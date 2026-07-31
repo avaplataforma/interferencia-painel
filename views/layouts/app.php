@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 /** @var Closure(mixed): string $escape */
 $authenticated = ($currentUser ?? null) !== null;
+$currentPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
+$crmOpen = str_contains($currentPath, '/crm');
 ?>
 <!doctype html>
 <html lang="pt-BR">
@@ -40,8 +42,8 @@ $authenticated = ($currentUser ?? null) !== null;
     .alert { padding: .8rem 1rem; margin-bottom: 1rem; border-radius: .55rem; }
     .alert-success { color: #176b3a; background: #eaf8ef; } .alert-danger { color: #8c2020; background: #fff0f0; }
     .mobile-menu { position: relative; }
-    .mobile-menu summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #aeb8c1; border-radius: .45rem; background: #fff; color: #536170; cursor: pointer; list-style: none; font-size: 1.2rem; }
-    .mobile-menu summary::-webkit-details-marker { display: none; }
+    .mobile-menu > summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #aeb8c1; border-radius: .45rem; background: #fff; color: #536170; cursor: pointer; list-style: none; font-size: 1.2rem; }
+    .mobile-menu > summary::-webkit-details-marker { display: none; }
     .mobile-menu-panel { position: absolute; z-index: 1060; top: calc(100% + .7rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: .75rem; background: #fff; border: 1px solid #dfe5e9; border-radius: .75rem; box-shadow: 0 1rem 2.5rem rgb(23 33 43 / 16%); }
     :root { --inter-accent: #ed1c24; --inter-accent-dark: #c81018; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
     body { background: var(--inter-bg); color: var(--inter-ink); }
@@ -54,6 +56,14 @@ $authenticated = ($currentUser ?? null) !== null;
     .sidebar .nav, .mobile-menu .nav { display: flex; flex-direction: column; width: 100%; }
     .sidebar a.nav-link, .mobile-menu a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
     .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .mobile-menu a.nav-link:hover, .mobile-menu a.nav-link:focus { color: var(--inter-accent-dark); background: #fff0f1; text-decoration: none; }
+    .nav-group { width: 100%; }
+    .nav-group > summary { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: .72rem .8rem; border-radius: .65rem; color: #536170; font-weight: 700; cursor: pointer; list-style: none; }
+    .nav-group > summary::-webkit-details-marker { display: none; }
+    .nav-group > summary::after { content: "›"; font-size: 1.25rem; transition: transform .15s ease; }
+    .nav-group[open] > summary::after { transform: rotate(90deg); }
+    .nav-group > summary:hover, .nav-group > summary:focus { color: var(--inter-accent-dark); background: #fff0f1; }
+    .nav-submenu { display: grid; gap: .2rem; margin: .2rem 0 .35rem .75rem; padding-left: .55rem; border-left: 2px solid #f4c2c4; }
+    .sidebar .nav-submenu a.nav-link, .mobile-menu .nav-submenu a.nav-link { padding: .55rem .7rem; font-size: .94rem; }
     .topbar { position: sticky; z-index: 1020; top: 0; min-height: 4.5rem; background: rgb(255 255 255 / 92%); border-bottom: 1px solid #e2e8ec; backdrop-filter: blur(8px); }
     .content-wrap { max-width: 80rem; margin-inline: auto; padding: 2rem; }
     .quick-link { display: flex; flex-direction: column; gap: .35rem; height: 100%; padding: 1.1rem; color: var(--inter-ink); text-decoration: none; background: #fff; border: 1px solid #e1e7eb; border-radius: .8rem; }
@@ -91,7 +101,7 @@ $authenticated = ($currentUser ?? null) !== null;
       <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt=""><span>PAINEL INTER</span></a>
       <nav class="nav flex-column gap-1">
         <a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a>
-        <?php if ($navigation['crm'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">CRM — Contatos</a><?php endif; ?>
+        <?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary>CRM</summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">Contatos</a></div></details><?php endif; ?>
         <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?>
         <?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?>
         <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?>
@@ -99,7 +109,7 @@ $authenticated = ($currentUser ?? null) !== null;
     </aside>
     <div class="flex-grow-1 min-width-0">
       <header class="topbar sticky-top d-flex align-items-center px-3 px-lg-4 gap-3">
-        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['crm'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">CRM — Contatos</a><?php endif; ?><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
+        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary>CRM</summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">Contatos</a></div></details><?php endif; ?><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
         <form class="unit-switcher d-flex align-items-center gap-2 me-auto" method="post" action="<?= $escape($basePath) ?>/context/unit">
           <?= $csrfField ?>
           <label class="visually-hidden" for="active-unit">Unidade ativa</label>
