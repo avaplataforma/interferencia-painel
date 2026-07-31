@@ -13,22 +13,25 @@ final readonly class ContactRepository
     public function __construct(private PDO $database) {}
 
     /** @return list<array<string, mixed>> */
-    public function all(int $unitId, string $search = ''): array
+    public function all(int $unitId, string $search = '', int $tagId = 0): array
     {
-        $sql = "SELECT c.*, s.name status_name, s.color status_color, u.name responsible_name FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id LEFT JOIN users u ON u.id=c.responsible_user_id WHERE c.unit_id=:unit";
+        $sql = "SELECT c.*, s.name status_name, s.color status_color, u.name responsible_name, (SELECT GROUP_CONCAT(CONCAT(t.name, '|', t.color) SEPARATOR ';;') FROM crm_contact_tags ct INNER JOIN crm_tags t ON t.id=ct.tag_id WHERE ct.contact_id=c.id) tags_data FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id LEFT JOIN users u ON u.id=c.responsible_user_id WHERE c.unit_id=:unit";
         $params = ['unit' => $unitId];
-        if ($search !== '') { $sql .= ' AND (c.name LIKE :search OR c.phone LIKE :search OR c.email LIKE :search OR c.course LIKE :search)'; $params['search'] = '%' . $search . '%'; }
+        if ($search !== '') { $sql .= ' AND (c.name LIKE :search_name OR c.phone LIKE :search_phone OR c.email LIKE :search_email OR c.course LIKE :search_course)'; $term = '%' . $search . '%'; $params += ['search_name'=>$term,'search_phone'=>$term,'search_email'=>$term,'search_course'=>$term]; }
+        if ($tagId > 0) { $sql .= ' AND EXISTS (SELECT 1 FROM crm_contact_tags filter_tags WHERE filter_tags.contact_id=c.id AND filter_tags.tag_id=:tag)'; $params['tag'] = $tagId; }
         $statement = $this->database->prepare($sql . ' ORDER BY c.registered_at DESC, c.id DESC');
         $statement->execute($params);
         return $statement->fetchAll();
     }
 
     /** @param list<int> $unitIds @return list<array<string, mixed>> */
-    public function allForUnits(array $unitIds, string $search=''): array
+    public function allForUnits(array $unitIds, string $search='', int $tagId=0): array
     {
         if($unitIds===[])return[]; $marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT c.*, s.name status_name,s.color status_color,u.name responsible_name,un.name unit_name FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id INNER JOIN units un ON un.id=c.unit_id LEFT JOIN users u ON u.id=c.responsible_user_id WHERE c.unit_id IN ({$marks})"; $params=$unitIds;
-        if($search!==''){$sql.=' AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ? OR c.course LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);} $statement=$this->database->prepare($sql.' ORDER BY c.registered_at DESC,c.id DESC');$statement->execute($params);return $statement->fetchAll();
+        $sql="SELECT c.*, s.name status_name,s.color status_color,u.name responsible_name,un.name unit_name,(SELECT GROUP_CONCAT(CONCAT(t.name, '|', t.color) SEPARATOR ';;') FROM crm_contact_tags ct INNER JOIN crm_tags t ON t.id=ct.tag_id WHERE ct.contact_id=c.id) tags_data FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id INNER JOIN units un ON un.id=c.unit_id LEFT JOIN users u ON u.id=c.responsible_user_id WHERE c.unit_id IN ({$marks})"; $params=$unitIds;
+        if($search!==''){$sql.=' AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ? OR c.course LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);}
+        if($tagId>0){$sql.=' AND EXISTS (SELECT 1 FROM crm_contact_tags filter_tags WHERE filter_tags.contact_id=c.id AND filter_tags.tag_id=?)';$params[]=$tagId;}
+        $statement=$this->database->prepare($sql.' ORDER BY c.registered_at DESC,c.id DESC');$statement->execute($params);return $statement->fetchAll();
     }
 
     /** @return array<string, mixed>|null */

@@ -1,0 +1,4 @@
+<?php declare(strict_types=1); /** @var Closure(mixed): string $escape */ $editing=$tag!==null; ?>
+<span class="status">ADM · Etiquetas</span><h1><?= $editing?'Editar etiqueta':'Nova etiqueta' ?></h1>
+<?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
+<form method="post" action="<?= $escape($basePath) ?>/tags<?= $editing?'/'.$escape($tag['id']):'' ?>" novalidate><?= $csrfField ?><label>Nome<input name="name" required minlength="2" maxlength="80" value="<?= $escape($tag['name']??'') ?>" placeholder="Ex.: Trabalho na rua"></label><label>Cor<input name="color" type="color" required value="<?= $escape($tag['color']??'#ed1c24') ?>"></label><div class="checks"><label><input type="checkbox" name="is_active" value="1" <?= !$editing||(int)$tag['is_active']===1?'checked':'' ?>>Etiqueta ativa</label></div><button type="submit">Salvar etiqueta</button></form><p><a href="<?= $escape($basePath) ?>/tags">Cancelar</a></p>

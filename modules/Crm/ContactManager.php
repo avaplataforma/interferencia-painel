@@ -9,7 +9,7 @@ use RuntimeException;
 
 final readonly class ContactManager
 {
-    public function __construct(private ContactRepository $contacts) {}
+    public function __construct(private ContactRepository $contacts, private TagRepository $tags) {}
 
     /** @param array<string, mixed> $data */
     public function save(?int $id, int $unitId, int $creatorId, array $data): int
@@ -27,7 +27,8 @@ final readonly class ContactManager
         if ($registered === false) throw new RuntimeException('Informe uma data e hora válidas.');
 
         $clean = ['status_id'=>$statusId, 'responsible_user_id'=>$responsible ?: null, 'name'=>trim((string)$data['name'],), 'phone'=>$this->nullable($data['phone'] ?? null), 'email'=>$this->nullable($data['email'] ?? null), 'document'=>$this->nullable($data['document'] ?? null), 'course'=>$this->nullable($data['course'] ?? null), 'interest_score'=>$score, 'origin_city'=>$this->nullable($data['origin_city'] ?? null), 'registration_source'=>$source, 'registered_at'=>$registered->format('Y-m-d H:i:s'), 'notes'=>$this->nullable($data['notes'] ?? null), 'is_active'=>(int)(($data['is_active'] ?? null)==='1')];
-        return $this->contacts->save($id, $unitId, $creatorId, $clean);
+        $tagIds=array_values(array_unique(array_map('intval',is_array($data['tags']??null)?$data['tags']:[])));if(!$this->tags->validIds($tagIds))throw new RuntimeException('Uma ou mais etiquetas são inválidas.');
+        $saved=$this->contacts->save($id, $unitId, $creatorId, $clean);$this->tags->syncContact($saved,$tagIds);return $saved;
     }
 
     private function nullable(mixed $value): ?string { $value=trim((string)$value); return $value==='' ? null : $value; }

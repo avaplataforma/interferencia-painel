@@ -24,6 +24,7 @@ use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
+use Interferencia\Modules\Crm\TagRepository;
 
 return static function (
     Router $router,
@@ -43,6 +44,7 @@ return static function (
     ContactRepository $contacts,
     ContactManager $contactManager,
     ExternalContactIntake $externalIntake,
+    TagRepository $tags,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -214,17 +216,18 @@ return static function (
     $manageContacts = [$requireAuth, new RequirePermission($auth, 'crm.contacts.manage')];
     $contactUnit = static fn (): ?array => $unitContext->current();
 
-    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
+    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $tags, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
         $unit = $contactUnit(); if ($unit === null) return Response::text("Nenhuma unidade ativa.\n", 422);
         $search = trim((string) $request->queryValue('q', ''));
-        $items=$unit['id']===null?$contacts->allForUnits(array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()),$search):$contacts->all((int)$unit['id'],$search);
-        return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
+        $tagId=max(0,(int)$request->queryValue('tag',0));
+        $items=$unit['id']===null?$contacts->allForUnits(array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()),$search,$tagId):$contacts->all((int)$unit['id'],$search,$tagId);
+        return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'tags'=>$tags->all(true), 'selectedTag'=>$tagId, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
     }, $viewContacts);
 
-    $contactForm = static function (?int $id=null) use ($view,$contacts,$contactUnit,$session,$csrf,$basePath,$browserTitle): Response {
+    $contactForm = static function (?int $id=null) use ($view,$contacts,$tags,$contactUnit,$session,$csrf,$basePath,$browserTitle): Response {
         $unit=$contactUnit(); if ($unit===null||$unit['id']===null) return Response::text("Selecione uma unidade específica para cadastrar ou editar contatos.\n",422);
         $contact=$id===null?null:$contacts->find($id,(int)$unit['id']); if ($id!==null&&$contact===null) return Response::text("Contato não encontrado.\n",404);
-        return $view->render('crm/contacts/form',['title'=>($id===null?'Novo contato':'Editar contato').' — '.$browserTitle,'contact'=>$contact,'unit'=>$unit,'statuses'=>$contacts->statuses(),'responsibles'=>$contacts->users((int)$unit['id']),'error'=>$session->get('contacts.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+        return $view->render('crm/contacts/form',['title'=>($id===null?'Novo contato':'Editar contato').' — '.$browserTitle,'contact'=>$contact,'unit'=>$unit,'statuses'=>$contacts->statuses(),'responsibles'=>$contacts->users((int)$unit['id']),'tags'=>$tags->all(true),'selectedTags'=>$id===null?[]:$tags->idsForContact($id),'error'=>$session->get('contacts.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
     };
     $router->get('/crm/contacts/create',static fn():Response=>$contactForm(),$manageContacts);
     $router->get('/crm/contacts/{id:\d+}/edit',static fn(Request $request,array $params):Response=>$contactForm((int)$params['id']),$manageContacts);
@@ -237,6 +240,15 @@ return static function (
     };
     $router->post('/crm/contacts',static fn(Request $request):Response=>$saveContact($request),$manageContacts);
     $router->post('/crm/contacts/{id:\d+}',static fn(Request $request,array $params):Response=>$saveContact($request,(int)$params['id']),$manageContacts);
+
+    $manageTags=[$requireAuth,new RequirePermission($auth,'crm.tags.manage')];
+    $router->get('/tags',static function()use($view,$tags,$session,$basePath,$browserTitle):Response{return $view->render('tags/index',['title'=>'Etiquetas — '.$browserTitle,'tags'=>$tags->all(),'message'=>$session->get('tags.message'),'error'=>$session->get('tags.error'),'basePath'=>$basePath]);},$manageTags);
+    $tagForm=static function(?int $id=null)use($view,$tags,$session,$csrf,$basePath,$browserTitle):Response{$tag=$id===null?null:$tags->find($id);if($id!==null&&$tag===null)return Response::text("Etiqueta não encontrada.\n",404);return $view->render('tags/form',['title'=>($id===null?'Nova etiqueta':'Editar etiqueta').' — '.$browserTitle,'tag'=>$tag,'error'=>$session->get('tags.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);};
+    $router->get('/tags/create',static fn():Response=>$tagForm(),$manageTags);
+    $router->get('/tags/{id:\d+}/edit',static fn(Request $request,array $params):Response=>$tagForm((int)$params['id']),$manageTags);
+    $saveTag=static function(Request $request,?int $id=null)use($validator,$tags,$session,$basePath):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:80'],['name'=>'nome']);$color=strtolower(trim((string)$request->input('color','')));try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors())));if(preg_match('/^#[0-9a-f]{6}$/',$color)!==1)throw new RuntimeException('Escolha uma cor válida.');$tags->save($id,(string)$result->value('name'),$color,$request->input('is_active')==='1');$session->flash('tags.message',$id===null?'Etiqueta criada.':'Etiqueta atualizada.');return Response::redirect($basePath.'/tags');}catch(Throwable $exception){$session->flash('tags.error',$exception->getPrevious()!==null?'Já existe uma etiqueta com esse nome.':$exception->getMessage());return Response::redirect($basePath.($id===null?'/tags/create':"/tags/{$id}/edit"));}};
+    $router->post('/tags',static fn(Request $request):Response=>$saveTag($request),$manageTags);
+    $router->post('/tags/{id:\d+}',static fn(Request $request,array $params):Response=>$saveTag($request,(int)$params['id']),$manageTags);
 
     $router->postWithoutCsrf('/api/v1/external-contacts',static function(Request $request)use($externalIntake):Response{
         $authorization=(string)$request->header('authorization','');$key=str_starts_with($authorization,'Bearer ')?substr($authorization,7):(string)$request->header('x-form-key','');

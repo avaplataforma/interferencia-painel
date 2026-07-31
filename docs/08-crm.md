@@ -68,3 +68,11 @@ versão do aviso de privacidade. Telefone e e-mail ajudam a detectar duplicidade
 Usuários autorizados em mais de uma unidade podem selecionar **Todas as
 unidades** para consulta consolidada. Cadastros e edições internas continuam
 exigindo uma unidade específica.
+
+## Etiquetas
+
+- O catálogo de etiquetas é global para a empresa e cada etiqueta possui nome, cor e situação.
+- Um contato pode receber várias etiquetas, independentemente de sua unidade.
+- A listagem de contatos mostra as etiquetas e permite filtrar por uma etiqueta específica.
+- Administradores globais e gestores podem cadastrar e editar etiquetas pelo menu ADM.
+- Usuários com permissão para gerenciar contatos podem aplicar ou remover etiquetas existentes, sem alterar o catálogo.
