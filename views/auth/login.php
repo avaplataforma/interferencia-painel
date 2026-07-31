@@ -8,7 +8,7 @@ declare(strict_types=1);
 /** @var string $email */
 /** @var string $basePath */
 ?>
-<img class="login-logo" src="<?= $escape($basePath) ?>/assets/brand/painel-inter-logo.png" alt="Logo do PAINEL INTER">
+<img class="login-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt="Símbolo do PAINEL INTER">
 <span class="status">Acesso seguro</span>
 <h1>Entrar no PAINEL INTER 📊</h1>
 <p>Use suas credenciais para continuar.</p>

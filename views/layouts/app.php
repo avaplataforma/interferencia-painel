@@ -12,8 +12,8 @@ $authenticated = ($currentUser ?? null) !== null;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title><?= $escape($title) ?></title>
-  <link rel="icon" type="image/png" href="<?= $escape($basePath) ?>/assets/brand/painel-inter-favicon.png">
-  <link rel="apple-touch-icon" href="<?= $escape($basePath) ?>/assets/brand/painel-inter-favicon.png">
+  <link rel="icon" type="image/png" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
+  <link rel="apple-touch-icon" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
   <link href="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -87,7 +87,7 @@ $authenticated = ($currentUser ?? null) !== null;
 <?php else: ?>
   <div class="app-shell d-flex">
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
-      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/brand/painel-inter-logo.png" alt=""><span>PAINEL INTER</span></a>
+      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt=""><span>PAINEL INTER</span></a>
       <nav class="nav flex-column gap-1">
         <a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a>
         <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?>
