@@ -219,7 +219,7 @@ return static function (
     $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $tags, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
         $unit = $contactUnit(); if ($unit === null) return Response::text("Nenhuma unidade ativa.\n", 422);
         $search = trim((string) $request->queryValue('q', ''));
-        $tagId=max(0,(int)$request->queryValue('tag',0));
+        $tagId=max(0,(int)$request->queryValue('tag','0'));
         $items=$unit['id']===null?$contacts->allForUnits(array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()),$search,$tagId):$contacts->all((int)$unit['id'],$search,$tagId);
         return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'tags'=>$tags->all(true), 'selectedTag'=>$tagId, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
     }, $viewContacts);
