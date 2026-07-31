@@ -25,6 +25,10 @@
   "scripts": {
     "check": [
       "@php tests/run.php"
-    ]
+    ],
+    "db:check": "@php bin/console db:check",
+    "migrate:status": "@php bin/console migrate:status",
+    "migrate": "@php bin/console migrate",
+    "migrate:rollback": "@php bin/console migrate:rollback"
   }
 }

@@ -2,7 +2,7 @@
 
 ## Visão
 
-O CRM será próprio e integrado ao Interferência Painel. Ele deve refletir o
+O CRM será próprio e integrado ao PAINEL INTER 📊. Ele deve refletir o
 processo real da empresa, manter histórico útil e conversar naturalmente com as
 unidades e o WhatsApp. Esta fase documenta direção, não define telas ou tabelas.
 
@@ -51,4 +51,3 @@ A conversa e o contato do CRM são conceitos relacionados, mas distintos. Um
 contato poderá participar de várias conversas e canais; uma mensagem não deve
 criar automaticamente duplicatas. A estratégia de identificação e mesclagem só
 será definida após analisar dados e fluxos reais.
-

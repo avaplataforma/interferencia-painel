@@ -6,6 +6,10 @@ O MariaDB será a fonte transacional principal. O esquema real será criado por
 migrações somente quando os domínios forem especificados; esta fundação não cria
 tabelas prematuramente.
 
+O kernel já possui conexão PDO e executor de migrações. Antes das tabelas de
+domínio, o executor cria somente `schema_migrations`, que registra identificador,
+lote e momento de aplicação de cada versão.
+
 - Engine InnoDB.
 - Charset `utf8mb4` e collation compatível com os requisitos de busca.
 - Chaves estrangeiras explícitas.
@@ -52,3 +56,21 @@ podem conservar dados indefinidamente por acidente.
 - Consultas lentas e capacidade acompanhadas por métricas.
 - Nenhuma credencial ou cópia de produção no Git.
 
+## Comandos
+
+```bash
+php bin/console db:check
+php bin/console migrate:status
+php bin/console migrate
+php bin/console migrate:rollback
+```
+
+- `db:check` confirma banco e versão sem mostrar credenciais.
+- `migrate:status` compara arquivos versionados com registros aplicados.
+- `migrate` executa somente versões pendentes em ordem crescente.
+- `migrate:rollback` reverte, em ordem inversa, apenas o último lote.
+
+Migrações usam o padrão `AAAAMMDD_HHMMSS_descricao`, devem ser imutáveis depois
+de compartilhadas e precisam implementar `Migration::up()` e `Migration::down()`.
+Como DDL no MariaDB pode provocar commit implícito, cada migração deve ser pequena,
+idempotente quando possível e possuir procedimento de recuperação revisado.

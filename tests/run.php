@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Interferencia\Kernel\Config\Config;
+use Interferencia\Kernel\Database\Connection;
+use Interferencia\Kernel\Database\MigrationRepository;
 use Interferencia\Kernel\Environment\Environment;
 use Interferencia\Kernel\Http\Request;
 use Interferencia\Kernel\Http\Response;
@@ -103,6 +105,50 @@ $tests['aceita HEAD em rota GET'] = static function (): void {
     $router->get('/status', static fn (): Response => Response::text('ok'));
 
     assertSame(200, $router->dispatch(new Request('HEAD', '/painel/status'))->status());
+};
+
+$tests['monta DSN MariaDB sem incluir credenciais'] = static function (): void {
+    $dsn = Connection::dsn('127.0.0.1', 3306, 'painel_inter', 'utf8mb4');
+
+    assertSame('mysql:host=127.0.0.1;port=3306;dbname=painel_inter;charset=utf8mb4', $dsn);
+    assertTrue(!str_contains($dsn, 'password'), 'O DSN não deve conter senha.');
+};
+
+$tests['descobre e ordena migrações por identificador'] = static function (): void {
+    $directory = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'migrations_' . bin2hex(random_bytes(6));
+    assertTrue(mkdir($directory, 0700), 'Não foi possível criar diretório temporário.');
+
+    $migrationTemplate = <<<'PHP'
+<?php
+return new class ('%s') implements \Interferencia\Kernel\Database\Migration {
+    public function __construct(private readonly string $migrationId) {}
+    public function id(): string { return $this->migrationId; }
+    public function up(\PDO $database): void {}
+    public function down(\PDO $database): void {}
+};
+PHP;
+
+    $files = [
+        $directory . DIRECTORY_SEPARATOR . '20260731_200000_segunda.php' => '20260731_200000_segunda',
+        $directory . DIRECTORY_SEPARATOR . '20260731_190000_primeira.php' => '20260731_190000_primeira',
+    ];
+
+    try {
+        foreach ($files as $file => $id) {
+            file_put_contents($file, sprintf($migrationTemplate, $id));
+        }
+
+        $migrations = (new MigrationRepository($directory))->all();
+        assertSame(
+            ['20260731_190000_primeira', '20260731_200000_segunda'],
+            array_keys($migrations),
+        );
+    } finally {
+        foreach (array_keys($files) as $file) {
+            @unlink($file);
+        }
+        @rmdir($directory);
+    }
 };
 
 $failures = 0;

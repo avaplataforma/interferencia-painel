@@ -1,4 +1,4 @@
-# Interferência Painel
+# PAINEL INTER 📊
 
 Sistema central de gestão da Interferência, planejado para operar em
 `https://interferencia.com.br/painel`.
@@ -47,7 +47,8 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Preparação para Git e Composer
 - [x] Bootstrap, configuração, logs e tratamento de erros
 - [x] Requisição, resposta, roteador e templates iniciais
-- [ ] Banco de dados e migrações
+- [x] Conexão MariaDB e controle de migrações
+- [ ] Sessões, validação e proteção CSRF
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 
@@ -57,6 +58,9 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 composer dump-autoload
 composer check
 ```
+
+Os comandos `composer db:check`, `composer migrate:status`, `composer migrate` e
+`composer migrate:rollback` operam a camada de banco sem exibir credenciais.
 
 O procedimento de produção está em
 [docs/09-operacao-e-deploy.md](docs/09-operacao-e-deploy.md).

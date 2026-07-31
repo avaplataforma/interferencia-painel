@@ -7,7 +7,7 @@ devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 
 **Status:** aceita
 
-- **Nome:** Interferência Painel.
+- **Nome original:** Interferência Painel.
 - **URL de produção:** `https://interferencia.com.br/painel`.
 - **Hospedagem:** VPS própria.
 - **Stack:** PHP 8.3, MariaDB, Bootstrap 5 e JavaScript.
@@ -34,3 +34,11 @@ devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 - O ambiente de produção não deve expor `config/`, `storage/`, `database/`,
   `kernel/` ou `modules/`; somente `public/` será público.
 
+## 31/07/2026 — Nome oficial do produto
+
+**Status:** aceita; substitui o nome original registrado na fundação
+
+- **Nome oficial:** PAINEL INTER 📊.
+- O endereço permanece `https://interferencia.com.br/painel`.
+- O namespace técnico e o nome do pacote Composer permanecem estáveis para não
+  acoplar identidade visual à estrutura interna do código.

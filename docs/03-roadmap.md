@@ -18,7 +18,7 @@ de negócio.
 - [x] Inicialização, configuração, tratamento de erros e logs.
 - [x] Página de estado da fundação.
 - [x] Roteamento, requisição, resposta e templates iniciais.
-- [ ] Conexão com banco e executor de migrações.
+- [x] Conexão com banco e executor de migrações.
 - [ ] Sessões, validação e proteção CSRF.
 - [x] Executor inicial de testes; ferramentas adicionais de qualidade pendentes.
 

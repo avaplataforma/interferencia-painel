@@ -2,13 +2,13 @@
 
 ## Propósito
 
-O Interferência Painel será o sistema central de gestão da empresa. Seu objetivo
+O PAINEL INTER 📊 será o sistema central de gestão da empresa. Seu objetivo
 é reunir operação, relacionamento com clientes, usuários, unidades e canais de
 WhatsApp em uma plataforma única, auditável e preparada para evolução contínua.
 
 ## Contexto
 
-- Produto: **Interferência Painel**.
+- Produto: **PAINEL INTER 📊**.
 - Endereço: `https://interferencia.com.br/painel`.
 - Infraestrutura: VPS própria.
 - Abrangência inicial: seis números/unidades.
@@ -49,4 +49,3 @@ definitiva ocorrerá ao modelar o banco.
 4. Segredos apenas no ambiente, nunca no repositório.
 5. Observabilidade e auditoria como requisitos, não complementos.
 6. Interface acessível, responsiva e consistente.
-

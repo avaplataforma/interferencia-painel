@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+use Interferencia\Kernel\Config\Config;
+use Interferencia\Kernel\Database\Connection;
+use Interferencia\Kernel\Database\MigrationRepository;
+use Interferencia\Kernel\Database\Migrator;
+use Interferencia\Kernel\Environment\Environment;
+
+$rootPath = dirname(__DIR__);
+$autoload = $rootPath . '/vendor/autoload.php';
+
+if (!is_file($autoload)) {
+    fwrite(STDERR, "Autoload ausente. Execute: composer dump-autoload\n");
+    exit(1);
+}
+
+require $autoload;
+Environment::load($rootPath . '/.env');
+$config = Config::fromDirectory($rootPath . '/config');
+$command = $argv[1] ?? 'help';
+
+try {
+    if (in_array($command, ['help', '--help', '-h'], true)) {
+        fwrite(STDOUT, <<<TEXT
+PAINEL INTER 📊
+
+Comandos disponíveis:
+  db:check           Verifica a conexão e mostra banco/versão
+  migrate:status     Lista migrações e seus estados
+  migrate            Executa migrações pendentes
+  migrate:rollback   Reverte o último lote de migrações
+
+TEXT);
+        exit(0);
+    }
+
+    $connection = new Connection($config);
+
+    if ($command === 'db:check') {
+        $info = $connection->check();
+        fwrite(STDOUT, sprintf("Conexão OK\nBanco: %s\nServidor: %s\n", $info->database, $info->serverVersion));
+        exit(0);
+    }
+
+    $migrator = new Migrator(
+        $connection->pdo(),
+        new MigrationRepository($rootPath . '/database/migrations'),
+    );
+
+    if ($command === 'migrate:status') {
+        $statuses = $migrator->status();
+
+        if ($statuses === []) {
+            fwrite(STDOUT, "Nenhuma migração de domínio registrada.\n");
+        }
+
+        foreach ($statuses as $status) {
+            fwrite(STDOUT, sprintf(
+                "[%s] %s%s\n",
+                $status->applied ? 'aplicada' : 'pendente',
+                $status->id,
+                $status->batch === null ? '' : sprintf(' (lote %d)', $status->batch),
+            ));
+        }
+
+        exit(0);
+    }
+
+    if ($command === 'migrate') {
+        $executed = $migrator->migrate();
+        fwrite(STDOUT, $executed === []
+            ? "Nenhuma migração pendente.\n"
+            : "Aplicadas:\n- " . implode("\n- ", $executed) . "\n");
+        exit(0);
+    }
+
+    if ($command === 'migrate:rollback') {
+        $reverted = $migrator->rollback();
+        fwrite(STDOUT, $reverted === []
+            ? "Nenhum lote para reverter.\n"
+            : "Revertidas:\n- " . implode("\n- ", $reverted) . "\n");
+        exit(0);
+    }
+
+    fwrite(STDERR, sprintf("Comando desconhecido: %s\n", $command));
+    exit(2);
+} catch (Throwable $exception) {
+    fwrite(STDERR, sprintf("Falha: %s\n", $exception->getMessage()));
+    exit(1);
+}
+
