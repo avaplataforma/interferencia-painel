@@ -75,6 +75,11 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .quick-link:hover { color: var(--inter-accent-dark); border-color: #f3a4a7; box-shadow: 0 .5rem 1.5rem rgb(90 15 19 / 8%); }
     .quick-link span, .meta { color: var(--inter-muted); font-size: .9rem; }
     .status { color: var(--inter-accent); font-weight: 700; }
+    .required-mark { color: var(--inter-accent); font-weight: 800; }
+    main select:required:invalid { color: var(--inter-accent); }
+    main select option { color: var(--inter-ink); }
+    .tag-dropdown > summary { color: var(--inter-accent); }
+    .tag-dropdown > summary .tag-badge { color: var(--tag-color); }
     .actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .actions > a { color: #fff; background: var(--inter-accent); padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; }
     main a { color: var(--inter-accent-dark); font-weight: 600; }
