@@ -12,7 +12,7 @@ $authenticated = ($currentUser ?? null) !== null;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title><?= $escape($title) ?></title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  <link href="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
   <style>
     :root { --inter-green: #087443; --inter-green-dark: #075c37; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
     body { background: var(--inter-bg); color: var(--inter-ink); }
@@ -82,6 +82,6 @@ $authenticated = ($currentUser ?? null) !== null;
     <div class="offcanvas-body"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div>
   </div>
 <?php endif; ?>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
 </body>
 </html>

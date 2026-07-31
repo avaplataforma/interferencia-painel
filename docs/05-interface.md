@@ -6,8 +6,8 @@ A interface será responsiva e orientada à operação diária, usando Bootstrap
 JavaScript progressivo. O conteúdo e as ações essenciais devem funcionar sem
 depender de um framework JavaScript de página única.
 
-A base visual utiliza Bootstrap 5.3.8 com arquivos versionados pelo CDN oficial
-indicado na documentação do projeto, integridade SRI e tema complementar próprio.
+A base visual utiliza Bootstrap 5.3.8 armazenado em `public/assets/vendor`, sem
+dependência de CDN em produção, além de um tema complementar próprio.
 
 ## Estrutura prevista
 
