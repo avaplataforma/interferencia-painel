@@ -20,8 +20,16 @@ document.querySelectorAll('.status-dropdown').forEach((dropdown) => {
 document.querySelectorAll('.tags-dropdown').forEach((dropdown) => {
   const summary = dropdown.querySelector('summary');
   const update = () => {
-    const total = dropdown.querySelectorAll('input[type="checkbox"]:checked').length;
-    if (summary) summary.textContent = total === 0 ? 'Selecionar etiquetas' : `${total} etiqueta(s) selecionada(s)`;
+    if (!summary) return;
+    const selected = [...dropdown.querySelectorAll('input[type="checkbox"]:checked')];
+    if (selected.length === 0) {
+      summary.textContent = 'Selecionar etiquetas';
+      return;
+    }
+    const badges = selected
+      .map((input) => input.closest('label')?.querySelector('.tag-badge')?.cloneNode(true))
+      .filter(Boolean);
+    summary.replaceChildren(...badges);
   };
   dropdown.addEventListener('change', update);
   update();

@@ -96,6 +96,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .tag-picker label { display: flex; align-items: center; gap: .35rem; margin: 0; cursor: pointer; }
     .tag-dropdown { position: relative; margin-top: .4rem; max-width: 100%; }
     .tag-dropdown > summary { min-height: 3rem; padding: .72rem; border: 1px solid #bcc6ce; border-radius: .55rem; background: #fff; cursor: pointer; list-style-position: inside; }
+    .tags-dropdown > summary .tag-badge { margin: 0 .2rem; }
     .tag-dropdown-menu { position: absolute; z-index: 30; display: grid; gap: .45rem; width: 100%; max-height: 16rem; overflow-y: auto; padding: .75rem; border: 1px solid #dfe4e8; border-radius: .55rem; background: #fff; box-shadow: 0 .7rem 1.8rem rgb(23 33 43 / 14%); }
     .tag-dropdown-menu label { display: flex; align-items: center; gap: .45rem; margin: 0; padding: .25rem; cursor: pointer; }
     .status-options label { justify-content: flex-start; }
