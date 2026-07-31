@@ -47,8 +47,9 @@ $authenticated = ($currentUser ?? null) !== null;
     .sidebar { width: 17rem; background: #fff; border-right: 1px solid #e2e8ec; }
     .brand { color: var(--inter-ink); text-decoration: none; font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; }
     .brand-mark { display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .7rem; background: var(--inter-green); color: #fff; }
-    .nav-link { color: #536170; border-radius: .65rem; padding: .7rem .8rem; font-weight: 600; }
-    .nav-link:hover, .nav-link:focus { color: var(--inter-green-dark); background: #eaf7f0; }
+    .sidebar .nav, .offcanvas .nav { display: flex; flex-direction: column; width: 100%; }
+    .sidebar a.nav-link, .offcanvas a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
+    .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .offcanvas a.nav-link:hover, .offcanvas a.nav-link:focus { color: var(--inter-green-dark); background: #eaf7f0; text-decoration: none; }
     .topbar { position: sticky; z-index: 1020; top: 0; min-height: 4.5rem; background: rgb(255 255 255 / 92%); border-bottom: 1px solid #e2e8ec; backdrop-filter: blur(8px); }
     .content-wrap { max-width: 80rem; margin-inline: auto; padding: 2rem; }
     .quick-link { display: flex; flex-direction: column; gap: .35rem; height: 100%; padding: 1.1rem; color: var(--inter-ink); text-decoration: none; background: #fff; border: 1px solid #e1e7eb; border-radius: .8rem; }
