@@ -7,15 +7,25 @@ namespace Interferencia\Kernel\View;
 use Interferencia\Kernel\Http\Response;
 use RuntimeException;
 
-final readonly class View
+final class View
 {
+    /** @var array<string, mixed> */
+    private array $shared = [];
+
     public function __construct(private string $directory)
     {
     }
 
     /** @param array<string, mixed> $data */
+    public function share(array $data): void
+    {
+        $this->shared = array_merge($this->shared, $data);
+    }
+
+    /** @param array<string, mixed> $data */
     public function render(string $template, array $data = [], int $status = 200): Response
     {
+        $data = array_merge($this->shared, $data);
         $content = $this->capture($template, $data);
         $html = $this->capture('layouts/app', array_merge($data, ['content' => $content]));
 
@@ -56,4 +66,3 @@ final readonly class View
         }
     }
 }
-

@@ -36,7 +36,8 @@ de negócio.
 - [x] Cadastro, edição e ativação das unidades e seus dados básicos.
 - [x] Vínculos entre usuários e unidades.
 - [ ] Vínculos entre unidades e números.
-- Visão central e filtros por escopo autorizado.
+- [x] Seleção da unidade ativa limitada ao escopo autorizado.
+- [ ] Filtros dos módulos de negócio pelo contexto da unidade ativa.
 
 ## Fase 4 — CRM
 

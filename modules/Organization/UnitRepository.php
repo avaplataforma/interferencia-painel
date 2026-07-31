@@ -20,6 +20,17 @@ final readonly class UnitRepository
         return $this->database->query('SELECT u.id, u.code, u.name, u.city, u.is_active, COUNT(DISTINCT s.user_id) AS user_count FROM units u LEFT JOIN user_unit_scopes s ON s.unit_id = u.id GROUP BY u.id ORDER BY u.is_active DESC, u.name')->fetchAll();
     }
 
+    /** @param list<string> $codes @return list<array<string, mixed>> */
+    public function activeByCodes(array $codes): array
+    {
+        if ($codes === []) return [];
+        $placeholders = implode(', ', array_fill(0, count($codes), '?'));
+        $statement = $this->database->prepare("SELECT id, code, name, city FROM units WHERE is_active = 1 AND code IN ({$placeholders}) ORDER BY name");
+        $statement->execute($codes);
+
+        return $statement->fetchAll();
+    }
+
     /** @return array<string, mixed>|null */
     public function find(int $id): ?array
     {

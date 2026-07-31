@@ -6,11 +6,14 @@ A interface será responsiva e orientada à operação diária, usando Bootstrap
 JavaScript progressivo. O conteúdo e as ações essenciais devem funcionar sem
 depender de um framework JavaScript de página única.
 
+A base visual utiliza Bootstrap 5.3.8 com arquivos versionados pelo CDN oficial
+indicado na documentação do projeto, integridade SRI e tema complementar próprio.
+
 ## Estrutura prevista
 
-- Cabeçalho com identidade, contexto da unidade e conta do usuário.
-- Navegação lateral por módulos autorizados.
-- Área principal com título, contexto, ações e conteúdo.
+- [x] Cabeçalho com identidade, contexto da unidade e conta do usuário.
+- [x] Navegação lateral responsiva por módulos autorizados.
+- [x] Área principal com título, contexto, ações e conteúdo.
 - Feedback uniforme para sucesso, aviso, erro e carregamento.
 - Tabelas e filtros adaptáveis a telas menores.
 
@@ -43,4 +46,3 @@ evitar dependências globais e oferecer tratamento de falha de rede.
 - Dispositivos prioritários e navegadores suportados.
 - Densidade de informação desejada para CRM e caixa de entrada.
 - Necessidade de tema escuro e preferências por usuário.
-

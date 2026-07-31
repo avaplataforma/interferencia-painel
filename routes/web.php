@@ -20,6 +20,7 @@ use Interferencia\Modules\Identity\RoleManager;
 use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
+use Interferencia\Modules\Organization\UnitContext;
 
 return static function (
     Router $router,
@@ -35,6 +36,7 @@ return static function (
     UnitManager $unitManager,
     RoleRepository $roles,
     RoleManager $roleManager,
+    UnitContext $unitContext,
 ): void {
     $basePath = $config->string('app.base_path');
     $requireAuth = new RequireAuth($auth, $basePath);
@@ -76,7 +78,7 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function () use ($auth, $config, $view, $csrf): Response {
+    $router->get('/', static function () use ($auth, $config, $view, $csrf, $session): Response {
         return $view->render('dashboard', [
             'title' => $config->string('app.name'),
             'user' => $auth->user(),
@@ -86,12 +88,24 @@ return static function (
             'canManageUsers' => $auth->can('users.manage'),
             'canManageUnits' => $auth->can('units.manage'),
             'canManageRoles' => $auth->can('roles.manage'),
+            'message' => $session->get('dashboard.message'),
+            'error' => $session->get('dashboard.error'),
         ]);
     }, [$requireAuth, new RequirePermission($auth, 'dashboard.view')]);
 
     $router->post('/logout', static function () use ($auth, $basePath): Response {
         $auth->logout();
         return Response::redirect($basePath . '/login');
+    }, [$requireAuth]);
+
+    $router->post('/context/unit', static function (Request $request) use ($unitContext, $session, $basePath): Response {
+        try {
+            $unitContext->select((string) $request->input('unit_code', ''));
+            $session->flash('dashboard.message', 'Unidade ativa atualizada.');
+        } catch (Throwable $exception) {
+            $session->flash('dashboard.error', $exception->getMessage());
+        }
+        return Response::redirect($basePath . '/');
     }, [$requireAuth]);
 
     $manageUsers = [$requireAuth, new RequirePermission($auth, 'users.manage')];

@@ -251,6 +251,7 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\Identity\RoleRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Organization\UnitManager::class));
     assertTrue(class_exists(Interferencia\Modules\Organization\UnitRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\Organization\UnitContext::class));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

@@ -21,6 +21,7 @@ use Interferencia\Modules\Identity\RoleManager;
 use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
+use Interferencia\Modules\Organization\UnitContext;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -76,7 +77,21 @@ $roles = new RoleRepository($database);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
+$unitContext = new UnitContext($auth, $units, $session);
+$currentUser = $auth->user();
+$view->share([
+    'basePath' => $config->string('app.base_path'),
+    'csrfField' => $csrf->field(),
+    'currentUser' => $currentUser,
+    'navigation' => [
+        'users' => $auth->can('users.manage'),
+        'units' => $auth->can('units.manage'),
+        'roles' => $auth->can('roles.manage'),
+    ],
+    'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
+    'currentUnit' => $currentUser === null ? null : $unitContext->current(),
+]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles));
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext);
 
 return new Application($router);
