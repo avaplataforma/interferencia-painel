@@ -53,3 +53,12 @@ devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 - Credencial armazenada somente no `.env` de produção com permissão `0600`.
 - Nenhuma tabela de negócio criada nesta etapa; apenas o controle técnico
   `schema_migrations` foi inicializado.
+
+## 31/07/2026 — Nomes das unidades de Tijucas
+
+**Status:** aceita; substitui somente os nomes de exibição anteriores
+
+- A unidade de código `sede-central-tijucas` passa a ser exibida como **Central**.
+- A unidade de código `filial-tijucas` passa a ser exibida como **Tijucas**.
+- Os códigos técnicos permanecem inalterados para preservar todos os vínculos já
+  existentes no banco de dados.

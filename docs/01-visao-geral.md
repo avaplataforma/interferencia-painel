@@ -15,8 +15,8 @@ WhatsApp em uma plataforma única, auditável e preparada para evolução contí
 
 | Identificador conceitual | Unidade | Observação |
 |---|---|---|
-| sede-central-tijucas | Sede/Central — Tijucas | Operação central |
-| filial-tijucas | Filial Tijucas | Unidade separada da Sede/Central |
+| sede-central-tijucas | Central | Operação central |
+| filial-tijucas | Tijucas | Unidade separada da Central |
 | itapema | Itapema | Unidade local |
 | porto-belo | Porto Belo | Unidade local |
 | sao-joao-batista | São João Batista | Unidade local |

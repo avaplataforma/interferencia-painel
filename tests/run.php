@@ -237,11 +237,12 @@ $tests['informa erros de validação por campo'] = static function (): void {
     assertTrue($result->firstError('role') !== null, 'Perfil deve possuir erro.');
 };
 
-$tests['carrega migração de identidade e acesso'] = static function () use ($rootPath): void {
+$tests['carrega migrações de identidade, acesso e unidades'] = static function () use ($rootPath): void {
     $migrations = (new MigrationRepository($rootPath . '/database/migrations'))->all();
 
     assertTrue(isset($migrations['20260731_210000_create_identity_and_access']));
     assertTrue(isset($migrations['20260731_220000_grant_dashboard_to_operational_roles']));
+    assertTrue(isset($migrations['20260731_230000_rename_tijucas_units']));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

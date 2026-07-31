@@ -43,7 +43,7 @@ Antes da implementação, entrevistar responsáveis das unidades e documentar:
 3. Informações essenciais e fontes atuais.
 4. Atividades, prazos, alertas e critérios de encerramento.
 5. Relatórios e decisões que cada indicador deve apoiar.
-6. Exceções entre Sede/Central, Filial Tijucas e demais unidades.
+6. Exceções entre Central, Tijucas e demais unidades.
 
 ## Integração com WhatsApp
 

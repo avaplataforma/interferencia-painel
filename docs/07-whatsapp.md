@@ -10,8 +10,8 @@ Business quanto na API, conforme elegibilidade e regras vigentes da Meta.
 
 Serão considerados seis números, associados às unidades:
 
-1. Sede/Central — Tijucas.
-2. Filial Tijucas, separada da Sede/Central.
+1. Central.
+2. Tijucas, separada da Central.
 3. Itapema.
 4. Porto Belo.
 5. São João Batista.
@@ -63,4 +63,3 @@ deverá começar com um número piloto e ter plano de reversão.
 - Mapear responsáveis, volume, horários e processo de atendimento por unidade.
 - Definir modelo de distribuição, transferência e encerramento de conversas.
 - Aprovar política de consentimento e retenção com os responsáveis adequados.
-

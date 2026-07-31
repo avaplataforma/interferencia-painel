@@ -30,7 +30,7 @@ Sem definir tabelas nesta fase, o modelo deverá considerar:
 
 ## Unidades e isolamento
 
-A Sede/Central em Tijucas e a Filial Tijucas são unidades distintas. Registros
+A Central e a unidade Tijucas são unidades distintas. Registros
 com escopo organizacional deverão referenciar inequivocamente a unidade. A
 autorização por unidade será aplicada no caso de uso e validada no acesso aos
 dados, sem confiar apenas em filtros da interface.
