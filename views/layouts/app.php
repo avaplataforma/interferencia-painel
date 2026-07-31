@@ -99,7 +99,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .tag-dropdown-menu { position: absolute; z-index: 30; display: grid; gap: .45rem; width: 100%; max-height: 16rem; overflow-y: auto; padding: .75rem; border: 1px solid #dfe4e8; border-radius: .55rem; background: #fff; box-shadow: 0 .7rem 1.8rem rgb(23 33 43 / 14%); }
     .tag-dropdown-menu label { display: flex; align-items: center; gap: .45rem; margin: 0; padding: .25rem; cursor: pointer; }
     .status-options label { justify-content: flex-start; }
-    .status-options input[type=radio] { appearance: none; flex: 0 0 .85rem; width: .85rem; height: .85rem; margin: 0; border: 1px solid #8c98a4; border-radius: .18rem; background: #fff; }
+    .status-options input[type=radio] { appearance: none; box-sizing: border-box; flex: 0 0 .85rem; width: .85rem !important; height: .85rem; margin: 0 !important; padding: 0 !important; border: 1px solid #8c98a4; border-radius: .18rem; background: #fff; }
     .status-options input[type=radio]:checked { border-color: var(--inter-accent); background: var(--inter-accent); box-shadow: inset 0 0 0 2px #fff; }
     main { overflow-x: auto; }
     table { width: 100%; min-width: 42rem; margin-top: 1rem; background: #fff; }
