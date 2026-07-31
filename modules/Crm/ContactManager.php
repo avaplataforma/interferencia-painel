@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Interferencia\Modules\Crm;
+
+use DateTimeImmutable;
+use RuntimeException;
+
+final readonly class ContactManager
+{
+    public function __construct(private ContactRepository $contacts) {}
+
+    /** @param array<string, mixed> $data */
+    public function save(?int $id, int $unitId, int $creatorId, array $data): int
+    {
+        if ($id !== null && $this->contacts->find($id, $unitId) === null) throw new RuntimeException('Contato não encontrado nesta unidade.');
+        $statusId = (int) ($data['status_id'] ?? 0);
+        if (!$this->contacts->statusExists($statusId)) throw new RuntimeException('Selecione um status válido.');
+        $responsible = (int) ($data['responsible_user_id'] ?? 0);
+        if ($responsible > 0 && !$this->contacts->userBelongsToUnit($responsible, $unitId)) throw new RuntimeException('Responsável indisponível nesta unidade.');
+        $score = ($data['interest_score'] ?? '') === '' ? null : (int) $data['interest_score'];
+        if ($score !== null && ($score < 0 || $score > 10)) throw new RuntimeException('O interesse deve estar entre 0 e 10.');
+        $source = (string) ($data['registration_source'] ?? 'internal');
+        if (!in_array($source, ['internal', 'external_form'], true)) throw new RuntimeException('Origem de cadastro inválida.');
+        $registered = DateTimeImmutable::createFromFormat('Y-m-d\TH:i', (string) ($data['registered_at'] ?? ''));
+        if ($registered === false) throw new RuntimeException('Informe uma data e hora válidas.');
+
+        $clean = ['status_id'=>$statusId, 'responsible_user_id'=>$responsible ?: null, 'name'=>trim((string)$data['name'],), 'phone'=>$this->nullable($data['phone'] ?? null), 'email'=>$this->nullable($data['email'] ?? null), 'document'=>$this->nullable($data['document'] ?? null), 'course'=>$this->nullable($data['course'] ?? null), 'interest_score'=>$score, 'origin_city'=>$this->nullable($data['origin_city'] ?? null), 'registration_source'=>$source, 'registered_at'=>$registered->format('Y-m-d H:i:s'), 'notes'=>$this->nullable($data['notes'] ?? null), 'is_active'=>(int)(($data['is_active'] ?? null)==='1')];
+        return $this->contacts->save($id, $unitId, $creatorId, $clean);
+    }
+
+    private function nullable(mixed $value): ?string { $value=trim((string)$value); return $value==='' ? null : $value; }
+}

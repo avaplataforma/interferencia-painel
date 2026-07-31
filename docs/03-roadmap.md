@@ -41,8 +41,9 @@ de negócio.
 
 ## Fase 4 — CRM
 
-- Descoberta e validação do processo comercial.
-- Contatos, oportunidades, etapas, atividades e histórico.
+- [ ] Descoberta e validação completa do processo comercial.
+- [x] Cadastro inicial de contatos por unidade, status, curso, interesse e polo.
+- [ ] Oportunidades, etapas, atividades e histórico.
 - Relatórios iniciais e integrações internas.
 
 ## Fase 5 — WhatsApp

@@ -21,6 +21,8 @@ use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
+use Interferencia\Modules\Crm\ContactManager;
+use Interferencia\Modules\Crm\ContactRepository;
 
 return static function (
     Router $router,
@@ -37,6 +39,8 @@ return static function (
     RoleRepository $roles,
     RoleManager $roleManager,
     UnitContext $unitContext,
+    ContactRepository $contacts,
+    ContactManager $contactManager,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -203,4 +207,31 @@ return static function (
     };
     $router->post('/roles', static fn (Request $request): Response => $saveRole($request), $manageRoles);
     $router->post('/roles/{id:\d+}', static fn (Request $request, array $params): Response => $saveRole($request, (int) $params['id']), $manageRoles);
+
+    $viewContacts = [$requireAuth, new RequirePermission($auth, 'crm.contacts.view')];
+    $manageContacts = [$requireAuth, new RequirePermission($auth, 'crm.contacts.manage')];
+    $contactUnit = static fn (): ?array => $unitContext->current();
+
+    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $contactUnit, $session, $basePath, $browserTitle): Response {
+        $unit = $contactUnit(); if ($unit === null) return Response::text("Nenhuma unidade ativa.\n", 422);
+        $search = trim((string) $request->queryValue('q', ''));
+        return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$contacts->all((int)$unit['id'], $search), 'search'=>$search, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
+    }, $viewContacts);
+
+    $contactForm = static function (?int $id=null) use ($view,$contacts,$contactUnit,$session,$csrf,$basePath,$browserTitle): Response {
+        $unit=$contactUnit(); if ($unit===null) return Response::text("Nenhuma unidade ativa.\n",422);
+        $contact=$id===null?null:$contacts->find($id,(int)$unit['id']); if ($id!==null&&$contact===null) return Response::text("Contato não encontrado.\n",404);
+        return $view->render('crm/contacts/form',['title'=>($id===null?'Novo contato':'Editar contato').' — '.$browserTitle,'contact'=>$contact,'unit'=>$unit,'statuses'=>$contacts->statuses(),'responsibles'=>$contacts->users((int)$unit['id']),'error'=>$session->get('contacts.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+    };
+    $router->get('/crm/contacts/create',static fn():Response=>$contactForm(),$manageContacts);
+    $router->get('/crm/contacts/{id:\d+}/edit',static fn(Request $request,array $params):Response=>$contactForm((int)$params['id']),$manageContacts);
+
+    $saveContact=static function(Request $request,?int $id=null) use($validator,$contactManager,$contactUnit,$auth,$session,$basePath):Response {
+        $unit=$contactUnit(); if($unit===null)return Response::text("Nenhuma unidade ativa.\n",422);
+        $result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:160','email'=>'nullable|string|email|max:190','phone'=>'nullable|string|max:32','course'=>'nullable|string|max:160','origin_city'=>'nullable|string|max:120','document'=>'nullable|string|max:24','notes'=>'nullable|string|max:5000'],['name'=>'nome','email'=>'e-mail','phone'=>'telefone','course'=>'curso','origin_city'=>'polo','document'=>'documento','notes'=>'observações']);
+        try { if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors()))); $data=$request->inputData(); foreach($result->values() as $key=>$value)$data[$key]=$value; $contactManager->save($id,(int)$unit['id'],$auth->user()->id,$data); $session->flash('contacts.message',$id===null?'Contato criado.':'Contato atualizado.'); return Response::redirect($basePath.'/crm/contacts'); }
+        catch(Throwable $exception){$session->flash('contacts.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/crm/contacts/create':"/crm/contacts/{$id}/edit"));}
+    };
+    $router->post('/crm/contacts',static fn(Request $request):Response=>$saveContact($request),$manageContacts);
+    $router->post('/crm/contacts/{id:\d+}',static fn(Request $request,array $params):Response=>$saveContact($request,(int)$params['id']),$manageContacts);
 };

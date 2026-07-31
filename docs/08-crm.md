@@ -51,3 +51,10 @@ A conversa e o contato do CRM são conceitos relacionados, mas distintos. Um
 contato poderá participar de várias conversas e canais; uma mensagem não deve
 criar automaticamente duplicatas. A estratégia de identificação e mesclagem só
 será definida após analisar dados e fluxos reais.
+
+## Primeira entrega operacional
+
+O cadastro inicial de contatos possui nome, telefone/WhatsApp, e-mail, documento,
+unidade responsável, responsável, status configurável, data e origem do cadastro,
+curso, interesse de 0 a 10, polo/cidade de origem, observações e situação ativa.
+Os status iniciais são Novo, Negociação, Sem interesse e Matriculado.

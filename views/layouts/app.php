@@ -66,6 +66,7 @@ $authenticated = ($currentUser ?? null) !== null;
     main > form:not(.unit-switcher) { max-width: 46rem; }
     main label { display: block; margin-top: 1rem; font-weight: 650; }
     main input:not([type=checkbox]) { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; border: 1px solid #bcc6ce; border-radius: .55rem; }
+    main textarea { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; border: 1px solid #bcc6ce; border-radius: .55rem; font: inherit; }
     main button { margin-top: 1.25rem; padding: .75rem 1rem; border: 0; border-radius: .55rem; background: var(--inter-accent); color: #fff; font-weight: 700; }
     .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .5rem; margin-top: .6rem; }
     .checks label { margin: 0; padding: .65rem; border: 1px solid #dfe4e8; border-radius: .5rem; background: #fff; }
@@ -90,6 +91,7 @@ $authenticated = ($currentUser ?? null) !== null;
       <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt=""><span>PAINEL INTER</span></a>
       <nav class="nav flex-column gap-1">
         <a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a>
+        <?php if ($navigation['crm'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">CRM — Contatos</a><?php endif; ?>
         <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?>
         <?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?>
         <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?>
@@ -97,7 +99,7 @@ $authenticated = ($currentUser ?? null) !== null;
     </aside>
     <div class="flex-grow-1 min-width-0">
       <header class="topbar sticky-top d-flex align-items-center px-3 px-lg-4 gap-3">
-        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
+        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['crm'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">CRM — Contatos</a><?php endif; ?><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
         <form class="unit-switcher d-flex align-items-center gap-2 me-auto" method="post" action="<?= $escape($basePath) ?>/context/unit">
           <?= $csrfField ?>
           <label class="visually-hidden" for="active-unit">Unidade ativa</label>
