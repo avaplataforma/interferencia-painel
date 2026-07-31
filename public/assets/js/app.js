@@ -31,6 +31,11 @@ document.querySelectorAll('.tags-dropdown').forEach((dropdown) => {
       .filter(Boolean);
     summary.replaceChildren(...badges);
   };
-  dropdown.addEventListener('change', update);
+  dropdown.addEventListener('change', (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.type === 'checkbox') {
+      update();
+      dropdown.open = false;
+    }
+  });
   update();
 });
