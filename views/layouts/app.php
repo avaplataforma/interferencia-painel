@@ -17,6 +17,8 @@ $crmOpen = str_contains($currentPath, '/crm');
   <link rel="icon" type="image/png" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
   <link rel="apple-touch-icon" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
   <link href="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link href="<?= $escape($basePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css" rel="stylesheet">
+  <link href="<?= $escape($basePath) ?>/assets/vendor/fontawesome/css/solid.min.css" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     html { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5; }
@@ -64,6 +66,8 @@ $crmOpen = str_contains($currentPath, '/crm');
     .nav-group > summary:hover, .nav-group > summary:focus { color: var(--inter-accent-dark); background: #fff0f1; }
     .nav-submenu { display: grid; gap: .2rem; margin: .2rem 0 .35rem .75rem; padding-left: .55rem; border-left: 2px solid #f4c2c4; }
     .sidebar .nav-submenu a.nav-link, .mobile-menu .nav-submenu a.nav-link { padding: .55rem .7rem; font-size: .94rem; }
+    .nav-link .fa-fw, .nav-group summary .fa-fw { margin-right: .55rem; color: var(--inter-accent); }
+    .quick-icon { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; margin-bottom: .35rem; border-radius: .65rem; color: var(--inter-accent); background: #fff0f1; font-size: 1.05rem; }
     .topbar { position: sticky; z-index: 1020; top: 0; min-height: 4.5rem; background: rgb(255 255 255 / 92%); border-bottom: 1px solid #e2e8ec; backdrop-filter: blur(8px); }
     .content-wrap { max-width: 80rem; margin-inline: auto; padding: 2rem; }
     .quick-link { display: flex; flex-direction: column; gap: .35rem; height: 100%; padding: 1.1rem; color: var(--inter-ink); text-decoration: none; background: #fff; border: 1px solid #e1e7eb; border-radius: .8rem; }
@@ -100,16 +104,16 @@ $crmOpen = str_contains($currentPath, '/crm');
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
       <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt=""><span>PAINEL INTER</span></a>
       <nav class="nav flex-column gap-1">
-        <a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a>
-        <?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary>CRM</summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">Contatos</a></div></details><?php endif; ?>
-        <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?>
-        <?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?>
-        <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?>
+        <a class="nav-link" href="<?= $escape($basePath) ?>/"><i class="fa-solid fa-house fa-fw" aria-hidden="true"></i>Visão geral</a>
+        <?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary><span><i class="fa-solid fa-chart-line fa-fw" aria-hidden="true"></i>CRM</span></summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts"><i class="fa-solid fa-address-book fa-fw" aria-hidden="true"></i>Contatos</a></div></details><?php endif; ?>
+        <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users"><i class="fa-solid fa-users fa-fw" aria-hidden="true"></i>Usuários</a><?php endif; ?>
+        <?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units"><i class="fa-solid fa-building fa-fw" aria-hidden="true"></i>Unidades</a><?php endif; ?>
+        <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles"><i class="fa-solid fa-user-shield fa-fw" aria-hidden="true"></i>Perfis e permissões</a><?php endif; ?>
       </nav>
     </aside>
     <div class="flex-grow-1 min-width-0">
       <header class="topbar sticky-top d-flex align-items-center px-3 px-lg-4 gap-3">
-        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary>CRM</summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts">Contatos</a></div></details><?php endif; ?><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
+        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/"><i class="fa-solid fa-house fa-fw" aria-hidden="true"></i>Visão geral</a><?php if ($navigation['crm'] ?? false): ?><details class="nav-group" <?= $crmOpen ? 'open' : '' ?>><summary><span><i class="fa-solid fa-chart-line fa-fw" aria-hidden="true"></i>CRM</span></summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/crm/contacts"><i class="fa-solid fa-address-book fa-fw" aria-hidden="true"></i>Contatos</a></div></details><?php endif; ?><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users"><i class="fa-solid fa-users fa-fw" aria-hidden="true"></i>Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units"><i class="fa-solid fa-building fa-fw" aria-hidden="true"></i>Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles"><i class="fa-solid fa-user-shield fa-fw" aria-hidden="true"></i>Perfis e permissões</a><?php endif; ?></nav></div></details>
         <form class="unit-switcher d-flex align-items-center gap-2 me-auto" method="post" action="<?= $escape($basePath) ?>/context/unit">
           <?= $csrfField ?>
           <label class="visually-hidden" for="active-unit">Unidade ativa</label>

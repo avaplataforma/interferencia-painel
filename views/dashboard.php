@@ -16,7 +16,7 @@ declare(strict_types=1);
 </div>
 <h2 class="h5 mt-4">Atalhos</h2>
 <div class="row g-3">
-  <?php if ($canManageUsers): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/users"><strong>Usuários</strong><span>Contas, perfis e unidades permitidas</span></a></div><?php endif; ?>
-  <?php if ($canManageUnits): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/units"><strong>Unidades</strong><span>Cadastro e situação operacional</span></a></div><?php endif; ?>
-  <?php if ($canManageRoles): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/roles"><strong>Perfis</strong><span>Permissões e níveis de acesso</span></a></div><?php endif; ?>
+  <?php if ($canManageUsers): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/users"><span class="quick-icon"><i class="fa-solid fa-users" aria-hidden="true"></i></span><strong>Usuários</strong><span>Contas, perfis e unidades permitidas</span></a></div><?php endif; ?>
+  <?php if ($canManageUnits): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/units"><span class="quick-icon"><i class="fa-solid fa-building" aria-hidden="true"></i></span><strong>Unidades</strong><span>Cadastro e situação operacional</span></a></div><?php endif; ?>
+  <?php if ($canManageRoles): ?><div class="col-md-4"><a class="quick-link" href="<?= $escape($basePath) ?>/roles"><span class="quick-icon"><i class="fa-solid fa-user-shield" aria-hidden="true"></i></span><strong>Perfis</strong><span>Permissões e níveis de acesso</span></a></div><?php endif; ?>
 </div>

@@ -9,6 +9,10 @@ depender de um framework JavaScript de página única.
 A base visual utiliza Bootstrap 5.3.8 armazenado em `public/assets/vendor`, sem
 dependência de CDN em produção, além de um tema complementar próprio.
 
+Os ícones de interface usam Font Awesome Free 6.7.2 auto-hospedado, com os
+arquivos de licença preservados no repositório. Ícones são decorativos quando o
+texto adjacente já comunica a ação, evitando ruído para leitores de tela.
+
 A marca fornecida pela empresa é exibida na autenticação e na navegação interna,
 e também é usada como favicon e ícone para atalhos em dispositivos móveis.
 
