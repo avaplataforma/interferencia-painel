@@ -62,3 +62,11 @@ devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 - A unidade de código `filial-tijucas` passa a ser exibida como **Tijucas**.
 - Os códigos técnicos permanecem inalterados para preservar todos os vínculos já
   existentes no banco de dados.
+
+## 31/07/2026 — Cor principal da interface
+
+**Status:** aceita
+
+- A cor principal da identidade visual do PAINEL INTER é o vermelho `#ed1c24`.
+- Cores semânticas, como verde para sucesso e vermelho escuro para erro,
+  permanecem reservadas à comunicação de estados do sistema.
