@@ -76,3 +76,7 @@ exigindo uma unidade específica.
 - A listagem de contatos mostra as etiquetas e permite filtrar por uma etiqueta específica.
 - Administradores globais e gestores podem cadastrar e editar etiquetas pelo menu ADM.
 - Usuários com permissão para gerenciar contatos podem aplicar ou remover etiquetas existentes, sem alterar o catálogo.
+
+Os status do CRM também são configuráveis. Administradores globais e gestores
+podem cadastrar nome, cor, ordem de exibição e situação pelo menu ADM. Apenas
+status ativos aparecem para seleção nos novos cadastros de contato.

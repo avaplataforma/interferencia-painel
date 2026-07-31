@@ -25,6 +25,7 @@ use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
 use Interferencia\Modules\Crm\TagRepository;
+use Interferencia\Modules\Crm\StatusRepository;
 
 return static function (
     Router $router,
@@ -45,6 +46,7 @@ return static function (
     ContactManager $contactManager,
     ExternalContactIntake $externalIntake,
     TagRepository $tags,
+    StatusRepository $statuses,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -249,6 +251,15 @@ return static function (
     $saveTag=static function(Request $request,?int $id=null)use($validator,$tags,$session,$basePath):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:80'],['name'=>'nome']);$color=strtolower(trim((string)$request->input('color','')));try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors())));if(preg_match('/^#[0-9a-f]{6}$/',$color)!==1)throw new RuntimeException('Escolha uma cor válida.');$tags->save($id,(string)$result->value('name'),$color,$request->input('is_active')==='1');$session->flash('tags.message',$id===null?'Etiqueta criada.':'Etiqueta atualizada.');return Response::redirect($basePath.'/tags');}catch(Throwable $exception){$session->flash('tags.error',$exception->getPrevious()!==null?'Já existe uma etiqueta com esse nome.':$exception->getMessage());return Response::redirect($basePath.($id===null?'/tags/create':"/tags/{$id}/edit"));}};
     $router->post('/tags',static fn(Request $request):Response=>$saveTag($request),$manageTags);
     $router->post('/tags/{id:\d+}',static fn(Request $request,array $params):Response=>$saveTag($request,(int)$params['id']),$manageTags);
+
+    $manageStatuses=[$requireAuth,new RequirePermission($auth,'crm.statuses.manage')];
+    $router->get('/statuses',static function()use($view,$statuses,$session,$basePath,$browserTitle):Response{return $view->render('statuses/index',['title'=>'Status do CRM — '.$browserTitle,'statuses'=>$statuses->all(),'message'=>$session->get('statuses.message'),'error'=>$session->get('statuses.error'),'basePath'=>$basePath]);},$manageStatuses);
+    $statusForm=static function(?int $id=null)use($view,$statuses,$session,$csrf,$basePath,$browserTitle):Response{$status=$id===null?null:$statuses->find($id);if($id!==null&&$status===null)return Response::text("Status não encontrado.\n",404);return $view->render('statuses/form',['title'=>($id===null?'Novo status':'Editar status').' — '.$browserTitle,'statusItem'=>$status,'error'=>$session->get('statuses.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);};
+    $router->get('/statuses/create',static fn():Response=>$statusForm(),$manageStatuses);
+    $router->get('/statuses/{id:\d+}/edit',static fn(Request $request,array $params):Response=>$statusForm((int)$params['id']),$manageStatuses);
+    $saveStatus=static function(Request $request,?int $id=null)use($validator,$statuses,$session,$basePath):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:100'],['name'=>'nome']);$color=strtolower(trim((string)$request->input('color','')));$order=max(0,min(65535,(int)$request->input('sort_order','0')));try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors())));if(preg_match('/^#[0-9a-f]{6}$/',$color)!==1)throw new RuntimeException('Escolha uma cor válida.');$statuses->save($id,(string)$result->value('name'),$color,$order,$request->input('is_active')==='1');$session->flash('statuses.message',$id===null?'Status criado.':'Status atualizado.');return Response::redirect($basePath.'/statuses');}catch(Throwable $exception){$session->flash('statuses.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/statuses/create':"/statuses/{$id}/edit"));}};
+    $router->post('/statuses',static fn(Request $request):Response=>$saveStatus($request),$manageStatuses);
+    $router->post('/statuses/{id:\d+}',static fn(Request $request,array $params):Response=>$saveStatus($request,(int)$params['id']),$manageStatuses);
 
     $router->postWithoutCsrf('/api/v1/external-contacts',static function(Request $request)use($externalIntake):Response{
         $authorization=(string)$request->header('authorization','');$key=str_starts_with($authorization,'Bearer ')?substr($authorization,7):(string)$request->header('x-form-key','');
