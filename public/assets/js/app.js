@@ -19,9 +19,12 @@ document.querySelectorAll('.status-dropdown').forEach((dropdown) => {
 
 document.querySelectorAll('.tags-dropdown').forEach((dropdown) => {
   const summary = dropdown.querySelector('summary');
+  const inputs = [...dropdown.querySelectorAll('input[type="checkbox"]')];
   const update = () => {
     if (!summary) return;
-    const selected = [...dropdown.querySelectorAll('input[type="checkbox"]:checked')];
+    const selected = inputs.filter((input) => input.checked);
+    inputs.forEach((input) => input.setCustomValidity(''));
+    if (selected.length === 0 && inputs[0]) inputs[0].setCustomValidity('Selecione pelo menos uma etiqueta.');
     if (selected.length === 0) {
       summary.textContent = 'Selecionar etiquetas';
       return;
@@ -38,6 +41,21 @@ document.querySelectorAll('.tags-dropdown').forEach((dropdown) => {
     }
   });
   update();
+
+  dropdown.closest('form')?.addEventListener('submit', (event) => {
+    if (inputs.length > 0 && !inputs.some((input) => input.checked)) {
+      event.preventDefault();
+      dropdown.open = true;
+      inputs[0].reportValidity();
+    }
+  });
+});
+
+document.querySelectorAll('[data-normalize="email"]').forEach((input) => {
+  if (!(input instanceof HTMLInputElement)) return;
+  const normalize = () => { input.value = input.value.trim().toLowerCase().replace(/\s+/g, ''); };
+  input.addEventListener('change', normalize);
+  input.addEventListener('blur', normalize);
 });
 
 const digits = (value, limit) => value.replace(/\D/g, '').slice(0, limit);
