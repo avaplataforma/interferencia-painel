@@ -173,6 +173,15 @@ final readonly class UserRepository
         return array_values(array_filter($statement->fetchAll(PDO::FETCH_COLUMN), 'is_string'));
     }
 
+    /** @return list<string> */
+    public function activeUnitCodes(): array
+    {
+        return array_values(array_filter(
+            $this->database->query('SELECT code FROM units WHERE is_active = 1 ORDER BY code')->fetchAll(PDO::FETCH_COLUMN),
+            'is_string',
+        ));
+    }
+
     public function recordFailedLogin(int $userId, int $lockAfter = 5, int $lockMinutes = 15): void
     {
         $lockedUntil = (new DateTimeImmutable('now', new DateTimeZone('UTC')))

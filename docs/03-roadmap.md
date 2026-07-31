@@ -27,7 +27,8 @@ de negócio.
 - [x] Usuários, login, logout e bloqueio inicial de tentativas.
 - [x] Papéis, permissões e escopo por unidade.
 - [x] Gestão de usuários, ativação, papéis e unidades permitidas.
-- [ ] Recuperação segura, editor de papéis e segundo fator.
+- [x] Editor de perfis e suas permissões.
+- [ ] Recuperação segura e segundo fator.
 - [ ] Auditoria ampliada de ações sensíveis.
 
 ## Fase 3 — Unidades

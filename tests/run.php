@@ -246,6 +246,13 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260731_240000_add_units_management_permission']));
 };
 
+$tests['carrega serviços administrativos'] = static function (): void {
+    assertTrue(class_exists(Interferencia\Modules\Identity\RoleManager::class));
+    assertTrue(class_exists(Interferencia\Modules\Identity\RoleRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\Organization\UnitManager::class));
+    assertTrue(class_exists(Interferencia\Modules\Organization\UnitRepository::class));
+};
+
 $tests['gera e verifica senha com Argon2id'] = static function (): void {
     $hasher = new PasswordHasher(['memory_cost' => 8192, 'time_cost' => 1, 'threads' => 1]);
     $hash = $hasher->hash('uma-senha-de-teste-segura');

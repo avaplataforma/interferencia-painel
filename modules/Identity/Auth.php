@@ -87,7 +87,11 @@ final class Auth
     {
         $user = $this->user();
 
-        return $user === null ? [] : $this->users->unitScopes($user->id);
+        if ($user === null) return [];
+
+        return $this->can('units.access_all')
+            ? $this->users->activeUnitCodes()
+            : $this->users->unitScopes($user->id);
     }
 
     public function logout(): void
@@ -98,4 +102,3 @@ final class Auth
         $this->resolvedUser = null;
     }
 }
-

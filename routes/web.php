@@ -16,6 +16,8 @@ use Interferencia\Modules\Identity\RequireGuest;
 use Interferencia\Modules\Identity\RequirePermission;
 use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\Identity\UserManager;
+use Interferencia\Modules\Identity\RoleManager;
+use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 
@@ -31,6 +33,8 @@ return static function (
     UserManager $userManager,
     UnitRepository $units,
     UnitManager $unitManager,
+    RoleRepository $roles,
+    RoleManager $roleManager,
 ): void {
     $basePath = $config->string('app.base_path');
     $requireAuth = new RequireAuth($auth, $basePath);
@@ -81,6 +85,7 @@ return static function (
             'basePath' => $config->string('app.base_path'),
             'canManageUsers' => $auth->can('users.manage'),
             'canManageUnits' => $auth->can('units.manage'),
+            'canManageRoles' => $auth->can('roles.manage'),
         ]);
     }, [$requireAuth, new RequirePermission($auth, 'dashboard.view')]);
 
@@ -152,4 +157,35 @@ return static function (
     };
     $router->post('/units', static fn (Request $request): Response => $saveUnit($request), $manageUnits);
     $router->post('/units/{id:\d+}', static fn (Request $request, array $params): Response => $saveUnit($request, (int) $params['id']), $manageUnits);
+
+    $manageRoles = [$requireAuth, new RequirePermission($auth, 'roles.manage')];
+
+    $router->get('/roles', static function () use ($view, $config, $roles, $session, $basePath): Response {
+        return $view->render('roles/index', ['title' => 'Perfis e permissões — ' . $config->string('app.name'), 'roles' => $roles->all(), 'message' => $session->get('roles.message'), 'error' => $session->get('roles.error'), 'basePath' => $basePath]);
+    }, $manageRoles);
+
+    $roleForm = static function (?int $id = null) use ($view, $config, $roles, $session, $csrf, $basePath): Response {
+        $role = $id === null ? null : $roles->find($id);
+        if ($id !== null && $role === null) return Response::text("Perfil não encontrado.\n", 404);
+        return $view->render('roles/form', ['title' => ($id === null ? 'Novo perfil' : 'Editar perfil') . ' — ' . $config->string('app.name'), 'role' => $role, 'permissions' => $roles->permissions(), 'selectedPermissions' => $id === null ? [] : $roles->permissionIds($id), 'error' => $session->get('roles.error'), 'csrfField' => $csrf->field(), 'basePath' => $basePath]);
+    };
+    $router->get('/roles/create', static fn (): Response => $roleForm(), $manageRoles);
+    $router->get('/roles/{id:\d+}/edit', static fn (Request $request, array $params): Response => $roleForm((int) $params['id']), $manageRoles);
+
+    $saveRole = static function (Request $request, ?int $id = null) use ($validator, $roleManager, $session, $basePath, $ids): Response {
+        $result = $validator->validate($request->inputData(), ['name' => 'required|string|min:2|max:120'], ['name' => 'nome']);
+        try {
+            if ($result->fails()) throw new RuntimeException(implode(' ', array_map(static fn (array $errors): string => $errors[0], $result->errors())));
+            $name = (string) $result->value('name'); $permissions = $ids($request->input('permissions'));
+            if ($id === null) $roleManager->create($name, $permissions);
+            else $roleManager->update($id, $name, $permissions);
+            $session->flash('roles.message', $id === null ? 'Perfil criado.' : 'Perfil atualizado.');
+            return Response::redirect($basePath . '/roles');
+        } catch (Throwable $exception) {
+            $session->flash('roles.error', $exception->getMessage());
+            return Response::redirect($basePath . ($id === null ? '/roles/create' : "/roles/{$id}/edit"));
+        }
+    };
+    $router->post('/roles', static fn (Request $request): Response => $saveRole($request), $manageRoles);
+    $router->post('/roles/{id:\d+}', static fn (Request $request, array $params): Response => $saveRole($request, (int) $params['id']), $manageRoles);
 };

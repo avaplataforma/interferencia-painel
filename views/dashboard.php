@@ -9,6 +9,7 @@ declare(strict_types=1);
 /** @var string $basePath */
 /** @var bool $canManageUsers */
 /** @var bool $canManageUnits */
+/** @var bool $canManageRoles */
 ?>
 <span class="status">Sessão autenticada</span>
 <h1>Olá, <?= $escape($user->name) ?></h1>
@@ -19,6 +20,7 @@ declare(strict_types=1);
 </dl>
 <?php if ($canManageUsers): ?><p><a href="<?= $escape($basePath) ?>/users">Gerenciar usuários</a></p><?php endif; ?>
 <?php if ($canManageUnits): ?><p><a href="<?= $escape($basePath) ?>/units">Gerenciar unidades</a></p><?php endif; ?>
+<?php if ($canManageRoles): ?><p><a href="<?= $escape($basePath) ?>/roles">Gerenciar perfis e permissões</a></p><?php endif; ?>
 <form method="post" action="<?= $escape($basePath) ?>/logout">
   <?= $csrfField ?>
   <button type="submit">Sair</button>

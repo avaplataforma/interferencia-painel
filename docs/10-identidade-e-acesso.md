@@ -48,7 +48,10 @@ mensagem de chat.
   desativar unidades. O código interno é permanente, e novas unidades são
   vinculadas automaticamente aos usuários com acesso global.
 - O sistema impede desativar ou remover o papel do último administrador global.
-- Ainda não há editor da composição interna de cada papel.
+- Administradores com `roles.manage` podem criar perfis e editar sua composição
+  de permissões; alterações afetam imediatamente todos os usuários vinculados.
+- O Administrador global conserva todas as permissões para impedir bloqueio
+  acidental da administração do sistema.
 - Recuperação de senha e segundo fator serão especificados separadamente.
 - Limitação atual é por conta; limitação adicional por origem será adicionada
   antes de expor autenticação a uma operação de maior escala.
