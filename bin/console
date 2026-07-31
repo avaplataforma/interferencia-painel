@@ -55,12 +55,6 @@ TEXT);
             throw new RuntimeException('Uso: php bin/console user:create-admin "Nome" email@dominio.com');
         }
 
-        $users = new UserRepository($connection->pdo());
-
-        if ($users->findByEmail($email) !== null) {
-            throw new RuntimeException('Já existe um usuário com esse e-mail.');
-        }
-
         $password = readHidden('Senha (mínimo 12 caracteres): ');
         $confirmation = readHidden('Confirme a senha: ');
 
@@ -72,8 +66,19 @@ TEXT);
             throw new RuntimeException('A confirmação da senha não confere.');
         }
 
-        $id = $users->createAdministrator($name, $email, (new PasswordHasher())->hash($password));
+        $passwordHash = (new PasswordHasher())->hash($password);
         unset($password, $confirmation);
+
+        // Abra a conexão somente depois da interação e do Argon2id. Alguns
+        // ambientes encerram conexões ociosas enquanto o terminal aguarda.
+        $users = new UserRepository($connection->pdo());
+
+        if ($users->findByEmail($email) !== null) {
+            throw new RuntimeException('Já existe um usuário com esse e-mail.');
+        }
+
+        $id = $users->createAdministrator($name, $email, $passwordHash);
+        unset($passwordHash);
         fwrite(STDOUT, sprintf("Administrador criado com ID %d.\n", $id));
         exit(0);
     }
