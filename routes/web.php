@@ -39,21 +39,22 @@ return static function (
     UnitContext $unitContext,
 ): void {
     $basePath = $config->string('app.base_path');
+    $browserTitle = $config->string('app.browser_title');
     $requireAuth = new RequireAuth($auth, $basePath);
     $requireGuest = new RequireGuest($auth, $basePath);
 
-    $router->get('/status', static function () use ($config, $view): Response {
+    $router->get('/status', static function () use ($config, $view, $browserTitle): Response {
         return $view->render('status', [
-            'title' => $config->string('app.name'),
+            'title' => $browserTitle,
             'name' => $config->string('app.name'),
             'environment' => $config->string('app.environment'),
             'basePath' => $config->string('app.base_path'),
         ]);
     });
 
-    $router->get('/login', static function () use ($config, $view, $session, $csrf): Response {
+    $router->get('/login', static function () use ($view, $session, $csrf, $browserTitle): Response {
         return $view->render('auth/login', [
-            'title' => 'Entrar — ' . $config->string('app.name'),
+            'title' => 'Entrar — ' . $browserTitle,
             'csrfField' => $csrf->field(),
             'error' => $session->get('auth.error'),
             'email' => (string) $session->get('auth.email', ''),
@@ -78,9 +79,9 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function () use ($auth, $config, $view, $csrf, $session): Response {
+    $router->get('/', static function () use ($auth, $view, $csrf, $session, $browserTitle): Response {
         return $view->render('dashboard', [
-            'title' => $config->string('app.name'),
+            'title' => $browserTitle,
             'user' => $auth->user(),
             'unitScopes' => $auth->unitScopes(),
             'csrfField' => $csrf->field(),
