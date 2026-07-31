@@ -85,6 +85,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     main a { color: var(--inter-accent-dark); font-weight: 600; }
     main > form:not(.unit-switcher) { max-width: 46rem; }
     main label { display: block; margin-top: 1rem; font-weight: 650; }
+    main input, main select, main textarea, .tag-dropdown > summary { font-weight: 400; }
     main input:not([type=checkbox]) { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; border: 1px solid #bcc6ce; border-radius: .55rem; }
     main textarea { box-sizing: border-box; width: 100%; margin-top: .4rem; padding: .75rem; border: 1px solid #bcc6ce; border-radius: .55rem; font: inherit; }
     main button { margin-top: 1.25rem; padding: .75rem 1rem; border: 0; border-radius: .55rem; background: var(--inter-accent); color: #fff; font-weight: 700; }
