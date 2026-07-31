@@ -4,14 +4,11 @@ declare(strict_types=1);
 $editing=$contact!==null;
 $registered=$editing?date('Y-m-d\TH:i',strtotime((string)$contact['registered_at'])):date('Y-m-d\TH:i');
 $selectedStatusId=(int)($contact['status_id']??($statuses[0]['id']??0));
-$selectedStatusName='Selecionar status';
-$selectedStatusColor='#64748b';
-foreach($statuses as $statusOption){if((int)$statusOption['id']===$selectedStatusId){$selectedStatusName=(string)$statusOption['name'];$selectedStatusColor=(string)$statusOption['color'];break;}}
 ?>
 <span class="status">CRM · <?= $escape($unit['name']) ?></span><h1><?= $editing?'Editar contato':'Novo contato' ?></h1>
 <?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
 <form method="post" action="<?= $escape($basePath) ?>/crm/contacts<?= $editing?'/'.$escape($contact['id']):'' ?>" novalidate><?= $csrfField ?>
-<div class="row"><div class="col-sm-6"><label>Status</label><details class="tag-dropdown"><summary><span class="tag-badge" style="--tag-color:<?= $escape($selectedStatusColor) ?>"><?= $escape($selectedStatusName) ?></span></summary><div class="tag-dropdown-menu"><?php foreach($statuses as $statusOption):?><label><input type="radio" name="status_id" value="<?= $escape($statusOption['id']) ?>" <?= $selectedStatusId===(int)$statusOption['id']?'checked':'' ?> required><span class="tag-badge" style="--tag-color:<?= $escape($statusOption['color']) ?>"><?= $escape($statusOption['name']) ?></span></label><?php endforeach;?></div></details></div>
+<div class="row"><div class="col-sm-6"><label>Status</label><details class="tag-dropdown"><summary>Selecionar status</summary><div class="tag-dropdown-menu status-options"><?php foreach($statuses as $statusOption):?><label><input type="radio" name="status_id" value="<?= $escape($statusOption['id']) ?>" <?= $selectedStatusId===(int)$statusOption['id']?'checked':'' ?> required><span class="tag-badge" style="--tag-color:<?= $escape($statusOption['color']) ?>"><?= $escape($statusOption['name']) ?></span></label><?php endforeach;?></div></details></div>
 <div class="col-sm-6"><label>Etiquetas</label><details class="tag-dropdown"><summary><?= $selectedTags===[]?'Selecionar etiquetas':$escape(count($selectedTags).' etiqueta(s) selecionada(s)') ?></summary><div class="tag-dropdown-menu"><?php if($tags===[]):?><p class="meta">Nenhuma etiqueta disponível.</p><?php endif;?><?php foreach($tags as $tag):?><label><input type="checkbox" name="tags[]" value="<?= $escape($tag['id']) ?>" <?= in_array((int)$tag['id'],$selectedTags,true)?'checked':'' ?>><span class="tag-badge" style="--tag-color:<?= $escape($tag['color']) ?>"><?= $escape($tag['name']) ?></span></label><?php endforeach;?></div></details></div></div>
 <label>Nome<input name="name" required maxlength="160" value="<?= $escape($contact['name']??'') ?>"></label>
 <div class="row"><div class="col-sm-6"><label>Telefone/WhatsApp<input name="phone" maxlength="32" value="<?= $escape($contact['phone']??'') ?>"></label></div><div class="col-sm-6"><label>E-mail<input name="email" type="email" maxlength="190" value="<?= $escape($contact['email']??'') ?>"></label></div></div>
