@@ -18,8 +18,8 @@ final readonly class ContactManager
         $statusId = (int) ($data['status_id'] ?? 0);
         if (!$this->contacts->statusExists($statusId)) throw new RuntimeException('Selecione um status válido.');
         $responsible = (int) ($data['responsible_user_id'] ?? 0);
-        if ($responsible <= 0) throw new RuntimeException('Selecione um responsável.');
-        if ($responsible > 0 && !$this->contacts->userBelongsToUnit($responsible, $unitId)) throw new RuntimeException('Responsável indisponível nesta unidade.');
+        if ($responsible <= 0) throw new RuntimeException('Selecione um atendente.');
+        if ($responsible > 0 && !$this->contacts->userBelongsToUnit($responsible, $unitId)) throw new RuntimeException('Atendente indisponível nesta unidade.');
         $score = ($data['interest_score'] ?? '') === '' ? null : (int) $data['interest_score'];
         if ($score === null) throw new RuntimeException('Informe o interesse do contato.');
         if ($score !== null && ($score < 0 || $score > 10)) throw new RuntimeException('O interesse deve estar entre 0 e 10.');
