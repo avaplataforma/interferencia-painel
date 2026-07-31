@@ -12,6 +12,8 @@ $authenticated = ($currentUser ?? null) !== null;
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title><?= $escape($title) ?></title>
+  <link rel="icon" type="image/png" href="<?= $escape($basePath) ?>/assets/brand/favicon.png">
+  <link rel="apple-touch-icon" href="<?= $escape($basePath) ?>/assets/brand/favicon.png">
   <link href="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -47,7 +49,8 @@ $authenticated = ($currentUser ?? null) !== null;
     .min-width-0 { min-width: 0; }
     .sidebar { width: 17rem; background: #fff; border-right: 1px solid #e2e8ec; }
     .brand { color: var(--inter-ink); text-decoration: none; font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; }
-    .brand-mark { display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .7rem; background: var(--inter-accent); color: #fff; }
+    .brand-logo { display: block; width: 2.35rem; height: 2.35rem; border-radius: 50%; object-fit: cover; }
+    .login-logo { display: block; width: 6rem; height: 6rem; margin: 0 auto 1.25rem; border-radius: 50%; object-fit: cover; }
     .sidebar .nav, .mobile-menu .nav { display: flex; flex-direction: column; width: 100%; }
     .sidebar a.nav-link, .mobile-menu a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
     .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .mobile-menu a.nav-link:hover, .mobile-menu a.nav-link:focus { color: var(--inter-accent-dark); background: #fff0f1; text-decoration: none; }
@@ -84,7 +87,7 @@ $authenticated = ($currentUser ?? null) !== null;
 <?php else: ?>
   <div class="app-shell d-flex">
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
-      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><span class="brand-mark">📊</span><span>PAINEL INTER</span></a>
+      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/brand/logo.png" alt=""><span>PAINEL INTER</span></a>
       <nav class="nav flex-column gap-1">
         <a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a>
         <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?>

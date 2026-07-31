@@ -9,6 +9,9 @@ depender de um framework JavaScript de página única.
 A base visual utiliza Bootstrap 5.3.8 armazenado em `public/assets/vendor`, sem
 dependência de CDN em produção, além de um tema complementar próprio.
 
+A marca fornecida pela empresa é exibida na autenticação e na navegação interna,
+e também é usada como favicon e ícone para atalhos em dispositivos móveis.
+
 ## Estrutura prevista
 
 - [x] Cabeçalho com identidade, contexto da unidade e conta do usuário.
