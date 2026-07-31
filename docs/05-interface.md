@@ -12,6 +12,11 @@ dependência de CDN em produção, além de um tema complementar próprio.
 A marca fornecida pela empresa é exibida na autenticação e na navegação interna,
 e também é usada como favicon e ícone para atalhos em dispositivos móveis.
 
+A política de segurança de conteúdo permite imagens, estilos, fontes, scripts e
+conexões somente da própria aplicação; imagens `data:` são aceitas para ícones
+gerados localmente. Objetos incorporados e enquadramento por terceiros continuam
+bloqueados.
+
 ## Estrutura prevista
 
 - [x] Cabeçalho com identidade, contexto da unidade e conta do usuário.
