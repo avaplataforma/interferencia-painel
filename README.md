@@ -46,7 +46,8 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Documentação inicial
 - [x] Preparação para Git e Composer
 - [x] Bootstrap, configuração, logs e tratamento de erros
-- [ ] Roteador e camada HTTP completos
+- [x] Requisição, resposta, roteador e templates iniciais
+- [ ] Banco de dados e migrações
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 

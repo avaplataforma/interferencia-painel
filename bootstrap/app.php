@@ -7,6 +7,8 @@ use Interferencia\Kernel\Config\Config;
 use Interferencia\Kernel\Environment\Environment;
 use Interferencia\Kernel\Error\ErrorHandler;
 use Interferencia\Kernel\Log\JsonLogger;
+use Interferencia\Kernel\Http\Router;
+use Interferencia\Kernel\View\View;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -37,5 +39,9 @@ $logger = new JsonLogger(
 $errorHandler = new ErrorHandler($logger, $config->bool('app.debug'));
 $errorHandler->register();
 
-return new Application($config, $logger);
+$router = new Router($config->string('app.base_path'));
+$view = new View($rootPath . '/views');
+$registerRoutes = require $rootPath . '/routes/web.php';
+$registerRoutes($router, $config, $view);
 
+return new Application($router);

@@ -53,6 +53,7 @@ Quando dependências externas forem adicionadas, o projeto deverá versionar
 - `/painel/` exibe o estado da fundação.
 - `/painel/status` responde pela mesma aplicação.
 - Rotas inexistentes retornam `404`.
+- Métodos não aceitos em rotas existentes retornam `405` e o cabeçalho `Allow`.
 - Respostas incluem `X-Request-ID` para correlação com logs.
 - Logs ficam em `storage/logs/` e nunca dentro da raiz pública.
 
@@ -61,4 +62,3 @@ Quando dependências externas forem adicionadas, o projeto deverá versionar
 Antes de atualizar, registre o commit ativo. Em uma emergência, retorne ao commit
 anterior aprovado e regenere o autoload. Não use `git reset --hard` em um
 diretório com mudanças não investigadas.
-

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use Interferencia\Kernel\Config\Config;
 use Interferencia\Kernel\Environment\Environment;
+use Interferencia\Kernel\Http\Request;
+use Interferencia\Kernel\Http\Response;
+use Interferencia\Kernel\Http\Router;
 use Interferencia\Kernel\Log\JsonLogger;
 
 $rootPath = dirname(__DIR__);
@@ -70,6 +73,38 @@ $tests['grava JSON e remove segredos do contexto'] = static function (): void {
     }
 };
 
+$tests['roteia dentro do prefixo e captura parâmetros restritos'] = static function (): void {
+    $router = new Router('/painel');
+    $router->get(
+        '/unidades/{id:\d+}',
+        static fn (Request $request, array $parameters): Response => Response::text($parameters['id']),
+    );
+
+    $response = $router->dispatch(new Request('GET', '/painel/unidades/42/'));
+    assertSame(200, $response->status());
+    assertSame('42', $response->body());
+
+    assertSame(404, $router->dispatch(new Request('GET', '/painel/unidades/abc'))->status());
+    assertSame(404, $router->dispatch(new Request('GET', '/outro/unidades/42'))->status());
+};
+
+$tests['diferencia método não permitido de rota inexistente'] = static function (): void {
+    $router = new Router('/painel');
+    $router->get('/status', static fn (): Response => Response::text('ok'));
+
+    $notAllowed = $router->dispatch(new Request('POST', '/painel/status'));
+    assertSame(405, $notAllowed->status());
+    assertSame('GET, HEAD', $notAllowed->header('Allow'));
+    assertSame(404, $router->dispatch(new Request('GET', '/painel/ausente'))->status());
+};
+
+$tests['aceita HEAD em rota GET'] = static function (): void {
+    $router = new Router('/painel');
+    $router->get('/status', static fn (): Response => Response::text('ok'));
+
+    assertSame(200, $router->dispatch(new Request('HEAD', '/painel/status'))->status());
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
@@ -102,4 +137,3 @@ function assertTrue(bool $condition, string $message): void
         throw new RuntimeException($message);
     }
 }
-

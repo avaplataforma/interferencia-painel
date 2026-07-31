@@ -41,6 +41,16 @@ MariaDB / storage/   Persistência controlada
 5. A resposta é renderizada como HTML ou serializada como JSON.
 6. Eventos relevantes são registrados de modo estruturado e auditável.
 
+## Camada HTTP implementada
+
+- `Request` normaliza método, caminho, query, cabeçalhos e corpo.
+- `Router` remove o prefixo configurado, aceita parâmetros com restrições e
+  distingue rotas ausentes (`404`) de métodos não permitidos (`405`).
+- Rotas `GET` respondem também a `HEAD` conforme a semântica HTTP.
+- `Response` centraliza status, cabeçalhos e corpo.
+- `View` renderiza templates PHP com escape HTML explícito e layout comum.
+- As rotas da interface ficam declaradas em `routes/web.php`.
+
 ## Limites do kernel
 
 O kernel poderá fornecer configuração, contêiner, roteamento, HTTP, sessão,
