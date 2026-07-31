@@ -3,7 +3,7 @@
 O roadmap orienta a ordem de construção, mas cada fase deverá ganhar critérios
 de aceite e estimativas antes de começar.
 
-## Sprint 0 — Fundação (atual)
+## Sprint 0 — Fundação (concluída)
 
 - Estrutura inicial do repositório.
 - Documentação do produto e arquitetura.
@@ -13,13 +13,14 @@ de aceite e estimativas antes de começar.
 **Saída:** repositório compreensível e pronto para iniciar o kernel, sem módulos
 de negócio.
 
-## Fase 1 — Kernel
+## Fase 1 — Kernel (atual)
 
-- Inicialização, configuração e tratamento de erros.
-- Roteamento, requisição, resposta e templates.
-- Conexão com banco e executor de migrações.
-- Sessões, logs, validação e proteção CSRF.
-- Ambiente de testes e qualidade automatizada.
+- [x] Inicialização, configuração, tratamento de erros e logs.
+- [x] Página de estado da fundação.
+- [ ] Roteamento, requisição, resposta e templates.
+- [ ] Conexão com banco e executor de migrações.
+- [ ] Sessões, validação e proteção CSRF.
+- [x] Executor inicial de testes; ferramentas adicionais de qualidade pendentes.
 
 ## Fase 2 — Identidade e acesso
 
@@ -56,4 +57,3 @@ de negócio.
 
 Uma fase só é concluída com documentação atualizada, testes proporcionais ao
 risco, migrações revisadas, critérios de aceite atendidos e plano de rollback.
-

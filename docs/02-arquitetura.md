@@ -70,9 +70,9 @@ deve conhecer conceitos como lead, conversa, campanha ou unidade comercial.
 
 ## Decisões pendentes
 
-- Servidor web (Nginx ou Apache) e processo PHP.
+- Ambiente confirmado: Cloudflare, Nginx, Apache e PHP-FPM gerenciados pelo
+  HestiaCP; detalhes em `09-operacao-e-deploy.md`.
 - Biblioteca de testes e análise estática.
 - Política de filas e execução assíncrona.
 - Estratégia de deploy, rollback, backup e monitoramento.
 - Modelo final de autorização e isolamento entre unidades.
-

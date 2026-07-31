@@ -33,7 +33,7 @@ tests/      testes automatizados
 
 1. Instale PHP 8.3, Composer e MariaDB.
 2. Copie `.env.example` para `.env` e preencha apenas valores locais.
-3. Execute `composer install` quando as primeiras dependências forem definidas.
+3. Execute `composer dump-autoload` para gerar o autoload.
 4. Aponte a raiz pública do servidor para `public/`.
 
 O arquivo `.env` e o conteúdo gerado em `storage/` não devem ser versionados.
@@ -45,7 +45,17 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Fundação de diretórios
 - [x] Documentação inicial
 - [x] Preparação para Git e Composer
-- [ ] Kernel
+- [x] Bootstrap, configuração, logs e tratamento de erros
+- [ ] Roteador e camada HTTP completos
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 
+## Verificação
+
+```bash
+composer dump-autoload
+composer check
+```
+
+O procedimento de produção está em
+[docs/09-operacao-e-deploy.md](docs/09-operacao-e-deploy.md).

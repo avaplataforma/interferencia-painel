@@ -24,8 +24,7 @@
   },
   "scripts": {
     "check": [
-      "@php -l public/index.php"
+      "@php tests/run.php"
     ]
   }
 }
-
