@@ -52,13 +52,13 @@ return static function (
         ]);
     });
 
-    $router->get('/login', static function () use ($view, $session, $csrf, $browserTitle): Response {
+    $router->get('/login', static function () use ($view, $session, $csrf, $browserTitle, $basePath): Response {
         return $view->render('auth/login', [
             'title' => 'Entrar — ' . $browserTitle,
             'csrfField' => $csrf->field(),
             'error' => $session->get('auth.error'),
             'email' => (string) $session->get('auth.email', ''),
-            'basePath' => $config->string('app.base_path'),
+            'basePath' => $basePath,
         ]);
     }, [$requireGuest]);
 
@@ -79,13 +79,13 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function () use ($auth, $view, $csrf, $session, $browserTitle): Response {
+    $router->get('/', static function () use ($auth, $view, $csrf, $session, $browserTitle, $basePath): Response {
         return $view->render('dashboard', [
             'title' => $browserTitle,
             'user' => $auth->user(),
             'unitScopes' => $auth->unitScopes(),
             'csrfField' => $csrf->field(),
-            'basePath' => $config->string('app.base_path'),
+            'basePath' => $basePath,
             'canManageUsers' => $auth->can('users.manage'),
             'canManageUnits' => $auth->can('units.manage'),
             'canManageRoles' => $auth->can('roles.manage'),
