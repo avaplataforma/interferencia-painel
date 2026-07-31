@@ -19,25 +19,28 @@ final class Router
         $this->basePath = $normalized === '/' ? '' : $normalized;
     }
 
-    /** @param Closure(Request, array<string, string>): Response $handler */
-    public function get(string $path, Closure $handler): self
+    /** @param Closure(Request, array<string, string>): Response $handler
+     *  @param list<Middleware> $middleware
+     */
+    public function get(string $path, Closure $handler, array $middleware = []): self
     {
-        return $this->add(['GET'], $path, $handler);
+        return $this->add(['GET'], $path, $handler, $middleware);
     }
 
     /** @param Closure(Request, array<string, string>): Response $handler */
-    public function post(string $path, Closure $handler): self
+    public function post(string $path, Closure $handler, array $middleware = []): self
     {
-        return $this->add(['POST'], $path, $handler);
+        return $this->add(['POST'], $path, $handler, $middleware);
     }
 
     /**
      * @param list<string> $methods
      * @param Closure(Request, array<string, string>): Response $handler
+     * @param list<Middleware> $middleware
      */
-    public function add(array $methods, string $path, Closure $handler): self
+    public function add(array $methods, string $path, Closure $handler, array $middleware = []): self
     {
-        $this->routes[] = new Route($methods, $path, $handler);
+        $this->routes[] = new Route($methods, $path, $handler, $middleware);
 
         return $this;
     }

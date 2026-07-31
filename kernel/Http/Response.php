@@ -24,6 +24,11 @@ final class Response
         return new self($body, $status, ['Content-Type' => 'text/plain; charset=UTF-8']);
     }
 
+    public static function redirect(string $location, int $status = 302): self
+    {
+        return new self('', $status, ['Location' => $location]);
+    }
+
     public function status(): int
     {
         return $this->status;
@@ -66,4 +71,3 @@ final class Response
         }
     }
 }
-

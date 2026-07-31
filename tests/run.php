@@ -9,10 +9,12 @@ use Interferencia\Kernel\Environment\Environment;
 use Interferencia\Kernel\Http\Request;
 use Interferencia\Kernel\Http\Response;
 use Interferencia\Kernel\Http\Router;
+use Interferencia\Kernel\Http\Middleware;
 use Interferencia\Kernel\Log\JsonLogger;
 use Interferencia\Kernel\Security\Csrf;
 use Interferencia\Kernel\Session\Session;
 use Interferencia\Kernel\Validation\Validator;
+use Interferencia\Modules\Identity\PasswordHasher;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -233,6 +235,51 @@ $tests['informa erros de validação por campo'] = static function (): void {
     assertTrue($result->firstError('name') !== null, 'Nome deve possuir erro.');
     assertTrue($result->firstError('email') !== null, 'E-mail deve possuir erro.');
     assertTrue($result->firstError('role') !== null, 'Perfil deve possuir erro.');
+};
+
+$tests['carrega migração de identidade e acesso'] = static function () use ($rootPath): void {
+    $migrations = (new MigrationRepository($rootPath . '/database/migrations'))->all();
+
+    assertTrue(isset($migrations['20260731_210000_create_identity_and_access']));
+};
+
+$tests['gera e verifica senha com Argon2id'] = static function (): void {
+    $hasher = new PasswordHasher(['memory_cost' => 8192, 'time_cost' => 1, 'threads' => 1]);
+    $hash = $hasher->hash('uma-senha-de-teste-segura');
+
+    assertTrue(str_starts_with($hash, '$argon2id$'));
+    assertTrue($hasher->verify('uma-senha-de-teste-segura', $hash));
+    assertTrue(!$hasher->verify('senha-incorreta', $hash));
+};
+
+$tests['executa middleware antes do controlador'] = static function (): void {
+    $state = new class {
+        /** @var list<string> */
+        public array $events = [];
+    };
+    $middleware = new class ($state) implements Middleware {
+        public function __construct(private object $state) {}
+        public function handle(Request $request, Closure $next): Response
+        {
+            $this->state->events[] = 'middleware';
+            return $next($request);
+        }
+    };
+    $router = new Router('/painel');
+    $router->get('/', static function () use ($state): Response {
+        $state->events[] = 'controlador';
+        return Response::text('ok');
+    }, [$middleware]);
+
+    assertSame(200, $router->dispatch(new Request('GET', '/painel'))->status());
+    assertSame(['middleware', 'controlador'], $state->events);
+};
+
+$tests['cria redirecionamento HTTP'] = static function (): void {
+    $response = Response::redirect('/painel/login');
+
+    assertSame(302, $response->status());
+    assertSame('/painel/login', $response->header('Location'));
 };
 
 $failures = 0;

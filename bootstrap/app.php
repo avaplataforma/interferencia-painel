@@ -11,6 +11,11 @@ use Interferencia\Kernel\Http\Router;
 use Interferencia\Kernel\View\View;
 use Interferencia\Kernel\Session\Session;
 use Interferencia\Kernel\Security\Csrf;
+use Interferencia\Kernel\Database\Connection;
+use Interferencia\Kernel\Validation\Validator;
+use Interferencia\Modules\Identity\Auth;
+use Interferencia\Modules\Identity\PasswordHasher;
+use Interferencia\Modules\Identity\UserRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -58,9 +63,12 @@ $session = new Session(
 );
 $session->start();
 
-$router = new Router($config->string('app.base_path'), new Csrf($session));
+$csrf = new Csrf($session);
+$users = new UserRepository((new Connection($config))->pdo());
+$auth = new Auth($users, new PasswordHasher(), $session, $csrf);
+$router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth);
 
 return new Application($router);

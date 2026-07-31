@@ -49,7 +49,8 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Requisição, resposta, roteador e templates iniciais
 - [x] Conexão MariaDB e controle de migrações
 - [x] Sessões, mensagens flash, validação e proteção CSRF
-- [ ] Autenticação, usuários e permissões
+- [x] Login, logout, administrador inicial e autorização básica
+- [ ] Gestão de usuários, recuperação de senha e segundo fator
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 

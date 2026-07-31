@@ -24,9 +24,10 @@ de negócio.
 
 ## Fase 2 — Identidade e acesso
 
-- Usuários, autenticação e recuperação segura de acesso.
-- Papéis, permissões e escopo por unidade.
-- Auditoria de ações sensíveis e gestão de sessões.
+- [x] Usuários, login, logout e bloqueio inicial de tentativas.
+- [x] Papéis, permissões e escopo por unidade.
+- [ ] Gestão de usuários, recuperação segura e segundo fator.
+- [ ] Auditoria ampliada de ações sensíveis.
 
 ## Fase 3 — Unidades
 

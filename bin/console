@@ -7,6 +7,8 @@ use Interferencia\Kernel\Database\Connection;
 use Interferencia\Kernel\Database\MigrationRepository;
 use Interferencia\Kernel\Database\Migrator;
 use Interferencia\Kernel\Environment\Environment;
+use Interferencia\Modules\Identity\PasswordHasher;
+use Interferencia\Modules\Identity\UserRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -31,6 +33,7 @@ Comandos disponíveis:
   migrate:status     Lista migrações e seus estados
   migrate            Executa migrações pendentes
   migrate:rollback   Reverte o último lote de migrações
+  user:create-admin  Cria o primeiro administrador de forma interativa
 
 TEXT);
         exit(0);
@@ -41,6 +44,37 @@ TEXT);
     if ($command === 'db:check') {
         $info = $connection->check();
         fwrite(STDOUT, sprintf("Conexão OK\nBanco: %s\nServidor: %s\n", $info->database, $info->serverVersion));
+        exit(0);
+    }
+
+    if ($command === 'user:create-admin') {
+        $name = trim((string) ($argv[2] ?? ''));
+        $email = strtolower(trim((string) ($argv[3] ?? '')));
+
+        if ($name === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Uso: php bin/console user:create-admin "Nome" email@dominio.com');
+        }
+
+        $users = new UserRepository($connection->pdo());
+
+        if ($users->findByEmail($email) !== null) {
+            throw new RuntimeException('Já existe um usuário com esse e-mail.');
+        }
+
+        $password = readHidden('Senha (mínimo 12 caracteres): ');
+        $confirmation = readHidden('Confirme a senha: ');
+
+        if (strlen($password) < 12 || strlen($password) > 4096) {
+            throw new RuntimeException('A senha deve possuir entre 12 e 4096 caracteres.');
+        }
+
+        if (!hash_equals($password, $confirmation)) {
+            throw new RuntimeException('A confirmação da senha não confere.');
+        }
+
+        $id = $users->createAdministrator($name, $email, (new PasswordHasher())->hash($password));
+        unset($password, $confirmation);
+        fwrite(STDOUT, sprintf("Administrador criado com ID %d.\n", $id));
         exit(0);
     }
 
@@ -91,3 +125,26 @@ TEXT);
     exit(1);
 }
 
+function readHidden(string $prompt): string
+{
+    fwrite(STDOUT, $prompt);
+    $state = trim((string) shell_exec('stty -g'));
+
+    if ($state === '') {
+        throw new RuntimeException('Não foi possível preparar a leitura segura da senha.');
+    }
+
+    try {
+        system('stty -echo');
+        $value = fgets(STDIN);
+    } finally {
+        system('stty ' . escapeshellarg($state));
+        fwrite(STDOUT, PHP_EOL);
+    }
+
+    if (!is_string($value)) {
+        throw new RuntimeException('Não foi possível ler a senha.');
+    }
+
+    return rtrim($value, "\r\n");
+}

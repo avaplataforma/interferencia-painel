@@ -16,8 +16,9 @@ final readonly class Route
     /**
      * @param list<string> $methods
      * @param Closure(Request, array<string, string>): Response $handler
+     * @param list<Middleware> $middleware
      */
-    public function __construct(array $methods, string $path, private Closure $handler)
+    public function __construct(array $methods, string $path, private Closure $handler, private array $middleware = [])
     {
         $this->methods = array_values(array_unique(array_map('strtoupper', $methods)));
 
@@ -58,7 +59,13 @@ final readonly class Route
     /** @param array<string, string> $parameters */
     public function run(Request $request, array $parameters): Response
     {
-        return ($this->handler)($request, $parameters);
+        $next = fn (Request $request): Response => ($this->handler)($request, $parameters);
+
+        foreach (array_reverse($this->middleware) as $middleware) {
+            $next = fn (Request $request): Response => $middleware->handle($request, $next);
+        }
+
+        return $next($request);
     }
 
     private static function compilePattern(string $path): string
