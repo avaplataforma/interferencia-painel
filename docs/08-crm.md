@@ -80,3 +80,10 @@ exigindo uma unidade específica.
 Os status do CRM também são configuráveis. Administradores globais e gestores
 podem cadastrar nome, cor, ordem de exibição e situação pelo menu ADM. Apenas
 status ativos aparecem para seleção nos novos cadastros de contato.
+
+## Follow-up
+
+Cada contato pode possuir vários acompanhamentos com próxima ação, data e hora,
+atendente e observações. A agenda do CRM reúne os registros das unidades que o
+usuário pode acessar e permite acompanhar as situações pendente, concluída e
+cancelada. O histórico permanece vinculado ao contato.

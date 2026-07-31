@@ -26,6 +26,7 @@ use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
 use Interferencia\Modules\Crm\TagRepository;
 use Interferencia\Modules\Crm\StatusRepository;
+use Interferencia\Modules\Crm\FollowUpRepository;
 
 return static function (
     Router $router,
@@ -47,6 +48,7 @@ return static function (
     ExternalContactIntake $externalIntake,
     TagRepository $tags,
     StatusRepository $statuses,
+    FollowUpRepository $followUps,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -242,6 +244,14 @@ return static function (
     };
     $router->post('/crm/contacts',static fn(Request $request):Response=>$saveContact($request),$manageContacts);
     $router->post('/crm/contacts/{id:\d+}',static fn(Request $request,array $params):Response=>$saveContact($request,(int)$params['id']),$manageContacts);
+
+    $router->get('/crm/follow-ups',static function(Request $request)use($view,$followUps,$contactUnit,$unitContext,$session,$basePath,$browserTitle):Response{$unit=$contactUnit();if($unit===null)return Response::text("Nenhuma unidade ativa.\n",422);$unitIds=$unit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']];$status=(string)$request->queryValue('status','pending');return $view->render('crm/follow-ups/index',['title'=>'Follow-ups — '.$browserTitle,'followUps'=>$followUps->allForUnits($unitIds,$status),'selectedStatus'=>$status,'unit'=>$unit,'message'=>$session->get('followups.message'),'error'=>$session->get('followups.error'),'basePath'=>$basePath]);},$viewContacts);
+
+    $router->get('/crm/contacts/{id:\d+}/follow-ups/create',static function(Request $request,array $params)use($view,$contacts,$followUps,$contactUnit,$session,$csrf,$basePath,$browserTitle,$auth):Response{$unit=$contactUnit();if($unit===null||$unit['id']===null)return Response::text("Selecione uma unidade específica.\n",422);$contact=$contacts->find((int)$params['id'],(int)$unit['id']);if($contact===null)return Response::text("Contato não encontrado.\n",404);return $view->render('crm/follow-ups/form',['title'=>'Novo follow-up — '.$browserTitle,'contact'=>$contact,'unit'=>$unit,'responsibles'=>$contacts->users((int)$unit['id']),'selectedResponsibleId'=>$auth->user()->id,'history'=>$followUps->forContact((int)$contact['id'],(int)$unit['id']),'error'=>$session->get('followups.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$manageContacts);
+
+    $router->post('/crm/contacts/{id:\d+}/follow-ups',static function(Request $request,array $params)use($validator,$contacts,$followUps,$contactUnit,$auth,$session,$basePath):Response{$unit=$contactUnit();if($unit===null||$unit['id']===null)return Response::text("Selecione uma unidade específica.\n",422);$contactId=(int)$params['id'];if($contacts->find($contactId,(int)$unit['id'])===null)return Response::text("Contato não encontrado.\n",404);$result=$validator->validate($request->inputData(),['action'=>'required|string|min:2|max:160','scheduled_at'=>'required|string','responsible_user_id'=>'required|string','notes'=>'required|string|min:2|max:5000'],['action'=>'próxima ação','scheduled_at'=>'data e hora','responsible_user_id'=>'atendente','notes'=>'observações']);try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors())));$responsible=(int)$result->value('responsible_user_id');if(!$contacts->userBelongsToUnit($responsible,(int)$unit['id']))throw new RuntimeException('Atendente indisponível nesta unidade.');$scheduled=DateTimeImmutable::createFromFormat('Y-m-d\TH:i',(string)$result->value('scheduled_at'));if($scheduled===false)throw new RuntimeException('Informe uma data e hora válidas.');$followUps->create($contactId,$responsible,(string)$result->value('action'),$scheduled->format('Y-m-d H:i:s'),(string)$result->value('notes'),$auth->user()->id);$session->flash('followups.message','Follow-up criado.');return Response::redirect($basePath.'/crm/follow-ups');}catch(Throwable $exception){$session->flash('followups.error',$exception->getMessage());return Response::redirect($basePath."/crm/contacts/{$contactId}/follow-ups/create");}},$manageContacts);
+
+    $router->post('/crm/follow-ups/{id:\d+}/status',static function(Request $request,array $params)use($followUps,$contactUnit,$session,$basePath):Response{$unit=$contactUnit();if($unit===null||$unit['id']===null)return Response::text("Selecione uma unidade específica.\n",422);$status=(string)$request->input('status','');if(!in_array($status,['pending','completed','cancelled'],true)){$session->flash('followups.error','Situação inválida.');return Response::redirect($basePath.'/crm/follow-ups');}if(!$followUps->setStatus((int)$params['id'],(int)$unit['id'],$status))$session->flash('followups.error','Follow-up não encontrado nesta unidade.');else$session->flash('followups.message','Situação do follow-up atualizada.');return Response::redirect($basePath.'/crm/follow-ups');},$manageContacts);
 
     $manageTags=[$requireAuth,new RequirePermission($auth,'crm.tags.manage')];
     $router->get('/tags',static function()use($view,$tags,$session,$basePath,$browserTitle):Response{return $view->render('tags/index',['title'=>'Etiquetas — '.$browserTitle,'tags'=>$tags->all(),'message'=>$session->get('tags.message'),'error'=>$session->get('tags.error'),'basePath'=>$basePath]);},$manageTags);

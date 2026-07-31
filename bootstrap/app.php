@@ -27,6 +27,7 @@ use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
 use Interferencia\Modules\Crm\TagRepository;
 use Interferencia\Modules\Crm\StatusRepository;
+use Interferencia\Modules\Crm\FollowUpRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -82,6 +83,7 @@ $roles = new RoleRepository($database);
 $contacts = new ContactRepository($database);
 $tags = new TagRepository($database);
 $statuses = new StatusRepository($database);
+$followUps = new FollowUpRepository($database);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
@@ -103,6 +105,6 @@ $view->share([
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps);
 
 return new Application($router);

@@ -251,6 +251,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260731_260000_add_external_form_fields']));
     assertTrue(isset($migrations['20260731_270000_create_crm_tags']));
     assertTrue(isset($migrations['20260731_280000_add_crm_status_management']));
+    assertTrue(isset($migrations['20260731_290000_create_crm_follow_ups']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
@@ -264,6 +265,7 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\Crm\ExternalContactIntake::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\TagRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\StatusRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\Crm\FollowUpRepository::class));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {
