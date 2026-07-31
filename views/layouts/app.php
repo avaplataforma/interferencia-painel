@@ -37,9 +37,10 @@ $authenticated = ($currentUser ?? null) !== null;
     .card { background: #fff; border-radius: .8rem; } .card-body { padding: 1rem; } .h-100 { height: 100%; }
     .alert { padding: .8rem 1rem; margin-bottom: 1rem; border-radius: .55rem; }
     .alert-success { color: #176b3a; background: #eaf8ef; } .alert-danger { color: #8c2020; background: #fff0f0; }
-    .offcanvas { position: fixed; z-index: 1050; inset: 0 auto 0 0; width: min(20rem, 88vw); padding: 1rem; background: #fff; box-shadow: .5rem 0 2rem rgb(0 0 0 / 16%); transform: translateX(-105%); transition: transform .2s ease; }
-    .offcanvas.show { transform: translateX(0); } .offcanvas-header { display: flex; justify-content: space-between; align-items: center; } .offcanvas-body { padding-top: 1rem; }
-    .offcanvas-title { margin: 0; } .btn-close { width: 2rem; height: 2rem; border: 0; background: transparent; font-size: 1.4rem; cursor: pointer; }
+    .mobile-menu { position: relative; }
+    .mobile-menu summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #aeb8c1; border-radius: .45rem; background: #fff; color: #536170; cursor: pointer; list-style: none; font-size: 1.2rem; }
+    .mobile-menu summary::-webkit-details-marker { display: none; }
+    .mobile-menu-panel { position: absolute; z-index: 1060; top: calc(100% + .7rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: .75rem; background: #fff; border: 1px solid #dfe5e9; border-radius: .75rem; box-shadow: 0 1rem 2.5rem rgb(23 33 43 / 16%); }
     :root { --inter-green: #087443; --inter-green-dark: #075c37; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
     body { background: var(--inter-bg); color: var(--inter-ink); }
     .app-shell { min-height: 100vh; }
@@ -47,9 +48,9 @@ $authenticated = ($currentUser ?? null) !== null;
     .sidebar { width: 17rem; background: #fff; border-right: 1px solid #e2e8ec; }
     .brand { color: var(--inter-ink); text-decoration: none; font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; }
     .brand-mark { display: inline-grid; place-items: center; width: 2.2rem; height: 2.2rem; border-radius: .7rem; background: var(--inter-green); color: #fff; }
-    .sidebar .nav, .offcanvas .nav { display: flex; flex-direction: column; width: 100%; }
-    .sidebar a.nav-link, .offcanvas a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
-    .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .offcanvas a.nav-link:hover, .offcanvas a.nav-link:focus { color: var(--inter-green-dark); background: #eaf7f0; text-decoration: none; }
+    .sidebar .nav, .mobile-menu .nav { display: flex; flex-direction: column; width: 100%; }
+    .sidebar a.nav-link, .mobile-menu a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
+    .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .mobile-menu a.nav-link:hover, .mobile-menu a.nav-link:focus { color: var(--inter-green-dark); background: #eaf7f0; text-decoration: none; }
     .topbar { position: sticky; z-index: 1020; top: 0; min-height: 4.5rem; background: rgb(255 255 255 / 92%); border-bottom: 1px solid #e2e8ec; backdrop-filter: blur(8px); }
     .content-wrap { max-width: 80rem; margin-inline: auto; padding: 2rem; }
     .quick-link { display: flex; flex-direction: column; gap: .35rem; height: 100%; padding: 1.1rem; color: var(--inter-ink); text-decoration: none; background: #fff; border: 1px solid #e1e7eb; border-radius: .8rem; }
@@ -93,14 +94,14 @@ $authenticated = ($currentUser ?? null) !== null;
     </aside>
     <div class="flex-grow-1 min-width-0">
       <header class="topbar sticky-top d-flex align-items-center px-3 px-lg-4 gap-3">
-        <button class="btn btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-label="Abrir menu">☰</button>
+        <details class="mobile-menu d-lg-none"><summary aria-label="Abrir menu">☰</summary><div class="mobile-menu-panel"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div></details>
         <form class="unit-switcher d-flex align-items-center gap-2 me-auto" method="post" action="<?= $escape($basePath) ?>/context/unit">
           <?= $csrfField ?>
           <label class="visually-hidden" for="active-unit">Unidade ativa</label>
-          <select class="form-select form-select-sm" id="active-unit" name="unit_code" onchange="this.form.submit()" aria-label="Unidade ativa">
+          <select class="form-select form-select-sm" id="active-unit" name="unit_code" aria-label="Unidade ativa">
             <?php foreach ($availableUnits as $unit): ?><option value="<?= $escape($unit['code']) ?>" <?= ($currentUnit['code'] ?? null) === $unit['code'] ? 'selected' : '' ?>><?= $escape($unit['name']) ?></option><?php endforeach; ?>
           </select>
-          <noscript><button class="btn btn-sm btn-success m-0" type="submit">Alterar</button></noscript>
+          <button class="btn btn-sm btn-success m-0" type="submit">Aplicar</button>
         </form>
         <div class="d-none d-sm-block text-end"><strong><?= $escape($currentUser->name) ?></strong><div class="meta"><?= $escape($currentUser->email) ?></div></div>
         <form method="post" action="<?= $escape($basePath) ?>/logout"><?= $csrfField ?><button class="btn btn-sm btn-outline-secondary m-0" type="submit">Sair</button></form>
@@ -108,22 +109,7 @@ $authenticated = ($currentUser ?? null) !== null;
       <main class="content-wrap"><?= $content ?></main>
     </div>
   </div>
-  <div class="offcanvas offcanvas-start" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
-    <div class="offcanvas-header"><h2 class="offcanvas-title h5" id="mobileMenuLabel">PAINEL INTER 📊</h2><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Fechar"></button></div>
-    <div class="offcanvas-body"><nav class="nav flex-column gap-1"><a class="nav-link" href="<?= $escape($basePath) ?>/">Visão geral</a><?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users">Usuários</a><?php endif; ?><?php if ($navigation['units'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/units">Unidades</a><?php endif; ?><?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles">Perfis e permissões</a><?php endif; ?></nav></div>
-  </div>
 <?php endif; ?>
 <script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-<script>
-if (typeof window.bootstrap === 'undefined') {
-  document.querySelectorAll('[data-bs-toggle="offcanvas"]').forEach(function (button) {
-    button.addEventListener('click', function () { document.querySelector(button.getAttribute('data-bs-target'))?.classList.add('show'); });
-  });
-  document.querySelectorAll('[data-bs-dismiss="offcanvas"]').forEach(function (button) {
-    button.textContent = '×';
-    button.addEventListener('click', function () { button.closest('.offcanvas')?.classList.remove('show'); });
-  });
-}
-</script>
 </body>
 </html>
