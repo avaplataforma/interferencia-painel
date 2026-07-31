@@ -18,7 +18,7 @@ final readonly class Route
      * @param Closure(Request, array<string, string>): Response $handler
      * @param list<Middleware> $middleware
      */
-    public function __construct(array $methods, string $path, private Closure $handler, private array $middleware = [])
+    public function __construct(array $methods, string $path, private Closure $handler, private array $middleware = [], private bool $csrfProtected = true)
     {
         $this->methods = array_values(array_unique(array_map('strtoupper', $methods)));
 
@@ -28,6 +28,8 @@ final readonly class Route
 
         $this->pattern = self::compilePattern($path);
     }
+
+    public function requiresCsrf(): bool { return $this->csrfProtected; }
 
     public function allows(string $method): bool
     {

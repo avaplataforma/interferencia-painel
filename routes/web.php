@@ -23,6 +23,7 @@ use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
+use Interferencia\Modules\Crm\ExternalContactIntake;
 
 return static function (
     Router $router,
@@ -41,6 +42,7 @@ return static function (
     UnitContext $unitContext,
     ContactRepository $contacts,
     ContactManager $contactManager,
+    ExternalContactIntake $externalIntake,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -212,14 +214,15 @@ return static function (
     $manageContacts = [$requireAuth, new RequirePermission($auth, 'crm.contacts.manage')];
     $contactUnit = static fn (): ?array => $unitContext->current();
 
-    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $contactUnit, $session, $basePath, $browserTitle): Response {
+    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
         $unit = $contactUnit(); if ($unit === null) return Response::text("Nenhuma unidade ativa.\n", 422);
         $search = trim((string) $request->queryValue('q', ''));
-        return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$contacts->all((int)$unit['id'], $search), 'search'=>$search, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
+        $items=$unit['id']===null?$contacts->allForUnits(array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()),$search):$contacts->all((int)$unit['id'],$search);
+        return $view->render('crm/contacts/index', ['title'=>'Contatos — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
     }, $viewContacts);
 
     $contactForm = static function (?int $id=null) use ($view,$contacts,$contactUnit,$session,$csrf,$basePath,$browserTitle): Response {
-        $unit=$contactUnit(); if ($unit===null) return Response::text("Nenhuma unidade ativa.\n",422);
+        $unit=$contactUnit(); if ($unit===null||$unit['id']===null) return Response::text("Selecione uma unidade específica para cadastrar ou editar contatos.\n",422);
         $contact=$id===null?null:$contacts->find($id,(int)$unit['id']); if ($id!==null&&$contact===null) return Response::text("Contato não encontrado.\n",404);
         return $view->render('crm/contacts/form',['title'=>($id===null?'Novo contato':'Editar contato').' — '.$browserTitle,'contact'=>$contact,'unit'=>$unit,'statuses'=>$contacts->statuses(),'responsibles'=>$contacts->users((int)$unit['id']),'error'=>$session->get('contacts.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
     };
@@ -227,11 +230,17 @@ return static function (
     $router->get('/crm/contacts/{id:\d+}/edit',static fn(Request $request,array $params):Response=>$contactForm((int)$params['id']),$manageContacts);
 
     $saveContact=static function(Request $request,?int $id=null) use($validator,$contactManager,$contactUnit,$auth,$session,$basePath):Response {
-        $unit=$contactUnit(); if($unit===null)return Response::text("Nenhuma unidade ativa.\n",422);
+        $unit=$contactUnit(); if($unit===null||$unit['id']===null)return Response::text("Selecione uma unidade específica.\n",422);
         $result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:160','email'=>'nullable|string|email|max:190','phone'=>'nullable|string|max:32','course'=>'nullable|string|max:160','origin_city'=>'nullable|string|max:120','document'=>'nullable|string|max:24','notes'=>'nullable|string|max:5000'],['name'=>'nome','email'=>'e-mail','phone'=>'telefone','course'=>'curso','origin_city'=>'polo','document'=>'documento','notes'=>'observações']);
         try { if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors()))); $data=$request->inputData(); foreach($result->values() as $key=>$value)$data[$key]=$value; $contactManager->save($id,(int)$unit['id'],$auth->user()->id,$data); $session->flash('contacts.message',$id===null?'Contato criado.':'Contato atualizado.'); return Response::redirect($basePath.'/crm/contacts'); }
         catch(Throwable $exception){$session->flash('contacts.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/crm/contacts/create':"/crm/contacts/{$id}/edit"));}
     };
     $router->post('/crm/contacts',static fn(Request $request):Response=>$saveContact($request),$manageContacts);
     $router->post('/crm/contacts/{id:\d+}',static fn(Request $request,array $params):Response=>$saveContact($request,(int)$params['id']),$manageContacts);
+
+    $router->postWithoutCsrf('/api/v1/external-contacts',static function(Request $request)use($externalIntake):Response{
+        $authorization=(string)$request->header('authorization','');$key=str_starts_with($authorization,'Bearer ')?substr($authorization,7):(string)$request->header('x-form-key','');
+        $data=json_decode($request->body(),true);if(!is_array($data))return Response::json(['ok'=>false,'error'=>'JSON inválido.'],400);
+        try{$source=(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown'));$result=$externalIntake->receive($key,$data,$source);return Response::json(['ok'=>true]+$result,$result['duplicate']?200:201);}catch(Throwable $exception){$status=in_array($exception->getCode(),[401,422,429],true)?$exception->getCode():500;return Response::json(['ok'=>false,'error'=>$status===500?'Erro interno.':$exception->getMessage()],$status);}
+    });
 };

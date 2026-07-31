@@ -12,4 +12,5 @@ return [
     'timezone' => getenv('APP_TIMEZONE') ?: 'America/Sao_Paulo',
     'log_level' => getenv('LOG_LEVEL') ?: 'warning',
     'log_channel' => getenv('LOG_CHANNEL') ?: 'application',
+    'external_form_key' => getenv('EXTERNAL_FORM_KEY') ?: '',
 ];

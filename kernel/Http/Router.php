@@ -33,6 +33,12 @@ final class Router
         return $this->add(['POST'], $path, $handler, $middleware);
     }
 
+    public function postWithoutCsrf(string $path, Closure $handler, array $middleware = []): self
+    {
+        $this->routes[] = new Route(['POST'], $path, $handler, $middleware, false);
+        return $this;
+    }
+
     /**
      * @param list<string> $methods
      * @param Closure(Request, array<string, string>): Response $handler
@@ -63,7 +69,7 @@ final class Router
             }
 
             if ($route->allows($request->method())) {
-                if ($this->csrf !== null && !$this->csrf->validateRequest($request)) {
+                if ($route->requiresCsrf() && $this->csrf !== null && !$this->csrf->validateRequest($request)) {
                     return Response::text("Token de segurança inválido ou expirado.\n", 419);
                 }
 

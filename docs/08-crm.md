@@ -58,3 +58,13 @@ O cadastro inicial de contatos possui nome, telefone/WhatsApp, e-mail, documento
 unidade responsável, responsável, status configurável, data e origem do cadastro,
 curso, interesse de 0 a 10, polo/cidade de origem, observações e situação ativa.
 Os status iniciais são Novo, Negociação, Sem interesse e Matriculado.
+
+O formulário único do site oficial envia o código público do polo. A API valida
+esse código contra unidades ativas e resolve internamente o `unit_id`; IDs
+numéricos nunca são aceitos do visitante. A integração exige chave Bearer,
+`submission_id` idempotente, data/hora original e pode registrar consentimento e
+versão do aviso de privacidade. Telefone e e-mail ajudam a detectar duplicidade.
+
+Usuários autorizados em mais de uma unidade podem selecionar **Todas as
+unidades** para consulta consolidada. Cadastros e edições internas continuam
+exigindo uma unidade específica.

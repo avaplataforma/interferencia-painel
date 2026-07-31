@@ -104,6 +104,7 @@ $authenticated = ($currentUser ?? null) !== null;
           <?= $csrfField ?>
           <label class="visually-hidden" for="active-unit">Unidade ativa</label>
           <select class="form-select form-select-sm" id="active-unit" name="unit_code" aria-label="Unidade ativa">
+            <?php if (count($availableUnits) > 1): ?><option value="__all__" <?= ($currentUnit['code'] ?? null) === '__all__' ? 'selected' : '' ?>>Todas as unidades</option><?php endif; ?>
             <?php foreach ($availableUnits as $unit): ?><option value="<?= $escape($unit['code']) ?>" <?= ($currentUnit['code'] ?? null) === $unit['code'] ? 'selected' : '' ?>><?= $escape($unit['name']) ?></option><?php endforeach; ?>
           </select>
           <button class="btn btn-sm btn-success m-0" type="submit">Aplicar</button>
