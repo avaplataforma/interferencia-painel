@@ -10,7 +10,7 @@ declare(strict_types=1);
 ?>
 <img class="login-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt="Símbolo do PAINEL INTER">
 <span class="status">Acesso seguro</span>
-<h1>Entrar no PAINEL INTER 📊</h1>
+<h1>PAINEL INTER</h1>
 <p>Use suas credenciais para continuar.</p>
 <?php if ($error !== null): ?>
   <p class="alert" role="alert"><?= $escape($error) ?></p>
