@@ -42,3 +42,14 @@ devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 - O endereço permanece `https://interferencia.com.br/painel`.
 - O namespace técnico e o nome do pacote Composer permanecem estáveis para não
   acoplar identidade visual à estrutura interna do código.
+
+## 31/07/2026 — Banco de produção
+
+**Status:** aceita
+
+- MariaDB administrado pelo HestiaCP.
+- Banco da aplicação: `jonathan_painel_inter`.
+- Usuário dedicado, restrito ao host local e ao banco da aplicação.
+- Credencial armazenada somente no `.env` de produção com permissão `0600`.
+- Nenhuma tabela de negócio criada nesta etapa; apenas o controle técnico
+  `schema_migrations` foi inicializado.

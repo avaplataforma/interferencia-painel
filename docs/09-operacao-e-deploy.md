@@ -6,12 +6,16 @@
 - Cloudflare na borda.
 - HestiaCP gerenciando Nginx como proxy e Apache como aplicação.
 - PHP 8.3 via pool PHP-FPM dedicado ao domínio.
+- MariaDB 11.4 gerenciado pelo HestiaCP; banco de produção
+  `jonathan_painel_inter` acessível somente pelo usuário local correspondente.
 - Projeto privado em
   `/home/jonathan/web/interferencia.com.br/private/interferencia-painel`.
 - Link público `/home/jonathan/web/interferencia.com.br/public_html/painel`
   apontando exclusivamente para `public/`.
 
 Arquivos gerados pelo HestiaCP não devem ser editados diretamente.
+Credenciais do banco existem somente no `.env` de produção, pertencente a
+`jonathan:jonathan` com permissão `0600`.
 
 ## Primeira preparação
 
