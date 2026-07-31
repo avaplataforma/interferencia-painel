@@ -145,5 +145,6 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
   </div>
 <?php endif; ?>
 <script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="<?= $escape($basePath) ?>/assets/js/app.js"></script>
 </body>
 </html>
