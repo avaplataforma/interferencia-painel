@@ -1,0 +1,31 @@
+{
+  "name": "interferencia/painel",
+  "description": "Sistema central de gestão da Interferência.",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.3"
+  },
+  "require-dev": {},
+  "autoload": {
+    "psr-4": {
+      "Interferencia\\Kernel\\": "kernel/",
+      "Interferencia\\Modules\\": "modules/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Interferencia\\Tests\\": "tests/"
+    }
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "sort-packages": true
+  },
+  "scripts": {
+    "check": [
+      "@php -l public/index.php"
+    ]
+  }
+}
+

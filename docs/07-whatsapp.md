@@ -1,0 +1,66 @@
+# WhatsApp
+
+## Decisão
+
+A integração usará a **WhatsApp Cloud API oficial**, com o recurso de
+**coexistência** para manter cada número disponível tanto no aplicativo WhatsApp
+Business quanto na API, conforme elegibilidade e regras vigentes da Meta.
+
+## Escopo organizacional
+
+Serão considerados seis números, associados às unidades:
+
+1. Sede/Central — Tijucas.
+2. Filial Tijucas, separada da Sede/Central.
+3. Itapema.
+4. Porto Belo.
+5. São João Batista.
+6. Nova Trento.
+
+A relação exata entre número, conta do WhatsApp Business, portfólio empresarial
+e unidade deverá ser inventariada antes da implementação.
+
+## Capacidades futuras
+
+- Receber mensagens e atualizações de status por webhook.
+- Enviar mensagens livres dentro das condições permitidas e templates aprovados
+  quando exigidos.
+- Organizar conversas por unidade e responsável.
+- Vincular contatos e histórico ao CRM sem duplicação indevida.
+- Registrar falhas, tentativas, entrega, leitura e contexto de consentimento.
+
+## Requisitos técnicos
+
+- HTTPS público e validação da assinatura dos webhooks.
+- Verificação de token apenas no fluxo de configuração.
+- Processamento idempotente para eventos repetidos ou fora de ordem.
+- Filas, retentativas com recuo e fila de falhas.
+- Tokens e segredos fora do banco quando possível, com rotação documentada.
+- Identificadores externos separados dos IDs internos.
+- Observabilidade por unidade e número, sem expor conteúdo sensível em logs.
+
+## Coexistência
+
+Coexistência não significa que aplicativo e API tenham comportamento idêntico.
+Antes de ativar qualquer número, o projeto deverá validar na documentação oficial
+vigente: elegibilidade, sincronização de histórico/contatos, dispositivos
+vinculados, recursos suportados e possíveis efeitos operacionais. A ativação
+deverá começar com um número piloto e ter plano de reversão.
+
+## Conformidade e operação
+
+- Registrar consentimento e origem quando aplicável.
+- Respeitar políticas da plataforma, janela de atendimento e templates.
+- Definir retenção, acesso, exportação e exclusão conforme LGPD.
+- Criar procedimento para token expirado, webhook indisponível, perda de
+  qualidade e bloqueio do número.
+- Não usar mensagens de clientes em ambientes de desenvolvimento.
+
+## Antes de implementar
+
+- Confirmar ativos e administradores no ecossistema Meta.
+- Validar disponibilidade atual da coexistência para cada número.
+- Mapear responsáveis, volume, horários e processo de atendimento por unidade.
+- Definir modelo de distribuição, transferência e encerramento de conversas.
+- Aprovar política de consentimento e retenção com os responsáveis adequados.
+
