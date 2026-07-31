@@ -9,6 +9,8 @@ use Interferencia\Kernel\Error\ErrorHandler;
 use Interferencia\Kernel\Log\JsonLogger;
 use Interferencia\Kernel\Http\Router;
 use Interferencia\Kernel\View\View;
+use Interferencia\Kernel\Session\Session;
+use Interferencia\Kernel\Security\Csrf;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -39,7 +41,24 @@ $logger = new JsonLogger(
 $errorHandler = new ErrorHandler($logger, $config->bool('app.debug'));
 $errorHandler->register();
 
-$router = new Router($config->string('app.base_path'));
+$sessionLifetime = $config->get('session.lifetime');
+
+if (!is_int($sessionLifetime)) {
+    throw new RuntimeException('Tempo de sessão inválido.');
+}
+
+$session = new Session(
+    $config->string('session.name'),
+    $config->string('app.base_path'),
+    $sessionLifetime,
+    $config->bool('session.secure'),
+    $config->bool('session.http_only'),
+    $config->string('session.same_site'),
+    $rootPath . '/storage/sessions',
+);
+$session->start();
+
+$router = new Router($config->string('app.base_path'), new Csrf($session));
 $view = new View($rootPath . '/views');
 $registerRoutes = require $rootPath . '/routes/web.php';
 $registerRoutes($router, $config, $view);

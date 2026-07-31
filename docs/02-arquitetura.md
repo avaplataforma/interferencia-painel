@@ -51,6 +51,16 @@ MariaDB / storage/   Persistência controlada
 - `View` renderiza templates PHP com escape HTML explícito e layout comum.
 - As rotas da interface ficam declaradas em `routes/web.php`.
 
+## Estado e proteção de formulários
+
+- Sessões usam apenas cookies, modo estrito, cookie `Secure` e `HttpOnly`,
+  `SameSite=Lax` e caminho limitado a `/painel`.
+- O identificador deve ser regenerado após autenticação e invalidado no logout.
+- Mensagens flash sobrevivem exatamente à requisição seguinte.
+- Tokens CSRF possuem 256 bits, ficam na sessão, usam comparação resistente a
+  timing e são aplicados pelo roteador, por padrão, em métodos que alteram estado.
+- O validador trabalha com campos declarados e não repassa entradas adicionais.
+
 ## Limites do kernel
 
 O kernel poderá fornecer configuração, contêiner, roteamento, HTTP, sessão,

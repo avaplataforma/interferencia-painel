@@ -48,7 +48,8 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Bootstrap, configuração, logs e tratamento de erros
 - [x] Requisição, resposta, roteador e templates iniciais
 - [x] Conexão MariaDB e controle de migrações
-- [ ] Sessões, validação e proteção CSRF
+- [x] Sessões, mensagens flash, validação e proteção CSRF
+- [ ] Autenticação, usuários e permissões
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 

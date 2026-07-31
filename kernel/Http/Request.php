@@ -9,6 +9,7 @@ final readonly class Request
     /**
      * @param array<string, string|array<string>> $query
      * @param array<string, string> $headers
+     * @param array<string, mixed> $input
      */
     public function __construct(
         private string $method,
@@ -16,6 +17,7 @@ final readonly class Request
         private array $query = [],
         private array $headers = [],
         private string $body = '',
+        private array $input = [],
     ) {
     }
 
@@ -31,6 +33,7 @@ final readonly class Request
             $_GET,
             self::headersFromServer($_SERVER),
             $body === false ? '' : $body,
+            $_POST,
         );
     }
 
@@ -63,6 +66,17 @@ final readonly class Request
     public function body(): string
     {
         return $this->body;
+    }
+
+    /** @return array<string, mixed> */
+    public function inputData(): array
+    {
+        return $this->input;
+    }
+
+    public function input(string $key, mixed $default = null): mixed
+    {
+        return $this->input[$key] ?? $default;
     }
 
     /**
@@ -100,4 +114,3 @@ final readonly class Request
         return $normalized === '/' ? '/' : rtrim($normalized, '/');
     }
 }
-

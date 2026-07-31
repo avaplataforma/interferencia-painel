@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Interferencia\Kernel\Http;
 
 use Closure;
+use Interferencia\Kernel\Security\Csrf;
 
 final class Router
 {
@@ -12,7 +13,7 @@ final class Router
     private array $routes = [];
     private readonly string $basePath;
 
-    public function __construct(string $basePath = '/')
+    public function __construct(string $basePath = '/', private readonly ?Csrf $csrf = null)
     {
         $normalized = '/' . trim($basePath, '/');
         $this->basePath = $normalized === '/' ? '' : $normalized;
@@ -59,6 +60,10 @@ final class Router
             }
 
             if ($route->allows($request->method())) {
+                if ($this->csrf !== null && !$this->csrf->validateRequest($request)) {
+                    return Response::text("Token de segurança inválido ou expirado.\n", 419);
+                }
+
                 return $route->run($request, $parameters);
             }
 

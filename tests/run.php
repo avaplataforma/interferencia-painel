@@ -10,6 +10,9 @@ use Interferencia\Kernel\Http\Request;
 use Interferencia\Kernel\Http\Response;
 use Interferencia\Kernel\Http\Router;
 use Interferencia\Kernel\Log\JsonLogger;
+use Interferencia\Kernel\Security\Csrf;
+use Interferencia\Kernel\Session\Session;
+use Interferencia\Kernel\Validation\Validator;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -151,6 +154,87 @@ PHP;
     }
 };
 
+$tests['mantém flash por uma requisição completa'] = static function (): void {
+    $_SESSION = [];
+    $session = testSession();
+    $session->flash('success', 'Salvo');
+
+    $session->ageFlash();
+    assertSame('Salvo', $session->get('success'));
+
+    $session->ageFlash();
+    assertSame(null, $session->get('success'));
+};
+
+$tests['gera valida e rotaciona token CSRF'] = static function (): void {
+    $_SESSION = [];
+    $csrf = new Csrf(testSession());
+    $token = $csrf->token();
+
+    assertSame(64, strlen($token));
+    assertTrue($csrf->validate($token), 'Token recém-gerado deve ser válido.');
+    assertTrue($csrf->validateRequest(new Request('GET', '/painel/status')), 'GET não exige token.');
+    assertTrue($csrf->validateRequest(new Request('POST', '/painel', [], [], '', ['_token' => $token])));
+    assertTrue(!$csrf->validateRequest(new Request('POST', '/painel', [], [], '', ['_token' => 'inválido'])));
+
+    $newToken = $csrf->rotate();
+    assertTrue($newToken !== $token, 'A rotação deve trocar o token.');
+    assertTrue(!$csrf->validate($token), 'Token anterior deve ser invalidado.');
+};
+
+$tests['roteador protege mutações com CSRF por padrão'] = static function (): void {
+    $_SESSION = [];
+    $csrf = new Csrf(testSession());
+    $token = $csrf->token();
+    $router = new Router('/painel', $csrf);
+    $router->post('/salvar', static fn (): Response => Response::text('salvo'));
+
+    assertSame(419, $router->dispatch(new Request('POST', '/painel/salvar'))->status());
+    assertSame(200, $router->dispatch(new Request(
+        'POST',
+        '/painel/salvar',
+        [],
+        [],
+        '',
+        ['_token' => $token],
+    ))->status());
+};
+
+$tests['valida campos e retorna somente valores declarados'] = static function (): void {
+    $validator = new Validator();
+    $result = $validator->validate([
+        'name' => 'Maria',
+        'email' => 'maria@example.com',
+        'password' => 'segredo-forte',
+        'password_confirmation' => 'segredo-forte',
+        'admin' => '1',
+    ], [
+        'name' => 'required|string|min:3|max:80',
+        'email' => 'required|email|max:255',
+        'password' => 'required|string|min:12|confirmed',
+    ]);
+
+    assertTrue($result->passes(), 'Dados válidos não devem gerar erros.');
+    assertSame(['name', 'email', 'password'], array_keys($result->values()));
+    assertSame(null, $result->value('admin'));
+};
+
+$tests['informa erros de validação por campo'] = static function (): void {
+    $result = (new Validator())->validate([
+        'email' => 'email-inválido',
+        'role' => 'root',
+    ], [
+        'name' => 'required|string',
+        'email' => 'required|email',
+        'role' => 'required|in:admin,atendente',
+    ], ['name' => 'nome', 'email' => 'e-mail', 'role' => 'perfil']);
+
+    assertTrue($result->fails(), 'Dados inválidos devem falhar.');
+    assertTrue($result->firstError('name') !== null, 'Nome deve possuir erro.');
+    assertTrue($result->firstError('email') !== null, 'E-mail deve possuir erro.');
+    assertTrue($result->firstError('role') !== null, 'Perfil deve possuir erro.');
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
@@ -177,9 +261,22 @@ function assertSame(mixed $expected, mixed $actual): void
     }
 }
 
-function assertTrue(bool $condition, string $message): void
+function assertTrue(bool $condition, string $message = 'A condição esperada não foi atendida.'): void
 {
     if (!$condition) {
         throw new RuntimeException($message);
     }
+}
+
+function testSession(): Session
+{
+    return new Session(
+        'test_session',
+        '/painel',
+        7200,
+        true,
+        true,
+        'Lax',
+        sys_get_temp_dir(),
+    );
 }

@@ -60,6 +60,8 @@ Quando dependências externas forem adicionadas, o projeto deverá versionar
 - Métodos não aceitos em rotas existentes retornam `405` e o cabeçalho `Allow`.
 - Respostas incluem `X-Request-ID` para correlação com logs.
 - Logs ficam em `storage/logs/` e nunca dentro da raiz pública.
+- O cookie `painel_inter_session` deve ser `Secure`, `HttpOnly`, `SameSite=Lax`
+  e possuir `Path=/painel`.
 
 ## Reversão
 

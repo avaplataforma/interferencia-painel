@@ -19,7 +19,7 @@ de negócio.
 - [x] Página de estado da fundação.
 - [x] Roteamento, requisição, resposta e templates iniciais.
 - [x] Conexão com banco e executor de migrações.
-- [ ] Sessões, validação e proteção CSRF.
+- [x] Sessões, mensagens flash, validação e proteção CSRF.
 - [x] Executor inicial de testes; ferramentas adicionais de qualidade pendentes.
 
 ## Fase 2 — Identidade e acesso
