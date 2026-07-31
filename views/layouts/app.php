@@ -28,6 +28,13 @@ declare(strict_types=1);
     button { margin-top: 1.25rem; padding: .8rem 1.1rem; border: 0; border-radius: .55rem; background: #176b3a; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
     .alert { padding: .8rem 1rem; border-radius: .55rem; background: #fff0f0; color: #8c2020; }
     .meta { font-size: .92rem; color: #6a7783; }
+    a { color: #176b3a; font-weight: 650; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: .75rem .45rem; text-align: left; border-bottom: 1px solid #e3e7ea; vertical-align: top; }
+    .actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+    .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .5rem; margin-top: .6rem; }
+    .checks label { margin: 0; padding: .6rem; border: 1px solid #dfe4e8; border-radius: .5rem; }
+    .checks input { width: auto; margin: 0 .45rem 0 0; }
   </style>
 </head>
 <body>

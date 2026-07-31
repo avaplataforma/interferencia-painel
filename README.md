@@ -50,7 +50,8 @@ Consulte [docs/01-visao-geral.md](docs/01-visao-geral.md) para o contexto e
 - [x] Conexão MariaDB e controle de migrações
 - [x] Sessões, mensagens flash, validação e proteção CSRF
 - [x] Login, logout, administrador inicial e autorização básica
-- [ ] Gestão de usuários, recuperação de senha e segundo fator
+- [x] Gestão visual de usuários, papéis e unidades permitidas
+- [ ] Recuperação de senha, editor de papéis e segundo fator
 - [ ] Autenticação e autorização
 - [ ] Módulos de negócio
 

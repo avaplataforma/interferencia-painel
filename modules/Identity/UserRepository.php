@@ -61,6 +61,100 @@ final readonly class UserRepository
         }
     }
 
+    /** @return list<array<string, mixed>> */
+    public function allForManagement(): array
+    {
+        return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, COUNT(DISTINCT s.unit_id) AS unit_count FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id LEFT JOIN roles r ON r.id = ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id = u.id GROUP BY u.id ORDER BY u.name")->fetchAll();
+    }
+
+    /** @return list<array{id: int, code: string, name: string}> */
+    public function availableRoles(): array
+    {
+        return $this->database->query('SELECT id, code, name FROM roles ORDER BY name')->fetchAll();
+    }
+
+    /** @return list<array{id: int, code: string, name: string}> */
+    public function availableUnits(): array
+    {
+        return $this->database->query('SELECT id, code, name FROM units WHERE is_active = 1 ORDER BY name')->fetchAll();
+    }
+
+    /** @return list<int> */
+    public function roleIds(int $userId): array
+    {
+        $statement = $this->database->prepare('SELECT role_id FROM user_roles WHERE user_id = :id');
+        $statement->execute(['id' => $userId]);
+        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    /** @return list<int> */
+    public function unitIds(int $userId): array
+    {
+        $statement = $this->database->prepare('SELECT unit_id FROM user_unit_scopes WHERE user_id = :id');
+        $statement->execute(['id' => $userId]);
+        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+    }
+
+    public function isSuperAdmin(int $userId): bool
+    {
+        $statement = $this->database->prepare("SELECT COUNT(*) FROM user_roles ur INNER JOIN roles r ON r.id = ur.role_id WHERE ur.user_id = :id AND r.code = 'super_admin'");
+        $statement->execute(['id' => $userId]);
+        return (int) $statement->fetchColumn() > 0;
+    }
+
+    public function activeSuperAdminCount(): int
+    {
+        return (int) $this->database->query("SELECT COUNT(DISTINCT u.id) FROM users u INNER JOIN user_roles ur ON ur.user_id = u.id INNER JOIN roles r ON r.id = ur.role_id WHERE u.is_active = 1 AND r.code = 'super_admin'")->fetchColumn();
+    }
+
+    /** @param list<int> $roleIds @param list<int> $unitIds */
+    public function createManaged(string $name, string $email, string $passwordHash, bool $active, array $roleIds, array $unitIds): int
+    {
+        $this->database->beginTransaction();
+        try {
+            $statement = $this->database->prepare('INSERT INTO users (name, email, password_hash, is_active) VALUES (:name, :email, :hash, :active)');
+            $statement->execute(['name' => trim($name), 'email' => strtolower(trim($email)), 'hash' => $passwordHash, 'active' => (int) $active]);
+            $id = (int) $this->database->lastInsertId();
+            $this->syncRelations($id, $roleIds, $unitIds);
+            $this->database->commit();
+            return $id;
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw new RuntimeException('Não foi possível criar o usuário.', 0, $exception);
+        }
+    }
+
+    /** @param list<int> $roleIds @param list<int> $unitIds */
+    public function updateManaged(int $id, string $name, string $email, bool $active, array $roleIds, array $unitIds, ?string $passwordHash): void
+    {
+        $this->database->beginTransaction();
+        try {
+            $sql = 'UPDATE users SET name = :name, email = :email, is_active = :active';
+            $params = ['id' => $id, 'name' => trim($name), 'email' => strtolower(trim($email)), 'active' => (int) $active];
+            if ($passwordHash !== null) { $sql .= ', password_hash = :hash'; $params['hash'] = $passwordHash; }
+            $statement = $this->database->prepare($sql . ' WHERE id = :id');
+            $statement->execute($params);
+            $this->syncRelations($id, $roleIds, $unitIds);
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw new RuntimeException('Não foi possível atualizar o usuário.', 0, $exception);
+        }
+    }
+
+    /** @param list<int> $roleIds @param list<int> $unitIds */
+    private function syncRelations(int $userId, array $roleIds, array $unitIds): void
+    {
+        foreach (['user_roles', 'user_unit_scopes'] as $table) {
+            $statement = $this->database->prepare("DELETE FROM {$table} WHERE user_id = :id");
+            $statement->execute(['id' => $userId]);
+        }
+        $role = $this->database->prepare('INSERT INTO user_roles (user_id, role_id) VALUES (:user, :related)');
+        foreach ($roleIds as $id) $role->execute(['user' => $userId, 'related' => $id]);
+        $unit = $this->database->prepare('INSERT INTO user_unit_scopes (user_id, unit_id) VALUES (:user, :related)');
+        foreach ($unitIds as $id) $unit->execute(['user' => $userId, 'related' => $id]);
+    }
+
     /** @return list<string> */
     public function permissions(int $userId): array
     {

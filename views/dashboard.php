@@ -7,6 +7,7 @@ declare(strict_types=1);
 /** @var Interferencia\Modules\Identity\User $user */
 /** @var list<string> $unitScopes */
 /** @var string $basePath */
+/** @var bool $canManageUsers */
 ?>
 <span class="status">Sessão autenticada</span>
 <h1>Olá, <?= $escape($user->name) ?></h1>
@@ -15,6 +16,7 @@ declare(strict_types=1);
   <dt>E-mail</dt><dd><?= $escape($user->email) ?></dd>
   <dt>Unidades</dt><dd><?= $escape((string) count($unitScopes)) ?></dd>
 </dl>
+<?php if ($canManageUsers): ?><p><a href="<?= $escape($basePath) ?>/users">Gerenciar usuários</a></p><?php endif; ?>
 <form method="post" action="<?= $escape($basePath) ?>/logout">
   <?= $csrfField ?>
   <button type="submit">Sair</button>

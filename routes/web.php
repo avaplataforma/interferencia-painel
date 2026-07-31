@@ -14,6 +14,8 @@ use Interferencia\Modules\Identity\Auth;
 use Interferencia\Modules\Identity\RequireAuth;
 use Interferencia\Modules\Identity\RequireGuest;
 use Interferencia\Modules\Identity\RequirePermission;
+use Interferencia\Modules\Identity\UserRepository;
+use Interferencia\Modules\Identity\UserManager;
 
 return static function (
     Router $router,
@@ -23,6 +25,8 @@ return static function (
     Csrf $csrf,
     Validator $validator,
     Auth $auth,
+    UserRepository $users,
+    UserManager $userManager,
 ): void {
     $basePath = $config->string('app.base_path');
     $requireAuth = new RequireAuth($auth, $basePath);
@@ -71,6 +75,7 @@ return static function (
             'unitScopes' => $auth->unitScopes(),
             'csrfField' => $csrf->field(),
             'basePath' => $config->string('app.base_path'),
+            'canManageUsers' => $auth->can('users.manage'),
         ]);
     }, [$requireAuth, new RequirePermission($auth, 'dashboard.view')]);
 
@@ -78,4 +83,37 @@ return static function (
         $auth->logout();
         return Response::redirect($basePath . '/login');
     }, [$requireAuth]);
+
+    $manageUsers = [$requireAuth, new RequirePermission($auth, 'users.manage')];
+    $ids = static fn (mixed $value): array => array_values(array_unique(array_map('intval', is_array($value) ? $value : [])));
+
+    $router->get('/users', static function () use ($view, $config, $users, $session, $basePath): Response {
+        return $view->render('users/index', ['title' => 'Usuários — ' . $config->string('app.name'), 'users' => $users->allForManagement(), 'message' => $session->get('users.message'), 'error' => $session->get('users.error'), 'basePath' => $basePath]);
+    }, $manageUsers);
+
+    $form = static function (?int $id = null) use ($view, $config, $users, $session, $csrf, $basePath): Response {
+        $user = $id === null ? null : $users->findById($id);
+        if ($id !== null && $user === null) return Response::text("Usuário não encontrado.\n", 404);
+        return $view->render('users/form', ['title' => ($id === null ? 'Novo usuário' : 'Editar usuário') . ' — ' . $config->string('app.name'), 'user' => $user, 'roles' => $users->availableRoles(), 'units' => $users->availableUnits(), 'selectedRoles' => $id === null ? [] : $users->roleIds($id), 'selectedUnits' => $id === null ? [] : $users->unitIds($id), 'error' => $session->get('users.error'), 'csrfField' => $csrf->field(), 'basePath' => $basePath]);
+    };
+    $router->get('/users/create', static fn (): Response => $form(), $manageUsers);
+    $router->get('/users/{id:\d+}/edit', static fn (Request $request, array $params): Response => $form((int) $params['id']), $manageUsers);
+
+    $save = static function (Request $request, ?int $id = null) use ($validator, $userManager, $session, $basePath, $ids): Response {
+        $result = $validator->validate($request->inputData(), ['name' => 'required|string|min:3|max:120', 'email' => 'required|string|email|max:190', 'password' => ($id === null ? 'required|' : 'nullable|') . 'string|min:12|max:4096|confirmed'], ['name' => 'nome', 'email' => 'e-mail', 'password' => 'senha']);
+        try {
+            if ($result->fails()) throw new RuntimeException(implode(' ', array_map(static fn (array $errors): string => $errors[0], $result->errors())));
+            $name = (string) $result->value('name'); $email = (string) $result->value('email'); $password = $result->value('password');
+            $roles = $ids($request->input('roles')); $units = $ids($request->input('units')); $active = $request->input('is_active') === '1';
+            if ($id === null) $userManager->create($name, $email, (string) $password, $active, $roles, $units);
+            else $userManager->update($id, $name, $email, is_string($password) ? $password : null, $active, $roles, $units);
+            $session->flash('users.message', $id === null ? 'Usuário criado.' : 'Usuário atualizado.');
+            return Response::redirect($basePath . '/users');
+        } catch (Throwable $exception) {
+            $session->flash('users.error', $exception->getMessage());
+            return Response::redirect($basePath . ($id === null ? '/users/create' : "/users/{$id}/edit"));
+        }
+    };
+    $router->post('/users', static fn (Request $request): Response => $save($request), $manageUsers);
+    $router->post('/users/{id:\d+}', static fn (Request $request, array $params): Response => $save($request, (int) $params['id']), $manageUsers);
 };

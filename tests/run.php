@@ -241,6 +241,7 @@ $tests['carrega migração de identidade e acesso'] = static function () use ($r
     $migrations = (new MigrationRepository($rootPath . '/database/migrations'))->all();
 
     assertTrue(isset($migrations['20260731_210000_create_identity_and_access']));
+    assertTrue(isset($migrations['20260731_220000_grant_dashboard_to_operational_roles']));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

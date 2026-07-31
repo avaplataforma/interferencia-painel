@@ -42,8 +42,10 @@ mensagem de chat.
 
 ## Limites desta entrega
 
-- Ainda não há tela de gestão de usuários ou papéis.
+- Administradores com `users.manage` podem listar, criar e editar usuários,
+  atribuir papéis, selecionar unidades, trocar senha e ativar/desativar contas.
+- O sistema impede desativar ou remover o papel do último administrador global.
+- Ainda não há editor da composição interna de cada papel.
 - Recuperação de senha e segundo fator serão especificados separadamente.
 - Limitação atual é por conta; limitação adicional por origem será adicionada
   antes de expor autenticação a uma operação de maior escala.
-

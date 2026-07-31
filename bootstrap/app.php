@@ -16,6 +16,7 @@ use Interferencia\Kernel\Validation\Validator;
 use Interferencia\Modules\Identity\Auth;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Identity\UserRepository;
+use Interferencia\Modules\Identity\UserManager;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -69,6 +70,6 @@ $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()));
 
 return new Application($router);
