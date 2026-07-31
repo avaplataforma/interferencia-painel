@@ -243,6 +243,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260731_210000_create_identity_and_access']));
     assertTrue(isset($migrations['20260731_220000_grant_dashboard_to_operational_roles']));
     assertTrue(isset($migrations['20260731_230000_rename_tijucas_units']));
+    assertTrue(isset($migrations['20260731_240000_add_units_management_permission']));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

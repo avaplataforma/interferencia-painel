@@ -32,8 +32,9 @@ de negócio.
 
 ## Fase 3 — Unidades
 
-- Cadastro das seis unidades e seus dados operacionais.
-- Vínculos entre usuários, unidades e números.
+- [x] Cadastro, edição e ativação das unidades e seus dados básicos.
+- [x] Vínculos entre usuários e unidades.
+- [ ] Vínculos entre unidades e números.
 - Visão central e filtros por escopo autorizado.
 
 ## Fase 4 — CRM

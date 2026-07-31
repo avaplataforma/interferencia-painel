@@ -16,6 +16,8 @@ use Interferencia\Modules\Identity\RequireGuest;
 use Interferencia\Modules\Identity\RequirePermission;
 use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\Identity\UserManager;
+use Interferencia\Modules\Organization\UnitManager;
+use Interferencia\Modules\Organization\UnitRepository;
 
 return static function (
     Router $router,
@@ -27,6 +29,8 @@ return static function (
     Auth $auth,
     UserRepository $users,
     UserManager $userManager,
+    UnitRepository $units,
+    UnitManager $unitManager,
 ): void {
     $basePath = $config->string('app.base_path');
     $requireAuth = new RequireAuth($auth, $basePath);
@@ -76,6 +80,7 @@ return static function (
             'csrfField' => $csrf->field(),
             'basePath' => $config->string('app.base_path'),
             'canManageUsers' => $auth->can('users.manage'),
+            'canManageUnits' => $auth->can('units.manage'),
         ]);
     }, [$requireAuth, new RequirePermission($auth, 'dashboard.view')]);
 
@@ -116,4 +121,35 @@ return static function (
     };
     $router->post('/users', static fn (Request $request): Response => $save($request), $manageUsers);
     $router->post('/users/{id:\d+}', static fn (Request $request, array $params): Response => $save($request, (int) $params['id']), $manageUsers);
+
+    $manageUnits = [$requireAuth, new RequirePermission($auth, 'units.manage')];
+
+    $router->get('/units', static function () use ($view, $config, $units, $session, $basePath): Response {
+        return $view->render('units/index', ['title' => 'Unidades — ' . $config->string('app.name'), 'units' => $units->all(), 'message' => $session->get('units.message'), 'error' => $session->get('units.error'), 'basePath' => $basePath]);
+    }, $manageUnits);
+
+    $unitForm = static function (?int $id = null) use ($view, $config, $units, $session, $csrf, $basePath): Response {
+        $unit = $id === null ? null : $units->find($id);
+        if ($id !== null && $unit === null) return Response::text("Unidade não encontrada.\n", 404);
+        return $view->render('units/form', ['title' => ($id === null ? 'Nova unidade' : 'Editar unidade') . ' — ' . $config->string('app.name'), 'unit' => $unit, 'error' => $session->get('units.error'), 'csrfField' => $csrf->field(), 'basePath' => $basePath]);
+    };
+    $router->get('/units/create', static fn (): Response => $unitForm(), $manageUnits);
+    $router->get('/units/{id:\d+}/edit', static fn (Request $request, array $params): Response => $unitForm((int) $params['id']), $manageUnits);
+
+    $saveUnit = static function (Request $request, ?int $id = null) use ($validator, $unitManager, $session, $basePath): Response {
+        $result = $validator->validate($request->inputData(), ['name' => 'required|string|min:2|max:120', 'city' => 'required|string|min:2|max:120'], ['name' => 'nome', 'city' => 'cidade']);
+        try {
+            if ($result->fails()) throw new RuntimeException(implode(' ', array_map(static fn (array $errors): string => $errors[0], $result->errors())));
+            $name = (string) $result->value('name'); $city = (string) $result->value('city'); $active = $request->input('is_active') === '1';
+            if ($id === null) $unitManager->create($name, $city, $active);
+            else $unitManager->update($id, $name, $city, $active);
+            $session->flash('units.message', $id === null ? 'Unidade criada.' : 'Unidade atualizada.');
+            return Response::redirect($basePath . '/units');
+        } catch (Throwable $exception) {
+            $session->flash('units.error', $exception->getMessage());
+            return Response::redirect($basePath . ($id === null ? '/units/create' : "/units/{$id}/edit"));
+        }
+    };
+    $router->post('/units', static fn (Request $request): Response => $saveUnit($request), $manageUnits);
+    $router->post('/units/{id:\d+}', static fn (Request $request, array $params): Response => $saveUnit($request, (int) $params['id']), $manageUnits);
 };

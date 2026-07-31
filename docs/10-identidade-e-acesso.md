@@ -11,7 +11,7 @@ puro; hashes usam Argon2id com parâmetros versionáveis.
 - `users`: identidade, estado, hash, bloqueio e último acesso.
 - `roles` e `permissions`: autorização por capacidades estáveis.
 - `user_roles` e `role_permissions`: relações muitos-para-muitos.
-- `units`: seis unidades organizacionais aprovadas.
+- `units`: unidades organizacionais, incluindo as seis unidades iniciais aprovadas.
 - `user_unit_scopes`: unidades que cada usuário pode acessar.
 
 Papéis iniciais: `super_admin`, `manager` e `agent`. O administrador global
@@ -44,6 +44,9 @@ mensagem de chat.
 
 - Administradores com `users.manage` podem listar, criar e editar usuários,
   atribuir papéis, selecionar unidades, trocar senha e ativar/desativar contas.
+- Administradores com `units.manage` podem listar, criar, editar, ativar e
+  desativar unidades. O código interno é permanente, e novas unidades são
+  vinculadas automaticamente aos usuários com acesso global.
 - O sistema impede desativar ou remover o papel do último administrador global.
 - Ainda não há editor da composição interna de cada papel.
 - Recuperação de senha e segundo fator serão especificados separadamente.

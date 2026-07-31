@@ -17,6 +17,8 @@ use Interferencia\Modules\Identity\Auth;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\Identity\UserManager;
+use Interferencia\Modules\Organization\UnitManager;
+use Interferencia\Modules\Organization\UnitRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -65,11 +67,13 @@ $session = new Session(
 $session->start();
 
 $csrf = new Csrf($session);
-$users = new UserRepository((new Connection($config))->pdo());
+$database = (new Connection($config))->pdo();
+$users = new UserRepository($database);
+$units = new UnitRepository($database);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()));
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units));
 
 return new Application($router);
