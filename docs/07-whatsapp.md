@@ -146,5 +146,8 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - O download exige sessão autenticada e acesso à linha e à unidade da mensagem; não existe URL pública direta para o arquivo.
 - O piloto aceita JPEG, PNG, WebP, PDF, Word, MP3, OGG e M4A, limitados a 16 MB e validados pelo conteúdo real do arquivo.
 - O simulador permite testar o fluxo completo de recebimento, visualização e download sem enviar dados ao WhatsApp.
-- O webhook oficial já registra o identificador e os metadados das mídias. A obtenção do arquivo pela Cloud API será habilitada somente depois da validação das credenciais do piloto.
+- O webhook oficial registra o identificador e os metadados das mídias e, quando as credenciais estão disponíveis, busca o arquivo diretamente na Cloud API.
+- O endereço de download retornado pela Meta é validado, redirecionamentos não são seguidos e o conteúdo passa novamente pela lista de tipos e pelo limite de tamanho antes de ser armazenado.
+- Imagens podem ser visualizadas e áudios reproduzidos dentro da conversa; o download original continua disponível pelo endereço protegido do painel.
+- Uma falha temporária ao buscar a mídia não derruba o webhook nem duplica mensagens. O painel mantém os metadados para diagnóstico e futura sincronização.
 - O envio externo de anexos continua bloqueado nesta etapa.

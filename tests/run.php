@@ -288,6 +288,8 @@ $tests['carrega serviços administrativos'] = static function (): void {
 $tests['mantém envio oficial bloqueado por padrão'] = static function (): void {
     $client = new Interferencia\Modules\WhatsApp\CloudApiClient('token', 'v23.0', false);
     assertTrue(!$client->ready());
+    assertSame(function_exists('curl_init'), $client->canReceiveMedia());
+    assertTrue(!(new Interferencia\Modules\WhatsApp\CloudApiClient('', 'v23.0', false))->canReceiveMedia());
 };
 
 $tests['carrega suporte seguro a anexos do WhatsApp'] = static function () use ($rootPath): void {

@@ -161,3 +161,26 @@ document.querySelectorAll('[data-template-preview]').forEach((preview) => {
     if (status) status.textContent = option?.dataset.status === 'approved' ? 'Modelo marcado como aprovado.' : 'Modelo ainda não está aprovado para envio.';
   });
 });
+
+document.querySelectorAll('a.message-attachment').forEach((link) => {
+  if (!(link instanceof HTMLAnchorElement)) return;
+  const imageIcon = link.querySelector('.fa-image');
+  const audioIcon = link.querySelector('.fa-file-audio');
+  if (!imageIcon && !audioIcon) return;
+  const mediaUrl = `${link.href}${link.href.includes('?') ? '&' : '?'}inline=1`;
+  if (imageIcon) {
+    const image = document.createElement('img');
+    image.className = 'message-media-preview';
+    image.src = mediaUrl;
+    image.alt = link.querySelector('strong')?.textContent || 'Imagem recebida';
+    image.loading = 'lazy';
+    link.before(image);
+    return;
+  }
+  const audio = document.createElement('audio');
+  audio.className = 'message-audio-preview';
+  audio.controls = true;
+  audio.preload = 'metadata';
+  audio.src = mediaUrl;
+  link.before(audio);
+});

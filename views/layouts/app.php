@@ -311,6 +311,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms)(?:/|$)
   </div>
 <?php endif; ?>
 <script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-<script src="<?= $escape($basePath) ?>/assets/js/app.js?v=7"></script>
+<style>.message-media-preview{display:block;width:min(18rem,100%);max-height:18rem;margin-bottom:.45rem;border-radius:.65rem;object-fit:cover}.message-audio-preview{display:block;width:min(20rem,100%);margin-bottom:.45rem}</style>
+<script src="<?= $escape($basePath) ?>/assets/js/app.js?v=8"></script>
 </body>
 </html>

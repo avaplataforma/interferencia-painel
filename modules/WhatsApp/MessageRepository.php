@@ -8,14 +8,14 @@ final readonly class MessageRepository
 {
     public function __construct(private PDO $db) {}
 
-    public function receive(array $payload): void
+    public function receive(array $payload, ?CloudApiClient $cloudApi = null, ?MediaStorage $mediaStorage = null): void
     {
         foreach (($payload['entry'] ?? []) as $entry) foreach (($entry['changes'] ?? []) as $change) {
             $value=$change['value']??[];$phoneId=(string)($value['metadata']['phone_number_id']??'');
             if($phoneId==='')continue;$line=$this->lineByPhoneId($phoneId);$eventKey=hash('sha256',(string)json_encode($change,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
             if(!$this->claimEvent($eventKey,$line['id']??null,(string)($change['field']??'unknown')))continue;
             if($line===null){$this->finishEvent($eventKey,'Número da Meta não vinculado a uma linha.');continue;}
-            foreach(($value['messages']??[])as$message)$this->storeInbound((int)$line['id'],$value,$message);
+            foreach(($value['messages']??[])as$message)$this->storeInbound((int)$line['id'],$value,$message,$cloudApi,$mediaStorage);
             foreach(($value['statuses']??[])as$status)$this->updateStatus($status);
             $this->db->prepare("UPDATE whatsapp_lines SET connection_status='connected' WHERE id=:id")->execute(['id'=>$line['id']]);
             $this->finishEvent($eventKey,null);
@@ -25,7 +25,7 @@ final readonly class MessageRepository
     private function lineByPhoneId(string $phoneId):?array{$s=$this->db->prepare('SELECT * FROM whatsapp_lines WHERE phone_number_id=:id AND is_active=1 LIMIT 1');$s->execute(['id'=>$phoneId]);$r=$s->fetch();return is_array($r)?$r:null;}
     private function claimEvent(string $key,?int $lineId,string $type):bool{try{$s=$this->db->prepare('INSERT INTO whatsapp_webhook_events(event_key,line_id,event_type) VALUES(:event,:line,:type)');$s->execute(['event'=>$key,'line'=>$lineId,'type'=>$type]);return true;}catch(\Throwable){return false;}}
     private function finishEvent(string $key,?string $error):void{$s=$this->db->prepare('UPDATE whatsapp_webhook_events SET processed_at=CURRENT_TIMESTAMP,error_message=:error WHERE event_key=:event');$s->execute(['error'=>$error,'event'=>$key]);}
-    private function storeInbound(int $lineId,array $value,array $message):void
+    private function storeInbound(int $lineId,array $value,array $message,?CloudApiClient $cloudApi,?MediaStorage $mediaStorage):void
     {
         $waId=(string)($message['from']??'');$wamid=(string)($message['id']??'');if($waId===''||$wamid==='')return;
         $name=null;foreach(($value['contacts']??[])as$contact)if((string)($contact['wa_id']??'')===$waId)$name=(string)($contact['profile']['name']??'');
@@ -36,6 +36,8 @@ final readonly class MessageRepository
         $type=(string)($message['type']??'unknown');$body=$type==='text'?(string)($message['text']['body']??''):null;$media=is_array($message[$type]??null)?$message[$type]:[];
         $s=$this->db->prepare("INSERT IGNORE INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,media_id,mime_type,file_name,status,message_at) VALUES(:conversation,:line,:wamid,'inbound',:type,:body,:media_id,:mime,:file_name,'received',:at)");
         $s->execute(['conversation'=>$conversation,'line'=>$lineId,'wamid'=>$wamid,'type'=>$type,'body'=>$body,'media_id'=>isset($media['id'])?(string)$media['id']:null,'mime'=>isset($media['mime_type'])?(string)$media['mime_type']:null,'file_name'=>isset($media['filename'])?(string)$media['filename']:null,'at'=>$at]);
+        $mediaId=(string)($media['id']??'');
+        if($s->rowCount()===1&&$mediaId!==''&&$cloudApi?->canReceiveMedia()&&$mediaStorage!==null){try{$download=$cloudApi->downloadMedia($mediaId);$stored=$mediaStorage->storeContent($download['content'],(string)($media['filename']??''));$update=$this->db->prepare('UPDATE whatsapp_messages SET mime_type=:mime,file_name=:file_name,file_size=:file_size,storage_path=:storage_path WHERE wamid=:wamid AND storage_path IS NULL');$update->execute(['mime'=>$stored['mime_type'],'file_name'=>$stored['file_name'],'file_size'=>$stored['file_size'],'storage_path'=>$stored['storage_path'],'wamid'=>$wamid]);}catch(\Throwable){/* O webhook permanece disponível; a mídia pode ser sincronizada novamente depois. */}}
     }
     private function updateStatus(array $status):void{$wamid=(string)($status['id']??'');$state=(string)($status['status']??'');if($wamid===''||!in_array($state,['sent','delivered','read','failed'],true))return;$s=$this->db->prepare('UPDATE whatsapp_messages SET status=:status WHERE wamid=:wamid');$s->execute(['status'=>$state,'wamid'=>$wamid]);}
 

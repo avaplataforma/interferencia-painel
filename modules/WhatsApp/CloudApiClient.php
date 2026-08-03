@@ -8,6 +8,8 @@ use RuntimeException;
 
 final readonly class CloudApiClient
 {
+    private const MAX_MEDIA_SIZE = 16777216;
+
     public function __construct(
         private string $token,
         private string $graphVersion,
@@ -19,6 +21,97 @@ final readonly class CloudApiClient
         return $this->enabled
             && $this->token !== ''
             && preg_match('/^v\d+\.\d+$/', $this->graphVersion) === 1;
+    }
+
+    public function canReceiveMedia(): bool
+    {
+        return $this->token !== ''
+            && preg_match('/^v\d+\.\d+$/', $this->graphVersion) === 1
+            && function_exists('curl_init');
+    }
+
+    /** @return array{content:string,mime_type:string} */
+    public function downloadMedia(string $mediaId): array
+    {
+        if (!$this->canReceiveMedia() || $mediaId === '') {
+            throw new RuntimeException('As credenciais para receber mídias ainda não estão disponíveis.');
+        }
+
+        $metadata = $this->getJson(sprintf(
+            'https://graph.facebook.com/%s/%s',
+            $this->graphVersion,
+            rawurlencode($mediaId),
+        ));
+        $url = (string) ($metadata['url'] ?? '');
+        if (!$this->isTrustedMediaUrl($url)) {
+            throw new RuntimeException('A Meta retornou um endereço de mídia inválido.');
+        }
+
+        $curl = curl_init($url);
+        if ($curl === false) {
+            throw new RuntimeException('Não foi possível iniciar o download da mídia.');
+        }
+        $content = '';
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => false,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $this->token],
+            CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$content): int {
+                if (strlen($content) + strlen($chunk) > self::MAX_MEDIA_SIZE) {
+                    return 0;
+                }
+                $content .= $chunk;
+                return strlen($chunk);
+            },
+        ]);
+        $result = curl_exec($curl);
+        $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $mime = strtolower(trim((string) curl_getinfo($curl, CURLINFO_CONTENT_TYPE)));
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if ($result !== true || $status < 200 || $status >= 300 || $content === '') {
+            throw new RuntimeException('Não foi possível baixar a mídia da Meta' . ($error !== '' ? ': ' . $error : '') . '.');
+        }
+
+        return ['content' => $content, 'mime_type' => strtok($mime, ';') ?: 'application/octet-stream'];
+    }
+
+    /** @return array<string,mixed> */
+    private function getJson(string $url): array
+    {
+        $curl = curl_init($url);
+        if ($curl === false) {
+            throw new RuntimeException('Não foi possível consultar a mídia na Meta.');
+        }
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 20,
+            CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $this->token],
+        ]);
+        $response = curl_exec($curl);
+        $status = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        curl_close($curl);
+        $data = is_string($response) ? json_decode($response, true) : null;
+        if ($status < 200 || $status >= 300 || !is_array($data)) {
+            throw new RuntimeException('A Meta não disponibilizou os dados da mídia.');
+        }
+        return $data;
+    }
+
+    private function isTrustedMediaUrl(string $url): bool
+    {
+        $parts = parse_url($url);
+        if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https') {
+            return false;
+        }
+        $host = strtolower((string) ($parts['host'] ?? ''));
+        return $host === 'lookaside.fbsbx.com'
+            || str_ends_with($host, '.facebook.com')
+            || $host === 'facebook.com';
     }
 
     /** @return array{id:string,status:string} */

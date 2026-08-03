@@ -28,6 +28,34 @@ final readonly class MediaStorage
         return['mime_type'=>$mime,'file_name'=>mb_substr($name,0,255),'file_size'=>$file->size,'storage_path'=>$relative,'message_type'=>str_starts_with($mime,'image/')?'image':(str_starts_with($mime,'audio/')?'audio':'document')];
     }
 
+    /** @return array{mime_type:string,file_name:string,file_size:int,storage_path:string,message_type:string} */
+    public function storeContent(string $content, string $fileName = ''): array
+    {
+        $size = strlen($content);
+        if ($size < 1 || $size > self::MAX_SIZE) {
+            throw new RuntimeException('A mídia deve possuir no máximo 16 MB.');
+        }
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->buffer($content);
+        if (!is_string($mime) || !isset(self::TYPES[$mime])) {
+            throw new RuntimeException('O tipo da mídia recebida não é permitido.');
+        }
+        $relative = date('Y/m') . '/' . bin2hex(random_bytes(24)) . '.' . self::TYPES[$mime];
+        $destination = $this->absolute($relative);
+        $folder = dirname($destination);
+        if (!is_dir($folder) && !mkdir($folder, 0700, true) && !is_dir($folder)) {
+            throw new RuntimeException('Não foi possível preparar o armazenamento da mídia.');
+        }
+        if (file_put_contents($destination, $content, LOCK_EX) !== $size) {
+            throw new RuntimeException('Não foi possível guardar a mídia recebida.');
+        }
+        chmod($destination, 0600);
+        $name = preg_replace('/[^\pL\pN._ -]+/u', '_', basename($fileName));
+        if (!is_string($name) || $name === '') {
+            $name = 'midia.' . self::TYPES[$mime];
+        }
+        return ['mime_type'=>$mime,'file_name'=>mb_substr($name,0,255),'file_size'=>$size,'storage_path'=>$relative,'message_type'=>str_starts_with($mime,'image/')?'image':(str_starts_with($mime,'audio/')?'audio':'document')];
+    }
+
     public function read(string $relative):string
     {
         $path=$this->absolute($relative);if(!is_file($path))throw new RuntimeException('Anexo não encontrado.');$contents=file_get_contents($path);if($contents===false)throw new RuntimeException('Não foi possível ler o anexo.');return$contents;
