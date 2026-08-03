@@ -139,3 +139,25 @@ if (document.querySelector('.notification-center')) {
   window.setInterval(refreshNotifications, 30000);
   document.addEventListener('visibilitychange', refreshNotifications);
 }
+
+document.querySelectorAll('[data-template-preview]').forEach((preview) => {
+  const select = preview.querySelector('[data-template-select]');
+  const output = preview.querySelector('[data-template-output]');
+  const status = preview.querySelector('[data-template-status]');
+  if (!(select instanceof HTMLSelectElement) || !(output instanceof HTMLTextAreaElement)) return;
+  const values = {
+    nome: preview.dataset.name || 'Contato',
+    curso: preview.dataset.course || 'curso de interesse',
+    unidade: preview.dataset.unit || '',
+    atendente: preview.dataset.agent || 'Atendimento',
+  };
+  select.addEventListener('change', () => {
+    const option = select.selectedOptions[0];
+    let body = option?.dataset.body || '';
+    Object.entries(values).forEach(([key, value]) => {
+      body = body.replace(new RegExp(`{{\\s*${key}\\s*}}`, 'gi'), value);
+    });
+    output.value = body;
+    if (status) status.textContent = option?.dataset.status === 'approved' ? 'Modelo marcado como aprovado.' : 'Modelo ainda não está aprovado para envio.';
+  });
+});

@@ -132,3 +132,10 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - A linha precisa estar conectada e possuir um `phone_number_id` válido. Conversas do simulador nunca podem gerar envio externo.
 - Cada tentativa fica registrada com estado de entrega e diagnóstico limitado. Atualizações posteriores de envio, entrega, leitura ou falha continuam chegando pelo webhook oficial.
 - Fora da janela de 24 horas, o painel bloqueia texto livre e informa que será necessário utilizar um modelo previamente aprovado pela Meta.
+
+## Modelos oficiais
+
+- O ADM possui um catálogo interno de modelos com nome operacional, nome correspondente na Meta, categoria, idioma e situação de aprovação.
+- Os textos aceitam somente as variáveis controladas `{{nome}}`, `{{curso}}`, `{{unidade}}` e `{{atendente}}`.
+- A caixa de entrada permite selecionar um modelo e conferir a mensagem final com os dados do contato antes de qualquer envio.
+- O cadastro no painel não cria nem aprova modelos na Meta. O envio permanece indisponível até que o modelo correspondente esteja aprovado e a integração oficial seja ativada.

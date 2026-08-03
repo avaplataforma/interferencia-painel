@@ -261,6 +261,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260803_360000_add_whatsapp_assignment_permission']));
     assertTrue(isset($migrations['20260803_370000_enable_whatsapp_crm_intake']));
     assertTrue(isset($migrations['20260803_380000_add_whatsapp_delivery_diagnostics']));
+    assertTrue(isset($migrations['20260803_390000_create_whatsapp_templates']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
@@ -281,6 +282,7 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\WhatsApp\MessageRepository::class));
     assertTrue(class_exists(Interferencia\Modules\WhatsApp\WebhookVerifier::class));
     assertTrue(class_exists(Interferencia\Modules\WhatsApp\CloudApiClient::class));
+    assertTrue(class_exists(Interferencia\Modules\WhatsApp\TemplateRepository::class));
 };
 
 $tests['mantém envio oficial bloqueado por padrão'] = static function (): void {

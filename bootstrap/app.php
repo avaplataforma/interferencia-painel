@@ -33,6 +33,7 @@ use Interferencia\Modules\WhatsApp\LineRepository;
 use Interferencia\Modules\WhatsApp\MessageRepository;
 use Interferencia\Modules\WhatsApp\WebhookVerifier;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
+use Interferencia\Modules\WhatsApp\TemplateRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -92,6 +93,7 @@ $followUps = new FollowUpRepository($database);
 $externalForms = new ExternalFormRepository($database);
 $whatsappLines = new LineRepository($database);
 $whatsappMessages = new MessageRepository($database);
+$whatsappTemplates = new TemplateRepository($database);
 $whatsappVerifyToken = $config->get('app.whatsapp_verify_token');
 $whatsappAppSecret = $config->get('app.whatsapp_app_secret');
 $whatsappWebhook = new WebhookVerifier(is_string($whatsappVerifyToken) ? $whatsappVerifyToken : '', is_string($whatsappAppSecret) ? $whatsappAppSecret : '');
@@ -120,6 +122,7 @@ $view->share([
         'statuses' => $auth->can('crm.statuses.manage'),
         'external_forms' => $auth->can('external_forms.manage'),
         'whatsapp_lines' => $auth->can('whatsapp.lines.manage'),
+        'whatsapp_templates' => $auth->can('whatsapp.lines.manage'),
         'whatsapp' => $auth->can('whatsapp.inbox.view'),
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
@@ -130,6 +133,6 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappWebhook, $whatsappCloudApi);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappWebhook, $whatsappCloudApi);
 
 return new Application($router);
