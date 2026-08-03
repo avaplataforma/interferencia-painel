@@ -93,9 +93,13 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function () use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext): Response {
+    $router->get('/', static function (Request $request) use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext, $contacts, $tags): Response {
         $dashboardUnit=$unitContext->current();
         $dashboardUnitIds=$dashboardUnit===null?[]:($dashboardUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$dashboardUnit['id']]);
+        $source=(string)$request->queryValue('source','');
+        if(!in_array($source,['','internal','external_form','whatsapp'],true))$source='';
+        $tagId=max(0,(int)$request->queryValue('tag','0'));
+        $canViewContacts=$auth->can('crm.contacts.view');
         return $view->render('dashboard', [
             'title' => $browserTitle,
             'user' => $auth->user(),
@@ -105,7 +109,12 @@ return static function (
             'canManageUsers' => $auth->can('users.manage'),
             'canManageUnits' => $auth->can('units.manage'),
             'canManageRoles' => $auth->can('roles.manage'),
-            'followUpSummary' => $auth->can('crm.contacts.view') ? $followUps->summary($dashboardUnitIds) : null,
+            'followUpSummary' => $canViewContacts ? $followUps->summary($dashboardUnitIds) : null,
+            'newContacts' => $canViewContacts ? $contacts->newContactsDashboard($dashboardUnitIds,$source,$tagId) : null,
+            'contactTags' => $canViewContacts ? $tags->all(true) : [],
+            'selectedSource' => $source,
+            'selectedTag' => $tagId,
+            'allUnits' => $dashboardUnit !== null && array_key_exists('id',$dashboardUnit) && $dashboardUnit['id'] === null,
             'message' => $session->get('dashboard.message'),
             'error' => $session->get('dashboard.error'),
         ]);

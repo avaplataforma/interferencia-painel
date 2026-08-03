@@ -34,6 +34,37 @@ final readonly class ContactRepository
         $statement=$this->database->prepare($sql.' ORDER BY c.registered_at DESC,c.id DESC');$statement->execute($params);return $statement->fetchAll();
     }
 
+    /**
+     * @param list<int> $unitIds
+     * @return array{total:int,internal:int,external_form:int,whatsapp:int,items:list<array<string,mixed>>}
+     */
+    public function newContactsDashboard(array $unitIds, string $source = '', int $tagId = 0, int $limit = 8): array
+    {
+        $empty = ['total' => 0, 'internal' => 0, 'external_form' => 0, 'whatsapp' => 0, 'items' => []];
+        if ($unitIds === []) return $empty;
+
+        $marks = implode(',', array_fill(0, count($unitIds), '?'));
+        $summary = $this->database->prepare("SELECT COUNT(*) total, SUM(c.registration_source='internal') internal, SUM(c.registration_source='external_form') external_form, SUM(c.registration_source='whatsapp') whatsapp FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id WHERE s.code='new' AND c.is_active=1 AND c.unit_id IN ({$marks})");
+        $summary->execute($unitIds);
+        $counts = $summary->fetch() ?: [];
+
+        $sql = "SELECT c.id,c.name,c.phone,c.course,c.registration_source,c.registered_at,un.name unit_name,(SELECT GROUP_CONCAT(CONCAT(t.name,'|',t.color) ORDER BY t.name SEPARATOR ';;') FROM crm_contact_tags ct INNER JOIN crm_tags t ON t.id=ct.tag_id WHERE ct.contact_id=c.id) tags_data FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id INNER JOIN units un ON un.id=c.unit_id WHERE s.code='new' AND c.is_active=1 AND c.unit_id IN ({$marks})";
+        $params = $unitIds;
+        if (in_array($source, ['internal', 'external_form', 'whatsapp'], true)) { $sql .= ' AND c.registration_source=?'; $params[] = $source; }
+        if ($tagId > 0) { $sql .= ' AND EXISTS (SELECT 1 FROM crm_contact_tags filter_tags WHERE filter_tags.contact_id=c.id AND filter_tags.tag_id=?)'; $params[] = $tagId; }
+        $sql .= ' ORDER BY c.registered_at DESC,c.id DESC LIMIT ' . max(1, min(25, $limit));
+        $statement = $this->database->prepare($sql);
+        $statement->execute($params);
+
+        return [
+            'total' => (int) ($counts['total'] ?? 0),
+            'internal' => (int) ($counts['internal'] ?? 0),
+            'external_form' => (int) ($counts['external_form'] ?? 0),
+            'whatsapp' => (int) ($counts['whatsapp'] ?? 0),
+            'items' => $statement->fetchAll(),
+        ];
+    }
+
     /** @return array<string, mixed>|null */
     public function find(int $id, int $unitId): ?array
     {

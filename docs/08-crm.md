@@ -103,3 +103,11 @@ automática e status inicial. O Polo/Cidade escolhido pelo visitante resolve a
 Unidade responsável; a origem é identificada no servidor pela configuração do
 formulário, sem aceitar uma etiqueta enviada pelo navegador. O painel gera o
 código do iframe e contabiliza novos contatos recebidos.
+
+## Novos contatos no painel
+
+A visão geral destaca os contatos que permanecem no status Novo, respeitando a
+unidade ativa e todas as unidades autorizadas ao usuário. A lista recente pode
+ser filtrada pela origem do cadastro e pela etiqueta que identifica o site ou o
+formulário externo. A origem WhatsApp já aparece na visão operacional e será
+alimentada quando a integração oficial desse canal entrar em operação.

@@ -262,6 +262,7 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\Organization\UnitRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Organization\UnitContext::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\ContactRepository::class));
+    assertTrue(method_exists(Interferencia\Modules\Crm\ContactRepository::class, 'newContactsDashboard'));
     assertTrue(class_exists(Interferencia\Modules\Crm\ContactManager::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\ExternalContactIntake::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\TagRepository::class));

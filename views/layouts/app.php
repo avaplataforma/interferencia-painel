@@ -90,6 +90,22 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms)(?:/|$)
     .followup-card.overdue { color: #b4232c; border-color: #f0b2b6; }
     .followup-card.today { color: #9a6700; border-color: #ead28b; }
     .followup-card.future { color: #176b3a; border-color: #a8d9ba; }
+    main .source-card { display: flex; align-items: center; justify-content: space-between; min-height: 4.7rem; padding: 1rem; border: 1px solid #dfe5e9; border-radius: .8rem; background: #fff; color: #536170; text-decoration: none; }
+    main .source-card:hover { color: var(--inter-accent-dark); border-color: #f0b2b6; box-shadow: 0 .4rem 1.2rem rgb(23 33 43 / 7%); }
+    .source-card strong { color: var(--inter-ink); font-size: 1.8rem; }
+    .source-card i { margin-right: .3rem; color: var(--inter-accent); }
+    .source-card.source-total { border-color: #f0b2b6; }
+    .dashboard-contact-filters { display: grid; grid-template-columns: minmax(12rem,1fr) minmax(12rem,1fr) auto auto; gap: .65rem; align-items: end; max-width: none !important; margin: 1rem 0; }
+    .dashboard-contact-filters label { margin: 0; }
+    .dashboard-contact-filters select { width: 100%; min-height: 3rem; margin-top: .35rem; }
+    .dashboard-contact-filters button { min-height: 3rem; margin: 0; }
+    .dashboard-contact-table { border: 1px solid #e1e7eb; border-radius: .8rem; background: #fff; overflow: hidden; }
+    .new-contact-name { display: inline-flex; align-items: center; gap: .5rem; }
+    .new-dot { width: .58rem; height: .58rem; border-radius: 50%; background: var(--inter-accent); box-shadow: 0 0 0 .22rem #fff0f1; }
+    .source-badge { display: inline-flex; align-items: center; padding: .25rem .55rem; border-radius: 999px; color: #4f5d69; background: #edf1f4; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+    .source-external_form { color: #0c5f77; background: #e8f6fa; }
+    .source-whatsapp { color: #176b3a; background: #eaf8ef; }
+    .empty-dashboard { display: flex; align-items: center; justify-content: center; gap: .55rem; min-height: 5rem; color: var(--inter-muted); }
     .followup-filters { display: grid; grid-template-columns: minmax(16rem,1.5fr) repeat(3,minmax(9rem,1fr)) auto auto; gap: .55rem; align-items: end; max-width: none !important; margin-top: 1rem; }
     .followup-filters .followup-search { margin: 0; min-height: 3rem; }
     .followup-result-count { margin: .55rem 0 0; text-align: right; }
@@ -144,8 +160,8 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms)(?:/|$)
     @media (min-width: 576px) { .d-sm-block { display: block; } .col-sm-6 { width: 50%; } }
     @media (min-width: 768px) { .col-md-4 { width: 33.333%; } .p-md-5 { padding: 3rem; } }
     @media (min-width: 992px) { .d-lg-none { display: none; } .px-lg-4 { padding-inline: 1.5rem; } }
-    @media (min-width: 1200px) { .col-xl-4 { width: 33.333%; } }
-    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters, .followup-filters { grid-template-columns: 1fr; } }
+    @media (min-width: 1200px) { .col-xl-3 { width: 25%; } .col-xl-4 { width: 33.333%; } }
+    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters, .followup-filters, .dashboard-contact-filters { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
