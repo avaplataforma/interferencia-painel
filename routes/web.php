@@ -97,7 +97,7 @@ return static function (
         $dashboardUnit=$unitContext->current();
         $dashboardUnitIds=$dashboardUnit===null?[]:($dashboardUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$dashboardUnit['id']]);
         $source=(string)$request->queryValue('source','');
-        if(!in_array($source,['','internal','external_form','whatsapp'],true))$source='';
+        if(!in_array($source,['','internal','whatsapp'],true))$source='';
         $tagId=max(0,(int)$request->queryValue('tag','0'));
         $canViewContacts=$auth->can('crm.contacts.view');
         return $view->render('dashboard', [

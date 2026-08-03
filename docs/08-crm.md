@@ -108,6 +108,6 @@ código do iframe e contabiliza novos contatos recebidos.
 
 A visão geral destaca os contatos que permanecem no status Novo, respeitando a
 unidade ativa e todas as unidades autorizadas ao usuário. A lista recente pode
-ser filtrada pela origem do cadastro e pela etiqueta que identifica o site ou o
-formulário externo. A origem WhatsApp já aparece na visão operacional e será
+ser filtrada entre as origens operacionais e pela etiqueta que identifica cada
+site ou formulário externo. A origem WhatsApp já aparece na visão operacional e será
 alimentada quando a integração oficial desse canal entrar em operação.

@@ -21,11 +21,11 @@ declare(strict_types=1);
   <div class="row g-3 mt-2">
     <div class="col-sm-6 col-xl-3"><a class="source-card source-total" href="<?= $escape($basePath) ?>/"><span>Todos</span><strong><?= $escape($newContacts['total']) ?></strong></a></div>
     <div class="col-sm-6 col-xl-3"><a class="source-card" href="<?= $escape($basePath) ?>/?source=internal"><span><i class="fa-solid fa-user-pen" aria-hidden="true"></i> Cadastro interno</span><strong><?= $escape($newContacts['internal']) ?></strong></a></div>
-    <div class="col-sm-6 col-xl-3"><a class="source-card" href="<?= $escape($basePath) ?>/?source=external_form"><span><i class="fa-solid fa-code" aria-hidden="true"></i> Formulários externos</span><strong><?= $escape($newContacts['external_form']) ?></strong></a></div>
+    <div class="col-sm-6 col-xl-3"><div class="source-card"><span><i class="fa-solid fa-code" aria-hidden="true"></i> Formulários externos</span><strong><?= $escape($newContacts['external_form']) ?></strong></div></div>
     <div class="col-sm-6 col-xl-3"><a class="source-card" href="<?= $escape($basePath) ?>/?source=whatsapp"><span><i class="fa-solid fa-comments" aria-hidden="true"></i> WhatsApp</span><strong><?= $escape($newContacts['whatsapp']) ?></strong></a></div>
   </div>
   <form class="dashboard-contact-filters" method="get" action="<?= $escape($basePath) ?>/">
-    <label>Tipo de cadastro<select class="form-select" name="source"><option value="" <?= $selectedSource===''?'selected':'' ?>>Todos os tipos</option><option value="internal" <?= $selectedSource==='internal'?'selected':'' ?>>Cadastro interno</option><option value="external_form" <?= $selectedSource==='external_form'?'selected':'' ?>>Formulário externo</option><option value="whatsapp" <?= $selectedSource==='whatsapp'?'selected':'' ?>>WhatsApp</option></select></label>
+    <label>Tipo de cadastro<select class="form-select" name="source"><option value="" <?= $selectedSource===''?'selected':'' ?>>Todos os tipos</option><option value="internal" <?= $selectedSource==='internal'?'selected':'' ?>>Cadastro interno</option><option value="whatsapp" <?= $selectedSource==='whatsapp'?'selected':'' ?>>WhatsApp</option></select></label>
     <label>Etiqueta / site<select class="form-select" name="tag"><option value="0">Todas as etiquetas</option><?php foreach($contactTags as $tag):?><option value="<?= $escape($tag['id']) ?>" <?= $selectedTag===(int)$tag['id']?'selected':'' ?>><?= $escape($tag['name']) ?></option><?php endforeach;?></select></label>
     <button type="submit"><i class="fa-solid fa-filter" aria-hidden="true"></i> Filtrar</button>
     <a class="button-secondary" href="<?= $escape($basePath) ?>/">Limpar</a>
