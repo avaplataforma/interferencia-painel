@@ -84,6 +84,19 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .followup-pending { color: #9a6700; background: #fff4cc; }
     .followup-completed { color: #176b3a; background: #eaf8ef; }
     .followup-cancelled { color: #7a2630; background: #fff0f1; }
+    .followup-summary { margin-top: .2rem; }
+    .followup-card { display: flex; align-items: center; justify-content: space-between; min-height: 5rem; padding: 1rem; border: 1px solid #dfe5e9; border-radius: .8rem; background: #fff; text-decoration: none; }
+    .followup-card strong { font-size: 1.8rem; }
+    .followup-card.overdue { color: #b4232c; border-color: #f0b2b6; }
+    .followup-card.today { color: #9a6700; border-color: #ead28b; }
+    .followup-card.future { color: #176b3a; border-color: #a8d9ba; }
+    .followup-filters { display: grid; grid-template-columns: repeat(3,minmax(10rem,1fr)) auto auto; gap: .55rem; align-items: end; max-width: none !important; margin-top: 1rem; }
+    .followup-filters button { margin: 0; min-height: 3rem; }
+    .followup-row-overdue { background: #fff4f4; }
+    .overdue-label { color: #b4232c; font-size: .78rem; font-weight: 750; }
+    .followup-actions { display: grid; gap: .4rem; min-width: 10rem; }
+    .followup-actions form { margin: 0; }
+    .followup-actions button { width: 100%; margin: 0; padding: .45rem .55rem; }
     .actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .actions > a { color: #fff; background: var(--inter-accent); padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; }
     main a { color: var(--inter-accent-dark); font-weight: 600; }
@@ -120,7 +133,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     @media (min-width: 768px) { .col-md-4 { width: 33.333%; } .p-md-5 { padding: 3rem; } }
     @media (min-width: 992px) { .d-lg-none { display: none; } .px-lg-4 { padding-inline: 1.5rem; } }
     @media (min-width: 1200px) { .col-xl-4 { width: 33.333%; } }
-    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters { grid-template-columns: 1fr; } }
+    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters, .followup-filters { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>

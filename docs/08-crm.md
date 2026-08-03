@@ -87,3 +87,8 @@ Cada contato pode possuir vários acompanhamentos com próxima ação, data e ho
 atendente e observações. A agenda do CRM reúne os registros das unidades que o
 usuário pode acessar e permite acompanhar as situações pendente, concluída e
 cancelada. O histórico permanece vinculado ao contato.
+
+A agenda destaca acompanhamentos atrasados, previstos para hoje e futuros. Pode
+ser filtrada por situação, período e atendente. Ações rápidas permitem concluir,
+cancelar ou concluir e abrir imediatamente o próximo acompanhamento. O painel
+inicial apresenta os totais da unidade ativa ou da visão consolidada autorizada.
