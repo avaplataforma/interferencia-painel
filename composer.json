@@ -30,6 +30,7 @@
     "migrate:status": "@php bin/console migrate:status",
     "migrate": "@php bin/console migrate",
     "migrate:rollback": "@php bin/console migrate:rollback",
-    "user:create-admin": "@php bin/console user:create-admin"
+    "user:create-admin": "@php bin/console user:create-admin",
+    "whatsapp:media:sync": "@php bin/console whatsapp:media:sync"
   }
 }

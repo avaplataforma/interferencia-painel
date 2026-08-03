@@ -34,10 +34,10 @@ final readonly class MessageRepository
         $s->execute(['line'=>$lineId,'wa'=>$waId,'name'=>$name?:null,'at'=>$at]);$conversation=(int)$this->db->lastInsertId();
         $this->ensureCrmContact($conversation,$lineId,$waId,$name?:null,$at);
         $type=(string)($message['type']??'unknown');$body=$type==='text'?(string)($message['text']['body']??''):null;$media=is_array($message[$type]??null)?$message[$type]:[];
-        $s=$this->db->prepare("INSERT IGNORE INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,media_id,mime_type,file_name,status,message_at) VALUES(:conversation,:line,:wamid,'inbound',:type,:body,:media_id,:mime,:file_name,'received',:at)");
-        $s->execute(['conversation'=>$conversation,'line'=>$lineId,'wamid'=>$wamid,'type'=>$type,'body'=>$body,'media_id'=>isset($media['id'])?(string)$media['id']:null,'mime'=>isset($media['mime_type'])?(string)$media['mime_type']:null,'file_name'=>isset($media['filename'])?(string)$media['filename']:null,'at'=>$at]);
+        $s=$this->db->prepare("INSERT IGNORE INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,media_id,mime_type,file_name,media_sync_status,media_next_attempt_at,status,message_at) VALUES(:conversation,:line,:wamid,'inbound',:type,:body,:media_id,:mime,:file_name,:sync_status,:next_attempt,'received',:at)");
+        $s->execute(['conversation'=>$conversation,'line'=>$lineId,'wamid'=>$wamid,'type'=>$type,'body'=>$body,'media_id'=>isset($media['id'])?(string)$media['id']:null,'sync_status'=>isset($media['id'])?'pending':null,'next_attempt'=>isset($media['id'])?date('Y-m-d H:i:s'):null,'mime'=>isset($media['mime_type'])?(string)$media['mime_type']:null,'file_name'=>isset($media['filename'])?(string)$media['filename']:null,'at'=>$at]);
         $mediaId=(string)($media['id']??'');
-        if($s->rowCount()===1&&$mediaId!==''&&$cloudApi?->canReceiveMedia()&&$mediaStorage!==null){try{$download=$cloudApi->downloadMedia($mediaId);$stored=$mediaStorage->storeContent($download['content'],(string)($media['filename']??''));$update=$this->db->prepare('UPDATE whatsapp_messages SET mime_type=:mime,file_name=:file_name,file_size=:file_size,storage_path=:storage_path WHERE wamid=:wamid AND storage_path IS NULL');$update->execute(['mime'=>$stored['mime_type'],'file_name'=>$stored['file_name'],'file_size'=>$stored['file_size'],'storage_path'=>$stored['storage_path'],'wamid'=>$wamid]);}catch(\Throwable){/* O webhook permanece disponível; a mídia pode ser sincronizada novamente depois. */}}
+        if($s->rowCount()===1&&$mediaId!==''&&$cloudApi?->canReceiveMedia()&&$mediaStorage!==null)$this->syncMediaMessage((int)$this->db->lastInsertId(),$cloudApi,$mediaStorage);
     }
     private function updateStatus(array $status):void{$wamid=(string)($status['id']??'');$state=(string)($status['status']??'');if($wamid===''||!in_array($state,['sent','delivered','read','failed'],true))return;$s=$this->db->prepare('UPDATE whatsapp_messages SET status=:status WHERE wamid=:wamid');$s->execute(['status'=>$state,'wamid'=>$wamid]);}
 
@@ -56,6 +56,29 @@ final readonly class MessageRepository
     public function messages(int $conversationId):array{$s=$this->db->prepare('SELECT * FROM whatsapp_messages WHERE conversation_id=:id ORDER BY message_at,id');$s->execute(['id'=>$conversationId]);return$s->fetchAll();}
     /** @param list<int> $lineIds @return array<string,mixed>|null */
     public function attachment(int $messageId,array $lineIds):?array{if($lineIds===[])return null;$marks=implode(',',array_fill(0,count($lineIds),'?'));$s=$this->db->prepare("SELECT m.id,m.mime_type,m.file_name,m.file_size,m.storage_path FROM whatsapp_messages m WHERE m.id=? AND m.line_id IN ($marks) AND m.storage_path IS NOT NULL LIMIT 1");$s->execute(array_merge([$messageId],$lineIds));$row=$s->fetch();return is_array($row)?$row:null;}
+    /** @return array{processed:int,synced:int,failed:int,available:bool} */
+    public function syncPendingMedia(CloudApiClient $client,MediaStorage $storage,int $limit=20,?int $onlyId=null):array
+    {
+        if(!$client->canReceiveMedia())return['processed'=>0,'synced'=>0,'failed'=>0,'available'=>false];
+        $limit=max(1,min($limit,100));$sql="SELECT id FROM whatsapp_messages WHERE media_id IS NOT NULL AND storage_path IS NULL AND media_attempts<6";
+        $params=[];if($onlyId!==null){$sql.=' AND id=:id';$params['id']=$onlyId;}else{$sql.=" AND media_sync_status IN ('pending','failed') AND (media_next_attempt_at IS NULL OR media_next_attempt_at<=CURRENT_TIMESTAMP)";}$sql.=' ORDER BY id LIMIT '.$limit;
+        $s=$this->db->prepare($sql);$s->execute($params);$rows=$s->fetchAll();$result=['processed'=>0,'synced'=>0,'failed'=>0,'available'=>true];
+        foreach($rows as$row){$result['processed']++;$this->syncMediaMessage((int)$row['id'],$client,$storage)?$result['synced']++:$result['failed']++;}
+        return$result;
+    }
+    /** @return list<array<string,mixed>> */
+    public function mediaDiagnostics(int $limit=100):array{$limit=max(1,min($limit,200));$s=$this->db->query("SELECT m.id,m.message_type,m.file_name,m.mime_type,m.media_sync_status,m.media_attempts,m.media_next_attempt_at,m.media_last_attempt_at,m.media_error,m.message_at,c.contact_name,c.wa_contact_id,l.name line_name,u.name unit_name FROM whatsapp_messages m INNER JOIN whatsapp_conversations c ON c.id=m.conversation_id INNER JOIN whatsapp_lines l ON l.id=m.line_id INNER JOIN units u ON u.id=l.unit_id WHERE m.media_id IS NOT NULL ORDER BY (m.storage_path IS NULL) DESC,m.message_at DESC LIMIT {$limit}");return$s->fetchAll();}
+    /** @return array{processed:int,synced:int,failed:int,available:bool} */
+    public function retryMedia(int $messageId,CloudApiClient $client,MediaStorage $storage):array{$this->db->prepare("UPDATE whatsapp_messages SET media_sync_status='pending',media_attempts=0,media_next_attempt_at=CURRENT_TIMESTAMP,media_error=NULL WHERE id=:id AND media_id IS NOT NULL AND storage_path IS NULL")->execute(['id'=>$messageId]);return$this->syncPendingMedia($client,$storage,1,$messageId);}
+    /** @return list<string> */
+    public function storedMediaPaths():array{$s=$this->db->query('SELECT storage_path FROM whatsapp_messages WHERE storage_path IS NOT NULL');return array_values(array_map(static fn(array$row):string=>(string)$row['storage_path'],$s->fetchAll()));}
+    private function syncMediaMessage(int $messageId,CloudApiClient $client,MediaStorage $storage):bool
+    {
+        $s=$this->db->prepare('SELECT id,media_id,file_name,media_attempts,storage_path FROM whatsapp_messages WHERE id=:id LIMIT 1');$s->execute(['id'=>$messageId]);$row=$s->fetch();if(!is_array($row)||(string)($row['media_id']??'')===''||(string)($row['storage_path']??'')!=='')return false;
+        $attempt=(int)$row['media_attempts']+1;$this->db->prepare("UPDATE whatsapp_messages SET media_sync_status='processing',media_attempts=:attempt,media_last_attempt_at=CURRENT_TIMESTAMP WHERE id=:id")->execute(['attempt'=>$attempt,'id'=>$messageId]);
+        try{$download=$client->downloadMedia((string)$row['media_id']);$stored=$storage->storeContent($download['content'],(string)($row['file_name']??''));$update=$this->db->prepare("UPDATE whatsapp_messages SET message_type=:type,mime_type=:mime,file_name=:file_name,file_size=:file_size,storage_path=:storage_path,media_sync_status='synced',media_next_attempt_at=NULL,media_error=NULL WHERE id=:id AND storage_path IS NULL");$update->execute(['type'=>$stored['message_type'],'mime'=>$stored['mime_type'],'file_name'=>$stored['file_name'],'file_size'=>$stored['file_size'],'storage_path'=>$stored['storage_path'],'id'=>$messageId]);return$update->rowCount()===1;}
+        catch(\Throwable$e){$delays=[5,15,60,240,720,1440];$minutes=$delays[min($attempt-1,count($delays)-1)];$next=(new DateTimeImmutable("+{$minutes} minutes"))->format('Y-m-d H:i:s');$error=mb_substr($e->getMessage(),0,500);$this->db->prepare("UPDATE whatsapp_messages SET media_sync_status='failed',media_next_attempt_at=:next,media_error=:error WHERE id=:id")->execute(['next'=>$next,'error'=>$error,'id'=>$messageId]);return false;}
+    }
     /** @param list<int> $lineIds @return array{allowed:bool,reason:string} */
     public function sendAvailability(int $conversationId,array $lineIds,int $actorId,bool $cloudReady):array
     {

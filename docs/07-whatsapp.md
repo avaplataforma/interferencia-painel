@@ -150,4 +150,7 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - O endereço de download retornado pela Meta é validado, redirecionamentos não são seguidos e o conteúdo passa novamente pela lista de tipos e pelo limite de tamanho antes de ser armazenado.
 - Imagens podem ser visualizadas e áudios reproduzidos dentro da conversa; o download original continua disponível pelo endereço protegido do painel.
 - Uma falha temporária ao buscar a mídia não derruba o webhook nem duplica mensagens. O painel mantém os metadados para diagnóstico e futura sincronização.
+- A fila repete automaticamente as falhas com intervalos progressivos de 5 minutos a 24 horas, até seis tentativas.
+- O ADM acompanha tentativas, próximo processamento e último erro em `WhatsApp > Linhas > Diagnóstico de mídias`, podendo solicitar uma nova tentativa manual.
+- O comando `php bin/console whatsapp:media:sync` processa a fila em segundo plano; a opção `--cleanup` também remove arquivos órfãos com mais de 24 horas.
 - O envio externo de anexos continua bloqueado nesta etapa.

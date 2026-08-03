@@ -262,6 +262,8 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260803_370000_enable_whatsapp_crm_intake']));
     assertTrue(isset($migrations['20260803_380000_add_whatsapp_delivery_diagnostics']));
     assertTrue(isset($migrations['20260803_390000_create_whatsapp_templates']));
+    assertTrue(isset($migrations['20260803_400000_add_whatsapp_attachments']));
+    assertTrue(isset($migrations['20260803_410000_add_whatsapp_media_queue']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
@@ -297,6 +299,8 @@ $tests['carrega suporte seguro a anexos do WhatsApp'] = static function () use (
     assertTrue(class_exists(Interferencia\Modules\WhatsApp\MediaStorage::class));
     $migration = require $rootPath . '/database/migrations/20260803_400000_add_whatsapp_attachments.php';
     assertSame('20260803_400000_add_whatsapp_attachments', $migration->id());
+    $queueMigration = require $rootPath . '/database/migrations/20260803_410000_add_whatsapp_media_queue.php';
+    assertSame('20260803_410000_add_whatsapp_media_queue', $queueMigration->id());
 };
 
 $tests['valida webhook oficial do WhatsApp'] = static function (): void {

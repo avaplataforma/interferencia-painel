@@ -61,6 +61,16 @@ final readonly class MediaStorage
         $path=$this->absolute($relative);if(!is_file($path))throw new RuntimeException('Anexo não encontrado.');$contents=file_get_contents($path);if($contents===false)throw new RuntimeException('Não foi possível ler o anexo.');return$contents;
     }
 
+    /** @param list<string> $referenced @return array{candidates:int,deleted:int} */
+    public function cleanupOrphans(array $referenced,bool $delete=false,int $minimumAge=86400):array
+    {
+        if(!is_dir($this->directory))return['candidates'=>0,'deleted'=>0];
+        $known=array_fill_keys(array_map(static fn(string$path):string=>str_replace('\\','/',$path),$referenced),true);$candidates=0;$deleted=0;$cutoff=time()-max(3600,$minimumAge);
+        $iterator=new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->directory,\FilesystemIterator::SKIP_DOTS));
+        foreach($iterator as$file){if(!$file->isFile()||$file->getFilename()==='.gitkeep'||$file->getMTime()>$cutoff)continue;$relative=str_replace('\\','/',substr($file->getPathname(),strlen(rtrim($this->directory,'/\\'))+1));if(isset($known[$relative]))continue;$candidates++;if($delete&&unlink($file->getPathname()))$deleted++;}
+        return['candidates'=>$candidates,'deleted'=>$deleted];
+    }
+
     private function absolute(string $relative):string
     {
         if($relative===''||str_contains($relative,'..')||str_starts_with($relative,'/')||str_starts_with($relative,'\\'))throw new RuntimeException('Caminho de anexo inválido.');return rtrim($this->directory,'/\\').DIRECTORY_SEPARATOR.str_replace(['/', '\\'],DIRECTORY_SEPARATOR,$relative);

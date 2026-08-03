@@ -9,6 +9,9 @@ use Interferencia\Kernel\Database\Migrator;
 use Interferencia\Kernel\Environment\Environment;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Identity\UserRepository;
+use Interferencia\Modules\WhatsApp\CloudApiClient;
+use Interferencia\Modules\WhatsApp\MediaStorage;
+use Interferencia\Modules\WhatsApp\MessageRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -34,6 +37,7 @@ Comandos disponíveis:
   migrate            Executa migrações pendentes
   migrate:rollback   Reverte o último lote de migrações
   user:create-admin  Cria o primeiro administrador de forma interativa
+  whatsapp:media:sync  Recupera mídias pendentes da Cloud API
 
 TEXT);
         exit(0);
@@ -81,6 +85,26 @@ TEXT);
         unset($passwordHash);
         fwrite(STDOUT, sprintf("Administrador criado com ID %d.\n", $id));
         exit(0);
+    }
+
+    if ($command === 'whatsapp:media:sync') {
+        $messages = new MessageRepository($connection->pdo());
+        $client = new CloudApiClient(
+            (string) $config->get('app.whatsapp_access_token'),
+            (string) $config->get('app.whatsapp_graph_version'),
+            $config->bool('app.whatsapp_send_enabled'),
+        );
+        $storage = new MediaStorage($rootPath . '/storage/whatsapp/media');
+        $result = $messages->syncPendingMedia($client, $storage, 50);
+        if (!$result['available']) {
+            throw new RuntimeException('Credenciais da Meta indisponíveis para receber mídias.');
+        }
+        fwrite(STDOUT, sprintf("Mídias processadas: %d; recuperadas: %d; falhas: %d.\n", $result['processed'], $result['synced'], $result['failed']));
+        if (in_array('--cleanup', $argv, true)) {
+            $cleanup = $storage->cleanupOrphans($messages->storedMediaPaths(), true);
+            fwrite(STDOUT, sprintf("Órfãos encontrados: %d; removidos: %d.\n", $cleanup['candidates'], $cleanup['deleted']));
+        }
+        exit($result['failed'] === 0 ? 0 : 1);
     }
 
     $migrator = new Migrator(
