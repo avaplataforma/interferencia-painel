@@ -17,4 +17,5 @@ return [
     'whatsapp_app_secret' => getenv('WHATSAPP_APP_SECRET') ?: '',
     'whatsapp_access_token' => getenv('WHATSAPP_ACCESS_TOKEN') ?: '',
     'whatsapp_graph_version' => getenv('WHATSAPP_GRAPH_VERSION') ?: '',
+    'whatsapp_send_enabled' => filter_var(getenv('WHATSAPP_SEND_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
 ];

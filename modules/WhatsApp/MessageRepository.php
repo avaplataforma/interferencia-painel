@@ -49,9 +49,37 @@ final readonly class MessageRepository
         $s=$this->db->prepare($sql.' ORDER BY c.last_message_at DESC,c.id DESC');$s->execute($params);return$s->fetchAll();
     }
     /** @param list<int> $lineIds @return array<string,mixed>|null */
-    public function conversation(int $id,array $lineIds):?array{if($lineIds===[])return null;$marks=implode(',',array_fill(0,count($lineIds),'?'));$s=$this->db->prepare("SELECT c.*,l.name line_name,l.phone_e164,u.name unit_name,a.name assigned_name,crm.name crm_name,crm.id crm_id,(SELECT COUNT(*) FROM crm_contacts duplicate WHERE duplicate.id<>COALESCE(c.crm_contact_id,0) AND duplicate.is_active=1 AND duplicate.unit_id<>l.unit_id AND ".$this->normalizedPhoneSql('duplicate.phone')."=RIGHT(c.wa_contact_id,11)) cross_unit_duplicates FROM whatsapp_conversations c INNER JOIN whatsapp_lines l ON l.id=c.line_id INNER JOIN units u ON u.id=l.unit_id LEFT JOIN users a ON a.id=c.assigned_user_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=? AND c.line_id IN ($marks) LIMIT 1");$s->execute(array_merge([$id],$lineIds));$row=$s->fetch();return is_array($row)?$row:null;}
+    public function conversation(int $id,array $lineIds):?array{if($lineIds===[])return null;$marks=implode(',',array_fill(0,count($lineIds),'?'));$s=$this->db->prepare("SELECT c.*,l.name line_name,l.phone_e164,l.phone_number_id,l.connection_status,u.name unit_name,a.name assigned_name,crm.name crm_name,crm.id crm_id,(SELECT MAX(inbound.message_at) FROM whatsapp_messages inbound WHERE inbound.conversation_id=c.id AND inbound.direction='inbound') last_inbound_at,(SELECT COUNT(*) FROM crm_contacts duplicate WHERE duplicate.id<>COALESCE(c.crm_contact_id,0) AND duplicate.is_active=1 AND duplicate.unit_id<>l.unit_id AND ".$this->normalizedPhoneSql('duplicate.phone')."=RIGHT(c.wa_contact_id,11)) cross_unit_duplicates FROM whatsapp_conversations c INNER JOIN whatsapp_lines l ON l.id=c.line_id INNER JOIN units u ON u.id=l.unit_id LEFT JOIN users a ON a.id=c.assigned_user_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=? AND c.line_id IN ($marks) LIMIT 1");$s->execute(array_merge([$id],$lineIds));$row=$s->fetch();return is_array($row)?$row:null;}
     /** @return list<array<string,mixed>> */
     public function messages(int $conversationId):array{$s=$this->db->prepare('SELECT * FROM whatsapp_messages WHERE conversation_id=:id ORDER BY message_at,id');$s->execute(['id'=>$conversationId]);return$s->fetchAll();}
+    /** @param list<int> $lineIds @return array{allowed:bool,reason:string} */
+    public function sendAvailability(int $conversationId,array $lineIds,int $actorId,bool $cloudReady):array
+    {
+        $conversation=$this->conversation($conversationId,$lineIds);
+        if($conversation===null)return['allowed'=>false,'reason'=>'Conversa não encontrada ou sem permissão de acesso.'];
+        if((int)$conversation['is_test']===1)return['allowed'=>false,'reason'=>'O envio é bloqueado em conversas de simulação.'];
+        if((string)$conversation['status']!=='open')return['allowed'=>false,'reason'=>'Reabra a conversa antes de responder.'];
+        if((int)($conversation['assigned_user_id']??0)!==$actorId)return['allowed'=>false,'reason'=>'Assuma a conversa antes de responder.'];
+        if((string)$conversation['connection_status']!=='connected')return['allowed'=>false,'reason'=>'A linha ainda não está conectada à API oficial.'];
+        if(!ctype_digit((string)($conversation['phone_number_id']??'')))return['allowed'=>false,'reason'=>'Cadastre o Phone Number ID da linha na área ADM.'];
+        if(!$cloudReady)return['allowed'=>false,'reason'=>'O envio oficial permanece bloqueado até a conclusão segura das credenciais da Meta.'];
+        $lastInbound=strtotime((string)($conversation['last_inbound_at']??''));
+        if($lastInbound===false||$lastInbound<time()-86400)return['allowed'=>false,'reason'=>'A janela de atendimento de 24 horas terminou. Será necessário usar um modelo aprovado pela Meta.'];
+        return['allowed'=>true,'reason'=>'Envio disponível dentro da janela de atendimento de 24 horas.'];
+    }
+    /** @param list<int> $lineIds */
+    public function sendText(int $conversationId,array $lineIds,int $actorId,string $body,CloudApiClient $client):void
+    {
+        $body=trim($body);if($body===''||mb_strlen($body)>4096)throw new \RuntimeException('Digite uma mensagem com até 4.096 caracteres.');
+        $availability=$this->sendAvailability($conversationId,$lineIds,$actorId,$client->ready());if(!$availability['allowed'])throw new \RuntimeException($availability['reason']);
+        $conversation=$this->conversation($conversationId,$lineIds);if($conversation===null)throw new \RuntimeException('Conversa não encontrada.');
+        $localId='local_'.bin2hex(random_bytes(16));$now=date('Y-m-d H:i:s');
+        $insert=$this->db->prepare("INSERT INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,status,message_at,attempted_at) VALUES(:conversation,:line,:wamid,'outbound','text',:body,'queued',:at,:attempted)");
+        $insert->execute(['conversation'=>$conversationId,'line'=>$conversation['line_id'],'wamid'=>$localId,'body'=>$body,'at'=>$now,'attempted'=>$now]);
+        $messageId=(int)$this->db->lastInsertId();
+        try{$result=$client->sendText((string)$conversation['phone_number_id'],(string)$conversation['wa_contact_id'],$body);$update=$this->db->prepare('UPDATE whatsapp_messages SET wamid=:wamid,status=:status,error_message=NULL WHERE id=:id');$update->execute(['wamid'=>$result['id'],'status'=>$result['status'],'id'=>$messageId]);$this->db->prepare('UPDATE whatsapp_conversations SET last_message_at=:at WHERE id=:id')->execute(['at'=>$now,'id'=>$conversationId]);}
+        catch(\Throwable$e){$error=mb_substr($e->getMessage(),0,500);$this->db->prepare("UPDATE whatsapp_messages SET status='failed',error_message=:error WHERE id=:id")->execute(['error'=>$error,'id'=>$messageId]);throw new \RuntimeException($error,0,$e);}
+    }
     public function markRead(int $conversationId):void{$s=$this->db->prepare('UPDATE whatsapp_conversations SET unread_count=0 WHERE id=:id');$s->execute(['id'=>$conversationId]);}
     /** @param list<int> $lineIds @return array{unread:int,unassigned:int} */
     public function notificationSummary(array $lineIds):array

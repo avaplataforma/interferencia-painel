@@ -123,3 +123,12 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - A central de notificações reúne mensagens não lidas e follow-ups atrasados ou previstos para hoje.
 - Os totais respeitam o contexto de unidade, as linhas autorizadas e o atendente responsável.
 - Os contadores são atualizados em segundo plano a cada 30 segundos enquanto a página estiver visível.
+
+## Envio oficial com trava de segurança
+
+- O cliente da Cloud API usa o token somente a partir do ambiente seguro da VPS; o token nunca é armazenado no banco ou exibido na interface.
+- A chave `WHATSAPP_SEND_ENABLED` permanece desligada por padrão e precisa ser ativada conscientemente após a validação das credenciais do piloto.
+- O envio de texto somente é liberado em conversa real, aberta, atribuída ao próprio atendente e recebida nas últimas 24 horas.
+- A linha precisa estar conectada e possuir um `phone_number_id` válido. Conversas do simulador nunca podem gerar envio externo.
+- Cada tentativa fica registrada com estado de entrega e diagnóstico limitado. Atualizações posteriores de envio, entrega, leitura ou falha continuam chegando pelo webhook oficial.
+- Fora da janela de 24 horas, o painel bloqueia texto livre e informa que será necessário utilizar um modelo previamente aprovado pela Meta.

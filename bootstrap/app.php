@@ -32,6 +32,7 @@ use Interferencia\Modules\Crm\ExternalFormRepository;
 use Interferencia\Modules\WhatsApp\LineRepository;
 use Interferencia\Modules\WhatsApp\MessageRepository;
 use Interferencia\Modules\WhatsApp\WebhookVerifier;
+use Interferencia\Modules\WhatsApp\CloudApiClient;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -94,6 +95,11 @@ $whatsappMessages = new MessageRepository($database);
 $whatsappVerifyToken = $config->get('app.whatsapp_verify_token');
 $whatsappAppSecret = $config->get('app.whatsapp_app_secret');
 $whatsappWebhook = new WebhookVerifier(is_string($whatsappVerifyToken) ? $whatsappVerifyToken : '', is_string($whatsappAppSecret) ? $whatsappAppSecret : '');
+$whatsappCloudApi = new CloudApiClient(
+    (string) $config->get('app.whatsapp_access_token'),
+    (string) $config->get('app.whatsapp_graph_version'),
+    $config->bool('app.whatsapp_send_enabled'),
+);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
@@ -124,6 +130,6 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappWebhook);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappWebhook, $whatsappCloudApi);
 
 return new Application($router);
