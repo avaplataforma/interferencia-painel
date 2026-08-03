@@ -151,23 +151,26 @@ return static function (
     $form = static function (?int $id = null) use ($view, $config, $users, $session, $csrf, $basePath): Response {
         $user = $id === null ? null : $users->findById($id);
         if ($id !== null && $user === null) return Response::text("Usuário não encontrado.\n", 404);
-        return $view->render('users/form', ['title' => ($id === null ? 'Novo usuário' : 'Editar usuário') . ' — ' . $config->string('app.name'), 'user' => $user, 'roles' => $users->availableRoles(), 'units' => $users->availableUnits(), 'selectedRoles' => $id === null ? [] : $users->roleIds($id), 'selectedUnits' => $id === null ? [] : $users->unitIds($id), 'error' => $session->get('users.error'), 'csrfField' => $csrf->field(), 'basePath' => $basePath]);
+        $old = $session->get('users.old', []);
+        if (!is_array($old)) $old = [];
+        return $view->render('users/form', ['title' => ($id === null ? 'Novo usuário' : 'Editar usuário') . ' — ' . $config->string('app.name'), 'user' => $user, 'roles' => $users->availableRoles(), 'units' => $users->availableUnits(), 'selectedRoles' => $old['roles'] ?? ($id === null ? [] : $users->roleIds($id)), 'selectedUnits' => $old['units'] ?? ($id === null ? [] : $users->unitIds($id)), 'old' => $old, 'error' => $session->get('users.error'), 'csrfField' => $csrf->field(), 'basePath' => $basePath]);
     };
     $router->get('/users/create', static fn (): Response => $form(), $manageUsers);
     $router->get('/users/{id:\d+}/edit', static fn (Request $request, array $params): Response => $form((int) $params['id']), $manageUsers);
 
     $save = static function (Request $request, ?int $id = null) use ($validator, $userManager, $session, $basePath, $ids): Response {
+        $roles = $ids($request->input('roles')); $units = $ids($request->input('units')); $active = $request->input('is_active') === '1';
         $result = $validator->validate($request->inputData(), ['name' => 'required|string|min:3|max:120', 'email' => 'required|string|email|max:190', 'password' => ($id === null ? 'required|' : 'nullable|') . 'string|min:12|max:4096|confirmed'], ['name' => 'nome', 'email' => 'e-mail', 'password' => 'senha']);
         try {
             if ($result->fails()) throw new RuntimeException(implode(' ', array_map(static fn (array $errors): string => $errors[0], $result->errors())));
             $name = (string) $result->value('name'); $email = (string) $result->value('email'); $password = $result->value('password');
-            $roles = $ids($request->input('roles')); $units = $ids($request->input('units')); $active = $request->input('is_active') === '1';
             if ($id === null) $userManager->create($name, $email, (string) $password, $active, $roles, $units);
             else $userManager->update($id, $name, $email, is_string($password) ? $password : null, $active, $roles, $units);
             $session->flash('users.message', $id === null ? 'Usuário criado.' : 'Usuário atualizado.');
             return Response::redirect($basePath . '/users');
         } catch (Throwable $exception) {
             $session->flash('users.error', $exception->getMessage());
+            $session->flash('users.old', ['name' => (string) $request->input('name', ''), 'email' => (string) $request->input('email', ''), 'roles' => $roles, 'units' => $units, 'is_active' => $active]);
             return Response::redirect($basePath . ($id === null ? '/users/create' : "/users/{$id}/edit"));
         }
     };
