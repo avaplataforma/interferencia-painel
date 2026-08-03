@@ -1,5 +1,6 @@
 <?php declare(strict_types=1); /** @var Closure(mixed):string $escape */
 $demo=[['id'=>0,'contact_name'=>'Maria Silva','wa_contact_id'=>'5548999990001','line_name'=>$lines[0]['name']??'WhatsApp Piloto','unit_name'=>$lines[0]['unit_name']??'Central','assigned_name'=>'Você','unread_count'=>2,'last_body'=>'Olá! Gostaria de saber mais sobre os cursos.'],['id'=>-1,'contact_name'=>'Carlos Souza','wa_contact_id'=>'5548999990002','line_name'=>$lines[0]['name']??'WhatsApp Piloto','unit_name'=>$lines[0]['unit_name']??'Central','assigned_name'=>null,'unread_count'=>0,'last_body'=>'Obrigado pelo atendimento!']];$items=$demoMode?$demo:$conversations;
+if(!($navigation['whatsapp_transfer']??false)&&$currentUser!==null)$attendants=[['id'=>$currentUser->id,'name'=>$currentUser->name]];
 ?>
 <div class="whatsapp-heading"><div><span class="status">WhatsApp</span><h1>Caixa de entrada</h1><p class="meta">Atenda somente as linhas e unidades permitidas para o seu usuário.</p></div><?php if($demoMode&&$lines!==[]):?><span class="demo-badge"><i class="fa-solid fa-flask"></i> Demonstração</span><?php endif;?></div>
 <?php if($message):?><p class="alert alert-success"><?= $escape($message) ?></p><?php endif;?><?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>

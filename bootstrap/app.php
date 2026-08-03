@@ -114,6 +114,7 @@ $view->share([
         'external_forms' => $auth->can('external_forms.manage'),
         'whatsapp_lines' => $auth->can('whatsapp.lines.manage'),
         'whatsapp' => $auth->can('whatsapp.inbox.view'),
+        'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),

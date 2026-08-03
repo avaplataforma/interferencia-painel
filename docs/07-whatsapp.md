@@ -98,3 +98,5 @@ da linha armazena apenas WABA ID e Phone Number ID, que não são credenciais.
 A caixa de entrada mostra somente as linhas liberadas para o usuário e oferece filtros para todas as conversas, minhas conversas, conversas sem atendente e não lidas. Enquanto a empresa aguarda a aprovação da Meta, a interface inicial usa uma prévia demonstrativa não persistida e mantém o envio desativado.
 
 O administrador também dispõe de um simulador seguro de recebimento. Ele grava conversas marcadas com `is_test`, permitindo validar caixa de entrada, atribuição, vínculo com CRM e follow-up sem abrir uma sessão do WhatsApp Web e sem enviar mensagens externas.
+
+Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conversa para si. A transferência para outro atendente exige a permissão `whatsapp.conversations.assign`, concedida aos perfis Administrador global e Gestor. A validação é feita novamente no servidor, independentemente dos controles exibidos na interface.
