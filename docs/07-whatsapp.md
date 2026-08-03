@@ -139,3 +139,12 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - Os textos aceitam somente as variáveis controladas `{{nome}}`, `{{curso}}`, `{{unidade}}` e `{{atendente}}`.
 - A caixa de entrada permite selecionar um modelo e conferir a mensagem final com os dados do contato antes de qualquer envio.
 - O cadastro no painel não cria nem aprova modelos na Meta. O envio permanece indisponível até que o modelo correspondente esteja aprovado e a integração oficial seja ativada.
+
+## Anexos e mídias
+
+- Imagens, documentos e áudios ficam em armazenamento privado, fora da pasta pública do site.
+- O download exige sessão autenticada e acesso à linha e à unidade da mensagem; não existe URL pública direta para o arquivo.
+- O piloto aceita JPEG, PNG, WebP, PDF, Word, MP3, OGG e M4A, limitados a 16 MB e validados pelo conteúdo real do arquivo.
+- O simulador permite testar o fluxo completo de recebimento, visualização e download sem enviar dados ao WhatsApp.
+- O webhook oficial já registra o identificador e os metadados das mídias. A obtenção do arquivo pela Cloud API será habilitada somente depois da validação das credenciais do piloto.
+- O envio externo de anexos continua bloqueado nesta etapa.

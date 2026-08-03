@@ -10,6 +10,7 @@ final readonly class Request
      * @param array<string, string|array<string>> $query
      * @param array<string, string> $headers
      * @param array<string, mixed> $input
+     * @param array<string, UploadedFile> $files
      */
     public function __construct(
         private string $method,
@@ -18,6 +19,7 @@ final readonly class Request
         private array $headers = [],
         private string $body = '',
         private array $input = [],
+        private array $files = [],
     ) {
     }
 
@@ -34,6 +36,7 @@ final readonly class Request
             self::headersFromServer($_SERVER),
             $body === false ? '' : $body,
             $_POST,
+            self::filesFromGlobals($_FILES),
         );
     }
 
@@ -77,6 +80,19 @@ final readonly class Request
     public function input(string $key, mixed $default = null): mixed
     {
         return $this->input[$key] ?? $default;
+    }
+
+    public function file(string $key): ?UploadedFile
+    {
+        return $this->files[$key] ?? null;
+    }
+
+    /** @param array<string, mixed> $files @return array<string, UploadedFile> */
+    private static function filesFromGlobals(array $files): array
+    {
+        $normalized=[];
+        foreach($files as$key=>$file){if(!is_array($file)||is_array($file['name']??null))continue;$normalized[$key]=new UploadedFile((string)($file['tmp_name']??''),(string)($file['name']??''),(string)($file['type']??''),(int)($file['size']??0),(int)($file['error']??UPLOAD_ERR_NO_FILE));}
+        return$normalized;
     }
 
     /**

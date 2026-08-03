@@ -34,6 +34,7 @@ use Interferencia\Modules\WhatsApp\MessageRepository;
 use Interferencia\Modules\WhatsApp\WebhookVerifier;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
 use Interferencia\Modules\WhatsApp\TemplateRepository;
+use Interferencia\Modules\WhatsApp\MediaStorage;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -94,6 +95,7 @@ $externalForms = new ExternalFormRepository($database);
 $whatsappLines = new LineRepository($database);
 $whatsappMessages = new MessageRepository($database);
 $whatsappTemplates = new TemplateRepository($database);
+$whatsappMedia = new MediaStorage($rootPath . '/storage/whatsapp/media');
 $whatsappVerifyToken = $config->get('app.whatsapp_verify_token');
 $whatsappAppSecret = $config->get('app.whatsapp_app_secret');
 $whatsappWebhook = new WebhookVerifier(is_string($whatsappVerifyToken) ? $whatsappVerifyToken : '', is_string($whatsappAppSecret) ? $whatsappAppSecret : '');
@@ -133,6 +135,6 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappWebhook, $whatsappCloudApi);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi);
 
 return new Application($router);

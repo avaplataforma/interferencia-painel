@@ -290,6 +290,13 @@ $tests['mantém envio oficial bloqueado por padrão'] = static function (): void
     assertTrue(!$client->ready());
 };
 
+$tests['carrega suporte seguro a anexos do WhatsApp'] = static function () use ($rootPath): void {
+    assertTrue(class_exists(Interferencia\Kernel\Http\UploadedFile::class));
+    assertTrue(class_exists(Interferencia\Modules\WhatsApp\MediaStorage::class));
+    $migration = require $rootPath . '/database/migrations/20260803_400000_add_whatsapp_attachments.php';
+    assertSame('20260803_400000_add_whatsapp_attachments', $migration->id());
+};
+
 $tests['valida webhook oficial do WhatsApp'] = static function (): void {
     $verifier = new Interferencia\Modules\WhatsApp\WebhookVerifier('token-verificacao', 'segredo-app');
     assertSame('12345', $verifier->challenge('subscribe', 'token-verificacao', '12345'));
