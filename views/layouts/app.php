@@ -90,7 +90,9 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .followup-card.overdue { color: #b4232c; border-color: #f0b2b6; }
     .followup-card.today { color: #9a6700; border-color: #ead28b; }
     .followup-card.future { color: #176b3a; border-color: #a8d9ba; }
-    .followup-filters { display: grid; grid-template-columns: repeat(3,minmax(10rem,1fr)) auto auto; gap: .55rem; align-items: end; max-width: none !important; margin-top: 1rem; }
+    .followup-filters { display: grid; grid-template-columns: minmax(16rem,1.5fr) repeat(3,minmax(9rem,1fr)) auto auto; gap: .55rem; align-items: end; max-width: none !important; margin-top: 1rem; }
+    .followup-filters .followup-search { margin: 0; min-height: 3rem; }
+    .followup-result-count { margin: .55rem 0 0; text-align: right; }
     .followup-filters button { margin: 0; min-height: 3rem; }
     .followup-row-overdue { background: #fff4f4; }
     .overdue-label { color: #b4232c; font-size: .78rem; font-weight: 750; }

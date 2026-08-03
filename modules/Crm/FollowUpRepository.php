@@ -7,7 +7,7 @@ final readonly class FollowUpRepository
 {
     public function __construct(private PDO $db) {}
 
-    public function allForUnits(array $unitIds, string $status='', string $period='', int $responsibleId=0): array
+    public function allForUnits(array $unitIds, string $status='', string $period='', int $responsibleId=0, string $search=''): array
     {
         if ($unitIds === []) return [];
         $marks=implode(',',array_fill(0,count($unitIds),'?'));
@@ -19,6 +19,7 @@ final readonly class FollowUpRepository
         elseif($period==='today')$sql.=" AND f.status='pending' AND f.scheduled_at>=CURDATE() AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY";
         elseif($period==='future')$sql.=" AND f.status='pending' AND f.scheduled_at>=CURDATE()+INTERVAL 1 DAY";
         if($responsibleId>0){$sql.=' AND f.responsible_user_id=?';$params[]=$responsibleId;}
+        if($search!==''){$sql.=' AND (c.name LIKE ? OR c.phone LIKE ? OR c.email LIKE ? OR f.action LIKE ? OR f.notes LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term,$term);}
         $sql.=" ORDER BY CASE f.status WHEN 'pending' THEN 0 ELSE 1 END,f.scheduled_at ASC,f.id DESC";
         $s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
     }
