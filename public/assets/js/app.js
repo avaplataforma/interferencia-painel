@@ -102,3 +102,40 @@ document.querySelectorAll('[data-copy]').forEach((button) => {
     window.setTimeout(() => { button.textContent = original; }, 1600);
   });
 });
+
+const refreshNotifications = async () => {
+  if (document.hidden || !document.querySelector('.notification-center')) return;
+  try {
+    const basePath = document.body.dataset.basePath || '';
+    const response = await fetch(`${basePath}/notifications/summary`, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+    if (!response.ok) return;
+    const data = await response.json();
+    const unread = Number(data?.whatsapp?.unread || 0);
+    const overdue = Number(data?.followups?.overdue || 0);
+    const today = Number(data?.followups?.today || 0);
+    const total = Number(data?.total || 0);
+    if (unread > 0 && !document.querySelector('[data-whatsapp-count]')) document.querySelectorAll('.nav-link[href$="/whatsapp"]').forEach((link) => { const badge = document.createElement('span'); badge.className = 'nav-count'; badge.dataset.whatsappCount = ''; link.append(badge); });
+    document.querySelectorAll('[data-whatsapp-count]').forEach((badge) => { badge.textContent = String(unread); badge.hidden = unread < 1; });
+    const summary = document.querySelector('.notification-center > summary');
+    let totalBadge = document.querySelector('[data-notification-total]');
+    if (!totalBadge && summary && total > 0) { totalBadge = document.createElement('span'); totalBadge.className = 'notification-total'; totalBadge.dataset.notificationTotal = ''; summary.append(totalBadge); }
+    if (totalBadge) { totalBadge.textContent = String(total); totalBadge.hidden = total < 1; }
+    const panel = document.querySelector('.notification-panel');
+    if (panel) {
+      panel.querySelectorAll('.notification-item,.notification-empty').forEach((item) => item.remove());
+      const addItem = (href, icon, title, subtitle) => { const link = document.createElement('a'); link.className = 'notification-item'; link.href = href; const image = document.createElement('i'); image.className = `fa-solid ${icon}`; const copy = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = title; const small = document.createElement('small'); small.textContent = subtitle; copy.append(strong, small); link.append(image, copy); panel.append(link); };
+      if (unread > 0) addItem(`${basePath}/whatsapp?scope=unread`, 'fa-comments', `${unread} mensagem(ns) não lida(s)`, 'Abrir caixa do WhatsApp');
+      const userId = document.body.dataset.currentUserId || '';
+      if (overdue > 0) addItem(`${basePath}/crm/follow-ups?status=pending&period=overdue&responsible=${userId}`, 'fa-triangle-exclamation', `${overdue} retorno(s) atrasado(s)`, 'Exigem atenção');
+      if (today > 0) addItem(`${basePath}/crm/follow-ups?status=pending&period=today&responsible=${userId}`, 'fa-calendar-day', `${today} retorno(s) para hoje`, 'Abrir agenda');
+      if (total < 1) { const empty = document.createElement('p'); empty.className = 'notification-empty'; empty.textContent = 'Nenhuma pendência no momento.'; panel.append(empty); }
+    }
+  } catch (_) {
+    // A navegação continua normal se a atualização em segundo plano falhar.
+  }
+};
+
+if (document.querySelector('.notification-center')) {
+  window.setInterval(refreshNotifications, 30000);
+  document.addEventListener('visibilitychange', refreshNotifications);
+}

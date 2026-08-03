@@ -53,6 +53,12 @@ final readonly class MessageRepository
     /** @return list<array<string,mixed>> */
     public function messages(int $conversationId):array{$s=$this->db->prepare('SELECT * FROM whatsapp_messages WHERE conversation_id=:id ORDER BY message_at,id');$s->execute(['id'=>$conversationId]);return$s->fetchAll();}
     public function markRead(int $conversationId):void{$s=$this->db->prepare('UPDATE whatsapp_conversations SET unread_count=0 WHERE id=:id');$s->execute(['id'=>$conversationId]);}
+    /** @param list<int> $lineIds @return array{unread:int,unassigned:int} */
+    public function notificationSummary(array $lineIds):array
+    {
+        if($lineIds===[])return['unread'=>0,'unassigned'=>0];$marks=implode(',',array_fill(0,count($lineIds),'?'));
+        $s=$this->db->prepare("SELECT COALESCE(SUM(CASE WHEN status='open' THEN unread_count ELSE 0 END),0) unread,COALESCE(SUM(status='open' AND assigned_user_id IS NULL),0) unassigned FROM whatsapp_conversations WHERE line_id IN ($marks)");$s->execute($lineIds);$row=$s->fetch()?:[];return['unread'=>(int)($row['unread']??0),'unassigned'=>(int)($row['unassigned']??0)];
+    }
     /** @param list<int> $lineIds */
     public function setConversationStatus(int $conversationId,string $status,array $lineIds,int $actorId,string $resolution=''):bool
     {

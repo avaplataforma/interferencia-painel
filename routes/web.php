@@ -86,6 +86,7 @@ return static function (
         $whatsappMessages->receive($payload);
         return Response::text("EVENT_RECEIVED\n");
     });
+    $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$follow=['overdue'=>0,'today'=>0,'future'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}return Response::json(['followups'=>$follow,'whatsapp'=>$whatsapp,'total'=>$follow['overdue']+$follow['today']+$whatsapp['unread']]);},[$requireAuth]);
 
     $router->get('/login', static function () use ($view, $session, $csrf, $browserTitle, $basePath): Response {
         return $view->render('auth/login', [

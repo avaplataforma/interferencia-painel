@@ -116,3 +116,10 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - Quando a opção de retorno é escolhida, o sistema exige um follow-up pendente para o contato.
 - Encerramentos e reaberturas são registrados no histórico do CRM.
 - Uma nova mensagem recebida reabre automaticamente a conversa.
+
+## Notificações operacionais
+
+- O menu do WhatsApp exibe a quantidade de mensagens não lidas das linhas permitidas ao usuário.
+- A central de notificações reúne mensagens não lidas e follow-ups atrasados ou previstos para hoje.
+- Os totais respeitam o contexto de unidade, as linhas autorizadas e o atendente responsável.
+- Os contadores são atualizados em segundo plano a cada 30 segundos enquanto a página estiver visível.
