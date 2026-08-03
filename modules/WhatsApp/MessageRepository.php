@@ -30,11 +30,26 @@ final readonly class MessageRepository
         $waId=(string)($message['from']??'');$wamid=(string)($message['id']??'');if($waId===''||$wamid==='')return;
         $name=null;foreach(($value['contacts']??[])as$contact)if((string)($contact['wa_id']??'')===$waId)$name=(string)($contact['profile']['name']??'');
         $at=(new DateTimeImmutable('@'.(int)($message['timestamp']??time())))->format('Y-m-d H:i:s');
-        $s=$this->db->prepare("INSERT INTO whatsapp_conversations(line_id,wa_contact_id,contact_name,last_message_at) VALUES(:line,:wa,:name,:at) ON DUPLICATE KEY UPDATE contact_name=COALESCE(VALUES(contact_name),contact_name),last_message_at=GREATEST(COALESCE(last_message_at,VALUES(last_message_at)),VALUES(last_message_at)),id=LAST_INSERT_ID(id)");
+        $s=$this->db->prepare("INSERT INTO whatsapp_conversations(line_id,wa_contact_id,contact_name,last_message_at,unread_count) VALUES(:line,:wa,:name,:at,1) ON DUPLICATE KEY UPDATE contact_name=COALESCE(VALUES(contact_name),contact_name),last_message_at=GREATEST(COALESCE(last_message_at,VALUES(last_message_at)),VALUES(last_message_at)),unread_count=unread_count+1,id=LAST_INSERT_ID(id)");
         $s->execute(['line'=>$lineId,'wa'=>$waId,'name'=>$name?:null,'at'=>$at]);$conversation=(int)$this->db->lastInsertId();
         $type=(string)($message['type']??'unknown');$body=$type==='text'?(string)($message['text']['body']??''):null;
         $s=$this->db->prepare("INSERT IGNORE INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,status,message_at) VALUES(:conversation,:line,:wamid,'inbound',:type,:body,'received',:at)");
         $s->execute(['conversation'=>$conversation,'line'=>$lineId,'wamid'=>$wamid,'type'=>$type,'body'=>$body,'at'=>$at]);
     }
     private function updateStatus(array $status):void{$wamid=(string)($status['id']??'');$state=(string)($status['status']??'');if($wamid===''||!in_array($state,['sent','delivered','read','failed'],true))return;$s=$this->db->prepare('UPDATE whatsapp_messages SET status=:status WHERE wamid=:wamid');$s->execute(['status'=>$state,'wamid'=>$wamid]);}
+
+    /** @param list<int> $lineIds @return list<array<string,mixed>> */
+    public function conversations(array $lineIds,string $scope='all',string $search='',?int $userId=null):array
+    {
+        if($lineIds===[])return[];$marks=implode(',',array_fill(0,count($lineIds),'?'));
+        $sql="SELECT c.*,l.name line_name,l.phone_e164,u.name unit_name,a.name assigned_name,crm.name crm_name,crm.id crm_id,(SELECT m.body FROM whatsapp_messages m WHERE m.conversation_id=c.id ORDER BY m.message_at DESC,m.id DESC LIMIT 1) last_body FROM whatsapp_conversations c INNER JOIN whatsapp_lines l ON l.id=c.line_id INNER JOIN units u ON u.id=l.unit_id LEFT JOIN users a ON a.id=c.assigned_user_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.line_id IN ($marks)";$params=$lineIds;
+        if($scope==='mine'&&$userId!==null){$sql.=' AND c.assigned_user_id=?';$params[]=$userId;}elseif($scope==='unassigned'){$sql.=' AND c.assigned_user_id IS NULL';}elseif($scope==='unread'){$sql.=' AND c.unread_count>0';}
+        if($search!==''){$sql.=' AND (c.contact_name LIKE ? OR c.wa_contact_id LIKE ? OR crm.name LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term);}
+        $s=$this->db->prepare($sql.' ORDER BY c.last_message_at DESC,c.id DESC');$s->execute($params);return$s->fetchAll();
+    }
+    /** @param list<int> $lineIds @return array<string,mixed>|null */
+    public function conversation(int $id,array $lineIds):?array{if($lineIds===[])return null;$marks=implode(',',array_fill(0,count($lineIds),'?'));$s=$this->db->prepare("SELECT c.*,l.name line_name,l.phone_e164,u.name unit_name,a.name assigned_name,crm.name crm_name,crm.id crm_id FROM whatsapp_conversations c INNER JOIN whatsapp_lines l ON l.id=c.line_id INNER JOIN units u ON u.id=l.unit_id LEFT JOIN users a ON a.id=c.assigned_user_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=? AND c.line_id IN ($marks) LIMIT 1");$s->execute(array_merge([$id],$lineIds));$row=$s->fetch();return is_array($row)?$row:null;}
+    /** @return list<array<string,mixed>> */
+    public function messages(int $conversationId):array{$s=$this->db->prepare('SELECT * FROM whatsapp_messages WHERE conversation_id=:id ORDER BY message_at,id');$s->execute(['id'=>$conversationId]);return$s->fetchAll();}
+    public function markRead(int $conversationId):void{$s=$this->db->prepare('UPDATE whatsapp_conversations SET unread_count=0 WHERE id=:id');$s->execute(['id'=>$conversationId]);}
 }
