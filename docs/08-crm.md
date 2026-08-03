@@ -117,3 +117,16 @@ operação reúne agenda, contatos novos e filtros para todos os usuários
 autorizados no CRM. Atalhos de usuários, unidades, perfis, etiquetas, status e
 sites externos ficam agrupados em Administração e são exibidos individualmente
 conforme as permissões do usuário.
+
+## Ficha do contato
+
+Cada contato possui uma ficha central acessível inclusive na visão consolidada
+das unidades autorizadas. Ela reúne dados cadastrais, status, etiquetas, origem,
+unidade, atendente, canais de comunicação, próximo retorno e histórico de
+follow-ups. Ligações, e-mails e conversas no WhatsApp podem ser iniciados por
+atalhos da própria ficha.
+
+Edição e novos follow-ups exigem que a unidade responsável esteja selecionada,
+evitando alterações no contexto errado. Mudanças de status, atendente,
+etiquetas e observações passam a compor um histórico de auditoria com data e
+autor; os contatos anteriores recebem um marco inicial na migração.

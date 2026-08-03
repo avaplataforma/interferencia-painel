@@ -14,7 +14,9 @@ final readonly class ContactManager
     /** @param array<string, mixed> $data */
     public function save(?int $id, int $unitId, int $creatorId, array $data): int
     {
-        if ($id !== null && $this->contacts->find($id, $unitId) === null) throw new RuntimeException('Contato não encontrado nesta unidade.');
+        $before = $id === null ? null : $this->contacts->find($id, $unitId);
+        if ($id !== null && $before === null) throw new RuntimeException('Contato não encontrado nesta unidade.');
+        $beforeTagIds = $id === null ? [] : $this->tags->idsForContact($id);
         $statusId = (int) ($data['status_id'] ?? 0);
         if (!$this->contacts->statusExists($statusId)) throw new RuntimeException('Selecione um status válido.');
         $responsible = (int) ($data['responsible_user_id'] ?? 0);
@@ -32,7 +34,17 @@ final readonly class ContactManager
         $phoneDigits=preg_replace('/\D/','',(string)($data['phone']??''));if(!in_array(strlen((string)$phoneDigits),[10,11],true))throw new RuntimeException('Informe um telefone com DDD válido.');
         $documentDigits=preg_replace('/\D/','',(string)($data['document']??''));if(!$this->validDocument((string)$documentDigits))throw new RuntimeException('Informe um CPF ou CNPJ válido.');
         $tagIds=array_values(array_unique(array_map('intval',is_array($data['tags']??null)?$data['tags']:[])));if($tagIds===[])throw new RuntimeException('Selecione pelo menos uma etiqueta.');if(!$this->tags->validIds($tagIds))throw new RuntimeException('Uma ou mais etiquetas são inválidas.');
-        $saved=$this->contacts->save($id, $unitId, $creatorId, $clean);$this->tags->syncContact($saved,$tagIds);return $saved;
+        $saved=$this->contacts->save($id, $unitId, $creatorId, $clean);
+        $this->tags->syncContact($saved,$tagIds);
+        if ($before === null) {
+            $this->contacts->recordEvent($saved,$creatorId,'created','Contato cadastrado internamente.');
+        } else {
+            if ((int)$before['status_id'] !== $statusId) $this->contacts->recordEvent($saved,$creatorId,'status_changed','Status alterado de '.$this->contacts->statusName((int)$before['status_id']).' para '.$this->contacts->statusName($statusId).'.');
+            if ((int)$before['responsible_user_id'] !== $responsible) $this->contacts->recordEvent($saved,$creatorId,'responsible_changed','Atendente alterado de '.$this->contacts->userName((int)$before['responsible_user_id']).' para '.$this->contacts->userName($responsible).'.');
+            $oldTags=$beforeTagIds;$newTags=$tagIds;sort($oldTags);sort($newTags);if($oldTags!==$newTags)$this->contacts->recordEvent($saved,$creatorId,'tags_changed','Etiquetas atualizadas: '.implode(', ',$this->tags->namesForIds($tagIds)).'.');
+            if ((string)$before['notes'] !== (string)$clean['notes']) $this->contacts->recordEvent($saved,$creatorId,'notes_changed','Observações do contato atualizadas.');
+        }
+        return $saved;
     }
 
     private function nullable(mixed $value): ?string { $value=trim((string)$value); return $value==='' ? null : $value; }

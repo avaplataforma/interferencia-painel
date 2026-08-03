@@ -73,6 +73,35 @@ final readonly class ContactRepository
         return is_array($row) ? $row : null;
     }
 
+    /** @param list<int> $unitIds @return array<string,mixed>|null */
+    public function findForUnits(int $id, array $unitIds): ?array
+    {
+        if ($unitIds === []) return null;
+        $marks = implode(',', array_fill(0, count($unitIds), '?'));
+        $sql = "SELECT c.*,s.name status_name,s.color status_color,u.name responsible_name,un.name unit_name,creator.name creator_name,(SELECT GROUP_CONCAT(CONCAT(t.name,'|',t.color) ORDER BY t.name SEPARATOR ';;') FROM crm_contact_tags ct INNER JOIN crm_tags t ON t.id=ct.tag_id WHERE ct.contact_id=c.id) tags_data FROM crm_contacts c INNER JOIN crm_statuses s ON s.id=c.status_id INNER JOIN units un ON un.id=c.unit_id LEFT JOIN users u ON u.id=c.responsible_user_id LEFT JOIN users creator ON creator.id=c.created_by WHERE c.id=? AND c.unit_id IN ({$marks}) LIMIT 1";
+        $statement = $this->database->prepare($sql);
+        $statement->execute(array_merge([$id], $unitIds));
+        $row = $statement->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function events(int $contactId, int $unitId): array
+    {
+        $statement = $this->database->prepare('SELECT e.*,u.name actor_name FROM crm_contact_events e INNER JOIN crm_contacts c ON c.id=e.contact_id LEFT JOIN users u ON u.id=e.actor_user_id WHERE e.contact_id=:contact AND c.unit_id=:unit ORDER BY e.created_at DESC,e.id DESC');
+        $statement->execute(['contact' => $contactId, 'unit' => $unitId]);
+        return $statement->fetchAll();
+    }
+
+    public function recordEvent(int $contactId, ?int $actorId, string $type, string $description): void
+    {
+        $statement = $this->database->prepare('INSERT INTO crm_contact_events(contact_id,actor_user_id,event_type,description) VALUES(:contact,:actor,:type,:description)');
+        $statement->execute(['contact' => $contactId, 'actor' => $actorId, 'type' => $type, 'description' => $description]);
+    }
+
+    public function statusName(int $id): string { $s=$this->database->prepare('SELECT name FROM crm_statuses WHERE id=:id');$s->execute(['id'=>$id]);return(string)($s->fetchColumn()?:'Não definido'); }
+    public function userName(int $id): string { $s=$this->database->prepare('SELECT name FROM users WHERE id=:id');$s->execute(['id'=>$id]);return(string)($s->fetchColumn()?:'Não definido'); }
+
     /** @return list<array<string, mixed>> */
     public function statuses(): array { return $this->database->query('SELECT id, code, name, color FROM crm_statuses WHERE is_active=1 ORDER BY sort_order, name')->fetchAll(); }
 
@@ -91,7 +120,7 @@ final readonly class ContactRepository
     public function activeUnitByCode(string $code):?array{$s=$this->database->prepare('SELECT id,code,name FROM units WHERE code=:code AND is_active=1 LIMIT 1');$s->execute(['code'=>$code]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function externalDuplicate(string $submissionId,int $unitId,?string $phone,?string $email):?int{$sql='SELECT id FROM crm_contacts WHERE external_submission_id=:submission OR (unit_id=:unit AND ((:phone_check IS NOT NULL AND phone=:phone_value) OR (:email_check IS NOT NULL AND email=:email_value))) LIMIT 1';$s=$this->database->prepare($sql);$s->execute(['submission'=>$submissionId,'unit'=>$unitId,'phone_check'=>$phone,'phone_value'=>$phone,'email_check'=>$email,'email_value'=>$email]);$id=$s->fetchColumn();return $id===false?null:(int)$id;}
     /** @param array<string,mixed> $data */
-    public function createExternal(array $data):int{$sql="INSERT INTO crm_contacts (unit_id,status_id,name,phone,email,course,interest_score,origin_city,registration_source,external_submission_id,consent_at,privacy_notice_version,registered_at,notes,is_active) SELECT :unit_id,id,:name,:phone,:email,:course,:interest_score,:origin_city,'external_form',:external_submission_id,:consent_at,:privacy_notice_version,:registered_at,:notes,1 FROM crm_statuses WHERE code='new'";$s=$this->database->prepare($sql);$s->execute($data);return(int)$this->database->lastInsertId();}
+    public function createExternal(array $data):int{$sql="INSERT INTO crm_contacts (unit_id,status_id,name,phone,email,course,interest_score,origin_city,registration_source,external_submission_id,consent_at,privacy_notice_version,registered_at,notes,is_active) SELECT :unit_id,id,:name,:phone,:email,:course,:interest_score,:origin_city,'external_form',:external_submission_id,:consent_at,:privacy_notice_version,:registered_at,:notes,1 FROM crm_statuses WHERE code='new'";$s=$this->database->prepare($sql);$s->execute($data);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,null,'created','Contato recebido por site externo.');return$id;}
     public function allowExternalRequest(string $fingerprint,int $limit=30):bool{$window=gmdate('Y-m-d H:i:00');$s=$this->database->prepare('INSERT INTO external_form_rate_limits (fingerprint,window_started_at,request_count) VALUES (:fingerprint,:window,1) ON DUPLICATE KEY UPDATE request_count=request_count+1');$s->execute(['fingerprint'=>$fingerprint,'window'=>$window]);$q=$this->database->prepare('SELECT request_count FROM external_form_rate_limits WHERE fingerprint=:fingerprint AND window_started_at=:window');$q->execute(['fingerprint'=>$fingerprint,'window'=>$window]);return(int)$q->fetchColumn()<=$limit;}
 
     /** @param array<string, mixed> $data */

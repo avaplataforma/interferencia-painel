@@ -253,6 +253,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260731_280000_add_crm_status_management']));
     assertTrue(isset($migrations['20260731_290000_create_crm_follow_ups']));
     assertTrue(isset($migrations['20260803_300000_create_external_forms']));
+    assertTrue(isset($migrations['20260803_310000_create_crm_contact_events']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
