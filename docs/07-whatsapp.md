@@ -93,9 +93,8 @@ tratamento posterior. Conteúdo de webhook não é gravado nos logs.
 
 Os segredos são fornecidos exclusivamente por variáveis de ambiente. O cadastro
 da linha armazena apenas WABA ID e Phone Number ID, que não são credenciais.
-# Caixa de entrada interna
+## Caixa de entrada interna
 
-A caixa de entrada mostra somente as linhas liberadas para o usuário e oferece filtros para todas as conversas, minhas conversas, conversas sem atendente e não lidas. Enquanto a empresa aguarda a aprovação da Meta, a interface usa dados demonstrativos claramente identificados e mantém o envio desativado. Nenhum dado simulado é gravado no banco.
-# Caixa de entrada interna
+A caixa de entrada mostra somente as linhas liberadas para o usuário e oferece filtros para todas as conversas, minhas conversas, conversas sem atendente e não lidas. Enquanto a empresa aguarda a aprovação da Meta, a interface inicial usa uma prévia demonstrativa não persistida e mantém o envio desativado.
 
-A caixa de entrada mostra somente as linhas liberadas para o usuário e oferece filtros para todas as conversas, minhas conversas, conversas sem atendente e não lidas. Enquanto a empresa aguarda a aprovação da Meta, a interface usa dados demonstrativos claramente identificados e mantém o envio desativado. Nenhum dado simulado é gravado no banco.
+O administrador também dispõe de um simulador seguro de recebimento. Ele grava conversas marcadas com `is_test`, permitindo validar caixa de entrada, atribuição, vínculo com CRM e follow-up sem abrir uma sessão do WhatsApp Web e sem enviar mensagens externas.

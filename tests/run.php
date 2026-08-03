@@ -257,6 +257,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260803_320000_create_whatsapp_lines']));
     assertTrue(isset($migrations['20260803_330000_create_whatsapp_messaging']));
     assertTrue(isset($migrations['20260803_340000_prepare_whatsapp_inbox']));
+    assertTrue(isset($migrations['20260803_350000_add_whatsapp_simulation_flag']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
