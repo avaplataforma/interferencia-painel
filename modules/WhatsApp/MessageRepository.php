@@ -30,7 +30,7 @@ final readonly class MessageRepository
         $waId=(string)($message['from']??'');$wamid=(string)($message['id']??'');if($waId===''||$wamid==='')return;
         $name=null;foreach(($value['contacts']??[])as$contact)if((string)($contact['wa_id']??'')===$waId)$name=(string)($contact['profile']['name']??'');
         $at=(new DateTimeImmutable('@'.(int)($message['timestamp']??time())))->format('Y-m-d H:i:s');
-        $s=$this->db->prepare("INSERT INTO whatsapp_conversations(line_id,wa_contact_id,contact_name,last_message_at,unread_count) VALUES(:line,:wa,:name,:at,1) ON DUPLICATE KEY UPDATE contact_name=COALESCE(VALUES(contact_name),contact_name),last_message_at=GREATEST(COALESCE(last_message_at,VALUES(last_message_at)),VALUES(last_message_at)),unread_count=unread_count+1,id=LAST_INSERT_ID(id)");
+        $s=$this->db->prepare("INSERT INTO whatsapp_conversations(line_id,wa_contact_id,contact_name,last_message_at,unread_count) VALUES(:line,:wa,:name,:at,1) ON DUPLICATE KEY UPDATE contact_name=COALESCE(VALUES(contact_name),contact_name),status='open',last_message_at=GREATEST(COALESCE(last_message_at,VALUES(last_message_at)),VALUES(last_message_at)),unread_count=unread_count+1,id=LAST_INSERT_ID(id)");
         $s->execute(['line'=>$lineId,'wa'=>$waId,'name'=>$name?:null,'at'=>$at]);$conversation=(int)$this->db->lastInsertId();
         $this->ensureCrmContact($conversation,$lineId,$waId,$name?:null,$at);
         $type=(string)($message['type']??'unknown');$body=$type==='text'?(string)($message['text']['body']??''):null;
@@ -44,7 +44,7 @@ final readonly class MessageRepository
     {
         if($lineIds===[])return[];$marks=implode(',',array_fill(0,count($lineIds),'?'));
         $sql="SELECT c.*,l.name line_name,l.phone_e164,u.name unit_name,a.name assigned_name,crm.name crm_name,crm.id crm_id,(SELECT m.body FROM whatsapp_messages m WHERE m.conversation_id=c.id ORDER BY m.message_at DESC,m.id DESC LIMIT 1) last_body FROM whatsapp_conversations c INNER JOIN whatsapp_lines l ON l.id=c.line_id INNER JOIN units u ON u.id=l.unit_id LEFT JOIN users a ON a.id=c.assigned_user_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.line_id IN ($marks)";$params=$lineIds;
-        if($scope==='mine'&&$userId!==null){$sql.=' AND c.assigned_user_id=?';$params[]=$userId;}elseif($scope==='unassigned'){$sql.=' AND c.assigned_user_id IS NULL';}elseif($scope==='unread'){$sql.=' AND c.unread_count>0';}
+        if($scope==='mine'&&$userId!==null){$sql.=" AND c.assigned_user_id=? AND c.status='open'";$params[]=$userId;}elseif($scope==='unassigned'){$sql.=" AND c.assigned_user_id IS NULL AND c.status='open'";}elseif($scope==='unread'){$sql.=" AND c.unread_count>0 AND c.status='open'";}elseif($scope==='open'){$sql.=" AND c.status='open'";}elseif($scope==='closed'){$sql.=" AND c.status='closed'";}elseif($scope==='overdue'){$sql.=" AND c.status='open' AND EXISTS(SELECT 1 FROM crm_follow_ups due WHERE due.contact_id=c.crm_contact_id AND due.status='pending' AND due.scheduled_at<CURRENT_TIMESTAMP)";}
         if($search!==''){$sql.=' AND (c.contact_name LIKE ? OR c.wa_contact_id LIKE ? OR crm.name LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term);}
         $s=$this->db->prepare($sql.' ORDER BY c.last_message_at DESC,c.id DESC');$s->execute($params);return$s->fetchAll();
     }
@@ -53,6 +53,13 @@ final readonly class MessageRepository
     /** @return list<array<string,mixed>> */
     public function messages(int $conversationId):array{$s=$this->db->prepare('SELECT * FROM whatsapp_messages WHERE conversation_id=:id ORDER BY message_at,id');$s->execute(['id'=>$conversationId]);return$s->fetchAll();}
     public function markRead(int $conversationId):void{$s=$this->db->prepare('UPDATE whatsapp_conversations SET unread_count=0 WHERE id=:id');$s->execute(['id'=>$conversationId]);}
+    /** @param list<int> $lineIds */
+    public function setConversationStatus(int $conversationId,string $status,array $lineIds,int $actorId,string $resolution=''):bool
+    {
+        if($lineIds===[]||!in_array($status,['open','closed'],true))return false;$marks=implode(',',array_fill(0,count($lineIds),'?'));
+        $this->db->beginTransaction();
+        try{$find=$this->db->prepare("SELECT c.crm_contact_id,c.status FROM whatsapp_conversations c WHERE c.id=? AND c.line_id IN ($marks) FOR UPDATE");$find->execute(array_merge([$conversationId],$lineIds));$row=$find->fetch();if(!is_array($row)){ $this->db->rollBack();return false;}$contactId=(int)($row['crm_contact_id']??0);if($status==='closed'&&$contactId>0&&$resolution==='followup'&&!$this->hasPendingFollowUp($contactId))throw new \RuntimeException('Agende um follow-up antes de encerrar ou escolha “Atendimento concluído”.');if($status==='closed'&&!in_array($resolution,['followup','completed'],true))throw new \RuntimeException('Informe se haverá retorno ou se o atendimento foi concluído.');$update=$this->db->prepare('UPDATE whatsapp_conversations SET status=:status WHERE id=:id');$update->execute(['status'=>$status,'id'=>$conversationId]);if($contactId>0&&$row['status']!==$status){$description=$status==='closed'?($resolution==='followup'?'Conversa do WhatsApp encerrada com retorno agendado.':'Conversa do WhatsApp encerrada como atendimento concluído.'):'Conversa do WhatsApp reaberta.';$this->recordCrmEvent($contactId,$actorId,$status==='closed'?'whatsapp_closed':'whatsapp_reopened',$description);}$this->db->commit();return true;}catch(\Throwable$e){if($this->db->inTransaction())$this->db->rollBack();throw$e;}
+    }
     /** @param list<int> $lineIds */
     public function assign(int $conversationId,int $userId,array $lineIds,?int $actorId=null):bool
     {
@@ -82,6 +89,7 @@ final readonly class MessageRepository
     }
 
     private function normalizedPhoneSql(string $column):string{return "RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE($column,'(',''),')',''),'-',''),' ',''),'+',''),11)";}
+    private function hasPendingFollowUp(int $contactId):bool{$s=$this->db->prepare("SELECT COUNT(*) FROM crm_follow_ups WHERE contact_id=:contact AND status='pending'");$s->execute(['contact'=>$contactId]);return(int)$s->fetchColumn()>0;}
     private function formatBrazilianPhone(string $phone):string{$digits=substr(preg_replace('/\D/','',$phone)?:'',-11);return strlen($digits)===11?sprintf('(%s) %s-%s',substr($digits,0,2),substr($digits,2,5),substr($digits,7)):sprintf('(%s) %s-%s',substr($digits,0,2),substr($digits,2,4),substr($digits,6));}
     private function recordCrmEvent(int $contactId,?int $actorId,string $type,string $description):void{$s=$this->db->prepare('INSERT INTO crm_contact_events(contact_id,actor_user_id,event_type,description) VALUES(:contact,:actor,:type,:description)');$s->execute(['contact'=>$contactId,'actor'=>$actorId,'type'=>$type,'description'=>$description]);}
 }

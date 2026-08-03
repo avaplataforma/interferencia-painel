@@ -108,3 +108,11 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 - Sem correspondência, o sistema cria um contato provisório com origem WhatsApp e status Novo.
 - Telefones iguais em outras unidades não são vinculados automaticamente; a caixa de entrada exibe um alerta.
 - Ao atribuir a conversa, o atendente do contato vinculado também é atualizado.
+
+## Ciclo de atendimento
+
+- A caixa separa conversas abertas, encerradas, atrasadas, não lidas, sem atendente e atribuídas ao usuário.
+- Para encerrar, o atendente informa se o atendimento foi concluído ou se já existe retorno agendado.
+- Quando a opção de retorno é escolhida, o sistema exige um follow-up pendente para o contato.
+- Encerramentos e reaberturas são registrados no histórico do CRM.
+- Uma nova mensagem recebida reabre automaticamente a conversa.
