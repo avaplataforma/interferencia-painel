@@ -92,3 +92,5 @@ A agenda destaca acompanhamentos atrasados, previstos para hoje e futuros. Pode
 ser filtrada por situação, período e atendente. Ações rápidas permitem concluir,
 cancelar ou concluir e abrir imediatamente o próximo acompanhamento. O painel
 inicial apresenta os totais da unidade ativa ou da visão consolidada autorizada.
+O cabeçalho exibe um alerta com sino para o usuário logado quando existem
+retornos atribuídos a ele que estão atrasados ou previstos para o dia atual.

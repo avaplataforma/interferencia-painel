@@ -14,7 +14,8 @@ final readonly class FollowUpRepository
         $sql="SELECT f.*,c.name contact_name,c.unit_id,un.name unit_name,u.name responsible_name FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id INNER JOIN units un ON un.id=c.unit_id INNER JOIN users u ON u.id=f.responsible_user_id WHERE c.unit_id IN ($marks)";
         $params=$unitIds;
         if(in_array($status,['pending','completed','cancelled'],true)){$sql.=' AND f.status=?';$params[]=$status;}
-        if($period==='overdue')$sql.=" AND f.status='pending' AND f.scheduled_at<CURDATE()";
+        if($period==='due')$sql.=" AND f.status='pending' AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY";
+        elseif($period==='overdue')$sql.=" AND f.status='pending' AND f.scheduled_at<CURDATE()";
         elseif($period==='today')$sql.=" AND f.status='pending' AND f.scheduled_at>=CURDATE() AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY";
         elseif($period==='future')$sql.=" AND f.status='pending' AND f.scheduled_at>=CURDATE()+INTERVAL 1 DAY";
         if($responsibleId>0){$sql.=' AND f.responsible_user_id=?';$params[]=$responsibleId;}
@@ -22,12 +23,13 @@ final readonly class FollowUpRepository
         $s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
     }
 
-    public function summary(array $unitIds): array
+    public function summary(array $unitIds, int $responsibleId=0): array
     {
         if($unitIds===[])return['overdue'=>0,'today'=>0,'future'=>0];
         $marks=implode(',',array_fill(0,count($unitIds),'?'));
         $sql="SELECT SUM(f.status='pending' AND f.scheduled_at<CURDATE()) overdue,SUM(f.status='pending' AND f.scheduled_at>=CURDATE() AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY) today,SUM(f.status='pending' AND f.scheduled_at>=CURDATE()+INTERVAL 1 DAY) future FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id WHERE c.unit_id IN ($marks)";
-        $s=$this->db->prepare($sql);$s->execute($unitIds);$row=$s->fetch()?:[];return['overdue'=>(int)($row['overdue']??0),'today'=>(int)($row['today']??0),'future'=>(int)($row['future']??0)];
+        $params=$unitIds;if($responsibleId>0){$sql.=' AND f.responsible_user_id=?';$params[]=$responsibleId;}
+        $s=$this->db->prepare($sql);$s->execute($params);$row=$s->fetch()?:[];return['overdue'=>(int)($row['overdue']??0),'today'=>(int)($row['today']??0),'future'=>(int)($row['future']??0)];
     }
 
     public function responsiblesForUnits(array $unitIds):array

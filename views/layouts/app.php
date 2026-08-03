@@ -97,6 +97,8 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .followup-actions { display: grid; gap: .4rem; min-width: 10rem; }
     .followup-actions form { margin: 0; }
     .followup-actions button { width: 100%; margin: 0; padding: .45rem .55rem; }
+    .followup-alert { position: relative; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; color: #fff; background: var(--inter-accent); text-decoration: none; }
+    .followup-alert-count { position: absolute; top: -.35rem; right: -.35rem; min-width: 1.25rem; height: 1.25rem; padding: 0 .25rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #8f1118; font-size: .7rem; font-weight: 800; line-height: 1rem; text-align: center; }
     .actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
     .actions > a { color: #fff; background: var(--inter-accent); padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; }
     main a { color: var(--inter-accent-dark); font-weight: 600; }
@@ -161,6 +163,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
           </select>
           <button class="btn btn-sm btn-success m-0" type="submit">Aplicar</button>
         </form>
+        <?php $alertCount=(int)(($followUpAlerts['overdue']??0)+($followUpAlerts['today']??0));if($alertCount>0):?><a class="followup-alert" href="<?= $escape($basePath) ?>/crm/follow-ups?status=pending&amp;period=due&amp;responsible=<?= $escape($currentUser->id) ?>" title="<?= $escape($alertCount) ?> retorno(s) atrasado(s) ou para hoje" aria-label="Abrir retornos pendentes"><i class="fa-solid fa-bell" aria-hidden="true"></i><span class="followup-alert-count"><?= $escape($alertCount) ?></span></a><?php endif; ?>
         <div class="d-none d-sm-block text-end"><strong><?= $escape($currentUser->name) ?></strong><div class="meta"><?= $escape($currentUser->email) ?></div></div>
         <form method="post" action="<?= $escape($basePath) ?>/logout"><?= $csrfField ?><button class="btn btn-sm btn-outline-secondary m-0" type="submit">Sair</button></form>
       </header>

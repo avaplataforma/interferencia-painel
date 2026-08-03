@@ -89,6 +89,8 @@ $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
 $unitContext = new UnitContext($auth, $units, $session);
 $currentUser = $auth->user();
+$alertUnitIds=[];
+if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext->current();$alertUnitIds=$alertUnit===null?[]:($alertUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$alertUnit['id']]);}
 $view->share([
     'basePath' => $config->string('app.base_path'),
     'csrfField' => $csrf->field(),
@@ -103,6 +105,7 @@ $view->share([
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
+    'followUpAlerts' => $currentUser === null || !$auth->can('crm.contacts.view') ? null : $followUps->summary($alertUnitIds,$currentUser->id),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
 $registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps);
