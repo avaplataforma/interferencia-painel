@@ -115,6 +115,12 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses)(?:/|$)#', $currentPat
     .contact-filters input, .contact-filters select, .contact-filters button { margin-top: 0 !important; min-height: 3rem; }
     .button-secondary { display: grid; place-items: center; min-height: 3rem; padding: .6rem .8rem; border: 1px solid #bcc6ce; border-radius: .55rem; background: #fff; text-decoration: none; }
     .tag-list { display: flex; flex-wrap: wrap; gap: .35rem; min-width: 9rem; }
+    .contact-actions { display: flex; flex-direction: column; gap: .4rem; min-width: 7.5rem; }
+    main .contact-action { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.15rem; padding: .4rem .65rem; border: 1px solid transparent; border-radius: .5rem; font-size: .84rem; font-weight: 700; line-height: 1; text-decoration: none; white-space: nowrap; }
+    main .contact-action-primary { color: #fff; background: var(--inter-accent); }
+    main .contact-action-primary:hover { color: #fff; background: var(--inter-accent-dark); }
+    main .contact-action-secondary { color: #4b5966; border-color: #b8c2ca; background: #fff; }
+    main .contact-action-secondary:hover { color: var(--inter-accent-dark); border-color: #e58c91; background: #fff5f5; }
     .tag-badge { display: inline-flex; align-items: center; width: fit-content; padding: .2rem .55rem; border: 1px solid var(--tag-color); border-radius: 999px; color: var(--tag-color); background: #fff; font-size: .8rem; font-weight: 750; white-space: nowrap; }
     .tag-picker { display: flex; flex-wrap: wrap; gap: .55rem; margin: 1.2rem 0; padding: 1rem; border: 1px solid #dfe4e8; border-radius: .6rem; background: #fff; }
     .tag-picker legend { padding: 0 .3rem; font-weight: 700; }
