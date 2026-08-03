@@ -94,3 +94,12 @@ cancelar ou concluir e abrir imediatamente o próximo acompanhamento. O painel
 inicial apresenta os totais da unidade ativa ou da visão consolidada autorizada.
 O cabeçalho exibe um alerta com sino para o usuário logado quando existem
 retornos atribuídos a ele que estão atrasados ou previstos para o dia atual.
+
+## Formulários externos
+
+Gestores e administradores podem criar formulários incorporáveis por iframe.
+Cada formulário possui domínio autorizado, identificador público, etiqueta
+automática e status inicial. O Polo/Cidade escolhido pelo visitante resolve a
+Unidade responsável; a origem é identificada no servidor pela configuração do
+formulário, sem aceitar uma etiqueta enviada pelo navegador. O painel gera o
+código do iframe e contabiliza novos contatos recebidos.

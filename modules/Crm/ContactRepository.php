@@ -53,6 +53,7 @@ final readonly class ContactRepository
     }
 
     public function statusExists(int $id): bool { $s=$this->database->prepare('SELECT COUNT(*) FROM crm_statuses WHERE id=:id AND is_active=1'); $s->execute(['id'=>$id]); return (int)$s->fetchColumn()>0; }
+    public function setExternalStatus(int $contactId,int $statusId):void{$s=$this->database->prepare('UPDATE crm_contacts SET status_id=:status WHERE id=:contact');$s->execute(['status'=>$statusId,'contact'=>$contactId]);}
     public function userBelongsToUnit(int $userId, int $unitId): bool { $s=$this->database->prepare('SELECT COUNT(*) FROM user_unit_scopes WHERE user_id=:user AND unit_id=:unit'); $s->execute(['user'=>$userId,'unit'=>$unitId]); return (int)$s->fetchColumn()>0; }
 
     /** @return array<string,mixed>|null */

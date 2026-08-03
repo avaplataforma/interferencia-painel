@@ -91,3 +91,14 @@ document.querySelectorAll('[data-mask]').forEach((input) => {
   input.addEventListener('input', update);
   update();
 });
+
+document.querySelectorAll('[data-copy]').forEach((button) => {
+  button.addEventListener('click', async () => {
+    const textarea = button.closest('.iframe-code')?.querySelector('textarea');
+    if (!(textarea instanceof HTMLTextAreaElement)) return;
+    await navigator.clipboard.writeText(textarea.value);
+    const original = button.textContent;
+    button.textContent = 'Copiado!';
+    window.setTimeout(() => { button.textContent = original; }, 1600);
+  });
+});

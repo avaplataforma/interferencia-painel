@@ -33,6 +33,12 @@ final class View
     }
 
     /** @param array<string, mixed> $data */
+    public function renderStandalone(string $template, array $data = [], int $status = 200): Response
+    {
+        return Response::html($this->capture($template, array_merge($this->shared, $data)), $status);
+    }
+
+    /** @param array<string, mixed> $data */
     private function capture(string $template, array $data): string
     {
         if (preg_match('#^[A-Za-z0-9/_-]+$#', $template) !== 1 || str_contains($template, '..')) {
