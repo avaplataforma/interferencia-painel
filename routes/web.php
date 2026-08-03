@@ -28,6 +28,7 @@ use Interferencia\Modules\Crm\TagRepository;
 use Interferencia\Modules\Crm\StatusRepository;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Crm\ExternalFormRepository;
+use Interferencia\Modules\WhatsApp\LineRepository;
 
 return static function (
     Router $router,
@@ -51,6 +52,7 @@ return static function (
     StatusRepository $statuses,
     FollowUpRepository $followUps,
     ExternalFormRepository $externalForms,
+    LineRepository $whatsappLines,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -112,6 +114,7 @@ return static function (
             'canManageTags' => $auth->can('crm.tags.manage'),
             'canManageStatuses' => $auth->can('crm.statuses.manage'),
             'canManageExternalForms' => $auth->can('external_forms.manage'),
+            'canManageWhatsAppLines' => $auth->can('whatsapp.lines.manage'),
             'followUpSummary' => $canViewContacts ? $followUps->summary($dashboardUnitIds) : null,
             'newContacts' => $canViewContacts ? $contacts->newContactsDashboard($dashboardUnitIds,$source,$tagId) : null,
             'contactTags' => $canViewContacts ? $tags->all(true) : [],
@@ -297,6 +300,18 @@ return static function (
     $saveStatus=static function(Request $request,?int $id=null)use($validator,$statuses,$session,$basePath):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:100'],['name'=>'nome']);$color=strtolower(trim((string)$request->input('color','')));$order=max(0,min(65535,(int)$request->input('sort_order','0')));try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array $errors):string=>$errors[0],$result->errors())));if(preg_match('/^#[0-9a-f]{6}$/',$color)!==1)throw new RuntimeException('Escolha uma cor válida.');$statuses->save($id,(string)$result->value('name'),$color,$order,$request->input('is_active')==='1');$session->flash('statuses.message',$id===null?'Status criado.':'Status atualizado.');return Response::redirect($basePath.'/statuses');}catch(Throwable $exception){$session->flash('statuses.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/statuses/create':"/statuses/{$id}/edit"));}};
     $router->post('/statuses',static fn(Request $request):Response=>$saveStatus($request),$manageStatuses);
     $router->post('/statuses/{id:\d+}',static fn(Request $request,array $params):Response=>$saveStatus($request,(int)$params['id']),$manageStatuses);
+
+    $viewWhatsApp=[$requireAuth,new RequirePermission($auth,'whatsapp.inbox.view')];
+    $router->get('/whatsapp',static function()use($view,$whatsappLines,$auth,$basePath,$browserTitle):Response{return$view->render('whatsapp/inbox',['title'=>'WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->authorizedForUser($auth->user()->id),'basePath'=>$basePath]);},$viewWhatsApp);
+
+    $manageWhatsAppLines=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
+    $router->get('/whatsapp/lines',static function()use($view,$whatsappLines,$session,$basePath,$browserTitle):Response{return$view->render('whatsapp/lines/index',['title'=>'Linhas do WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->all(),'message'=>$session->get('whatsapp_lines.message'),'error'=>$session->get('whatsapp_lines.error'),'basePath'=>$basePath]);},$manageWhatsAppLines);
+    $whatsappLineForm=static function(?int$id=null)use($view,$whatsappLines,$units,$session,$csrf,$basePath,$browserTitle):Response{$line=$id===null?null:$whatsappLines->find($id);if($id!==null&&$line===null)return Response::text("Linha não encontrada.\n",404);return$view->render('whatsapp/lines/form',['title'=>($id===null?'Nova linha':'Editar linha').' — '.$browserTitle,'line'=>$line,'units'=>array_values(array_filter($units->all(),static fn(array$item):bool=>(int)$item['is_active']===1)),'users'=>$whatsappLines->availableUsers(),'selectedUsers'=>$id===null?[]:$whatsappLines->selectedUserIds($id),'error'=>$session->get('whatsapp_lines.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);};
+    $router->get('/whatsapp/lines/create',static fn():Response=>$whatsappLineForm(),$manageWhatsAppLines);
+    $router->get('/whatsapp/lines/{id:\d+}/edit',static fn(Request$request,array$params):Response=>$whatsappLineForm((int)$params['id']),$manageWhatsAppLines);
+    $saveWhatsAppLine=static function(Request$request,?int$id=null)use($validator,$whatsappLines,$session,$basePath,$ids):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:120','unit_id'=>'required|string','phone'=>'required|string|max:20'],['name'=>'nome','unit_id'=>'unidade','phone'=>'número']);try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array$errors):string=>$errors[0],$result->errors())));$digits=preg_replace('/\D/','',(string)$result->value('phone'));if(in_array(strlen((string)$digits),[10,11],true))$digits='55'.$digits;if(!in_array(strlen((string)$digits),[12,13],true)||!str_starts_with((string)$digits,'55'))throw new RuntimeException('Informe um número brasileiro com DDD válido.');$whatsappLines->save($id,(int)$result->value('unit_id'),(string)$result->value('name'),'+'.$digits,$request->input('is_active')==='1',$ids($request->input('users')));$session->flash('whatsapp_lines.message',$id===null?'Linha cadastrada.':'Linha atualizada.');return Response::redirect($basePath.'/whatsapp/lines');}catch(Throwable$exception){$session->flash('whatsapp_lines.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/whatsapp/lines/create':"/whatsapp/lines/{$id}/edit"));}};
+    $router->post('/whatsapp/lines',static fn(Request$request):Response=>$saveWhatsAppLine($request),$manageWhatsAppLines);
+    $router->post('/whatsapp/lines/{id:\d+}',static fn(Request$request,array$params):Response=>$saveWhatsAppLine($request,(int)$params['id']),$manageWhatsAppLines);
 
     $manageExternalForms=[$requireAuth,new RequirePermission($auth,'external_forms.manage')];
     $router->get('/external-forms',static function()use($view,$externalForms,$session,$basePath,$browserTitle,$config):Response{return $view->render('external-forms/index',['title'=>'Sites externos — '.$browserTitle,'forms'=>$externalForms->all(),'appUrl'=>rtrim($config->string('app.url'),'/'),'message'=>$session->get('external_forms.message'),'error'=>$session->get('external_forms.error'),'basePath'=>$basePath]);},$manageExternalForms);

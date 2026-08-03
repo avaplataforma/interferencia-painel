@@ -63,3 +63,18 @@ deverá começar com um número piloto e ter plano de reversão.
 - Mapear responsáveis, volume, horários e processo de atendimento por unidade.
 - Definir modelo de distribuição, transferência e encerramento de conversas.
 - Aprovar política de consentimento e retenção com os responsáveis adequados.
+
+## Fundação interna
+
+O painel possui um cadastro administrativo de linhas, limitado inicialmente a
+uma linha por unidade. Cada número guarda nome operacional, telefone em formato
+internacional, unidade, situação e estado da futura conexão oficial.
+
+O administrador global define explicitamente quais usuários podem acessar cada
+linha. A liberação também exige que o usuário possua acesso à unidade
+correspondente; remover a unidade revoga efetivamente a visualização da caixa.
+Administradores globais mantêm visão integral.
+
+A tela de Atendimento mostra somente as linhas autorizadas e informa que leitura
+e envio permanecem aguardando a Cloud API oficial. Nenhuma automação de WhatsApp
+Web, sessão por QR Code ou biblioteca não oficial faz parte desta fundação.

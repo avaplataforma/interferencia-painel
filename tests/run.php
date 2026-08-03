@@ -254,6 +254,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260731_290000_create_crm_follow_ups']));
     assertTrue(isset($migrations['20260803_300000_create_external_forms']));
     assertTrue(isset($migrations['20260803_310000_create_crm_contact_events']));
+    assertTrue(isset($migrations['20260803_320000_create_whatsapp_lines']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
@@ -270,6 +271,7 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\Crm\StatusRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\FollowUpRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\ExternalFormRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\WhatsApp\LineRepository::class));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

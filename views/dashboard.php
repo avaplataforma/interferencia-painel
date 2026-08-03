@@ -3,7 +3,7 @@
 declare(strict_types=1);
 
 /** @var Closure(mixed): string $escape */
-$hasAdministration = $canManageUsers || $canManageUnits || $canManageRoles || $canManageTags || $canManageStatuses || $canManageExternalForms;
+$hasAdministration = $canManageUsers || $canManageUnits || $canManageRoles || $canManageTags || $canManageStatuses || $canManageExternalForms || $canManageWhatsAppLines;
 $tagSuffix = $selectedTag > 0 ? '&tag=' . $selectedTag : '';
 $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '');
 ?>
@@ -79,6 +79,7 @@ $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '
     <?php if ($canManageTags): ?><a class="admin-link" href="<?= $escape($basePath) ?>/tags"><span class="quick-icon"><i class="fa-solid fa-tags" aria-hidden="true"></i></span><span><strong>Etiquetas</strong><small>Origem e classificação</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a><?php endif; ?>
     <?php if ($canManageStatuses): ?><a class="admin-link" href="<?= $escape($basePath) ?>/statuses"><span class="quick-icon"><i class="fa-solid fa-list-check" aria-hidden="true"></i></span><span><strong>Status do CRM</strong><small>Etapas dos contatos</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a><?php endif; ?>
     <?php if ($canManageExternalForms): ?><a class="admin-link" href="<?= $escape($basePath) ?>/external-forms"><span class="quick-icon"><i class="fa-solid fa-globe" aria-hidden="true"></i></span><span><strong>Sites externos</strong><small>Captação e formulários</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a><?php endif; ?>
+    <?php if ($canManageWhatsAppLines): ?><a class="admin-link" href="<?= $escape($basePath) ?>/whatsapp/lines"><span class="quick-icon"><i class="fa-solid fa-sim-card" aria-hidden="true"></i></span><span><strong>Linhas do WhatsApp</strong><small>Unidades e usuários</small></span><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a><?php endif; ?>
   </div>
 </section>
 <?php endif; ?>

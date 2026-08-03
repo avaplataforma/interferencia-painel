@@ -29,6 +29,7 @@ use Interferencia\Modules\Crm\TagRepository;
 use Interferencia\Modules\Crm\StatusRepository;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Crm\ExternalFormRepository;
+use Interferencia\Modules\WhatsApp\LineRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -86,6 +87,7 @@ $tags = new TagRepository($database);
 $statuses = new StatusRepository($database);
 $followUps = new FollowUpRepository($database);
 $externalForms = new ExternalFormRepository($database);
+$whatsappLines = new LineRepository($database);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
@@ -104,6 +106,8 @@ $view->share([
         'tags' => $auth->can('crm.tags.manage'),
         'statuses' => $auth->can('crm.statuses.manage'),
         'external_forms' => $auth->can('external_forms.manage'),
+        'whatsapp_lines' => $auth->can('whatsapp.lines.manage'),
+        'whatsapp' => $auth->can('whatsapp.inbox.view'),
         'crm' => $auth->can('crm.contacts.view'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
@@ -111,6 +115,6 @@ $view->share([
     'followUpAlerts' => $currentUser === null || !$auth->can('crm.contacts.view') ? null : $followUps->summary($alertUnitIds,$currentUser->id),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines);
 
 return new Application($router);
