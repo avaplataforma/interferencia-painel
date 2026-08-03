@@ -111,3 +111,9 @@ unidade ativa e todas as unidades autorizadas ao usuário. A lista recente pode
 ser filtrada entre as origens operacionais e pela etiqueta que identifica cada
 site ou formulário externo. A origem WhatsApp já aparece na visão operacional e será
 alimentada quando a integração oficial desse canal entrar em operação.
+
+A visão geral separa informações operacionais das configurações do sistema. A
+operação reúne agenda, contatos novos e filtros para todos os usuários
+autorizados no CRM. Atalhos de usuários, unidades, perfis, etiquetas, status e
+sites externos ficam agrupados em Administração e são exibidos individualmente
+conforme as permissões do usuário.
