@@ -100,3 +100,11 @@ A caixa de entrada mostra somente as linhas liberadas para o usuário e oferece 
 O administrador também dispõe de um simulador seguro de recebimento. Ele grava conversas marcadas com `is_test`, permitindo validar caixa de entrada, atribuição, vínculo com CRM e follow-up sem abrir uma sessão do WhatsApp Web e sem enviar mensagens externas.
 
 Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conversa para si. A transferência para outro atendente exige a permissão `whatsapp.conversations.assign`, concedida aos perfis Administrador global e Gestor. A validação é feita novamente no servidor, independentemente dos controles exibidos na interface.
+
+## Integração automática com o CRM
+
+- Uma nova conversa procura primeiro um contato ativo com o mesmo telefone na unidade da linha.
+- Havendo correspondência na mesma unidade, a conversa é vinculada automaticamente ao contato existente.
+- Sem correspondência, o sistema cria um contato provisório com origem WhatsApp e status Novo.
+- Telefones iguais em outras unidades não são vinculados automaticamente; a caixa de entrada exibe um alerta.
+- Ao atribuir a conversa, o atendente do contato vinculado também é atualizado.
