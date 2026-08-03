@@ -255,6 +255,7 @@ $tests['carrega migrações de identidade, acesso e unidades'] = static function
     assertTrue(isset($migrations['20260803_300000_create_external_forms']));
     assertTrue(isset($migrations['20260803_310000_create_crm_contact_events']));
     assertTrue(isset($migrations['20260803_320000_create_whatsapp_lines']));
+    assertTrue(isset($migrations['20260803_330000_create_whatsapp_messaging']));
 };
 
 $tests['carrega serviços administrativos'] = static function (): void {
@@ -272,6 +273,18 @@ $tests['carrega serviços administrativos'] = static function (): void {
     assertTrue(class_exists(Interferencia\Modules\Crm\FollowUpRepository::class));
     assertTrue(class_exists(Interferencia\Modules\Crm\ExternalFormRepository::class));
     assertTrue(class_exists(Interferencia\Modules\WhatsApp\LineRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\WhatsApp\MessageRepository::class));
+    assertTrue(class_exists(Interferencia\Modules\WhatsApp\WebhookVerifier::class));
+};
+
+$tests['valida webhook oficial do WhatsApp'] = static function (): void {
+    $verifier = new Interferencia\Modules\WhatsApp\WebhookVerifier('token-verificacao', 'segredo-app');
+    assertSame('12345', $verifier->challenge('subscribe', 'token-verificacao', '12345'));
+    assertSame(null, $verifier->challenge('subscribe', 'incorreto', '12345'));
+    $body = '{"object":"whatsapp_business_account"}';
+    $signature = 'sha256=' . hash_hmac('sha256', $body, 'segredo-app');
+    assertTrue($verifier->validSignature($body, $signature));
+    assertTrue(!$verifier->validSignature($body, 'sha256=incorreta'));
 };
 
 $tests['gera e verifica senha com Argon2id'] = static function (): void {

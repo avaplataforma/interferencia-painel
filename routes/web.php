@@ -29,6 +29,8 @@ use Interferencia\Modules\Crm\StatusRepository;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Crm\ExternalFormRepository;
 use Interferencia\Modules\WhatsApp\LineRepository;
+use Interferencia\Modules\WhatsApp\MessageRepository;
+use Interferencia\Modules\WhatsApp\WebhookVerifier;
 
 return static function (
     Router $router,
@@ -53,6 +55,8 @@ return static function (
     FollowUpRepository $followUps,
     ExternalFormRepository $externalForms,
     LineRepository $whatsappLines,
+    MessageRepository $whatsappMessages,
+    WebhookVerifier $whatsappWebhook,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -66,6 +70,21 @@ return static function (
             'environment' => $config->string('app.environment'),
             'basePath' => $config->string('app.base_path'),
         ]);
+    });
+
+    $router->get('/api/whatsapp/webhook', static function (Request $request) use ($whatsappWebhook): Response {
+        $mode=$request->queryValue('hub.mode',$request->queryValue('hub_mode'));
+        $token=$request->queryValue('hub.verify_token',$request->queryValue('hub_verify_token'));
+        $challenge=$request->queryValue('hub.challenge',$request->queryValue('hub_challenge'));
+        $answer=$whatsappWebhook->challenge(is_string($mode)?$mode:null,is_string($token)?$token:null,is_string($challenge)?$challenge:null);
+        return $answer===null?Response::text("Verificação recusada.\n",403):Response::text($answer);
+    });
+    $router->postWithoutCsrf('/api/whatsapp/webhook', static function (Request $request) use ($whatsappWebhook,$whatsappMessages): Response {
+        if(!$whatsappWebhook->validSignature($request->body(),$request->header('x-hub-signature-256')))return Response::text("Assinatura inválida.\n",401);
+        $payload=json_decode($request->body(),true);
+        if(!is_array($payload))return Response::text("JSON inválido.\n",400);
+        $whatsappMessages->receive($payload);
+        return Response::text("EVENT_RECEIVED\n");
     });
 
     $router->get('/login', static function () use ($view, $session, $csrf, $browserTitle, $basePath): Response {
@@ -309,10 +328,10 @@ return static function (
 
     $manageWhatsAppLines=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
     $router->get('/whatsapp/lines',static function()use($view,$whatsappLines,$session,$basePath,$browserTitle):Response{return$view->render('whatsapp/lines/index',['title'=>'Linhas do WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->all(),'message'=>$session->get('whatsapp_lines.message'),'error'=>$session->get('whatsapp_lines.error'),'basePath'=>$basePath]);},$manageWhatsAppLines);
-    $whatsappLineForm=static function(?int$id=null)use($view,$whatsappLines,$units,$session,$csrf,$basePath,$browserTitle):Response{$line=$id===null?null:$whatsappLines->find($id);if($id!==null&&$line===null)return Response::text("Linha não encontrada.\n",404);return$view->render('whatsapp/lines/form',['title'=>($id===null?'Nova linha':'Editar linha').' — '.$browserTitle,'line'=>$line,'units'=>array_values(array_filter($units->all(),static fn(array$item):bool=>(int)$item['is_active']===1)),'users'=>$whatsappLines->availableUsers(),'selectedUsers'=>$id===null?[]:$whatsappLines->selectedUserIds($id),'error'=>$session->get('whatsapp_lines.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);};
+    $whatsappLineForm=static function(?int$id=null)use($view,$config,$whatsappLines,$units,$session,$csrf,$basePath,$browserTitle):Response{$line=$id===null?null:$whatsappLines->find($id);if($id!==null&&$line===null)return Response::text("Linha não encontrada.\n",404);return$view->render('whatsapp/lines/form',['title'=>($id===null?'Nova linha':'Editar linha').' — '.$browserTitle,'line'=>$line,'units'=>array_values(array_filter($units->all(),static fn(array$item):bool=>(int)$item['is_active']===1)),'users'=>$whatsappLines->availableUsers(),'selectedUsers'=>$id===null?[]:$whatsappLines->selectedUserIds($id),'webhookUrl'=>rtrim($config->string('app.url'),'/').'/api/whatsapp/webhook','credentialsReady'=>$config->string('app.whatsapp_verify_token')!==''&&$config->string('app.whatsapp_app_secret')!==''&&$config->string('app.whatsapp_access_token')!=='','error'=>$session->get('whatsapp_lines.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);};
     $router->get('/whatsapp/lines/create',static fn():Response=>$whatsappLineForm(),$manageWhatsAppLines);
     $router->get('/whatsapp/lines/{id:\d+}/edit',static fn(Request$request,array$params):Response=>$whatsappLineForm((int)$params['id']),$manageWhatsAppLines);
-    $saveWhatsAppLine=static function(Request$request,?int$id=null)use($validator,$whatsappLines,$session,$basePath,$ids):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:120','unit_id'=>'required|string','phone'=>'required|string|max:20'],['name'=>'nome','unit_id'=>'unidade','phone'=>'número']);try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array$errors):string=>$errors[0],$result->errors())));$digits=preg_replace('/\D/','',(string)$result->value('phone'));if(in_array(strlen((string)$digits),[10,11],true))$digits='55'.$digits;if(!in_array(strlen((string)$digits),[12,13],true)||!str_starts_with((string)$digits,'55'))throw new RuntimeException('Informe um número brasileiro com DDD válido.');$whatsappLines->save($id,(int)$result->value('unit_id'),(string)$result->value('name'),'+'.$digits,$request->input('is_active')==='1',$ids($request->input('users')));$session->flash('whatsapp_lines.message',$id===null?'Linha cadastrada.':'Linha atualizada.');return Response::redirect($basePath.'/whatsapp/lines');}catch(Throwable$exception){$session->flash('whatsapp_lines.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/whatsapp/lines/create':"/whatsapp/lines/{$id}/edit"));}};
+    $saveWhatsAppLine=static function(Request$request,?int$id=null)use($validator,$whatsappLines,$session,$basePath,$ids):Response{$result=$validator->validate($request->inputData(),['name'=>'required|string|min:2|max:120','unit_id'=>'required|string','phone'=>'required|string|max:20','waba_id'=>'nullable|string|max:80','phone_number_id'=>'nullable|string|max:80'],['name'=>'nome','unit_id'=>'unidade','phone'=>'número','waba_id'=>'ID da conta WhatsApp Business','phone_number_id'=>'ID do número na Meta']);try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array$errors):string=>$errors[0],$result->errors())));$digits=preg_replace('/\D/','',(string)$result->value('phone'));if(in_array(strlen((string)$digits),[10,11],true))$digits='55'.$digits;if(!in_array(strlen((string)$digits),[12,13],true)||!str_starts_with((string)$digits,'55'))throw new RuntimeException('Informe um número brasileiro com DDD válido.');$waba=trim((string)($result->value('waba_id')??''));$phoneId=trim((string)($result->value('phone_number_id')??''));if(($waba!==''&&!ctype_digit($waba))||($phoneId!==''&&!ctype_digit($phoneId)))throw new RuntimeException('Os identificadores da Meta devem conter somente números.');$whatsappLines->save($id,(int)$result->value('unit_id'),(string)$result->value('name'),'+'.$digits,$request->input('is_active')==='1',$ids($request->input('users')),$waba?:null,$phoneId?:null);$session->flash('whatsapp_lines.message',$id===null?'Linha cadastrada.':'Linha atualizada.');return Response::redirect($basePath.'/whatsapp/lines');}catch(Throwable$exception){$session->flash('whatsapp_lines.error',$exception->getMessage());return Response::redirect($basePath.($id===null?'/whatsapp/lines/create':"/whatsapp/lines/{$id}/edit"));}};
     $router->post('/whatsapp/lines',static fn(Request$request):Response=>$saveWhatsAppLine($request),$manageWhatsAppLines);
     $router->post('/whatsapp/lines/{id:\d+}',static fn(Request$request,array$params):Response=>$saveWhatsAppLine($request,(int)$params['id']),$manageWhatsAppLines);
 

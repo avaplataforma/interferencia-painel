@@ -30,6 +30,8 @@ use Interferencia\Modules\Crm\StatusRepository;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Crm\ExternalFormRepository;
 use Interferencia\Modules\WhatsApp\LineRepository;
+use Interferencia\Modules\WhatsApp\MessageRepository;
+use Interferencia\Modules\WhatsApp\WebhookVerifier;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -88,6 +90,8 @@ $statuses = new StatusRepository($database);
 $followUps = new FollowUpRepository($database);
 $externalForms = new ExternalFormRepository($database);
 $whatsappLines = new LineRepository($database);
+$whatsappMessages = new MessageRepository($database);
+$whatsappWebhook = new WebhookVerifier($config->string('app.whatsapp_verify_token'), $config->string('app.whatsapp_app_secret'));
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
@@ -115,6 +119,6 @@ $view->share([
     'followUpAlerts' => $currentUser === null || !$auth->can('crm.contacts.view') ? null : $followUps->summary($alertUnitIds,$currentUser->id),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappWebhook);
 
 return new Application($router);

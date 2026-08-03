@@ -13,4 +13,8 @@ return [
     'log_level' => getenv('LOG_LEVEL') ?: 'warning',
     'log_channel' => getenv('LOG_CHANNEL') ?: 'application',
     'external_form_key' => getenv('EXTERNAL_FORM_KEY') ?: '',
+    'whatsapp_verify_token' => getenv('WHATSAPP_VERIFY_TOKEN') ?: '',
+    'whatsapp_app_secret' => getenv('WHATSAPP_APP_SECRET') ?: '',
+    'whatsapp_access_token' => getenv('WHATSAPP_ACCESS_TOKEN') ?: '',
+    'whatsapp_graph_version' => getenv('WHATSAPP_GRAPH_VERSION') ?: '',
 ];

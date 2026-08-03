@@ -78,3 +78,18 @@ Administradores globais mantêm visão integral.
 A tela de Atendimento mostra somente as linhas autorizadas e informa que leitura
 e envio permanecem aguardando a Cloud API oficial. Nenhuma automação de WhatsApp
 Web, sessão por QR Code ou biblioteca não oficial faz parte desta fundação.
+
+## Webhook e mensageria do piloto
+
+O endpoint público do piloto é `GET|POST /api/whatsapp/webhook`. A verificação
+compara o token em tempo constante e o recebimento exige a assinatura
+`X-Hub-Signature-256`, calculada com o segredo do aplicativo Meta. Requisições
+sem assinatura válida não são processadas.
+
+Eventos são idempotentes e alimentam conversas e mensagens vinculadas à linha
+pelo `phone_number_id`. Mensagens de texto e atualizações de entrega/leitura já
+possuem persistência interna; outros tipos ficam identificados pelo tipo para
+tratamento posterior. Conteúdo de webhook não é gravado nos logs.
+
+Os segredos são fornecidos exclusivamente por variáveis de ambiente. O cadastro
+da linha armazena apenas WABA ID e Phone Number ID, que não são credenciais.
