@@ -60,6 +60,7 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Para PIX, o painel recupera o QR Code dinâmico, o código copia-e-cola e a validade diretamente do Asaas.
 - Cobranças pendentes ou vencidas podem ter forma, valor, vencimento e descrição alterados; também podem ser canceladas com confirmação explícita.
 - Cobranças recebidas não podem ser alteradas nem canceladas por esse fluxo; eventual devolução será tratada separadamente como estorno.
+- A central de cobranças consolida indicadores e permite busca e filtros por situação, forma e período, sempre respeitando a unidade ativa.
 
 ## Diagnóstico do webhook
 

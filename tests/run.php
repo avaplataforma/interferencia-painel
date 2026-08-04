@@ -60,6 +60,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_file($rootPath.'/views/finance/customers/show.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/pix.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/edit.php'));
+    assertTrue(is_file($rootPath.'/views/finance/payments/index.php'));
 };
 
 $tests['carrega diagnóstico idempotente do webhook financeiro'] = static function () use ($rootPath): void {
