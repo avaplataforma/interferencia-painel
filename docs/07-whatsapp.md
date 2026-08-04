@@ -137,8 +137,11 @@ Todo usuário com acesso à linha e à respectiva unidade pode assumir uma conve
 
 - O ADM possui um catálogo interno de modelos com nome operacional, nome correspondente na Meta, categoria, idioma e situação de aprovação.
 - Os textos aceitam somente as variáveis controladas `{{nome}}`, `{{curso}}`, `{{unidade}}` e `{{atendente}}`.
-- A caixa de entrada permite selecionar um modelo e conferir a mensagem final com os dados do contato antes de qualquer envio.
-- O cadastro no painel não cria nem aprova modelos na Meta. O envio permanece indisponível até que o modelo correspondente esteja aprovado e a integração oficial seja ativada.
+- A caixa de entrada oferece somente modelos ativos marcados como aprovados, monta as variáveis no servidor e exige confirmação explícita da mensagem final.
+- O envio de modelo exige conversa real e aberta, linha conectada, atendente responsável e acesso à linha e à unidade. Conversas simuladas permanecem bloqueadas.
+- A tentativa é registrada antes da chamada externa, incluindo modelo, idioma, variáveis, texto final, situação e diagnóstico limitado de falha.
+- Modelos podem ser usados dentro ou fora da janela de atendimento de 24 horas, conforme as regras e a aprovação mantidas pela Meta.
+- O cadastro no painel não cria nem aprova modelos na Meta. Mesmo um modelo marcado como aprovado no painel somente será enviado quando o nome e o idioma corresponderem ao cadastro real na Meta e a trava `WHATSAPP_SEND_ENABLED` estiver ativada.
 
 ## Anexos e mídias
 

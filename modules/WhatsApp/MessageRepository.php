@@ -107,6 +107,28 @@ final readonly class MessageRepository
         try{$result=$client->sendText((string)$conversation['phone_number_id'],(string)$conversation['wa_contact_id'],$body);$update=$this->db->prepare('UPDATE whatsapp_messages SET wamid=:wamid,status=:status,error_message=NULL WHERE id=:id');$update->execute(['wamid'=>$result['id'],'status'=>$result['status'],'id'=>$messageId]);$this->db->prepare('UPDATE whatsapp_conversations SET last_message_at=:at WHERE id=:id')->execute(['at'=>$now,'id'=>$conversationId]);}
         catch(\Throwable$e){$error=mb_substr($e->getMessage(),0,500);$this->db->prepare("UPDATE whatsapp_messages SET status='failed',error_message=:error WHERE id=:id")->execute(['error'=>$error,'id'=>$messageId]);throw new \RuntimeException($error,0,$e);}
     }
+    /** @return array{allowed:bool,reason:string} */
+    public function templateAvailability(int $conversationId,array $lineIds,int $actorId,bool $cloudReady):array
+    {
+        $conversation=$this->conversation($conversationId,$lineIds);if($conversation===null)return['allowed'=>false,'reason'=>'Conversa não encontrada ou sem permissão de acesso.'];
+        if((int)$conversation['is_test']===1)return['allowed'=>false,'reason'=>'Modelos oficiais são bloqueados em conversas de simulação.'];
+        if((string)$conversation['status']!=='open')return['allowed'=>false,'reason'=>'Reabra a conversa antes de enviar um modelo.'];
+        if((int)($conversation['assigned_user_id']??0)!==$actorId)return['allowed'=>false,'reason'=>'Assuma a conversa antes de enviar um modelo.'];
+        if((string)$conversation['connection_status']!=='connected'||!ctype_digit((string)($conversation['phone_number_id']??'')))return['allowed'=>false,'reason'=>'A linha ainda não está conectada corretamente à API oficial.'];
+        if(!$cloudReady)return['allowed'=>false,'reason'=>'O envio oficial permanece bloqueado até a conclusão segura das credenciais da Meta.'];
+        return['allowed'=>true,'reason'=>'Modelo oficial pronto para envio.'];
+    }
+    /** @param array<string,mixed> $template @param array{body:string,parameters:list<string>,variables:array<string,string>} $rendered */
+    public function sendTemplate(int $conversationId,array $lineIds,int $actorId,array $template,array $rendered,CloudApiClient $client):void
+    {
+        $availability=$this->templateAvailability($conversationId,$lineIds,$actorId,$client->ready());if(!$availability['allowed'])throw new \RuntimeException($availability['reason']);
+        if((string)($template['approval_status']??'')!=='approved'||(int)($template['is_active']??0)!==1)throw new \RuntimeException('Selecione um modelo ativo e aprovado pela Meta.');
+        $conversation=$this->conversation($conversationId,$lineIds);if($conversation===null)throw new \RuntimeException('Conversa não encontrada.');$localId='template_'.bin2hex(random_bytes(16));$now=date('Y-m-d H:i:s');$variables=json_encode($rendered['variables'],JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        $insert=$this->db->prepare("INSERT INTO whatsapp_messages(conversation_id,line_id,wamid,direction,message_type,body,template_id,template_name,template_language,template_variables,status,message_at,attempted_at) VALUES(:conversation,:line,:wamid,'outbound','template',:body,:template_id,:template_name,:language,:variables,'queued',:at,:attempted)");
+        $insert->execute(['conversation'=>$conversationId,'line'=>$conversation['line_id'],'wamid'=>$localId,'body'=>$rendered['body'],'template_id'=>$template['id'],'template_name'=>$template['meta_name'],'language'=>$template['language'],'variables'=>$variables,'at'=>$now,'attempted'=>$now]);$messageId=(int)$this->db->lastInsertId();
+        try{$result=$client->sendTemplate((string)$conversation['phone_number_id'],(string)$conversation['wa_contact_id'],(string)$template['meta_name'],(string)$template['language'],$rendered['parameters']);$this->db->prepare('UPDATE whatsapp_messages SET wamid=:wamid,status=:status,error_message=NULL WHERE id=:id')->execute(['wamid'=>$result['id'],'status'=>$result['status'],'id'=>$messageId]);$this->db->prepare('UPDATE whatsapp_conversations SET last_message_at=:at WHERE id=:id')->execute(['at'=>$now,'id'=>$conversationId]);}
+        catch(\Throwable$e){$error=mb_substr($e->getMessage(),0,500);$this->db->prepare("UPDATE whatsapp_messages SET status='failed',error_message=:error WHERE id=:id")->execute(['error'=>$error,'id'=>$messageId]);throw new \RuntimeException($error,0,$e);}
+    }
     public function markRead(int $conversationId):void{$s=$this->db->prepare('UPDATE whatsapp_conversations SET unread_count=0 WHERE id=:id');$s->execute(['id'=>$conversationId]);}
     /** @param list<int> $lineIds @return array{unread:int,unassigned:int} */
     public function notificationSummary(array $lineIds):array

@@ -311,7 +311,7 @@ $admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms)(?:/|$)
   </div>
 <?php endif; ?>
 <script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
-<style>.message-media-preview{display:block;width:min(18rem,100%);max-height:18rem;margin-bottom:.45rem;border-radius:.65rem;object-fit:cover}.message-audio-preview{display:block;width:min(20rem,100%);margin-bottom:.45rem}</style>
+<style>.message-media-preview{display:block;width:min(18rem,100%);max-height:18rem;margin-bottom:.45rem;border-radius:.65rem;object-fit:cover}.message-audio-preview{display:block;width:min(20rem,100%);margin-bottom:.45rem}.template-preview-card .template-confirm{grid-column:2/-1;display:flex;align-items:center;gap:.55rem;margin:0}.template-preview-card .template-confirm input{width:auto;margin:0}.template-preview-card>button{grid-column:2;justify-self:start;margin:0}.template-preview-card>[data-template-status]{grid-column:3;align-self:center}@media(max-width:900px){.template-preview-card .template-confirm,.template-preview-card>button,.template-preview-card>[data-template-status]{grid-column:1/-1}}</style>
 <script src="<?= $escape($basePath) ?>/assets/js/app.js?v=8"></script>
 </body>
 </html>

@@ -26,6 +26,27 @@ final readonly class TemplateRepository
         return $this->db->query("SELECT * FROM whatsapp_templates WHERE is_active=1 ORDER BY approval_status='approved' DESC,name")->fetchAll();
     }
 
+    /** @return list<array<string,mixed>> */
+    public function approved(): array
+    {
+        return $this->db->query("SELECT * FROM whatsapp_templates WHERE is_active=1 AND approval_status='approved' ORDER BY name")->fetchAll();
+    }
+
+    /** @return array<string,mixed>|null */
+    public function findApproved(int $id): ?array
+    {
+        $statement=$this->db->prepare("SELECT * FROM whatsapp_templates WHERE id=:id AND is_active=1 AND approval_status='approved' LIMIT 1");$statement->execute(['id'=>$id]);$row=$statement->fetch();return is_array($row)?$row:null;
+    }
+
+    /** @param array{nome:string,curso:string,unidade:string,atendente:string} $values @return array{body:string,parameters:list<string>,variables:array<string,string>} */
+    public function render(array $template,array $values):array
+    {
+        $body=(string)($template['body']??'');preg_match_all('/\{\{\s*(nome|curso|unidade|atendente)\s*\}\}/u',$body,$matches);$parameters=[];
+        foreach(($matches[1]??[]) as $variable){$value=trim((string)($values[$variable]??''));if($value==='')$value=$variable==='curso'?'curso de interesse':($variable==='atendente'?'Atendimento':'Contato');$parameters[]=$value;}
+        foreach($values as$key=>$value)$body=(string)preg_replace('/\{\{\s*'.preg_quote($key,'/').'\s*\}\}/iu',$value,$body);
+        return['body'=>$body,'parameters'=>$parameters,'variables'=>$values];
+    }
+
     /** @return array<string,mixed>|null */
     public function find(int $id): ?array
     {
