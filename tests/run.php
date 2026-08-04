@@ -65,7 +65,9 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     $paymentList = file_get_contents($rootPath.'/views/finance/payments/index.php');
     $customerList = file_get_contents($rootPath.'/views/finance/customers/index.php');
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Alunos</span>'));
-    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'nav-submenu-label'));
+    assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Financeiro</a>') === 2);
+    assertTrue(is_string($customerList) && str_contains($customerList, 'finance-section-tabs'));
+    assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
     assertTrue(is_string($customerList) && str_contains($customerList, 'Editar cliente'));
     $headquartersMigration = file_get_contents($rootPath.'/database/migrations/20260804_500000_add_headquarters_role_and_customer_delete.php');

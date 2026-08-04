@@ -11,6 +11,7 @@ $lastItem = min($result['total'], $result['page'] * 50);
 $pageStart = max(1, $result['page'] - 2);
 $pageEnd = min($result['pages'], $result['page'] + 2);
 ?>
+<nav class="finance-section-tabs" aria-label="Navegação do Financeiro"><a class="active" href="<?= $escape($basePath) ?>/finance/customers">Clientes</a><a href="<?= $escape($basePath) ?>/finance/payments">Cobranças</a><a href="<?= $escape($basePath) ?>/finance/subscriptions">Assinaturas</a></nav>
 <div class="finance-customer-heading">
   <div>
     <span class="status">Financeiro</span>
