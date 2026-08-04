@@ -21,4 +21,5 @@ return [
     'asaas_environment' => getenv('ASAAS_ENVIRONMENT') ?: 'sandbox',
     'asaas_api_key' => getenv('ASAAS_API_KEY') ?: '',
     'asaas_webhook_token' => getenv('ASAAS_WEBHOOK_TOKEN') ?: '',
+    'encryption_key' => getenv('APP_ENCRYPTION_KEY') ?: '',
 ];

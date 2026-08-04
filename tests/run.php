@@ -17,6 +17,7 @@ use Interferencia\Kernel\Validation\Validator;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
+use Interferencia\Kernel\Security\SecretCipher;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -37,6 +38,14 @@ $tests['mantém integração financeira segura por padrão'] = static function (
     assertTrue($verifier->ready());
     assertTrue($verifier->valid(str_repeat('a',32)));
     assertTrue(!$verifier->valid(str_repeat('b',32)));
+};
+
+$tests['criptografa segredos financeiros quando a chave-mestra está disponível'] = static function (): void {
+    $cipher=new SecretCipher(base64_encode(str_repeat('k',32)));
+    assertTrue($cipher->ready());
+    $encrypted=$cipher->encrypt('$aact_hmlg_teste');
+    assertTrue($encrypted!=='$aact_hmlg_teste');
+    assertSame('$aact_hmlg_teste',$cipher->decrypt($encrypted));
 };
 
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {

@@ -11,6 +11,7 @@ use Interferencia\Kernel\Http\Router;
 use Interferencia\Kernel\View\View;
 use Interferencia\Kernel\Session\Session;
 use Interferencia\Kernel\Security\Csrf;
+use Interferencia\Kernel\Security\SecretCipher;
 use Interferencia\Kernel\Database\Connection;
 use Interferencia\Kernel\Validation\Validator;
 use Interferencia\Modules\Identity\Auth;
@@ -39,6 +40,7 @@ use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
+use Interferencia\Modules\Finance\IntegrationRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -109,9 +111,14 @@ $whatsappCloudApi = new CloudApiClient(
     $config->bool('app.whatsapp_send_enabled'),
 );
 $finance = new FinanceRepository($database);
-$asaas = new AsaasClient((string)$config->get('app.asaas_environment'),(string)$config->get('app.asaas_api_key'));
+$financeIntegrations = new IntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
+$asaasSettings=$financeIntegrations->asaas();
+$asaasEnvironment=$asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment');
+$asaasApiKey=$asaasSettings['configured']&&$asaasSettings['is_active']?(string)$asaasSettings['api_key']:(string)$config->get('app.asaas_api_key');
+$asaasWebhookToken=$asaasSettings['configured']?(string)$asaasSettings['webhook_token']:(string)$config->get('app.asaas_webhook_token');
+$asaas = new AsaasClient($asaasEnvironment,$asaasApiKey);
 $asaasSynchronizer = new AsaasSynchronizer($asaas,$finance);
-$asaasWebhook = new AsaasWebhookVerifier((string)$config->get('app.asaas_webhook_token'));
+$asaasWebhook = new AsaasWebhookVerifier($asaasWebhookToken);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
 $router = new Router($config->string('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
@@ -135,6 +142,7 @@ $view->share([
         'whatsapp_templates' => $auth->can('whatsapp.lines.manage'),
         'whatsapp' => $auth->can('whatsapp.inbox.view'),
         'finance' => $auth->can('finance.view'),
+        'finance_settings' => $auth->can('finance.settings.manage'),
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
     ],
@@ -144,6 +152,6 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$asaas,$asaasSynchronizer,$asaasWebhook);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations);
 
 return new Application($router);

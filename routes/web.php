@@ -38,6 +38,7 @@ use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
+use Interferencia\Modules\Finance\IntegrationRepository;
 
 return static function (
     Router $router,
@@ -71,6 +72,7 @@ return static function (
     AsaasClient $asaas,
     AsaasSynchronizer $asaasSynchronizer,
     AsaasWebhookVerifier $asaasWebhook,
+    IntegrationRepository $financeIntegrations,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -363,6 +365,9 @@ return static function (
     $viewFinance=[$requireAuth,new RequirePermission($auth,'finance.view')];
     $router->get('/finance',static function()use($view,$finance,$asaas,$asaasWebhook,$auth,$unitContext,$session,$csrf,$basePath,$browserTitle):Response{$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']]);$legacy=$auth->can('finance.legacy_view');return$view->render('finance/dashboard',['title'=>'Financeiro — '.$browserTitle,'summary'=>$finance->summary($unitIds,$legacy),'connectionReady'=>$asaas->ready(),'environment'=>$asaas->environment(),'webhookReady'=>$asaasWebhook->ready(),'canSync'=>$auth->can('finance.manage'),'canViewLegacy'=>$legacy,'message'=>$session->get('finance.message'),'error'=>$session->get('finance.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$viewFinance);
     $router->post('/finance/sync',static function()use($asaasSynchronizer,$session,$basePath):Response{try{$result=$asaasSynchronizer->sync();$session->flash('finance.message',sprintf('Sincronização concluída: %d cliente(s) e %d cobrança(s).',$result['customers'],$result['payments']));}catch(Throwable$e){$session->flash('finance.error',$e->getMessage());}return Response::redirect($basePath.'/finance');},[$requireAuth,new RequirePermission($auth,'finance.manage')]);
+    $manageFinanceSettings=[$requireAuth,new RequirePermission($auth,'finance.settings.manage')];
+    $router->get('/admin/integrations/asaas',static function()use($view,$config,$financeIntegrations,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('finance/settings',['title'=>'Integração Asaas — '.$browserTitle,'settings'=>$financeIntegrations->asaas(),'webhookUrl'=>rtrim($config->string('app.url'),'/').'/api/asaas/webhook','encryptionReady'=>$financeIntegrations->encryptionReady(),'message'=>$session->get('finance_settings.message'),'error'=>$session->get('finance_settings.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$manageFinanceSettings);
+    $router->post('/admin/integrations/asaas',static function(Request$request)use($financeIntegrations,$auth,$session,$basePath):Response{try{$key=trim((string)$request->input('api_key',''));if($key==='')throw new RuntimeException('Informe a chave da API.');$financeIntegrations->saveAsaas($key,$auth->user()->id,$request->input('is_active')==='1');$session->flash('finance_settings.message','Conexão do Asaas salva com segurança.');}catch(Throwable$e){$session->flash('finance_settings.error',$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/asaas');},$manageFinanceSettings);
 
     $manageWhatsAppLines=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
     $router->get('/whatsapp/lines',static function()use($view,$whatsappLines,$session,$basePath,$browserTitle):Response{return$view->render('whatsapp/lines/index',['title'=>'Linhas do WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->all(),'message'=>$session->get('whatsapp_lines.message'),'error'=>$session->get('whatsapp_lines.error'),'basePath'=>$basePath]);},$manageWhatsAppLines);

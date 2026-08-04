@@ -18,6 +18,7 @@ do Asaas.
 ## Segurança e permissões
 
 - `ASAAS_API_KEY` e `ASAAS_WEBHOOK_TOKEN` existem apenas no `.env` da VPS.
+- A chave do Asaas também pode ser administrada pela tela protegida do ADM; nesse caso, fica criptografada no banco por uma chave-mestra mantida somente no `.env`.
 - `ASAAS_ENVIRONMENT` separa sandbox e produção.
 - O webhook autentica, registra o ID único do evento e ignora reentregas.
 - `finance.view`: consulta limitada às unidades autorizadas.
