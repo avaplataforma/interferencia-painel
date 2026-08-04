@@ -470,6 +470,21 @@ $tests['permite atualizar cliente financeiro no Asaas'] = static function (): vo
     assertTrue(is_file($root.'/database/migrations/20260804_490000_add_finance_customer_address.php'));
 };
 
+$tests['carrega módulo de tickets internos'] = static function () use ($rootPath): void {
+    $migration=file_get_contents($rootPath.'/database/migrations/20260804_530000_create_internal_tickets.php');
+    $routes=file_get_contents($rootPath.'/routes/web.php');
+    $layout=file_get_contents($rootPath.'/views/layouts/app.php');
+    assertTrue(is_string($migration) && str_contains($migration,'CREATE TABLE tickets'));
+    assertTrue(is_string($migration) && str_contains($migration,"'tickets.manage'"));
+    assertTrue(is_file($rootPath.'/modules/Tickets/TicketRepository.php'));
+    assertTrue(is_file($rootPath.'/views/tickets/index.php'));
+    assertTrue(is_file($rootPath.'/views/tickets/form.php'));
+    assertTrue(is_file($rootPath.'/views/tickets/show.php'));
+    assertTrue(is_string($routes) && str_contains($routes,"'/tickets/{id:\\d+}'"));
+    assertTrue(is_string($layout) && str_contains($layout,'>Tickets'));
+    assertTrue(is_string($layout) && str_contains($layout,'ticketAlerts'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

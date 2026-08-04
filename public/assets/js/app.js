@@ -129,9 +129,13 @@ const refreshNotifications = async () => {
     const unread = Number(data?.whatsapp?.unread || 0);
     const overdue = Number(data?.followups?.overdue || 0);
     const today = Number(data?.followups?.today || 0);
+    const ticketUnread = Number(data?.tickets?.unread || 0);
+    const ticketOverdue = Number(data?.tickets?.overdue || 0);
     const total = Number(data?.total || 0);
     if (unread > 0 && !document.querySelector('[data-whatsapp-count]')) document.querySelectorAll('.nav-link[href$="/whatsapp"]').forEach((link) => { const badge = document.createElement('span'); badge.className = 'nav-count'; badge.dataset.whatsappCount = ''; link.append(badge); });
     document.querySelectorAll('[data-whatsapp-count]').forEach((badge) => { badge.textContent = String(unread); badge.hidden = unread < 1; });
+    if (ticketUnread > 0 && !document.querySelector('[data-ticket-count]')) document.querySelectorAll('.nav-link[href$="/tickets"]').forEach((link) => { const badge = document.createElement('span'); badge.className = 'nav-count'; badge.dataset.ticketCount = ''; link.append(badge); });
+    document.querySelectorAll('[data-ticket-count]').forEach((badge) => { badge.textContent = String(ticketUnread); badge.hidden = ticketUnread < 1; });
     const summary = document.querySelector('.notification-center > summary');
     let totalBadge = document.querySelector('[data-notification-total]');
     if (!totalBadge && summary && total > 0) { totalBadge = document.createElement('span'); totalBadge.className = 'notification-total'; totalBadge.dataset.notificationTotal = ''; summary.append(totalBadge); }
@@ -140,6 +144,8 @@ const refreshNotifications = async () => {
     if (panel) {
       panel.querySelectorAll('.notification-item,.notification-empty').forEach((item) => item.remove());
       const addItem = (href, icon, title, subtitle) => { const link = document.createElement('a'); link.className = 'notification-item'; link.href = href; const image = document.createElement('i'); image.className = `fa-solid ${icon}`; const copy = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = title; const small = document.createElement('small'); small.textContent = subtitle; copy.append(strong, small); link.append(image, copy); panel.append(link); };
+      if (ticketUnread > 0) addItem(`${basePath}/tickets?scope=mine`, 'fa-ticket', `${ticketUnread} ticket(s) atualizado(s)`, 'Abrir demandas recebidas');
+      if (ticketOverdue > 0) addItem(`${basePath}/tickets?scope=overdue`, 'fa-clock', `${ticketOverdue} ticket(s) atrasado(s)`, 'Prazo vencido');
       if (unread > 0) addItem(`${basePath}/whatsapp?scope=unread`, 'fa-comments', `${unread} mensagem(ns) não lida(s)`, 'Abrir caixa do WhatsApp');
       const userId = document.body.dataset.currentUserId || '';
       if (overdue > 0) addItem(`${basePath}/crm/follow-ups?status=pending&period=overdue&responsible=${userId}`, 'fa-triangle-exclamation', `${overdue} retorno(s) atrasado(s)`, 'Exigem atenção');

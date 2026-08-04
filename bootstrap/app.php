@@ -42,6 +42,7 @@ use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 use Interferencia\Modules\Finance\IntegrationRepository;
 use Interferencia\Modules\Finance\CatalogRepository;
+use Interferencia\Modules\Tickets\TicketRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -113,6 +114,7 @@ $whatsappCloudApi = new CloudApiClient(
 );
 $finance = new FinanceRepository($database);
 $financeCatalog = new CatalogRepository($database);
+$tickets = new TicketRepository($database);
 $financeIntegrations = new IntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $asaasSettings=$financeIntegrations->asaas();
 $asaasEnvironment=$asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment');
@@ -151,13 +153,17 @@ $view->share([
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
         'crm_manage' => $auth->can('crm.contacts.manage'),
+        'tickets' => $auth->can('tickets.view'),
+        'tickets_create' => $auth->can('tickets.create'),
+        'tickets_manage' => $auth->can('tickets.manage'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
     'followUpAlerts' => $currentUser === null || !$auth->can('crm.contacts.view') ? null : $followUps->summary($alertUnitIds,$currentUser->id),
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
+    'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets);
 
 return new Application($router);
