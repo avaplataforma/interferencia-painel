@@ -267,3 +267,26 @@ document.querySelectorAll('[data-confirm-submit]').forEach((form) => {
     if (!window.confirm(form.dataset.confirmSubmit || 'Confirma esta alteração?')) event.preventDefault();
   });
 });
+
+document.querySelectorAll('[data-contact-unit-form]').forEach((form) => {
+  if (!(form instanceof HTMLFormElement)) return;
+  const unit = form.querySelector('[data-contact-unit]');
+  const responsible = form.querySelector('[data-contact-responsible]');
+  if (!(unit instanceof HTMLSelectElement) || !(responsible instanceof HTMLSelectElement)) return;
+  const updateResponsibles = () => {
+    const unitId = unit.value;
+    let selectedVisible = false;
+    Array.from(responsible.options).forEach((option, index) => {
+      if (index === 0) return;
+      const visible = unitId !== '' && (option.dataset.unitIds || '').split(',').includes(unitId);
+      option.hidden = !visible;
+      option.disabled = !visible;
+      if (visible && option.selected) selectedVisible = true;
+    });
+    if (!selectedVisible) responsible.value = '';
+    responsible.disabled = unitId === '';
+    responsible.options[0].textContent = unitId === '' ? 'Selecione a unidade primeiro' : 'Selecione o atendente';
+  };
+  unit.addEventListener('change', updateResponsibles);
+  updateResponsibles();
+});
