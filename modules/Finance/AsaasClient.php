@@ -87,6 +87,25 @@ final readonly class AsaasClient
     }
 
     /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
+    public function listSubscriptions(int $offset = 0, int $limit = 100): array{return $this->get('/subscriptions',$offset,$limit);}
+
+    /** @param array{customer:string,billingType:string,value:float,nextDueDate:string,cycle:string,description:string,externalReference:string,maxPayments?:int,endDate?:string} $payload @return array<string,mixed> */
+    public function createSubscription(array $payload):array
+    {
+        if(!$this->paymentsWriteEnabled)throw new RuntimeException('A criação real de assinaturas está bloqueada.');
+        return$this->request('POST','/subscriptions',$payload);
+    }
+
+    /** @return array<string,mixed> */
+    public function updateSubscriptionStatus(string$subscriptionId,string$status):array
+    {
+        if(!$this->paymentsWriteEnabled)throw new RuntimeException('As alterações reais de assinaturas estão bloqueadas.');
+        if(!preg_match('/^sub_[A-Za-z0-9]+$/',$subscriptionId))throw new RuntimeException('Identificador da assinatura inválido.');
+        if(!in_array($status,['ACTIVE','INACTIVE'],true))throw new RuntimeException('Situação da assinatura inválida.');
+        return$this->request('PUT','/subscriptions/'.rawurlencode($subscriptionId),['status'=>$status]);
+    }
+
+    /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
     private function get(string $path, int $offset, int $limit): array
     {
         if (!$this->ready()) throw new RuntimeException('A conexão com o Asaas ainda não está configurada corretamente.');

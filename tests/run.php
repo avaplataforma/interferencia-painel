@@ -62,11 +62,18 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_file($rootPath.'/views/finance/payments/edit.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/index.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/payments/form.php'),'installment_count'));
+    assertTrue(is_file($rootPath.'/views/finance/subscriptions/index.php'));
+    assertTrue(is_file($rootPath.'/views/finance/subscriptions/form.php'));
 };
 
 $tests['carrega diagnóstico idempotente do webhook financeiro'] = static function () use ($rootPath): void {
     $repository=new MigrationRepository($rootPath.'/database/migrations');
     assertTrue(in_array('20260804_460000_add_finance_webhook_diagnostics',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
+};
+
+$tests['carrega estrutura de assinaturas financeiras'] = static function () use ($rootPath): void {
+    $repository=new MigrationRepository($rootPath.'/database/migrations');
+    assertTrue(in_array('20260804_470000_create_finance_subscriptions',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
 };
 
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {

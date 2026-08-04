@@ -234,3 +234,36 @@ document.querySelectorAll('[data-finance-payment-form]').forEach((form) => {
   });
   update();
 });
+
+document.querySelectorAll('[data-subscription-form]').forEach((form) => {
+  if (!(form instanceof HTMLFormElement)) return;
+  const type = form.querySelector('[name="limit_type"]');
+  const countWrap = form.querySelector('[data-subscription-count]');
+  const dateWrap = form.querySelector('[data-subscription-end]');
+  const count = form.querySelector('[name="max_payments"]');
+  const endDate = form.querySelector('[name="end_date"]');
+  if (!(type instanceof HTMLSelectElement) || !(count instanceof HTMLInputElement) || !(endDate instanceof HTMLInputElement)) return;
+  const update = () => {
+    const byCount = type.value === 'count';
+    const byDate = type.value === 'date';
+    if (countWrap instanceof HTMLElement) countWrap.hidden = !byCount;
+    if (dateWrap instanceof HTMLElement) dateWrap.hidden = !byDate;
+    count.required = byCount;
+    endDate.required = byDate;
+  };
+  type.addEventListener('change', update);
+  form.addEventListener('submit', () => {
+    const button = form.querySelector('button[type="submit"]');
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.disabled = true;
+    button.textContent = 'Criando…';
+  });
+  update();
+});
+
+document.querySelectorAll('[data-confirm-submit]').forEach((form) => {
+  if (!(form instanceof HTMLFormElement)) return;
+  form.addEventListener('submit', (event) => {
+    if (!window.confirm(form.dataset.confirmSubmit || 'Confirma esta alteração?')) event.preventDefault();
+  });
+});

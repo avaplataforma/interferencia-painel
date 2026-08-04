@@ -64,6 +64,15 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - A emissão aceita cobrança única ou parcelamento entre 2 e 60 vezes. No parcelamento, o operador informa o valor total e o Asaas calcula as parcelas mensais, compensando eventual diferença de centavos na última.
 - Antes do envio é obrigatório revisar e confirmar cliente, unidade, valor, primeiro vencimento e condição de pagamento.
 
+## Assinaturas recorrentes
+
+- O Financeiro separa **Cobranças** e **Assinaturas** em navegação inspirada na ergonomia do Asaas.
+- Assinaturas podem usar Pix ou boleto e ciclos semanal, quinzenal, mensal, bimestral, trimestral, semestral ou anual.
+- A duração pode ser contínua, limitada por quantidade de cobranças ou por data final.
+- Criar uma assinatura agenda cobranças futuras e não representa pagamento recebido.
+- Pausar e reativar exigem permissão `finance.manage` e confirmação explícita.
+- Cartão recorrente permanece fora desta etapa até a implantação de tokenização segura; o Painel nunca armazenará os dados brutos do cartão.
+
 ## Diagnóstico do webhook
 
 - A Integração Asaas mostra os últimos eventos, horário, cobrança relacionada, reentregas e falhas.
