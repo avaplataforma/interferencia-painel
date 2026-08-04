@@ -58,7 +58,7 @@ $pageEnd = min($result['pages'], $result['page'] + 2);
 </section>
 
 <div class="finance-result-bar"><span>Exibindo <strong><?= $firstItem ?>–<?= $lastItem ?></strong> de <?= number_format((int)$result['total'], 0, ',', '.') ?></span><span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Dados conforme suas permissões</span></div>
-<div class="table-responsive finance-customer-table"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Unidade</th><th class="text-center">Cobranças</th><th class="text-end">Em aberto</th><th><span class="visually-hidden">Ações</span></th></tr></thead><tbody>
+<div class="table-responsive finance-customer-table"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Unidade</th><th class="text-center">Cobranças</th><th class="text-end">Em aberto</th><th>Ações</th></tr></thead><tbody>
 <?php if ($result['items'] === []): ?><tr><td colspan="6"><div class="finance-empty"><i class="fa-solid fa-user-slash" aria-hidden="true"></i><strong>Nenhum cliente encontrado</strong><span>Tente alterar a busca ou limpar os filtros.</span></div></td></tr><?php endif; ?>
 <?php foreach ($result['items'] as $item): ?>
   <tr>
@@ -67,7 +67,7 @@ $pageEnd = min($result['pages'], $result['page'] + 2);
     <td><?php if ($item['unit_id'] === null): ?><span class="connection-badge connection-pending">Sem unidade</span><?php else: ?><span class="finance-unit"><i class="fa-solid fa-building" aria-hidden="true"></i><?= $escape($item['unit_name']) ?></span><?php endif; ?></td>
     <td class="text-center"><span class="finance-count-badge"><?= (int)$item['payment_count'] ?></span></td>
     <td class="text-end"><strong class="<?= (float)$item['open_value'] > 0 ? 'finance-open-value' : 'finance-zero-value' ?>"><?= $escape($money((float)$item['open_value'])) ?></strong></td>
-    <td><a class="finance-open-customer" href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>" aria-label="Abrir <?= $escape($item['name']) ?>">Abrir <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a></td>
+    <td><div class="finance-action-buttons"><a class="button-secondary button-small" href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>"><i class="fa-solid fa-eye" aria-hidden="true"></i> Abrir</a><?php if($canManage):?><a class="button-secondary button-small" href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>/edit"><i class="fa-solid fa-pen" aria-hidden="true"></i> Editar cliente</a><?php endif;?></div></td>
   </tr>
 <?php endforeach; ?>
 </tbody></table></div>

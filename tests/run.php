@@ -61,6 +61,13 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_file($rootPath.'/views/finance/payments/pix.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/edit.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/index.php'));
+    $financeNavigation = file_get_contents($rootPath.'/views/layouts/app.php');
+    $paymentList = file_get_contents($rootPath.'/views/finance/payments/index.php');
+    $customerList = file_get_contents($rootPath.'/views/finance/customers/index.php');
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Alunos</span>'));
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'nav-submenu-label'));
+    assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
+    assertTrue(is_string($customerList) && str_contains($customerList, 'Editar cliente'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/payments/form.php'),'installment_count'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/index.php'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/form.php'));
