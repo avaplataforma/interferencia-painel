@@ -86,6 +86,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     $webRoutes = file_get_contents($rootPath.'/routes/web.php');
     assertTrue(is_string($webRoutes) && str_contains($webRoutes, "RequirePermission(\$auth,'finance.payments.modify')"));
     assertTrue(is_string($webRoutes) && str_contains($webRoutes, "RequirePermission(\$auth,'finance.payments.issue')"));
+    assertTrue(is_string($webRoutes) && str_contains($webRoutes, "['PIX','BOLETO','CREDIT_CARD']"));
     $contactFormView = file_get_contents($rootPath.'/views/crm/contacts/form.php');
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'name="unit_id"'));
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'data-contact-responsible'));

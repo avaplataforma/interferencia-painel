@@ -5,6 +5,7 @@
 - Administrador Global e SEDE podem emitir, alterar e cancelar cobranças pendentes ou vencidas.
 - Gestores e atendentes autorizados podem emitir cobranças e acessar PIX, fatura e segunda via, mas não podem alterar, cancelar ou dar baixa.
 - A confirmação de pagamento é recebida pelo webhook oficial do Asaas; não existe baixa manual no fluxo operacional.
+- Cobranças únicas e parceladas podem usar PIX, boleto ou cartão. No cartão, os dados sensíveis são preenchidos pelo cliente somente na página segura da fatura do Asaas.
 
 A exclusão de clientes é exclusiva do Administrador Global e é bloqueada quando existem cobranças, assinaturas ou checkouts vinculados. Essa proteção evita a remoção indireta de recursos financeiros no Asaas.
 
