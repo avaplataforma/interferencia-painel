@@ -16,7 +16,7 @@ final readonly class TicketRepository
     {
         if ($unitIds === []) return [];
         $marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT t.*,un.name unit_name,requester.name requester_name,assigned.name assigned_name,(tr.last_read_at IS NULL OR t.updated_at>tr.last_read_at) unread FROM tickets t INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN users assigned ON assigned.id=t.assigned_user_id LEFT JOIN ticket_reads tr ON tr.ticket_id=t.id AND tr.user_id=? WHERE t.unit_id IN ($marks)";
+        $sql="SELECT t.*,un.name unit_name,requester.name requester_name,assigned.name assigned_name,contact.name contact_name,(tr.last_read_at IS NULL OR t.updated_at>tr.last_read_at) unread FROM tickets t INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN users assigned ON assigned.id=t.assigned_user_id LEFT JOIN crm_contacts contact ON contact.id=t.crm_contact_id LEFT JOIN ticket_reads tr ON tr.ticket_id=t.id AND tr.user_id=? WHERE t.unit_id IN ($marks)";
         $params=[$userId,...$unitIds];
         if(!$manage){$sql.=' AND (t.requester_user_id=? OR t.assigned_user_id=?)';array_push($params,$userId,$userId);}
         if($scope==='mine'){$sql.=' AND t.assigned_user_id=?';$params[]=$userId;}elseif($scope==='created'){$sql.=' AND t.requester_user_id=?';$params[]=$userId;}elseif($scope==='overdue'){$sql.=" AND t.status NOT IN('resolved','closed') AND t.due_at<NOW()";}
@@ -31,7 +31,7 @@ final readonly class TicketRepository
     public function find(int $id,int $userId,bool $manage,array $unitIds):?array
     {
         if($unitIds===[])return null;$marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT t.*,un.name unit_name,requester.name requester_name,assigned.name assigned_name FROM tickets t INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN users assigned ON assigned.id=t.assigned_user_id WHERE t.id=? AND t.unit_id IN ($marks)";$params=[$id,...$unitIds];
+        $sql="SELECT t.*,un.name unit_name,requester.name requester_name,assigned.name assigned_name,contact.name contact_name,contact.phone contact_phone FROM tickets t INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN users assigned ON assigned.id=t.assigned_user_id LEFT JOIN crm_contacts contact ON contact.id=t.crm_contact_id WHERE t.id=? AND t.unit_id IN ($marks)";$params=[$id,...$unitIds];
         if(!$manage){$sql.=' AND (t.requester_user_id=? OR t.assigned_user_id=?)';array_push($params,$userId,$userId);}
         $s=$this->db->prepare($sql);$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
     }
@@ -39,10 +39,10 @@ final readonly class TicketRepository
     /** @return list<array<string,mixed>> */
     public function usersForUnit(int $unitId):array{$s=$this->db->prepare('SELECT DISTINCT u.id,u.name FROM users u INNER JOIN user_unit_scopes sc ON sc.user_id=u.id WHERE sc.unit_id=:unit AND u.is_active=1 ORDER BY u.name');$s->execute(['unit'=>$unitId]);return$s->fetchAll();}
 
-    public function create(int $unitId,int $requesterId,int $assignedId,string $subject,string $description,string $priority,?string $dueAt):int
+    public function create(int $unitId,int $requesterId,int $assignedId,?int $contactId,string $subject,string $description,string $priority,?string $dueAt):int
     {
         if(!$this->userCanAccessUnit($assignedId,$unitId))throw new RuntimeException('O responsável não possui acesso à unidade selecionada.');
-        $this->db->beginTransaction();try{$s=$this->db->prepare("INSERT INTO tickets(unit_id,requester_user_id,assigned_user_id,subject,description,priority,status,due_at) VALUES(:unit,:requester,:assigned,:subject,:description,:priority,'open',:due)");$s->execute(['unit'=>$unitId,'requester'=>$requesterId,'assigned'=>$assignedId,'subject'=>trim($subject),'description'=>trim($description),'priority'=>$priority,'due'=>$dueAt]);$id=(int)$this->db->lastInsertId();$this->event($id,$requesterId,'created',null,'Chamado aberto');$this->markRead($id,$requesterId);$this->db->commit();return$id;}catch(\Throwable$e){if($this->db->inTransaction())$this->db->rollBack();throw$e;}
+        $this->db->beginTransaction();try{$s=$this->db->prepare("INSERT INTO tickets(unit_id,crm_contact_id,requester_user_id,assigned_user_id,subject,description,priority,status,due_at) VALUES(:unit,:contact,:requester,:assigned,:subject,:description,:priority,'open',:due)");$s->execute(['unit'=>$unitId,'contact'=>$contactId,'requester'=>$requesterId,'assigned'=>$assignedId,'subject'=>trim($subject),'description'=>trim($description),'priority'=>$priority,'due'=>$dueAt]);$id=(int)$this->db->lastInsertId();$this->event($id,$requesterId,'created',null,'Chamado aberto');$this->markRead($id,$requesterId);$this->db->commit();return$id;}catch(\Throwable$e){if($this->db->inTransaction())$this->db->rollBack();throw$e;}
     }
 
     public function comments(int $ticketId):array{$s=$this->db->prepare('SELECT c.*,u.name user_name FROM ticket_comments c INNER JOIN users u ON u.id=c.user_id WHERE c.ticket_id=:ticket ORDER BY c.created_at,c.id');$s->execute(['ticket'=>$ticketId]);return$s->fetchAll();}

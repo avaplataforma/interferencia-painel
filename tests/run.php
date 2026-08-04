@@ -476,6 +476,7 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     $layout=file_get_contents($rootPath.'/views/layouts/app.php');
     assertTrue(is_string($migration) && str_contains($migration,'CREATE TABLE tickets'));
     assertTrue(is_string($migration) && str_contains($migration,"'tickets.manage'"));
+    assertTrue(is_file($rootPath.'/database/migrations/20260804_540000_link_tickets_to_crm_contacts.php'));
     assertTrue(is_file($rootPath.'/modules/Tickets/TicketRepository.php'));
     assertTrue(is_file($rootPath.'/views/tickets/index.php'));
     assertTrue(is_file($rootPath.'/views/tickets/form.php'));
@@ -483,6 +484,7 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     assertTrue(is_string($routes) && str_contains($routes,"'/tickets/{id:\\d+}'"));
     assertTrue(is_string($layout) && str_contains($layout,'>Tickets'));
     assertTrue(is_string($layout) && str_contains($layout,'ticketAlerts'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'Aluno/Contato vinculado'));
 };
 
 $failures = 0;
