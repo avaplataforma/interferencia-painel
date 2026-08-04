@@ -33,6 +33,13 @@ final readonly class AsaasClient
         return $this->request('PUT', '/customers/' . rawurlencode($customerId), $payload);
     }
 
+    public function deleteCustomer(string $customerId): void
+    {
+        if (!$this->paymentsWriteEnabled) throw new RuntimeException('A exclusão real de clientes está bloqueada.');
+        if (preg_match('/^cus_[A-Za-z0-9]+$/', $customerId) !== 1) throw new RuntimeException('Identificador do cliente inválido.');
+        $this->request('DELETE', '/customers/' . rawurlencode($customerId), []);
+    }
+
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function createCheckout(array$payload):array
     {

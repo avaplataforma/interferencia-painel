@@ -68,6 +68,10 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'nav-submenu-label'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
     assertTrue(is_string($customerList) && str_contains($customerList, 'Editar cliente'));
+    $headquartersMigration = file_get_contents($rootPath.'/database/migrations/20260804_500000_add_headquarters_role_and_customer_delete.php');
+    assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, "'headquarters','SEDE'"));
+    assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, 'finance.customers.delete'));
+    assertTrue(is_string($headquartersMigration) && !str_contains($headquartersMigration, "r.code='headquarters' AND p.code IN('users.manage'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/payments/form.php'),'installment_count'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/index.php'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/form.php'));

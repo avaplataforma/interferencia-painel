@@ -1,5 +1,9 @@
 # Identidade e Acesso
 
+## Perfil SEDE
+
+O perfil `SEDE` possui acesso operacional a todas as unidades, ao CRM, à caixa de entrada do WhatsApp e ao Financeiro, incluindo registros financeiros legados. Ele não recebe permissões estruturais de ADM, como gerenciar usuários, perfis, unidades, configurações, integrações ou excluir clientes financeiros.
+
 ## Escopo inicial
 
 A primeira versão de identidade do PAINEL INTER 📊 possui usuários, papéis,

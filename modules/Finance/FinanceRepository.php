@@ -95,8 +95,17 @@ final readonly class FinanceRepository
     /** @param list<int> $unitIds @return array<string,mixed>|null */
     public function customer(int$id,array$unitIds,bool$includeLegacy):?array
     {
-        $parts=[];$params=['id'=>$id];if($unitIds!==[]){$marks=[];foreach($unitIds as$i=>$unitId){$key='unit'.$i;$marks[]=':'.$key;$params[$key]=$unitId;}$parts[]='c.unit_id IN ('.implode(',',$marks).')';}if($includeLegacy)$parts[]='c.unit_id IS NULL';if($parts===[])return null;$s=$this->database->prepare('SELECT c.*,u.name unit_name,crm.name crm_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=:id AND ('.implode(' OR ',$parts).') LIMIT 1');$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
+        $parts=[];$params=['id'=>$id];if($unitIds!==[]){$marks=[];foreach($unitIds as$i=>$unitId){$key='unit'.$i;$marks[]=':'.$key;$params[$key]=$unitId;}$parts[]='c.unit_id IN ('.implode(',',$marks).')';}if($includeLegacy)$parts[]='c.unit_id IS NULL';if($parts===[])return null;$s=$this->database->prepare('SELECT c.*,u.name unit_name,crm.name crm_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=:id AND c.is_deleted=0 AND ('.implode(' OR ',$parts).') LIMIT 1');$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
     }
+    /** @return array{payments:int,subscriptions:int,checkouts:int} */
+    public function customerDependencies(int$id):array
+    {
+        $payments=$this->database->prepare('SELECT COUNT(*) FROM finance_payments WHERE finance_customer_id=:id AND is_deleted=0');$payments->execute(['id'=>$id]);
+        $subscriptions=$this->database->prepare('SELECT COUNT(*) FROM finance_subscriptions WHERE finance_customer_id=:id AND is_deleted=0');$subscriptions->execute(['id'=>$id]);
+        $checkouts=$this->database->prepare('SELECT COUNT(*) FROM finance_checkouts WHERE finance_customer_id=:id');$checkouts->execute(['id'=>$id]);
+        return['payments'=>(int)$payments->fetchColumn(),'subscriptions'=>(int)$subscriptions->fetchColumn(),'checkouts'=>(int)$checkouts->fetchColumn()];
+    }
+    public function markCustomerDeleted(int$id):void{$s=$this->database->prepare('UPDATE finance_customers SET is_deleted=1,synced_at=NOW() WHERE id=:id');$s->execute(['id'=>$id]);}
     /** @return list<array<string,mixed>> */
     public function customerPayments(int$customerId):array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC,id DESC LIMIT 200');$s->execute(['customer'=>$customerId]);return$s->fetchAll();}
     /** @return array<string,mixed>|null */

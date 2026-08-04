@@ -1,5 +1,7 @@
 # Financeiro e Asaas
 
+A exclusão de clientes é exclusiva do Administrador Global e é bloqueada quando existem cobranças, assinaturas ou checkouts vinculados. Essa proteção evita a remoção indireta de recursos financeiros no Asaas.
+
 O módulo Financeiro centraliza clientes, cobranças e recebimentos por unidade,
 respeitando os mesmos escopos do CRM e WhatsApp. A integração usa a API oficial
 do Asaas.

@@ -82,6 +82,12 @@ final class Auth
         return $user !== null && in_array($permission, $this->users->permissions($user->id), true);
     }
 
+    public function isSuperAdmin(): bool
+    {
+        $user = $this->user();
+        return $user !== null && $this->users->isSuperAdmin($user->id);
+    }
+
     /** @return list<string> */
     public function unitScopes(): array
     {
