@@ -72,6 +72,7 @@ final readonly class FinanceRepository
     /** @return array<string,mixed>|null */
     public function customerPayment(int$customerId,int$paymentId):?array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE id=:id AND finance_customer_id=:customer AND is_deleted=0 LIMIT 1');$s->execute(['id'=>$paymentId,'customer'=>$customerId]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function paymentIdByAsaas(string$asaasId):?int{$s=$this->database->prepare('SELECT id FROM finance_payments WHERE asaas_payment_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;}
+    public function markPaymentDeleted(int$id):void{$s=$this->database->prepare("UPDATE finance_payments SET is_deleted=1,status='CANCELED',synced_at=NOW() WHERE id=:id");$s->execute(['id'=>$id]);}
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
     public function crmCandidates(array$customer,array$unitIds):array
     {

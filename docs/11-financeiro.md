@@ -58,6 +58,8 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - O envio real permanece bloqueado por padrão com `ASAAS_PAYMENTS_WRITE_ENABLED=false` até a cobrança-piloto.
 - Clientes legados precisam ser conciliados antes da emissão.
 - Para PIX, o painel recupera o QR Code dinâmico, o código copia-e-cola e a validade diretamente do Asaas.
+- Cobranças pendentes ou vencidas podem ter forma, valor, vencimento e descrição alterados; também podem ser canceladas com confirmação explícita.
+- Cobranças recebidas não podem ser alteradas nem canceladas por esse fluxo; eventual devolução será tratada separadamente como estorno.
 
 ## Diagnóstico do webhook
 

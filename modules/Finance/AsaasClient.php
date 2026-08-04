@@ -31,6 +31,19 @@ final readonly class AsaasClient
         return $this->request('POST', '/payments', $payload);
     }
 
+    /** @param array{billingType:string,value:float,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
+    public function updatePayment(string $paymentId,array $payload):array
+    {
+        $this->assertPaymentWrite($paymentId);
+        return $this->request('PUT','/payments/'.rawurlencode($paymentId),$payload);
+    }
+
+    public function deletePayment(string $paymentId):void
+    {
+        $this->assertPaymentWrite($paymentId);
+        $this->request('DELETE','/payments/'.rawurlencode($paymentId),[]);
+    }
+
     /** @return array{encodedImage:string,payload:string,expirationDate:string} */
     public function pixQrCode(string $paymentId): array
     {
@@ -89,5 +102,11 @@ final readonly class AsaasClient
         $data=json_decode($response,true);
         if($status<200||$status>=300||!is_array($data)){$message=is_array($data)?(string)($data['errors'][0]['description']??'O Asaas recusou a cobrança.'):'O Asaas retornou uma resposta inválida.';throw new RuntimeException($message);}
         return $data;
+    }
+
+    private function assertPaymentWrite(string$paymentId):void
+    {
+        if(!$this->paymentsWriteEnabled)throw new RuntimeException('As alterações reais de cobranças estão bloqueadas.');
+        if(!preg_match('/^pay_[A-Za-z0-9]+$/',$paymentId))throw new RuntimeException('Identificador da cobrança inválido.');
     }
 }
