@@ -424,6 +424,15 @@ $tests['carrega catálogo e checkout financeiro'] = static function (): void {
     assertTrue(is_string($routes) && str_contains($routes, '/admin/finance/products') && str_contains($routes, '/checkouts/create'));
 };
 
+$tests['permite atualizar cliente financeiro no Asaas'] = static function (): void {
+    $root = dirname(__DIR__);
+    $client = file_get_contents($root.'/modules/Finance/AsaasClient.php');
+    $routes = file_get_contents($root.'/routes/web.php');
+    assertTrue(is_string($client) && str_contains($client, 'function updateCustomer') && str_contains($client, "'/customers/'"));
+    assertTrue(is_string($routes) && str_contains($routes, '/finance/customers/{id:\\d+}/edit'));
+    assertTrue(is_file($root.'/views/finance/customers/edit.php'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

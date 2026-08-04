@@ -85,6 +85,7 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 ## Checkout por curso
 
 - Um cliente conciliado com uma unidade pode receber um checkout avulso criado a partir do catálogo administrativo.
+- Usuários com `finance.manage` podem corrigir nome, e-mail, documento e telefones na ficha; a alteração é enviada ao Asaas e atualizada localmente.
 - Nesta primeira etapa, o checkout aceita **Pix** e/ou **cartão de crédito**, conforme o curso.
 - O link, a validade e a situação ficam registrados na ficha financeira do cliente.
 - A página de retorno informa apenas a conclusão da navegação. Somente o webhook do Asaas pode atualizar a situação financeira.

@@ -25,6 +25,15 @@ final readonly class AsaasClient
     public function paymentsWriteEnabled(): bool { return $this->paymentsWriteEnabled; }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function updateCustomer(string $customerId, array $payload): array
+    {
+        if (!$this->paymentsWriteEnabled) throw new RuntimeException('A alteração real de clientes está bloqueada.');
+        if (preg_match('/^cus_[A-Za-z0-9]+$/', $customerId) !== 1) throw new RuntimeException('Identificador do cliente inválido.');
+        if ($payload === []) throw new RuntimeException('Nenhuma alteração foi informada.');
+        return $this->request('PUT', '/customers/' . rawurlencode($customerId), $payload);
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function createCheckout(array$payload):array
     {
         if(!$this->paymentsWriteEnabled)throw new RuntimeException('A criação real de checkouts está bloqueada.');
