@@ -42,6 +42,10 @@ final readonly class FinanceRepository
     public function registerWebhook(string $eventId,string $eventType,?string $resourceId): bool
     { $s=$this->database->prepare('INSERT IGNORE INTO finance_webhook_events(asaas_event_id,event_type,resource_id) VALUES(:id,:type,:resource)');$s->execute(['id'=>$eventId,'type'=>$eventType,'resource'=>$resourceId]);return$s->rowCount()===1; }
     public function finishWebhook(string $eventId,?string $error=null):void{$s=$this->database->prepare('UPDATE finance_webhook_events SET processed_at=NOW(),error_message=:error WHERE asaas_event_id=:id');$s->execute(['error'=>$error,'id'=>$eventId]);}
+    /** @return array{offset:int,complete:bool} */
+    public function syncCursor(string$resource):array{$s=$this->database->prepare('SELECT next_offset,is_complete FROM finance_sync_cursors WHERE resource=:resource');$s->execute(['resource'=>$resource]);$row=$s->fetch()?:[];return['offset'=>(int)($row['next_offset']??0),'complete'=>(int)($row['is_complete']??0)===1];}
+    public function advanceSync(string$resource,int$offset,bool$complete):void{$s=$this->database->prepare('INSERT INTO finance_sync_cursors(resource,next_offset,is_complete) VALUES(:resource,:offset,:complete) ON DUPLICATE KEY UPDATE next_offset=VALUES(next_offset),is_complete=VALUES(is_complete)');$s->execute(['resource'=>$resource,'offset'=>$offset,'complete'=>(int)$complete]);}
+    public function resetSync():void{$this->database->exec('UPDATE finance_sync_cursors SET next_offset=0,is_complete=0');}
     private function nullable(mixed $value):?string{$v=trim((string)$value);return$v===''?null:$v;}
     private function date(mixed $value):?string{$v=(string)$value;return preg_match('/^\d{4}-\d{2}-\d{2}$/',$v)===1?$v:null;}
 }

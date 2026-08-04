@@ -48,6 +48,11 @@ $tests['criptografa segredos financeiros quando a chave-mestra está disponível
     assertSame('$aact_hmlg_teste',$cipher->decrypt($encrypted));
 };
 
+$tests['carrega migração de sincronização financeira em lotes'] = static function () use ($rootPath): void {
+    $repository=new MigrationRepository($rootPath.'/database/migrations');
+    assertTrue(in_array('20260804_450000_create_finance_sync_cursors',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
+};
+
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {
     $suffix = strtoupper(bin2hex(random_bytes(4)));
     $first = 'TEST_FIRST_' . $suffix;
