@@ -24,11 +24,33 @@ final readonly class AsaasClient
 
     public function paymentsWriteEnabled(): bool { return $this->paymentsWriteEnabled; }
 
-    /** @param array{customer:string,billingType:string,value:float,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
+    /** @param array{customer:string,billingType:string,value?:float,totalValue?:float,installmentCount?:int,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
     public function createPayment(array $payload): array
     {
         if (!$this->paymentsWriteEnabled) throw new RuntimeException('A emissão real de cobranças ainda está bloqueada para o teste piloto.');
         return $this->request('POST', '/payments', $payload);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function installmentPayments(string $installmentId): array
+    {
+        if (!preg_match('/^ins_[A-Za-z0-9]+$/', $installmentId)) throw new RuntimeException('Identificador do parcelamento inválido.');
+        $result = $this->get('/installments/' . rawurlencode($installmentId) . '/payments', 0, 100);
+        return $result['data'];
+    }
+
+    /** @param array<string,mixed> $firstPayment @return list<array<string,mixed>> */
+    public function createdInstallmentPayments(array $firstPayment): array
+    {
+        $installmentId = (string)($firstPayment['installment'] ?? '');
+        if (!preg_match('/^ins_[A-Za-z0-9]+$/', $installmentId)) return [$firstPayment];
+        try {
+            $payments = $this->installmentPayments($installmentId);
+            return $payments !== [] ? $payments : [$firstPayment];
+        } catch (RuntimeException) {
+            // A cobrança já foi criada. A sincronização/webhook completará as parcelas sem induzir uma emissão duplicada.
+            return [$firstPayment];
+        }
     }
 
     /** @param array{billingType:string,value:float,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */

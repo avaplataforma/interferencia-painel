@@ -61,6 +61,8 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Cobranças pendentes ou vencidas podem ter forma, valor, vencimento e descrição alterados; também podem ser canceladas com confirmação explícita.
 - Cobranças recebidas não podem ser alteradas nem canceladas por esse fluxo; eventual devolução será tratada separadamente como estorno.
 - A central de cobranças consolida indicadores e permite busca e filtros por situação, forma e período, sempre respeitando a unidade ativa.
+- A emissão aceita cobrança única ou parcelamento entre 2 e 60 vezes. No parcelamento, o operador informa o valor total e o Asaas calcula as parcelas mensais, compensando eventual diferença de centavos na última.
+- Antes do envio é obrigatório revisar e confirmar cliente, unidade, valor, primeiro vencimento e condição de pagamento.
 
 ## Diagnóstico do webhook
 
