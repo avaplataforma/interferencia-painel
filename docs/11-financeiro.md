@@ -44,3 +44,9 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Apenas o Administrador Global pode atribuir um registro sem unidade a um polo.
 - A vinculação opcional ao CRM sugere somente contatos com coincidência de documento, e-mail ou telefone.
 - Ao conciliar, todas as cobranças locais daquele cliente passam para a mesma unidade; nenhuma alteração é enviada ao Asaas nessa etapa.
+
+## Organização do menu
+
+- O menu operacional **Financeiro** contém somente **Clientes** nesta fase.
+- Credenciais, sincronização, webhook e diagnósticos ficam em **ADM → Integração Asaas**.
+- Recursos administrativos exigem `finance.settings.manage`; a consulta de clientes continua limitada por `finance.view` e pelo escopo de unidades.
