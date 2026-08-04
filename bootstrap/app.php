@@ -144,6 +144,8 @@ $view->share([
         'whatsapp_templates' => $auth->can('whatsapp.lines.manage'),
         'whatsapp' => $auth->can('whatsapp.inbox.view'),
         'finance' => $auth->can('finance.view'),
+        'finance_issue' => $auth->can('finance.payments.issue'),
+        'finance_modify' => $auth->can('finance.payments.modify'),
         'finance_settings' => $auth->can('finance.settings.manage'),
         'finance_products' => $auth->can('finance.settings.manage'),
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),

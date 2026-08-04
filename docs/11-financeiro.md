@@ -1,5 +1,11 @@
 # Financeiro e Asaas
 
+## Permissões sobre cobranças
+
+- Administrador Global e SEDE podem emitir, alterar e cancelar cobranças pendentes ou vencidas.
+- Gestores e atendentes autorizados podem emitir cobranças e acessar PIX, fatura e segunda via, mas não podem alterar, cancelar ou dar baixa.
+- A confirmação de pagamento é recebida pelo webhook oficial do Asaas; não existe baixa manual no fluxo operacional.
+
 A exclusão de clientes é exclusiva do Administrador Global e é bloqueada quando existem cobranças, assinaturas ou checkouts vinculados. Essa proteção evita a remoção indireta de recursos financeiros no Asaas.
 
 O módulo Financeiro centraliza clientes, cobranças e recebimentos por unidade,

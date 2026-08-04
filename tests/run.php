@@ -77,7 +77,15 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     $customerDetail = file_get_contents($rootPath.'/views/finance/customers/show.php');
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-reconcile-card'));
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-history-card'));
-    assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'asaas-customer-id'));
+    assertTrue(is_string($customerDetail) && !str_contains($customerDetail, 'ID no Asaas'));
+    assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-document-actions'));
+    $issueMigration = file_get_contents($rootPath.'/database/migrations/20260804_510000_add_finance_payment_issue_permission.php');
+    assertTrue(is_string($issueMigration) && str_contains($issueMigration, 'finance.payments.issue'));
+    assertTrue(is_string($issueMigration) && str_contains($issueMigration, 'finance.payments.modify'));
+    assertTrue(is_string($issueMigration) && str_contains($issueMigration, "r.code IN('super_admin','headquarters')"));
+    $webRoutes = file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(is_string($webRoutes) && str_contains($webRoutes, "RequirePermission(\$auth,'finance.payments.modify')"));
+    assertTrue(is_string($webRoutes) && str_contains($webRoutes, "RequirePermission(\$auth,'finance.payments.issue')"));
     $contactFormView = file_get_contents($rootPath.'/views/crm/contacts/form.php');
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'name="unit_id"'));
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'data-contact-responsible'));
