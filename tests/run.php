@@ -73,7 +73,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
     assertTrue(is_string($customerList) && str_contains($customerList, 'Editar cliente'));
-    assertTrue(is_string($customerList) && str_contains($customerList, 'Criar cobrança'));
+    assertTrue(is_string($customerList) && str_contains($customerList, 'Cobrança <i class="fa-solid fa-plus"'));
     $customerDetail = file_get_contents($rootPath.'/views/finance/customers/show.php');
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-reconcile-card'));
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-history-card'));
