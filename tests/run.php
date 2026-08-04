@@ -77,6 +77,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     $customerDetail = file_get_contents($rootPath.'/views/finance/customers/show.php');
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-reconcile-card'));
     assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'finance-history-card'));
+    assertTrue(is_string($customerDetail) && str_contains($customerDetail, 'asaas-customer-id'));
     $contactFormView = file_get_contents($rootPath.'/views/crm/contacts/form.php');
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'name="unit_id"'));
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'data-contact-responsible'));
