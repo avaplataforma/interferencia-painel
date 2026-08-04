@@ -114,7 +114,7 @@ TEXT);
         $repository = new FinanceRepository($connection->pdo());
         $client = new AsaasClient((string)$config->get('app.asaas_environment'),(string)$config->get('app.asaas_api_key'));
         $result = (new AsaasSynchronizer($client,$repository))->sync();
-        fwrite(STDOUT,sprintf("Sincronização concluída: %d cliente(s) e %d cobrança(s).\n",$result['customers'],$result['payments']));
+        fwrite(STDOUT,sprintf("Sincronização concluída: %d cliente(s), %d cobrança(s) e %d assinatura(s).\n",$result['customers'],$result['payments'],$result['subscriptions']));
         exit(0);
     }
 

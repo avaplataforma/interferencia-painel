@@ -72,6 +72,10 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Criar uma assinatura agenda cobranças futuras e não representa pagamento recebido.
 - Pausar e reativar exigem permissão `finance.manage` e confirmação explícita.
 - Cartão recorrente permanece fora desta etapa até a implantação de tokenização segura; o Painel nunca armazenará os dados brutos do cartão.
+- Assinaturas já existentes no Asaas são importadas em lotes de até 100 registros, depois de clientes e cobranças.
+- Assinaturas antigas sem unidade permanecem como legado e são visíveis somente ao Administrador Global.
+- O progresso de clientes, cobranças e assinaturas fica disponível em **ADM → Integração Asaas** e pode ser reiniciado para uma conferência completa sem apagar dados locais.
+- Eventos de assinatura recebidos pelo webhook atualizam o cadastro local de forma idempotente.
 
 ## Diagnóstico do webhook
 

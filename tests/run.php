@@ -74,6 +74,11 @@ $tests['carrega diagnóstico idempotente do webhook financeiro'] = static functi
 $tests['carrega estrutura de assinaturas financeiras'] = static function () use ($rootPath): void {
     $repository=new MigrationRepository($rootPath.'/database/migrations');
     assertTrue(in_array('20260804_470000_create_finance_subscriptions',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
+    $synchronizer=(string)file_get_contents($rootPath.'/modules/Finance/AsaasSynchronizer.php');
+    assertTrue(str_contains($synchronizer,'listSubscriptions'));
+    assertTrue(str_contains($synchronizer,"syncCursor('subscriptions')"));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($routes,"payload['subscription']"));
 };
 
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {
