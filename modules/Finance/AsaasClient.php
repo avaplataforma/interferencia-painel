@@ -24,6 +24,20 @@ final readonly class AsaasClient
 
     public function paymentsWriteEnabled(): bool { return $this->paymentsWriteEnabled; }
 
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function createCheckout(array$payload):array
+    {
+        if(!$this->paymentsWriteEnabled)throw new RuntimeException('A criação real de checkouts está bloqueada.');
+        $checkout=$this->request('POST','/checkouts',$payload);$id=(string)($checkout['id']??'');
+        if($id===''||preg_match('/^[A-Za-z0-9-]{20,80}$/',$id)!==1)throw new RuntimeException('O Asaas não retornou um identificador válido para o checkout.');
+        $link=trim((string)($checkout['link']??''));
+        if($link==='')$link=($this->environment==='sandbox'?'https://sandbox.asaas.com':'https://asaas.com').'/checkoutSession/show/'.rawurlencode($id);
+        $host=strtolower((string)parse_url($link,PHP_URL_HOST));
+        if(!str_ends_with($host,'.asaas.com')&&$host!=='asaas.com')throw new RuntimeException('O Asaas retornou um link de checkout inválido.');
+        $checkout['link']=$link;
+        return$checkout;
+    }
+
     /** @param array{customer:string,billingType:string,value?:float,totalValue?:float,installmentCount?:int,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
     public function createPayment(array $payload): array
     {

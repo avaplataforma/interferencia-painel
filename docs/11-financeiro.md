@@ -49,6 +49,7 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 
 - O menu operacional **Financeiro** contém somente **Clientes** nesta fase.
 - Credenciais, sincronização, webhook e diagnósticos ficam em **ADM → Integração Asaas**.
+- Cursos, preços, formas aceitas e disponibilidade por unidade ficam em **ADM → Cursos e preços**.
 - Recursos administrativos exigem `finance.settings.manage`; a consulta de clientes continua limitada por `finance.view` e pelo escopo de unidades.
 
 ## Emissão de cobranças
@@ -80,6 +81,14 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 ## Diagnóstico do webhook
 
 - A Integração Asaas mostra os últimos eventos, horário, cobrança relacionada, reentregas e falhas.
+
+## Checkout por curso
+
+- Um cliente conciliado com uma unidade pode receber um checkout avulso criado a partir do catálogo administrativo.
+- Nesta primeira etapa, o checkout aceita **Pix** e/ou **cartão de crédito**, conforme o curso.
+- O link, a validade e a situação ficam registrados na ficha financeira do cliente.
+- A página de retorno informa apenas a conclusão da navegação. Somente o webhook do Asaas pode atualizar a situação financeira.
+- Parcelamento, recorrência e split serão habilitados em etapas posteriores, com regras explícitas por unidade.
 - O ID do evento é único; uma reentrega aumenta o contador, mas não reaplica o processamento.
 - O teste interno registra e reentrega um evento sintético sem cliente ou cobrança real.
 - URL e token possuem ação de cópia e permanecem restritos ao Administrador Global.

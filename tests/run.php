@@ -414,6 +414,16 @@ $tests['cria redirecionamento HTTP'] = static function (): void {
     assertSame('/painel/login', $response->header('Location'));
 };
 
+$tests['carrega catálogo e checkout financeiro'] = static function (): void {
+    $root = dirname(__DIR__);
+    $migration = file_get_contents($root.'/database/migrations/20260804_480000_create_finance_products_and_checkouts.php');
+    $client = file_get_contents($root.'/modules/Finance/AsaasClient.php');
+    $routes = file_get_contents($root.'/routes/web.php');
+    assertTrue(is_string($migration) && str_contains($migration, 'finance_products') && str_contains($migration, 'finance_checkouts'));
+    assertTrue(is_string($client) && str_contains($client, "'/checkouts'"));
+    assertTrue(is_string($routes) && str_contains($routes, '/admin/finance/products') && str_contains($routes, '/checkouts/create'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
