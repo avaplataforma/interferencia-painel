@@ -148,6 +148,7 @@ $view->share([
         'finance_products' => $auth->can('finance.settings.manage'),
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
+        'crm_manage' => $auth->can('crm.contacts.manage'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),

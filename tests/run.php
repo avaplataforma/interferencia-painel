@@ -65,6 +65,9 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     $paymentList = file_get_contents($rootPath.'/views/finance/payments/index.php');
     $customerList = file_get_contents($rootPath.'/views/finance/customers/index.php');
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Alunos</span>'));
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Cadastro</a>'));
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'select:not([multiple])'));
+    assertTrue(str_contains((string) file_get_contents($rootPath.'/bootstrap/app.php'), "'crm_manage' => \$auth->can('crm.contacts.manage')"));
     assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Financeiro</a>') === 2);
     assertTrue(is_string($customerList) && str_contains($customerList, 'finance-section-tabs'));
     assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
