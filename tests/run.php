@@ -59,6 +59,11 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_file($rootPath.'/views/finance/customers/show.php'));
 };
 
+$tests['carrega diagnóstico idempotente do webhook financeiro'] = static function () use ($rootPath): void {
+    $repository=new MigrationRepository($rootPath.'/database/migrations');
+    assertTrue(in_array('20260804_460000_add_finance_webhook_diagnostics',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
+};
+
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {
     $suffix = strtoupper(bin2hex(random_bytes(4)));
     $first = 'TEST_FIRST_' . $suffix;

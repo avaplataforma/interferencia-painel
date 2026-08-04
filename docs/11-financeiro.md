@@ -50,3 +50,10 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - O menu operacional **Financeiro** contém somente **Clientes** nesta fase.
 - Credenciais, sincronização, webhook e diagnósticos ficam em **ADM → Integração Asaas**.
 - Recursos administrativos exigem `finance.settings.manage`; a consulta de clientes continua limitada por `finance.view` e pelo escopo de unidades.
+
+## Diagnóstico do webhook
+
+- A Integração Asaas mostra os últimos eventos, horário, cobrança relacionada, reentregas e falhas.
+- O ID do evento é único; uma reentrega aumenta o contador, mas não reaplica o processamento.
+- O teste interno registra e reentrega um evento sintético sem cliente ou cobrança real.
+- URL e token possuem ação de cópia e permanecem restritos ao Administrador Global.

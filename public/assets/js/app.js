@@ -1,5 +1,21 @@
 'use strict';
 
+document.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-copy-target]');
+  if (!button) return;
+  const field = document.getElementById(button.dataset.copyTarget || '');
+  if (!field || !navigator.clipboard) return;
+  try {
+    await navigator.clipboard.writeText(field.value || '');
+    const original = button.textContent;
+    button.textContent = 'Copiado';
+    window.setTimeout(() => { button.textContent = original; }, 1600);
+  } catch (_) {
+    field.focus();
+    field.select();
+  }
+});
+
 document.querySelectorAll('.status-dropdown').forEach((dropdown) => {
   const summary = dropdown.querySelector('summary');
   const update = () => {
