@@ -200,3 +200,37 @@ document.querySelectorAll('a.message-attachment').forEach((link) => {
   audio.src = mediaUrl;
   link.before(audio);
 });
+
+document.querySelectorAll('[data-finance-payment-form]').forEach((form) => {
+  if (!(form instanceof HTMLFormElement)) return;
+  const kind = form.querySelector('#charge-kind');
+  const field = form.querySelector('[data-installment-field]');
+  const count = form.querySelector('#installment-count');
+  const value = form.querySelector('#value');
+  const summary = form.querySelector('[data-installment-summary]');
+  const help = form.querySelector('[data-value-help]');
+  if (!(kind instanceof HTMLSelectElement) || !(count instanceof HTMLInputElement) || !(value instanceof HTMLInputElement)) return;
+  const update = () => {
+    const parcelled = kind.value === 'installment';
+    if (field instanceof HTMLElement) field.hidden = !parcelled;
+    count.required = parcelled;
+    if (summary instanceof HTMLElement) summary.hidden = !parcelled;
+    if (help instanceof HTMLElement) help.textContent = parcelled ? 'Valor total do parcelamento.' : 'Valor da cobrança única.';
+    if (!parcelled || !(summary instanceof HTMLElement)) return;
+    const total = Number(value.value || 0);
+    const installments = Number(count.value || 0);
+    const approximate = installments > 0 ? total / installments : 0;
+    const money = (amount) => amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    summary.textContent = `Total de ${money(total)} em ${installments || 0} parcelas de aproximadamente ${money(approximate)}. Primeira parcela na data informada; as seguintes serão mensais.`;
+  };
+  kind.addEventListener('change', update);
+  count.addEventListener('input', update);
+  value.addEventListener('input', update);
+  form.addEventListener('submit', () => {
+    const button = form.querySelector('button[type="submit"]');
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.disabled = true;
+    button.textContent = 'Emitindo…';
+  });
+  update();
+});
