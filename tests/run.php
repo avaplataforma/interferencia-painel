@@ -53,6 +53,12 @@ $tests['carrega migração de sincronização financeira em lotes'] = static fun
     assertTrue(in_array('20260804_450000_create_finance_sync_cursors',array_map(static fn($migration):string=>$migration->id(),$repository->all()),true));
 };
 
+$tests['carrega serviços de conciliação financeira'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/modules/Finance/FinanceRepository.php'));
+    assertTrue(is_file($rootPath.'/views/finance/customers/index.php'));
+    assertTrue(is_file($rootPath.'/views/finance/customers/show.php'));
+};
+
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {
     $suffix = strtoupper(bin2hex(random_bytes(4)));
     $first = 'TEST_FIRST_' . $suffix;

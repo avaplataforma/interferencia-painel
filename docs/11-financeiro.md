@@ -36,3 +36,11 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Checkout por curso e links de pagamento.
 - Configuração e auditoria dos splits.
 - Relatórios por polo e consolidado global.
+
+## Conciliação do legado
+
+- A listagem financeira permite buscar por nome, documento, e-mail, telefone ou ID Asaas.
+- O detalhe reúne os dados do cliente e até 200 cobranças recentes, com acesso à fatura e ao boleto existentes.
+- Apenas o Administrador Global pode atribuir um registro sem unidade a um polo.
+- A vinculação opcional ao CRM sugere somente contatos com coincidência de documento, e-mail ou telefone.
+- Ao conciliar, todas as cobranças locais daquele cliente passam para a mesma unidade; nenhuma alteração é enviada ao Asaas nessa etapa.

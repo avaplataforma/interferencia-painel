@@ -46,6 +46,33 @@ final readonly class FinanceRepository
     public function syncCursor(string$resource):array{$s=$this->database->prepare('SELECT next_offset,is_complete FROM finance_sync_cursors WHERE resource=:resource');$s->execute(['resource'=>$resource]);$row=$s->fetch()?:[];return['offset'=>(int)($row['next_offset']??0),'complete'=>(int)($row['is_complete']??0)===1];}
     public function advanceSync(string$resource,int$offset,bool$complete):void{$s=$this->database->prepare('INSERT INTO finance_sync_cursors(resource,next_offset,is_complete) VALUES(:resource,:offset,:complete) ON DUPLICATE KEY UPDATE next_offset=VALUES(next_offset),is_complete=VALUES(is_complete)');$s->execute(['resource'=>$resource,'offset'=>$offset,'complete'=>(int)$complete]);}
     public function resetSync():void{$this->database->exec('UPDATE finance_sync_cursors SET next_offset=0,is_complete=0');}
+    public function localResourceCount(string$resource):int{$table=$resource==='customers'?'finance_customers':($resource==='payments'?'finance_payments':'');if($table==='')return 0;return(int)$this->database->query("SELECT COUNT(*) FROM {$table}")->fetchColumn();}
+
+    /** @param list<int> $unitIds @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int} */
+    public function customers(array$unitIds,bool$includeLegacy,string$search='',string$scope='all',int$page=1,int$perPage=50):array
+    {
+        $parts=[];$params=[];if($scope!=='legacy'&&$unitIds!==[]){$parts[]='c.unit_id IN ('.implode(',',array_fill(0,count($unitIds),'?')).')';$params=array_merge($params,$unitIds);}if($includeLegacy&&$scope!=='units')$parts[]='c.unit_id IS NULL';if($parts===[])return['items'=>[],'total'=>0,'page'=>1,'pages'=>1];
+        $where='('.implode(' OR ',$parts).') AND c.is_deleted=0';if($search!==''){$where.=' AND (c.name LIKE ? OR c.email LIKE ? OR c.cpf_cnpj LIKE ? OR c.phone LIKE ? OR c.mobile_phone LIKE ? OR c.asaas_customer_id LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term,$term,$term);}
+        $count=$this->database->prepare("SELECT COUNT(*) FROM finance_customers c WHERE {$where}");$count->execute($params);$total=(int)$count->fetchColumn();$perPage=max(10,min(100,$perPage));$pages=max(1,(int)ceil($total/$perPage));$page=max(1,min($pages,$page));$offset=($page-1)*$perPage;
+        $sql="SELECT c.*,u.name unit_name,crm.name crm_name,(SELECT COUNT(*) FROM finance_payments p WHERE p.finance_customer_id=c.id AND p.is_deleted=0) payment_count,(SELECT COALESCE(SUM(p.value),0) FROM finance_payments p WHERE p.finance_customer_id=c.id AND p.status IN ('PENDING','OVERDUE') AND p.is_deleted=0) open_value FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE {$where} ORDER BY c.name,c.id LIMIT {$perPage} OFFSET {$offset}";$statement=$this->database->prepare($sql);$statement->execute($params);return['items'=>$statement->fetchAll(),'total'=>$total,'page'=>$page,'pages'=>$pages];
+    }
+
+    /** @param list<int> $unitIds @return array<string,mixed>|null */
+    public function customer(int$id,array$unitIds,bool$includeLegacy):?array
+    {
+        $parts=[];$params=['id'=>$id];if($unitIds!==[]){$marks=[];foreach($unitIds as$i=>$unitId){$key='unit'.$i;$marks[]=':'.$key;$params[$key]=$unitId;}$parts[]='c.unit_id IN ('.implode(',',$marks).')';}if($includeLegacy)$parts[]='c.unit_id IS NULL';if($parts===[])return null;$s=$this->database->prepare('SELECT c.*,u.name unit_name,crm.name crm_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=:id AND ('.implode(' OR ',$parts).') LIMIT 1');$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
+    }
+    /** @return list<array<string,mixed>> */
+    public function customerPayments(int$customerId):array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC,id DESC LIMIT 200');$s->execute(['customer'=>$customerId]);return$s->fetchAll();}
+    /** @param list<int> $unitIds @return list<array<string,mixed>> */
+    public function crmCandidates(array$customer,array$unitIds):array
+    {
+        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));$conditions=[];$params=$unitIds;$document=preg_replace('/\D/','',(string)($customer['cpf_cnpj']??''));$email=strtolower(trim((string)($customer['email']??'')));$phone=preg_replace('/\D/','',(string)($customer['mobile_phone']?:$customer['phone']??''));if($document!==''){$conditions[]="REPLACE(REPLACE(REPLACE(crm.document,'.',''),'-',''),'/','')=?";$params[]=$document;}if($email!==''){$conditions[]='LOWER(crm.email)=?';$params[]=$email;}if($phone!==''){$conditions[]="RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(crm.phone,'+',''),'(',''),')',''),'-',''),8)=?";$params[]=substr($phone,-8);}if($conditions===[])return[];$s=$this->database->prepare("SELECT crm.id,crm.name,crm.email,crm.phone,crm.unit_id,u.name unit_name FROM crm_contacts crm INNER JOIN units u ON u.id=crm.unit_id WHERE crm.unit_id IN ({$marks}) AND (".implode(' OR ',$conditions).') ORDER BY crm.name LIMIT 20');$s->execute($params);return$s->fetchAll();
+    }
+    public function reconcileCustomer(int$id,int$unitId,?int$crmContactId):void
+    {
+        $this->database->beginTransaction();try{if($crmContactId!==null){$c=$this->database->prepare('SELECT COUNT(*) FROM crm_contacts WHERE id=:contact AND unit_id=:unit');$c->execute(['contact'=>$crmContactId,'unit'=>$unitId]);if((int)$c->fetchColumn()!==1)throw new \RuntimeException('O contato selecionado não pertence à unidade.');}$s=$this->database->prepare('UPDATE finance_customers SET unit_id=:unit,crm_contact_id=:contact,is_legacy=0 WHERE id=:id');$s->execute(['unit'=>$unitId,'contact'=>$crmContactId,'id'=>$id]);$p=$this->database->prepare('UPDATE finance_payments SET unit_id=:unit,is_legacy=0 WHERE finance_customer_id=:customer');$p->execute(['unit'=>$unitId,'customer'=>$id]);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
     private function nullable(mixed $value):?string{$v=trim((string)$value);return$v===''?null:$v;}
     private function date(mixed $value):?string{$v=(string)$value;return preg_match('/^\d{4}-\d{2}-\d{2}$/',$v)===1?$v:null;}
 }

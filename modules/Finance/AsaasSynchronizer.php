@@ -19,11 +19,17 @@ final readonly class AsaasSynchronizer
     {
         $customers=$this->repository->syncCursor('customers');
         if(!$customers['complete']){
+            $probe=$this->client->listCustomers(0,1);if($probe['totalCount']>0&&$this->repository->localResourceCount('customers')>=$probe['totalCount']){$this->repository->advanceSync('customers',$probe['totalCount'],true);$customers=['offset'=>$probe['totalCount'],'complete'=>true];}
+        }
+        if(!$customers['complete']){
             $page=$this->client->listCustomers($customers['offset'],100);foreach($page['data']as$item)$this->repository->upsertCustomer($item);
             $next=$customers['offset']+count($page['data']);$this->repository->advanceSync('customers',$next,!$page['hasMore']);
             return['customers'=>count($page['data']),'payments'=>0,'complete'=>!$page['hasMore']&&$this->repository->syncCursor('payments')['complete'],'phase'=>'customers','next_offset'=>$next];
         }
         $payments=$this->repository->syncCursor('payments');
+        if(!$payments['complete']){
+            $probe=$this->client->listPayments(0,1);if($probe['totalCount']>0&&$this->repository->localResourceCount('payments')>=$probe['totalCount']){$this->repository->advanceSync('payments',$probe['totalCount'],true);$payments=['offset'=>$probe['totalCount'],'complete'=>true];}
+        }
         if(!$payments['complete']){
             $page=$this->client->listPayments($payments['offset'],100);foreach($page['data']as$item)$this->repository->upsertPayment($item);
             $next=$payments['offset']+count($page['data']);$complete=!$page['hasMore'];$this->repository->advanceSync('payments',$next,$complete);
