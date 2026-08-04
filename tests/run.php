@@ -70,6 +70,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
     assertTrue(is_string($customerList) && str_contains($customerList, 'Editar cliente'));
+    assertTrue(is_string($customerList) && str_contains($customerList, 'Criar cobrança'));
     $headquartersMigration = file_get_contents($rootPath.'/database/migrations/20260804_500000_add_headquarters_role_and_customer_delete.php');
     assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, "'headquarters','SEDE'"));
     assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, 'finance.customers.delete'));
