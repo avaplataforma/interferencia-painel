@@ -15,6 +15,8 @@ use Interferencia\Kernel\Security\Csrf;
 use Interferencia\Kernel\Session\Session;
 use Interferencia\Kernel\Validation\Validator;
 use Interferencia\Modules\Identity\PasswordHasher;
+use Interferencia\Modules\Finance\AsaasClient;
+use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -27,6 +29,15 @@ if (!is_file($autoload)) {
 require $autoload;
 
 $tests = [];
+
+$tests['mantém integração financeira segura por padrão'] = static function (): void {
+    assertTrue(!(new AsaasClient('sandbox',''))->ready());
+    assertTrue(!(new AsaasClient('production','$aact_hmlg_incorreta'))->ready());
+    $verifier=new AsaasWebhookVerifier(str_repeat('a',32));
+    assertTrue($verifier->ready());
+    assertTrue($verifier->valid(str_repeat('a',32)));
+    assertTrue(!$verifier->valid(str_repeat('b',32)));
+};
 
 $tests['carrega ambiente sem sobrescrever valores existentes'] = static function (): void {
     $suffix = strtoupper(bin2hex(random_bytes(4)));

@@ -59,6 +59,14 @@ de negócio.
 - Monitoramento, alertas, backup e recuperação testada.
 - Otimização de desempenho e revisão de segurança.
 
+## Fase financeira — Asaas
+
+- [x] Fundação local, permissões por unidade e conexão protegida.
+- [x] Sincronização inicial de clientes e cobranças antigas.
+- [ ] Conciliação do legado com unidades e contatos do CRM.
+- [ ] Emissão, assinaturas, links e checkout por curso.
+- [ ] Split e relatórios por polo.
+
 ## Regra de passagem
 
 Uma fase só é concluída com documentação atualizada, testes proporcionais ao

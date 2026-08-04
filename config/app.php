@@ -18,4 +18,7 @@ return [
     'whatsapp_access_token' => getenv('WHATSAPP_ACCESS_TOKEN') ?: '',
     'whatsapp_graph_version' => getenv('WHATSAPP_GRAPH_VERSION') ?: '',
     'whatsapp_send_enabled' => filter_var(getenv('WHATSAPP_SEND_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
+    'asaas_environment' => getenv('ASAAS_ENVIRONMENT') ?: 'sandbox',
+    'asaas_api_key' => getenv('ASAAS_API_KEY') ?: '',
+    'asaas_webhook_token' => getenv('ASAAS_WEBHOOK_TOKEN') ?: '',
 ];

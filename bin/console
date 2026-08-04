@@ -12,6 +12,9 @@ use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
 use Interferencia\Modules\WhatsApp\MediaStorage;
 use Interferencia\Modules\WhatsApp\MessageRepository;
+use Interferencia\Modules\Finance\AsaasClient;
+use Interferencia\Modules\Finance\AsaasSynchronizer;
+use Interferencia\Modules\Finance\FinanceRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -105,6 +108,14 @@ TEXT);
             fwrite(STDOUT, sprintf("Órfãos encontrados: %d; removidos: %d.\n", $cleanup['candidates'], $cleanup['deleted']));
         }
         exit($result['failed'] === 0 ? 0 : 1);
+    }
+
+    if ($command === 'finance:sync') {
+        $repository = new FinanceRepository($connection->pdo());
+        $client = new AsaasClient((string)$config->get('app.asaas_environment'),(string)$config->get('app.asaas_api_key'));
+        $result = (new AsaasSynchronizer($client,$repository))->sync();
+        fwrite(STDOUT,sprintf("Sincronização concluída: %d cliente(s) e %d cobrança(s).\n",$result['customers'],$result['payments']));
+        exit(0);
     }
 
     $migrator = new Migrator(

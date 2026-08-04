@@ -34,6 +34,10 @@ use Interferencia\Modules\WhatsApp\WebhookVerifier;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
 use Interferencia\Modules\WhatsApp\TemplateRepository;
 use Interferencia\Modules\WhatsApp\MediaStorage;
+use Interferencia\Modules\Finance\AsaasClient;
+use Interferencia\Modules\Finance\AsaasSynchronizer;
+use Interferencia\Modules\Finance\FinanceRepository;
+use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 
 return static function (
     Router $router,
@@ -63,6 +67,10 @@ return static function (
     MediaStorage $whatsappMedia,
     WebhookVerifier $whatsappWebhook,
     CloudApiClient $whatsappCloudApi,
+    FinanceRepository $finance,
+    AsaasClient $asaas,
+    AsaasSynchronizer $asaasSynchronizer,
+    AsaasWebhookVerifier $asaasWebhook,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -90,6 +98,15 @@ return static function (
         $payload=json_decode($request->body(),true);
         if(!is_array($payload))return Response::text("JSON inválido.\n",400);
         $whatsappMessages->receive($payload,$whatsappCloudApi,$whatsappMedia);
+        return Response::text("EVENT_RECEIVED\n");
+    });
+    $router->postWithoutCsrf('/api/asaas/webhook',static function(Request$request)use($asaasWebhook,$finance):Response{
+        if(!$asaasWebhook->valid($request->header('asaas-access-token')))return Response::text("Acesso recusado.\n",401);
+        $payload=json_decode($request->body(),true);if(!is_array($payload))return Response::text("JSON inválido.\n",400);
+        $eventId=trim((string)($payload['id']??''));$eventType=trim((string)($payload['event']??''));$payment=is_array($payload['payment']??null)?$payload['payment']:null;
+        if($eventId===''||$eventType==='')return Response::text("Evento inválido.\n",400);
+        if(!$finance->registerWebhook($eventId,$eventType,is_array($payment)?(string)($payment['id']??''):null))return Response::text("EVENT_RECEIVED\n");
+        try{if($payment!==null)$finance->upsertPayment($payment);$finance->finishWebhook($eventId);}catch(Throwable$e){$finance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
         return Response::text("EVENT_RECEIVED\n");
     });
     $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$follow=['overdue'=>0,'today'=>0,'future'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}return Response::json(['followups'=>$follow,'whatsapp'=>$whatsapp,'total'=>$follow['overdue']+$follow['today']+$whatsapp['unread']]);},[$requireAuth]);
@@ -342,6 +359,10 @@ return static function (
     $simulateWhatsApp=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
     $router->get('/whatsapp/simulator',static function()use($view,$whatsappLines,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('whatsapp/simulator',['title'=>'Simular mensagem — '.$browserTitle,'lines'=>array_values(array_filter($whatsappLines->all(),static fn(array$l):bool=>(int)$l['is_active']===1)),'error'=>$session->get('whatsapp.simulator.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$simulateWhatsApp);
     $router->post('/whatsapp/simulator',static function(Request$request)use($validator,$whatsappLines,$whatsappMessages,$whatsappMedia,$session,$basePath):Response{$result=$validator->validate($request->inputData(),['line_id'=>'required|string','name'=>'required|string|min:2|max:160','phone'=>'required|string|max:20','message'=>'required|string|min:1|max:4096'],['line_id'=>'linha','name'=>'nome','phone'=>'telefone','message'=>'mensagem']);try{if($result->fails())throw new RuntimeException(implode(' ',array_map(static fn(array$errors):string=>$errors[0],$result->errors())));$lineId=(int)$result->value('line_id');$line=$whatsappLines->find($lineId);if($line===null||(int)$line['is_active']!==1)throw new RuntimeException('Selecione uma linha ativa.');$attachment=$whatsappMedia->storeUploaded($request->file('attachment'));$conversation=$whatsappMessages->simulateInbound($lineId,(string)$result->value('name'),(string)$result->value('phone'),(string)$result->value('message'),$attachment);$session->flash('whatsapp.message',$attachment===null?'Mensagem de teste recebida.':'Mensagem e anexo de teste recebidos.');return Response::redirect($basePath.'/whatsapp?conversation='.$conversation);}catch(Throwable$e){$session->flash('whatsapp.simulator.error',$e->getMessage());return Response::redirect($basePath.'/whatsapp/simulator');}},$simulateWhatsApp);
+
+    $viewFinance=[$requireAuth,new RequirePermission($auth,'finance.view')];
+    $router->get('/finance',static function()use($view,$finance,$asaas,$asaasWebhook,$auth,$unitContext,$session,$csrf,$basePath,$browserTitle):Response{$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']]);$legacy=$auth->can('finance.legacy_view');return$view->render('finance/dashboard',['title'=>'Financeiro — '.$browserTitle,'summary'=>$finance->summary($unitIds,$legacy),'connectionReady'=>$asaas->ready(),'environment'=>$asaas->environment(),'webhookReady'=>$asaasWebhook->ready(),'canSync'=>$auth->can('finance.manage'),'canViewLegacy'=>$legacy,'message'=>$session->get('finance.message'),'error'=>$session->get('finance.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$viewFinance);
+    $router->post('/finance/sync',static function()use($asaasSynchronizer,$session,$basePath):Response{try{$result=$asaasSynchronizer->sync();$session->flash('finance.message',sprintf('Sincronização concluída: %d cliente(s) e %d cobrança(s).',$result['customers'],$result['payments']));}catch(Throwable$e){$session->flash('finance.error',$e->getMessage());}return Response::redirect($basePath.'/finance');},[$requireAuth,new RequirePermission($auth,'finance.manage')]);
 
     $manageWhatsAppLines=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
     $router->get('/whatsapp/lines',static function()use($view,$whatsappLines,$session,$basePath,$browserTitle):Response{return$view->render('whatsapp/lines/index',['title'=>'Linhas do WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->all(),'message'=>$session->get('whatsapp_lines.message'),'error'=>$session->get('whatsapp_lines.error'),'basePath'=>$basePath]);},$manageWhatsAppLines);
