@@ -1,6 +1,74 @@
-<?php declare(strict_types=1); /** @var Closure(mixed):string $escape */ $money=static fn(float$v):string=>'R$ '.number_format($v,2,',','.');$query=static function(array$changes)use($search,$scope):string{$values=array_merge(['q'=>$search,'scope'=>$scope],$changes);return http_build_query(array_filter($values,static fn($v)=>$v!==''));}; ?>
-<div class="actions"><div><span class="status">Financeiro</span><h1>Clientes</h1><p class="meta"><?= (int)$result['total'] ?> cliente(s) no escopo atual.</p></div><a href="<?= $escape($basePath) ?>/finance">Voltar à visão financeira</a></div>
-<?php if($message):?><p class="alert alert-success"><?= $escape($message) ?></p><?php endif;?><?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
-<form class="filter-grid mb-3" method="get" action="<?= $escape($basePath) ?>/finance/customers"><div class="form-field"><label for="finance-search">Buscar cliente</label><input id="finance-search" name="q" value="<?= $escape($search) ?>" placeholder="Nome, CPF/CNPJ, e-mail, telefone ou ID Asaas"></div><?php if($canViewLegacy):?><div class="form-field"><label for="finance-scope">Vínculo</label><select id="finance-scope" name="scope"><option value="all" <?= $scope==='all'?'selected':'' ?>>Todos do meu acesso</option><option value="legacy" <?= $scope==='legacy'?'selected':'' ?>>Legado / sem unidade</option><option value="units" <?= $scope==='units'?'selected':'' ?>>Já vinculados a unidades</option></select></div><?php endif;?><button class="button-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button><a class="button-secondary" href="<?= $escape($basePath) ?>/finance/customers">Limpar</a></form>
-<div class="table-responsive"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Unidade</th><th>Cobranças</th><th>Em aberto</th><th></th></tr></thead><tbody><?php if($result['items']===[]):?><tr><td colspan="6">Nenhum cliente encontrado.</td></tr><?php endif;?><?php foreach($result['items']as$item):?><tr><td><strong><?= $escape($item['name']) ?></strong><br><small class="meta"><?= $escape($item['email']?:$item['mobile_phone']?:$item['phone']?:'Sem contato') ?></small></td><td><?= $escape($item['cpf_cnpj']?:'—') ?></td><td><?php if($item['unit_id']===null):?><span class="connection-badge connection-pending">Sem unidade</span><?php else:?><?= $escape($item['unit_name']) ?><?php endif;?></td><td><?= (int)$item['payment_count'] ?></td><td><?= $escape($money((float)$item['open_value'])) ?></td><td><a href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>">Abrir</a></td></tr><?php endforeach;?></tbody></table></div>
-<?php if($result['pages']>1):?><nav class="pagination-nav" aria-label="Paginação"><span>Página <?= (int)$result['page'] ?> de <?= (int)$result['pages'] ?></span><div><?php if($result['page']>1):?><a class="button-secondary" href="?<?= $escape($query(['page'=>$result['page']-1])) ?>">Anterior</a><?php endif;?><?php if($result['page']<$result['pages']):?><a class="button-secondary" href="?<?= $escape($query(['page'=>$result['page']+1])) ?>">Próxima</a><?php endif;?></div></nav><?php endif;?>
+<?php
+declare(strict_types=1);
+/** @var Closure(mixed):string $escape */
+$money = static fn(float $value): string => 'R$ '.number_format($value, 2, ',', '.');
+$query = static function (array $changes) use ($search, $scope, $order): string {
+    $values = array_merge(['q' => $search, 'scope' => $scope, 'order' => $order], $changes);
+    return http_build_query(array_filter($values, static fn($value): bool => $value !== ''));
+};
+$firstItem = $result['total'] === 0 ? 0 : (($result['page'] - 1) * 50) + 1;
+$lastItem = min($result['total'], $result['page'] * 50);
+$pageStart = max(1, $result['page'] - 2);
+$pageEnd = min($result['pages'], $result['page'] + 2);
+?>
+<div class="finance-customer-heading">
+  <div>
+    <span class="status">Financeiro</span>
+    <h1>Clientes</h1>
+    <p class="meta">Consulte clientes, cobranças e vínculos respeitando a unidade ativa.</p>
+  </div>
+  <div class="finance-customer-total"><i class="fa-solid fa-users" aria-hidden="true"></i><span><strong><?= number_format((int)$result['total'], 0, ',', '.') ?></strong> clientes encontrados</span></div>
+</div>
+<?php if ($message): ?><p class="alert alert-success"><?= $escape($message) ?></p><?php endif; ?>
+<?php if ($error): ?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif; ?>
+
+<section class="finance-customer-toolbar" aria-label="Busca e filtros de clientes">
+  <form method="get" action="<?= $escape($basePath) ?>/finance/customers">
+    <div class="finance-search-row">
+      <label class="finance-search-box" for="finance-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="finance-search" name="q" value="<?= $escape($search) ?>" placeholder="Nome, e-mail, telefone, CPF/CNPJ ou ID Asaas">
+      </label>
+      <button class="button-primary finance-search-button" type="submit">Pesquisar</button>
+      <details class="finance-filter-panel" <?= ($scope !== 'all' || $order !== 'name') ? 'open' : '' ?>>
+        <summary><i class="fa-solid fa-filter" aria-hidden="true"></i> Filtros<?php if ($scope !== 'all' || $order !== 'name'): ?><span class="filter-active-dot" aria-label="Filtros ativos"></span><?php endif; ?></summary>
+        <div class="finance-filter-content">
+          <?php if ($canViewLegacy): ?>
+            <label for="finance-scope">Vínculo
+              <select id="finance-scope" name="scope">
+                <option value="all" <?= $scope === 'all' ? 'selected' : '' ?>>Todos do meu acesso</option>
+                <option value="legacy" <?= $scope === 'legacy' ? 'selected' : '' ?>>Legado / sem unidade</option>
+                <option value="units" <?= $scope === 'units' ? 'selected' : '' ?>>Vinculados a unidades</option>
+              </select>
+            </label>
+          <?php endif; ?>
+          <label for="finance-order">Ordenar por
+            <select id="finance-order" name="order">
+              <option value="name" <?= $order === 'name' ? 'selected' : '' ?>>Nome</option>
+              <option value="recent" <?= $order === 'recent' ? 'selected' : '' ?>>Mais recentes</option>
+              <option value="open" <?= $order === 'open' ? 'selected' : '' ?>>Maior valor em aberto</option>
+              <option value="charges" <?= $order === 'charges' ? 'selected' : '' ?>>Mais cobranças</option>
+            </select>
+          </label>
+          <div class="finance-filter-actions"><button class="button-primary" type="submit">Aplicar filtros</button><a class="button-secondary" href="<?= $escape($basePath) ?>/finance/customers">Limpar</a></div>
+        </div>
+      </details>
+    </div>
+  </form>
+</section>
+
+<div class="finance-result-bar"><span>Exibindo <strong><?= $firstItem ?>–<?= $lastItem ?></strong> de <?= number_format((int)$result['total'], 0, ',', '.') ?></span><span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> Dados conforme suas permissões</span></div>
+<div class="table-responsive finance-customer-table"><table><thead><tr><th>Cliente</th><th>Documento</th><th>Unidade</th><th class="text-center">Cobranças</th><th class="text-end">Em aberto</th><th><span class="visually-hidden">Ações</span></th></tr></thead><tbody>
+<?php if ($result['items'] === []): ?><tr><td colspan="6"><div class="finance-empty"><i class="fa-solid fa-user-slash" aria-hidden="true"></i><strong>Nenhum cliente encontrado</strong><span>Tente alterar a busca ou limpar os filtros.</span></div></td></tr><?php endif; ?>
+<?php foreach ($result['items'] as $item): ?>
+  <tr>
+    <td><a class="finance-customer-name" href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>"><span class="finance-avatar"><?= $escape(mb_strtoupper(mb_substr(trim((string)$item['name']), 0, 1))) ?></span><span><strong><?= $escape($item['name']) ?></strong><small><?php if ($item['email']): ?><i class="fa-regular fa-envelope" aria-hidden="true"></i> <?= $escape($item['email']) ?><?php elseif ($item['mobile_phone'] || $item['phone']): ?><i class="fa-solid fa-phone" aria-hidden="true"></i> <?= $escape($item['mobile_phone'] ?: $item['phone']) ?><?php else: ?>Sem contato informado<?php endif; ?></small></span></a></td>
+    <td><?= $escape($item['cpf_cnpj'] ?: '—') ?></td>
+    <td><?php if ($item['unit_id'] === null): ?><span class="connection-badge connection-pending">Sem unidade</span><?php else: ?><span class="finance-unit"><i class="fa-solid fa-building" aria-hidden="true"></i><?= $escape($item['unit_name']) ?></span><?php endif; ?></td>
+    <td class="text-center"><span class="finance-count-badge"><?= (int)$item['payment_count'] ?></span></td>
+    <td class="text-end"><strong class="<?= (float)$item['open_value'] > 0 ? 'finance-open-value' : 'finance-zero-value' ?>"><?= $escape($money((float)$item['open_value'])) ?></strong></td>
+    <td><a class="finance-open-customer" href="<?= $escape($basePath) ?>/finance/customers/<?= (int)$item['id'] ?>" aria-label="Abrir <?= $escape($item['name']) ?>">Abrir <i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a></td>
+  </tr>
+<?php endforeach; ?>
+</tbody></table></div>
+<?php if ($result['pages'] > 1): ?><nav class="finance-pagination" aria-label="Paginação de clientes"><span>Página <?= (int)$result['page'] ?> de <?= (int)$result['pages'] ?></span><div><?php if ($result['page'] > 1): ?><a href="?<?= $escape($query(['page' => $result['page'] - 1])) ?>" aria-label="Página anterior"><i class="fa-solid fa-chevron-left"></i></a><?php endif; ?><?php if ($pageStart > 1): ?><a href="?<?= $escape($query(['page' => 1])) ?>">1</a><?php if ($pageStart > 2): ?><span>…</span><?php endif; ?><?php endif; ?><?php for ($pageNumber = $pageStart; $pageNumber <= $pageEnd; $pageNumber++): ?><a href="?<?= $escape($query(['page' => $pageNumber])) ?>" <?= $pageNumber === $result['page'] ? 'class="active" aria-current="page"' : '' ?>><?= $pageNumber ?></a><?php endfor; ?><?php if ($pageEnd < $result['pages']): ?><?php if ($pageEnd < $result['pages'] - 1): ?><span>…</span><?php endif; ?><a href="?<?= $escape($query(['page' => $result['pages']])) ?>"><?= (int)$result['pages'] ?></a><?php endif; ?><?php if ($result['page'] < $result['pages']): ?><a href="?<?= $escape($query(['page' => $result['page'] + 1])) ?>" aria-label="Próxima página"><i class="fa-solid fa-chevron-right"></i></a><?php endif; ?></div></nav><?php endif; ?>
