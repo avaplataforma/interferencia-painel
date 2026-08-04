@@ -40,7 +40,7 @@ return new class implements Migration {
             $insertUnit->execute($unit);
         }
 
-        $database->exec("INSERT INTO `roles` (`code`, `name`) VALUES ('super_admin', 'Administrador global'), ('manager', 'Gestor'), ('agent', 'Atendente')");
+        $database->exec("INSERT INTO `roles` (`code`, `name`) VALUES ('super_admin', 'Admin System'), ('manager', 'Gestor'), ('agent', 'Atendente')");
         $database->exec("INSERT INTO `permissions` (`code`, `name`) VALUES ('dashboard.view', 'Visualizar painel'), ('users.manage', 'Gerenciar usuários'), ('roles.manage', 'Gerenciar papéis e permissões'), ('units.access_all', 'Acessar todas as unidades')");
         $database->exec("INSERT INTO `role_permissions` (`role_id`, `permission_id`) SELECT r.id, p.id FROM `roles` r CROSS JOIN `permissions` p WHERE r.code = 'super_admin'");
     }
@@ -52,4 +52,3 @@ return new class implements Migration {
         }
     }
 };
-

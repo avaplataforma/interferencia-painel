@@ -90,9 +90,12 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'name="unit_id"'));
     assertTrue(is_string($contactFormView) && str_contains($contactFormView, 'data-contact-responsible'));
     $headquartersMigration = file_get_contents($rootPath.'/database/migrations/20260804_500000_add_headquarters_role_and_customer_delete.php');
-    assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, "'headquarters','SEDE'"));
+    assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, "'headquarters','Sede'"));
     assertTrue(is_string($headquartersMigration) && str_contains($headquartersMigration, 'finance.customers.delete'));
     assertTrue(is_string($headquartersMigration) && !str_contains($headquartersMigration, "r.code='headquarters' AND p.code IN('users.manage'"));
+    $roleRenameMigration = file_get_contents($rootPath.'/database/migrations/20260804_520000_rename_system_roles.php');
+    assertTrue(is_string($roleRenameMigration) && str_contains($roleRenameMigration, "name='Admin System'"));
+    assertTrue(is_string($roleRenameMigration) && str_contains($roleRenameMigration, "name='Sede'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/payments/form.php'),'installment_count'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/index.php'));
     assertTrue(is_file($rootPath.'/views/finance/subscriptions/form.php'));
