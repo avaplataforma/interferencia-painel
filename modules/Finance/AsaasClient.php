@@ -31,6 +31,14 @@ final readonly class AsaasClient
         return $this->request('POST', '/payments', $payload);
     }
 
+    /** @return array{encodedImage:string,payload:string,expirationDate:string} */
+    public function pixQrCode(string $paymentId): array
+    {
+        if (!preg_match('/^pay_[A-Za-z0-9]+$/', $paymentId)) throw new RuntimeException('Identificador da cobrança inválido.');
+        $data=$this->request('GET','/payments/'.rawurlencode($paymentId).'/pixQrCode',[]);
+        return ['encodedImage'=>(string)($data['encodedImage']??''),'payload'=>(string)($data['payload']??''),'expirationDate'=>(string)($data['expirationDate']??'')];
+    }
+
     /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
     public function listCustomers(int $offset = 0, int $limit = 100): array
     {
@@ -73,8 +81,9 @@ final readonly class AsaasClient
         if (!$this->ready()) throw new RuntimeException('A conexão com o Asaas ainda não está configurada corretamente.');
         $curl = curl_init(self::BASES[$this->environment] . $path);
         if ($curl === false) throw new RuntimeException('Não foi possível iniciar a conexão com o Asaas.');
-        $body=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
-        curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>30,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$body,CURLOPT_HTTPHEADER=>['accept: application/json','content-type: application/json','access_token: '.$this->apiKey,'User-Agent: PAINEL-INTER/1.0']]);
+        $options=[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>30,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_HTTPHEADER=>['accept: application/json','content-type: application/json','access_token: '.$this->apiKey,'User-Agent: PAINEL-INTER/1.0']];
+        if($method!=='GET')$options[CURLOPT_POSTFIELDS]=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        curl_setopt_array($curl,$options);
         $response=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);$error=curl_error($curl);curl_close($curl);
         if(!is_string($response))throw new RuntimeException('Falha de comunicação com o Asaas'.($error!==''?': '.$error:'').'.');
         $data=json_decode($response,true);

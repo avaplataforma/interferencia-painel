@@ -69,6 +69,9 @@ final readonly class FinanceRepository
     }
     /** @return list<array<string,mixed>> */
     public function customerPayments(int$customerId):array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC,id DESC LIMIT 200');$s->execute(['customer'=>$customerId]);return$s->fetchAll();}
+    /** @return array<string,mixed>|null */
+    public function customerPayment(int$customerId,int$paymentId):?array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE id=:id AND finance_customer_id=:customer AND is_deleted=0 LIMIT 1');$s->execute(['id'=>$paymentId,'customer'=>$customerId]);$row=$s->fetch();return is_array($row)?$row:null;}
+    public function paymentIdByAsaas(string$asaasId):?int{$s=$this->database->prepare('SELECT id FROM finance_payments WHERE asaas_payment_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;}
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
     public function crmCandidates(array$customer,array$unitIds):array
     {

@@ -57,6 +57,7 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Unidade, cliente, valor, vencimento e descrição são obrigatórios.
 - O envio real permanece bloqueado por padrão com `ASAAS_PAYMENTS_WRITE_ENABLED=false` até a cobrança-piloto.
 - Clientes legados precisam ser conciliados antes da emissão.
+- Para PIX, o painel recupera o QR Code dinâmico, o código copia-e-cola e a validade diretamente do Asaas.
 
 ## Diagnóstico do webhook
 
