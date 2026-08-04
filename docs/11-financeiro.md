@@ -51,6 +51,13 @@ padrão; o editor de perfis permitirá ampliar esse acesso.
 - Credenciais, sincronização, webhook e diagnósticos ficam em **ADM → Integração Asaas**.
 - Recursos administrativos exigem `finance.settings.manage`; a consulta de clientes continua limitada por `finance.view` e pelo escopo de unidades.
 
+## Emissão de cobranças
+
+- A ficha do cliente conciliado permite preparar cobranças por PIX ou boleto.
+- Unidade, cliente, valor, vencimento e descrição são obrigatórios.
+- O envio real permanece bloqueado por padrão com `ASAAS_PAYMENTS_WRITE_ENABLED=false` até a cobrança-piloto.
+- Clientes legados precisam ser conciliados antes da emissão.
+
 ## Diagnóstico do webhook
 
 - A Integração Asaas mostra os últimos eventos, horário, cobrança relacionada, reentregas e falhas.

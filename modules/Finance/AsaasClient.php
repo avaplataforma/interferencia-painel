@@ -13,13 +13,22 @@ final readonly class AsaasClient
         'production' => 'https://api.asaas.com/v3',
     ];
 
-    public function __construct(private string $environment, private string $apiKey) {}
+    public function __construct(private string $environment, private string $apiKey, private bool $paymentsWriteEnabled = false) {}
 
     public function environment(): string { return $this->environment; }
     public function ready(): bool
     {
         $prefix = $this->environment === 'production' ? '$aact_prod_' : '$aact_hmlg_';
         return isset(self::BASES[$this->environment]) && str_starts_with($this->apiKey, $prefix) && function_exists('curl_init');
+    }
+
+    public function paymentsWriteEnabled(): bool { return $this->paymentsWriteEnabled; }
+
+    /** @param array{customer:string,billingType:string,value:float,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
+    public function createPayment(array $payload): array
+    {
+        if (!$this->paymentsWriteEnabled) throw new RuntimeException('A emissão real de cobranças ainda está bloqueada para o teste piloto.');
+        return $this->request('POST', '/payments', $payload);
     }
 
     /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
@@ -56,5 +65,20 @@ final readonly class AsaasClient
             throw new RuntimeException($message);
         }
         return ['data'=>array_values(array_filter($data['data'] ?? [], 'is_array')),'hasMore'=>(bool)($data['hasMore'] ?? false),'totalCount'=>(int)($data['totalCount'] ?? 0),'offset'=>(int)($data['offset'] ?? $offset),'limit'=>(int)($data['limit'] ?? $limit)];
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    private function request(string $method, string $path, array $payload): array
+    {
+        if (!$this->ready()) throw new RuntimeException('A conexão com o Asaas ainda não está configurada corretamente.');
+        $curl = curl_init(self::BASES[$this->environment] . $path);
+        if ($curl === false) throw new RuntimeException('Não foi possível iniciar a conexão com o Asaas.');
+        $body=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>30,CURLOPT_CUSTOMREQUEST=>$method,CURLOPT_POSTFIELDS=>$body,CURLOPT_HTTPHEADER=>['accept: application/json','content-type: application/json','access_token: '.$this->apiKey,'User-Agent: PAINEL-INTER/1.0']]);
+        $response=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);$error=curl_error($curl);curl_close($curl);
+        if(!is_string($response))throw new RuntimeException('Falha de comunicação com o Asaas'.($error!==''?': '.$error:'').'.');
+        $data=json_decode($response,true);
+        if($status<200||$status>=300||!is_array($data)){$message=is_array($data)?(string)($data['errors'][0]['description']??'O Asaas recusou a cobrança.'):'O Asaas retornou uma resposta inválida.';throw new RuntimeException($message);}
+        return $data;
     }
 }

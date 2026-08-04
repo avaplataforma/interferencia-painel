@@ -21,5 +21,6 @@ return [
     'asaas_environment' => getenv('ASAAS_ENVIRONMENT') ?: 'sandbox',
     'asaas_api_key' => getenv('ASAAS_API_KEY') ?: '',
     'asaas_webhook_token' => getenv('ASAAS_WEBHOOK_TOKEN') ?: '',
+    'asaas_payments_write_enabled' => filter_var(getenv('ASAAS_PAYMENTS_WRITE_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
     'encryption_key' => getenv('APP_ENCRYPTION_KEY') ?: '',
 ];

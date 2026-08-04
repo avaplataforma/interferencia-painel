@@ -34,6 +34,7 @@ $tests = [];
 $tests['mantém integração financeira segura por padrão'] = static function (): void {
     assertTrue(!(new AsaasClient('sandbox',''))->ready());
     assertTrue(!(new AsaasClient('production','$aact_hmlg_incorreta'))->ready());
+    assertTrue(!(new AsaasClient('sandbox','$aact_hmlg_teste'))->paymentsWriteEnabled());
     $verifier=new AsaasWebhookVerifier(str_repeat('a',32));
     assertTrue($verifier->ready());
     assertTrue($verifier->valid(str_repeat('a',32)));
