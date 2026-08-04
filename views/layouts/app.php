@@ -229,8 +229,19 @@ $studentsOpen = str_contains($currentPath, '/finance');
     .followup-actions button { width: 100%; margin: 0; padding: .45rem .55rem; }
     .followup-alert { position: relative; display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 50%; color: #fff; background: var(--inter-accent); text-decoration: none; }
     .followup-alert-count { position: absolute; top: -.35rem; right: -.35rem; min-width: 1.25rem; height: 1.25rem; padding: 0 .25rem; border: 2px solid #fff; border-radius: 999px; color: #fff; background: #8f1118; font-size: .7rem; font-weight: 800; line-height: 1rem; text-align: center; }
-    .actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-    .actions > a { color: #fff; background: var(--inter-accent); padding: .65rem .9rem; border-radius: .55rem; text-decoration: none; }
+    .actions { display: flex; gap: 1rem; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .actions > div:first-child { min-width: 0; }
+    .actions > div:first-child h1 { margin: .3rem 0 .4rem; line-height: 1.15; }
+    .actions > div:first-child p { margin: 0; }
+    .actions .actions { align-items: center; justify-content: flex-end; gap: .55rem; margin: 0; }
+    .actions .actions > * { margin: 0 !important; }
+    .actions > a:not(.button-primary):not(.button-secondary) { display: inline-flex; align-items: center; justify-content: center; min-height: 3rem; padding: .6rem .85rem; border: 1px solid #bcc6ce; border-radius: .55rem; color: #536170; background: #fff; font-weight: 700; text-decoration: none; }
+    .actions > a:not(.button-primary):not(.button-secondary):hover { color: var(--inter-accent-dark); border-color: #9aa7b2; background: #f8fafb; }
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(12rem,1fr)); gap: 1rem; }
+    .metric-card { display: grid; align-content: center; gap: .45rem; min-width: 0; min-height: 6.5rem; padding: 1rem 1.1rem; border: 1px solid #dce3e8; border-radius: .8rem; background: #fff; box-shadow: 0 .25rem .8rem rgb(23 33 43 / 4%); }
+    .metric-card > span { color: var(--inter-muted); font-size: .8rem; line-height: 1.3; }
+    .metric-card > strong { display: block; color: var(--inter-ink); font-size: 1.22rem; line-height: 1.25; overflow-wrap: anywhere; }
+    .metric-card > small { color: var(--inter-muted); line-height: 1.3; }
     main a { color: var(--inter-accent-dark); font-weight: 600; }
     main > form:not(.unit-switcher) { max-width: 46rem; }
     main label { display: block; margin-top: 1rem; font-weight: 650; }
@@ -243,7 +254,8 @@ $studentsOpen = str_contains($currentPath, '/finance');
     .checks input { margin-right: .45rem; }
     .contact-filters { display: grid; grid-template-columns: minmax(15rem, 1fr) minmax(12rem, 18rem) auto auto; gap: .55rem; align-items: end; max-width: none !important; }
     .contact-filters input, .contact-filters select, .contact-filters button { margin-top: 0 !important; min-height: 3rem; }
-    .button-secondary { display: grid; place-items: center; min-height: 3rem; padding: .6rem .8rem; border: 1px solid #bcc6ce; border-radius: .55rem; color: var(--inter-ink) !important; background: #fff; text-decoration: none; }
+    main .button-primary, .button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 3rem; margin-top: 0; padding: .6rem .85rem; border-radius: .55rem; font-weight: 700; line-height: 1.2; white-space: nowrap; text-decoration: none; }
+    .button-secondary { border: 1px solid #bcc6ce; color: var(--inter-ink) !important; background: #fff; }
     .button-secondary:hover { border-color: #9aa7b2; color: var(--inter-accent-dark) !important; background: #f8fafb; }
     .button-secondary:disabled { border-color: #d7dde2; color: #7a8792 !important; background: #f3f5f7; opacity: 1; cursor: not-allowed; }
     .button-small{display:inline-grid!important;min-height:2.25rem!important;padding:.35rem .65rem!important}.button-danger{min-height:2.75rem;padding:.55rem .85rem;border:0;border-radius:.55rem;color:#fff;background:#b4232c;font-weight:700}.button-danger:hover{background:#8f1720}
@@ -271,14 +283,14 @@ $studentsOpen = str_contains($currentPath, '/finance');
     .status-options input[type=radio]:checked { border-color: var(--inter-accent); background: var(--inter-accent); box-shadow: inset 0 0 0 2px #fff; }
     main { overflow-x: auto; }
     table { width: 100%; min-width: 42rem; margin-top: 1rem; background: #fff; }
-    th, td { padding: .75rem; border-bottom: 1px solid #e3e7ea; vertical-align: top; }
+    th, td { padding: .8rem .85rem; border-bottom: 1px solid #e3e7ea; vertical-align: middle; text-align: left; }
     .guest-card { width: min(30rem, calc(100% - 2rem)); }
     @media (min-width: 576px) { .d-sm-block { display: block; } .col-sm-6 { width: 50%; } }
     @media (min-width: 768px) { .col-md-4 { width: 33.333%; } .p-md-5 { padding: 3rem; } }
     @media (min-width: 992px) { .d-lg-none { display: none; } .px-lg-4 { padding-inline: 1.5rem; } }
     @media (min-width: 1200px) { .col-xl-3 { width: 25%; } .col-xl-4 { width: 33.333%; } }
-    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters, .followup-filters, .dashboard-contact-filters { grid-template-columns: 1fr; } .dashboard-hero { align-items: flex-start; flex-direction: column; } .dashboard-context { width: 100%; } .dashboard-context > span { flex: 1; } .intake-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .admin-links { grid-template-columns: repeat(2,minmax(0,1fr)); } .contact-profile-grid { grid-template-columns: 1fr; } .contact-profile-heading { align-items: flex-start; flex-direction: column; } .contact-profile-actions { justify-content: flex-start; } .finance-search-row{grid-template-columns:1fr auto}.finance-filter-panel{grid-column:1/-1}.finance-filter-panel>summary{justify-content:center}.finance-filter-content{left:0;right:auto}.finance-customer-heading{align-items:flex-start;flex-direction:column}.finance-customer-total{width:100%} }
-    @media (max-width: 575.98px) { .dashboard-context, .dashboard-section-heading, .subsection-title { align-items: stretch; flex-direction: column; } .dashboard-context > span { min-width: 0; } .dashboard-section { padding: 1rem; } .section-actions { display: grid; grid-template-columns: 1fr 1fr; } .intake-filters, .admin-links, .dashboard-tag-filter { grid-template-columns: 1fr; } .contact-data-grid { grid-template-columns: 1fr; } .contact-data-grid > div:nth-child(odd) { border-right: 0; } .contact-profile-actions .contact-action { flex: 1 1 calc(50% - .45rem); } .finance-search-row{grid-template-columns:1fr}.finance-search-button{width:100%}.finance-result-bar,.finance-pagination{align-items:flex-start;flex-direction:column}.finance-pagination>div{max-width:100%;overflow-x:auto}.finance-filter-content{width:100%} }
+    @media (max-width: 991.98px) { .desktop-sidebar { display: none; } .content-wrap { padding: 1.25rem; } .contact-filters, .followup-filters, .dashboard-contact-filters { grid-template-columns: 1fr; } .dashboard-hero { align-items: flex-start; flex-direction: column; } .dashboard-context { width: 100%; } .dashboard-context > span { flex: 1; } .intake-filters { grid-template-columns: repeat(2,minmax(0,1fr)); } .admin-links { grid-template-columns: repeat(2,minmax(0,1fr)); } .contact-profile-grid { grid-template-columns: 1fr; } .contact-profile-heading { align-items: flex-start; flex-direction: column; } .contact-profile-actions { justify-content: flex-start; } .finance-search-row{grid-template-columns:1fr auto}.finance-filter-panel{grid-column:1/-1}.finance-filter-panel>summary{justify-content:center}.finance-filter-content{left:0;right:auto}.finance-customer-heading{align-items:flex-start;flex-direction:column}.finance-customer-total{width:100%}.actions{flex-direction:column}.actions .actions{justify-content:flex-start;width:100%} }
+    @media (max-width: 575.98px) { .dashboard-context, .dashboard-section-heading, .subsection-title { align-items: stretch; flex-direction: column; } .dashboard-context > span { min-width: 0; } .dashboard-grid{grid-template-columns:1fr}.dashboard-section { padding: 1rem; } .section-actions { display: grid; grid-template-columns: 1fr 1fr; } .intake-filters, .admin-links, .dashboard-tag-filter { grid-template-columns: 1fr; } .contact-data-grid { grid-template-columns: 1fr; } .contact-data-grid > div:nth-child(odd) { border-right: 0; } .contact-profile-actions .contact-action { flex: 1 1 calc(50% - .45rem); } .finance-search-row{grid-template-columns:1fr}.finance-search-button{width:100%}.finance-result-bar,.finance-pagination{align-items:flex-start;flex-direction:column}.finance-pagination>div{max-width:100%;overflow-x:auto}.finance-filter-content{width:100%}.actions .actions>*{flex:1 1 100%;width:100%} }
   </style>
 </head>
 <body data-base-path="<?= $escape($basePath) ?>" data-current-user-id="<?= $authenticated?(int)$currentUser->id:'' ?>">
