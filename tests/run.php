@@ -68,7 +68,7 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Cadastro</a>'));
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'select:not([multiple])'));
     assertTrue(str_contains((string) file_get_contents($rootPath.'/bootstrap/app.php'), "'crm_manage' => \$auth->can('crm.contacts.manage')"));
-    assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Financeiro</a>') === 2);
+    assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Matrículas</a>') === 2);
     assertTrue(is_string($customerList) && str_contains($customerList, 'finance-section-tabs'));
     assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
@@ -504,7 +504,8 @@ $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath)
     $financeRepository=(string)file_get_contents($rootPath.'/modules/Finance/FinanceRepository.php');
     assertTrue(str_contains($routes,"'/finance/customers/create'"));
     assertTrue(str_contains($routes,'createCustomer(['));
-    assertTrue(str_contains($layout,'/finance/customers/create'));
+    assertTrue(str_contains($layout,'/finance/customers'));
+    assertTrue(str_contains($layout,'/students/enrollments'));
     assertTrue(str_contains($layout,'>Leads</a>'));
     assertTrue(str_contains($asaas,'function createCustomer'));
     assertTrue(str_contains($leadForm,'(opcional para Lead)'));
