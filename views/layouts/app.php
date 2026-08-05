@@ -207,6 +207,13 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .student-course-list span { display: flex; align-items: flex-start; gap: .4rem; line-height: 1.35; }
     .student-course-list i { margin-top: .18rem; color: var(--inter-accent); }
     .student-integrations { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; min-width: 18rem; }
+    .enrollment-history-row td { padding: 0 .75rem .75rem; border-top: 0; background: #fbfcfd; }
+    .enrollment-history-row summary { display: flex; align-items: center; gap: .45rem; width: fit-content; color: #536170; cursor: pointer; font-size: .82rem; font-weight: 700; }
+    .enrollment-timeline { display: grid; gap: .55rem; margin-top: .75rem; padding: .85rem; border-left: 2px solid #f3a6aa; background: #fff; }
+    .enrollment-timeline article { display: flex; align-items: flex-start; gap: .65rem; }
+    .enrollment-timeline article>i { display: grid; place-items: center; flex: 0 0 1.8rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; color: var(--inter-accent); background: #fff0f1; }
+    .enrollment-timeline article>div { display: grid; gap: .1rem; }
+    .enrollment-timeline small { color: var(--inter-muted); }
     .whatsapp-line-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(16rem,1fr)); gap: 1rem; margin-top: 1.25rem; }
     .whatsapp-line-card { display: flex; align-items: flex-start; flex-direction: column; min-height: 17rem; padding: 1.2rem; border: 1px solid #dfe5e9; border-radius: .9rem; background: #fff; box-shadow: 0 .3rem 1rem rgb(23 33 43 / 5%); }
     .whatsapp-line-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin: 1rem 0 .6rem; border-radius: 50%; color: #fff; background: #198754; font-size: 1.2rem; }
