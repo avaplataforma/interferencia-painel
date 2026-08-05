@@ -15,6 +15,7 @@ use Interferencia\Modules\WhatsApp\MessageRepository;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
+use Interferencia\Modules\Moodle\MoodleRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -41,6 +42,7 @@ Comandos disponíveis:
   migrate:rollback   Reverte o último lote de migrações
   user:create-admin  Cria o primeiro administrador de forma interativa
   whatsapp:media:sync  Recupera mídias pendentes da Cloud API
+  moodle:profiles:rebuild  Organiza campos complementares já sincronizados
 
 TEXT);
         exit(0);
@@ -115,6 +117,12 @@ TEXT);
         $client = new AsaasClient((string)$config->get('app.asaas_environment'),(string)$config->get('app.asaas_api_key'));
         $result = (new AsaasSynchronizer($client,$repository))->sync();
         fwrite(STDOUT,sprintf("Sincronização concluída: %d cliente(s), %d cobrança(s) e %d assinatura(s).\n",$result['customers'],$result['payments'],$result['subscriptions']));
+        exit(0);
+    }
+
+    if ($command === 'moodle:profiles:rebuild') {
+        $result=(new MoodleRepository($connection->pdo()))->rebuildProfileFieldsFromStoredUsers();
+        fwrite(STDOUT,sprintf("Perfis conferidos: %d; campos complementares encontrados: %d.\n",$result['users'],$result['fields']));
         exit(0);
     }
 

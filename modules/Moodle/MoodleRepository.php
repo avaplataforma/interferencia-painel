@@ -50,6 +50,13 @@ final readonly class MoodleRepository
         $exists=$this->database->prepare('SELECT COUNT(*) FROM moodle_profile_fields WHERE id=:id');$exists->execute(['id'=>$id]);if((int)$exists->fetchColumn()!==1)throw new \RuntimeException('Campo do Moodle nao encontrado.');
     }
 
+    /** @return array{users:int,fields:int} */
+    public function rebuildProfileFieldsFromStoredUsers():array
+    {
+        $users=0;foreach($this->database->query('SELECT moodle_user_id,raw_json FROM moodle_users')->fetchAll()as$row){$data=json_decode((string)($row['raw_json']??''),true);if(!is_array($data))continue;$fields=is_array($data['customfields']??null)?$data['customfields']:[];$this->syncProfileFields((int)$row['moodle_user_id'],$fields);$users++;}
+        return['users'=>$users,'fields'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_profile_fields')->fetchColumn()];
+    }
+
     /** @return array{student:?array,fields:list<array<string,mixed>>} */
     public function academicProfileForCustomer(int$customerId):array
     {

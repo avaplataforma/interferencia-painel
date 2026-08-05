@@ -546,6 +546,7 @@ $tests['organiza campos complementares do Moodle'] = static function () use ($ro
     $customer=(string)file_get_contents($rootPath.'/views/finance/customers/show.php');
     assertTrue(str_contains($repository,'syncProfileFields'));
     assertTrue(str_contains($repository,'academicProfileForCustomer'));
+    assertTrue(str_contains($repository,'rebuildProfileFieldsFromStoredUsers'));
     assertTrue(str_contains($routes,"'/admin/integrations/moodle/profile-fields'"));
     assertTrue(str_contains($settings,'Campos complementares'));
     assertTrue(str_contains($customer,'Dados acadêmicos'));
