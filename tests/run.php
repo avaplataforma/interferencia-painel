@@ -489,7 +489,7 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     assertTrue(is_file($rootPath.'/modules/Tickets/DepartmentRepository.php'));
     assertTrue(is_file($rootPath.'/views/tickets/departments/index.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-contact-results'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'ADM · Setores'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'>Setores</a>'));
 };
 
 $failures = 0;
