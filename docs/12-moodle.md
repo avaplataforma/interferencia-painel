@@ -44,3 +44,10 @@ O Moodle permanece como origem oficial de alunos e matrículas enquanto a integr
 - Correspondências divergentes ou duplicadas ficam marcadas como conflito.
 - Ausências ficam pendentes para revisão manual em **Alunos → Conciliação Moodle**.
 - O vínculo manual registra o usuário revisor; nenhuma informação é escrita no Moodle.
+
+## Campos complementares
+
+- Campos personalizados ficam separados como dados acadêmicos complementares e não se tornam obrigatórios por importação.
+- O Admin System define quais campos aparecem, quais são ignorados e o significado de cada um no Painel.
+- O mapeamento não sobrescreve automaticamente dados principais do Painel ou informações financeiras do Asaas.
+- Campos vazios e campos marcados para ignorar não aparecem na ficha do aluno.

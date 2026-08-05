@@ -22,6 +22,7 @@ final readonly class MoodleRepository
     {
         $sql='INSERT INTO moodle_users(moodle_user_id,username,firstname,lastname,fullname,email,idnumber,suspended,raw_json) VALUES(:id,:username,:first,:last,:full,:email,:number,:suspended,:raw) ON DUPLICATE KEY UPDATE username=VALUES(username),firstname=VALUES(firstname),lastname=VALUES(lastname),fullname=VALUES(fullname),email=VALUES(email),idnumber=VALUES(idnumber),suspended=VALUES(suspended),raw_json=VALUES(raw_json),synced_at=NOW()';
         $this->database->prepare($sql)->execute(['id'=>(int)($user['id']??0),'username'=>(string)($user['username']??''),'first'=>(string)($user['firstname']??''),'last'=>(string)($user['lastname']??''),'full'=>(string)($user['fullname']??trim((string)($user['firstname']??'').' '.(string)($user['lastname']??''))),'email'=>$this->nullable($user['email']??null),'number'=>$this->nullable($user['idnumber']??null),'suspended'=>(int)(bool)($user['suspended']??false),'raw'=>json_encode($user,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
+        $this->syncProfileFields((int)($user['id']??0),is_array($user['customfields']??null)?$user['customfields']:[]);
     }
 
     public function upsertEnrolment(int$courseId,int$userId,int$timeStart,int$timeEnd):void
@@ -38,6 +39,23 @@ final readonly class MoodleRepository
 
     /** @return list<array<string,mixed>> */
     public function coursesList():array{return$this->database->query('SELECT * FROM moodle_courses ORDER BY fullname LIMIT 100')->fetchAll();}
+
+    /** @return list<array<string,mixed>> */
+    public function profileFieldsCatalog():array{return$this->database->query('SELECT f.*,COUNT(v.id) value_count FROM moodle_profile_fields f LEFT JOIN moodle_user_profile_values v ON v.field_id=f.id GROUP BY f.id ORDER BY f.source_name')->fetchAll();}
+
+    public function saveProfileFieldMapping(int$id,string$destination,bool$visible):void
+    {
+        if(!in_array($destination,['supplemental','document','phone','mobile_phone','birth_date','education','unit','ignore'],true))throw new \RuntimeException('Destino de campo invalido.');
+        $s=$this->database->prepare('UPDATE moodle_profile_fields SET destination_key=:destination,is_visible=:visible WHERE id=:id');$s->execute(['destination'=>$destination,'visible'=>(int)$visible,'id'=>$id]);
+        $exists=$this->database->prepare('SELECT COUNT(*) FROM moodle_profile_fields WHERE id=:id');$exists->execute(['id'=>$id]);if((int)$exists->fetchColumn()!==1)throw new \RuntimeException('Campo do Moodle nao encontrado.');
+    }
+
+    /** @return array{student:?array,fields:list<array<string,mixed>>} */
+    public function academicProfileForCustomer(int$customerId):array
+    {
+        $s=$this->database->prepare('SELECT id,moodle_user_id,fullname,email,idnumber,suspended,synced_at FROM moodle_users WHERE finance_customer_id=:customer ORDER BY synced_at DESC LIMIT 1');$s->execute(['customer'=>$customerId]);$student=$s->fetch();if(!is_array($student))return['student'=>null,'fields'=>[]];
+        $q=$this->database->prepare("SELECT f.source_name,f.shortname,f.destination_key,v.field_value FROM moodle_user_profile_values v INNER JOIN moodle_profile_fields f ON f.id=v.field_id WHERE v.moodle_user_id=:user AND f.is_visible=1 AND f.destination_key<>'ignore' AND NULLIF(TRIM(v.field_value),'') IS NOT NULL ORDER BY f.source_name");$q->execute(['user'=>(int)$student['moodle_user_id']]);return['student'=>$student,'fields'=>$q->fetchAll()];
+    }
 
     /** Vincula apenas correspondencias unicas. CPF tem prioridade; divergencia entre CPF e e-mail vira conflito. */
     public function reconcileAutomatically():array
@@ -76,6 +94,13 @@ final readonly class MoodleRepository
     private function customerIdsByDocument(string$document):array{$s=$this->database->prepare("SELECT id FROM finance_customers WHERE REPLACE(REPLACE(REPLACE(cpf_cnpj,'.',''),'-',''),'/','')=:value AND is_deleted=0");$s->execute(['value'=>$document]);return array_map('intval',$s->fetchAll(PDO::FETCH_COLUMN));}
     private function customerIdsByEmail(string$email):array{$s=$this->database->prepare('SELECT id FROM finance_customers WHERE LOWER(email)=:value AND is_deleted=0');$s->execute(['value'=>$email]);return array_map('intval',$s->fetchAll(PDO::FETCH_COLUMN));}
     private function setReconciliation(int$id,?int$customerId,string$status,?string$method,?int$reviewerId):void{$s=$this->database->prepare('UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status=:status,match_method=:method,matched_at=CASE WHEN :customer2 IS NULL THEN NULL ELSE NOW() END,reviewed_by=:reviewer WHERE id=:id');$s->execute(['customer'=>$customerId,'status'=>$status,'method'=>$method,'customer2'=>$customerId,'reviewer'=>$reviewerId,'id'=>$id]);}
+
+    /** @param list<mixed> $fields */
+    private function syncProfileFields(int$userId,array$fields):void
+    {
+        if($userId<1)return;$fieldSql='INSERT INTO moodle_profile_fields(shortname,source_name,data_type) VALUES(:shortname,:name,:type) ON DUPLICATE KEY UPDATE source_name=VALUES(source_name),data_type=VALUES(data_type)';$valueSql='INSERT INTO moodle_user_profile_values(moodle_user_id,field_id,field_value,raw_json) VALUES(:user,:field,:value,:raw) ON DUPLICATE KEY UPDATE field_value=VALUES(field_value),raw_json=VALUES(raw_json),synced_at=NOW()';
+        foreach($fields as$field){if(!is_array($field))continue;$shortname=trim((string)($field['shortname']??''));if($shortname==='')continue;$this->database->prepare($fieldSql)->execute(['shortname'=>$shortname,'name'=>trim((string)($field['name']??$shortname))?:$shortname,'type'=>$this->nullable($field['type']??null)]);$id=$this->database->prepare('SELECT id FROM moodle_profile_fields WHERE shortname=:shortname');$id->execute(['shortname'=>$shortname]);$fieldId=(int)$id->fetchColumn();if($fieldId<1)continue;$value=$field['value']??null;if(is_array($value))$value=json_encode($value,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$this->database->prepare($valueSql)->execute(['user'=>$userId,'field'=>$fieldId,'value'=>$this->nullable($value),'raw'=>json_encode($field,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);}
+    }
 
     private function nullable(mixed$value):?string{$value=trim((string)$value);return$value===''?null:$value;}
     private function timestamp(mixed$value):?string{$value=(int)$value;return$value>0?date('Y-m-d H:i:s',$value):null;}

@@ -538,6 +538,19 @@ $tests['carrega conciliação segura de alunos do Moodle'] = static function () 
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'Conciliação Moodle'));
 };
 
+$tests['organiza campos complementares do Moodle'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_590000_create_moodle_profile_fields.php'));
+    $repository=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $settings=(string)file_get_contents($rootPath.'/views/moodle/settings.php');
+    $customer=(string)file_get_contents($rootPath.'/views/finance/customers/show.php');
+    assertTrue(str_contains($repository,'syncProfileFields'));
+    assertTrue(str_contains($repository,'academicProfileForCustomer'));
+    assertTrue(str_contains($routes,"'/admin/integrations/moodle/profile-fields'"));
+    assertTrue(str_contains($settings,'Campos complementares'));
+    assertTrue(str_contains($customer,'Dados acadêmicos'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
