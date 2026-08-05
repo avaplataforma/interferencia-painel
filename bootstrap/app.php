@@ -42,6 +42,7 @@ use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 use Interferencia\Modules\Finance\IntegrationRepository;
 use Interferencia\Modules\Finance\CatalogRepository;
+use Interferencia\Modules\Finance\CampaignRepository;
 use Interferencia\Modules\Tickets\TicketRepository;
 use Interferencia\Modules\Tickets\DepartmentRepository;
 use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
@@ -120,6 +121,7 @@ $whatsappCloudApi = new CloudApiClient(
 );
 $finance = new FinanceRepository($database);
 $financeCatalog = new CatalogRepository($database);
+$financeCampaigns = new CampaignRepository($database);
 $tickets = new TicketRepository($database);
 $ticketDepartments = new DepartmentRepository($database);
 $ticketFiles = new MediaStorage($rootPath . '/storage/tickets');
@@ -165,6 +167,7 @@ $view->share([
         'finance_modify' => $auth->can('finance.payments.modify'),
         'finance_settings' => $auth->can('finance.settings.manage'),
         'finance_products' => $auth->can('finance.settings.manage'),
+        'finance_campaigns' => $auth->can('finance.settings.manage'),
         'whatsapp_transfer' => $auth->can('whatsapp.conversations.assign'),
         'crm' => $auth->can('crm.contacts.view'),
         'crm_manage' => $auth->can('crm.contacts.manage'),
@@ -181,6 +184,6 @@ $view->share([
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$studentEnrollments);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$studentEnrollments);
 
 return new Application($router);

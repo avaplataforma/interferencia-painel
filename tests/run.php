@@ -566,6 +566,9 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
     assertTrue(str_contains($routes,"'/students/enrollments'"));
     assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/charge'"));
     assertTrue(str_contains($layout,'>Matrículas</a>'));
+    assertTrue(str_contains($layout,'>Campanhas</a>'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_620000_create_finance_campaigns.php'));
+    assertTrue(is_file($rootPath.'/modules/Finance/CampaignRepository.php'));
     assertTrue(str_contains($layout,'>Cadastro</a>'));
 };
 
