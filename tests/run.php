@@ -484,13 +484,14 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     assertTrue(is_string($routes) && str_contains($routes,"'/tickets/{id:\\d+}'"));
     assertTrue(is_string($layout) && str_contains($layout,'>Tickets'));
     assertTrue(is_string($layout) && str_contains($layout,'ticketAlerts'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'Aluno/Contato vinculado'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'Aluno vinculado'));
     assertTrue(is_file($rootPath.'/database/migrations/20260804_550000_create_ticket_departments_and_attachments.php'));
     assertTrue(is_file($rootPath.'/modules/Tickets/DepartmentRepository.php'));
     assertTrue(is_file($rootPath.'/views/tickets/departments/index.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-contact-results'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-contacts'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),"document.querySelectorAll('[data-ticket-contacts]')"));
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_560000_distinguish_students_from_leads.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-students'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),"document.querySelectorAll('[data-ticket-students]')"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'>Setores</a>'));
 };
 

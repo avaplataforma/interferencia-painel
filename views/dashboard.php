@@ -26,7 +26,7 @@ $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '
 <section class="dashboard-section dashboard-operation">
   <div class="dashboard-section-heading">
     <div><span class="section-eyebrow">Operação</span><h2>Seu trabalho no CRM</h2><p>Informações operacionais visíveis conforme as unidades liberadas para você.</p></div>
-    <div class="section-actions"><a class="button-secondary" href="<?= $escape($basePath) ?>/crm/contacts"><i class="fa-solid fa-address-book" aria-hidden="true"></i> Contatos</a><a class="button-secondary" href="<?= $escape($basePath) ?>/crm/follow-ups"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Follow-ups</a></div>
+    <div class="section-actions"><a class="button-secondary" href="<?= $escape($basePath) ?>/crm/contacts"><i class="fa-solid fa-user-tag" aria-hidden="true"></i> Leads</a><a class="button-secondary" href="<?= $escape($basePath) ?>/crm/follow-ups"><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Follow-ups</a></div>
   </div>
 
   <?php if ($followUpSummary !== null): ?>
@@ -42,7 +42,7 @@ $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '
 
   <?php if ($newContacts !== null): ?>
   <div class="dashboard-subsection dashboard-contacts">
-    <div class="subsection-title"><div><h3>Novos contatos</h3><p>Contatos que ainda estão no status Novo.</p></div><a href="<?= $escape($basePath) ?>/crm/contacts">Ver lista completa <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
+    <div class="subsection-title"><div><h3>Novos leads</h3><p>Leads que ainda estão no status Novo.</p></div><a href="<?= $escape($basePath) ?>/crm/contacts">Ver lista completa <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a></div>
 
     <nav class="intake-filters" aria-label="Filtrar novos contatos pela origem">
       <a class="intake-filter <?= $selectedSource === '' ? 'active' : '' ?>" href="<?= $escape($allSourceUrl) ?>"><span>Todos</span><strong><?= $escape($newContacts['total']) ?></strong></a>

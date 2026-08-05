@@ -8,7 +8,7 @@ $selectedStatusId=(int)($draft['status_id']??($statuses[0]['id']??0));
 $selectedResponsibleId=(int)($draft['responsible_user_id']??$currentUser->id);
 $required='<span class="required-mark">*</span>';
 ?>
-<span class="status">Alunos · Cadastro</span><h1><?= $editing?'Editar contato':'Novo contato' ?></h1>
+<span class="status">CRM · Leads</span><h1><?= $editing?'Editar lead':'Novo lead' ?></h1>
 <?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
 <form id="contact-form" method="post" action="<?= $escape($basePath) ?>/crm/contacts<?= $editing?'/'.$escape($contact['id']):'' ?>" data-contact-unit-form><?= $csrfField ?><?php if(!$editing&&(int)($draft['whatsapp_conversation_id']??0)>0):?><input type="hidden" name="whatsapp_conversation_id" value="<?= (int)$draft['whatsapp_conversation_id'] ?>"><?php endif;?>
 <?php if($editing):?><input type="hidden" name="unit_id" value="<?= $selectedUnitId ?>"><?php endif;?><label>Unidade <?= $required ?><select class="form-select" <?= $editing?'name="unit_id_display" disabled':'name="unit_id" required' ?> data-contact-unit><option value="">Selecione a unidade</option><?php foreach($availableUnits as$availableUnit):?><option value="<?= (int)$availableUnit['id'] ?>" <?= $selectedUnitId===(int)$availableUnit['id']?'selected':'' ?>><?= $escape($availableUnit['name']) ?></option><?php endforeach;?></select><?php if($editing):?><small>A unidade do contato é preservada durante a edição.</small><?php else:?><small>Esta unidade definirá quem poderá visualizar e atender o contato.</small><?php endif;?></label>

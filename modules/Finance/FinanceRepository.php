@@ -97,6 +97,21 @@ final readonly class FinanceRepository
     {
         $parts=[];$params=['id'=>$id];if($unitIds!==[]){$marks=[];foreach($unitIds as$i=>$unitId){$key='unit'.$i;$marks[]=':'.$key;$params[$key]=$unitId;}$parts[]='c.unit_id IN ('.implode(',',$marks).')';}if($includeLegacy)$parts[]='c.unit_id IS NULL';if($parts===[])return null;$s=$this->database->prepare('SELECT c.*,u.name unit_name,crm.name crm_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN crm_contacts crm ON crm.id=c.crm_contact_id WHERE c.id=:id AND c.is_deleted=0 AND ('.implode(' OR ',$parts).') LIMIT 1');$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
     }
+
+    /** @param list<int> $unitIds @return list<array<string,mixed>> */
+    public function activeStudentsForUnits(array $unitIds): array
+    {
+        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));
+        $s=$this->database->prepare("SELECT id,unit_id,name,email,COALESCE(NULLIF(mobile_phone,''),phone) phone,cpf_cnpj FROM finance_customers WHERE unit_id IN ({$marks}) AND student_status='active' AND is_deleted=0 ORDER BY name,id");
+        $s->execute($unitIds);return$s->fetchAll();
+    }
+
+    /** @return array<string,mixed>|null */
+    public function activeStudent(int$id,int$unitId):?array
+    {
+        $s=$this->database->prepare("SELECT * FROM finance_customers WHERE id=:id AND unit_id=:unit AND student_status='active' AND is_deleted=0 LIMIT 1");
+        $s->execute(['id'=>$id,'unit'=>$unitId]);$row=$s->fetch();return is_array($row)?$row:null;
+    }
     /** @return array{payments:int,subscriptions:int,checkouts:int} */
     public function customerDependencies(int$id):array
     {
@@ -119,7 +134,7 @@ final readonly class FinanceRepository
     }
     public function reconcileCustomer(int$id,int$unitId,?int$crmContactId):void
     {
-        $this->database->beginTransaction();try{if($crmContactId!==null){$c=$this->database->prepare('SELECT COUNT(*) FROM crm_contacts WHERE id=:contact AND unit_id=:unit');$c->execute(['contact'=>$crmContactId,'unit'=>$unitId]);if((int)$c->fetchColumn()!==1)throw new \RuntimeException('O contato selecionado não pertence à unidade.');}$s=$this->database->prepare('UPDATE finance_customers SET unit_id=:unit,crm_contact_id=:contact,is_legacy=0 WHERE id=:id');$s->execute(['unit'=>$unitId,'contact'=>$crmContactId,'id'=>$id]);$p=$this->database->prepare('UPDATE finance_payments SET unit_id=:unit,is_legacy=0 WHERE finance_customer_id=:customer');$p->execute(['unit'=>$unitId,'customer'=>$id]);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        $this->database->beginTransaction();try{if($crmContactId!==null){$c=$this->database->prepare('SELECT COUNT(*) FROM crm_contacts WHERE id=:contact AND unit_id=:unit');$c->execute(['contact'=>$crmContactId,'unit'=>$unitId]);if((int)$c->fetchColumn()!==1)throw new \RuntimeException('O lead selecionado não pertence à unidade.');}$s=$this->database->prepare("UPDATE finance_customers SET unit_id=:unit,crm_contact_id=:contact,is_legacy=0,student_status='active' WHERE id=:id");$s->execute(['unit'=>$unitId,'contact'=>$crmContactId,'id'=>$id]);$p=$this->database->prepare('UPDATE finance_payments SET unit_id=:unit,is_legacy=0 WHERE finance_customer_id=:customer');$p->execute(['unit'=>$unitId,'customer'=>$id]);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
     private function nullable(mixed $value):?string{$v=trim((string)$value);return$v===''?null:$v;}
     private function date(mixed $value):?string{$v=(string)$value;return preg_match('/^\d{4}-\d{2}-\d{2}$/',$v)===1?$v:null;}
