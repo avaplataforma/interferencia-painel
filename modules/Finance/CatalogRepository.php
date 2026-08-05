@@ -10,11 +10,12 @@ final readonly class CatalogRepository
 {
     public function __construct(private PDO $database){}
     /** @return list<array<string,mixed>> */
-    public function all():array{return$this->database->query('SELECT p.*,u.name unit_name FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id ORDER BY p.is_active DESC,p.name,p.id')->fetchAll();}
+    public function all():array{return$this->database->query('SELECT p.*,u.name unit_name,m.shortname moodle_shortname,m.visible moodle_visible FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id LEFT JOIN moodle_courses m ON m.id=p.moodle_course_id ORDER BY p.is_active DESC,p.name,p.id')->fetchAll();}
     /** @return list<array<string,mixed>> */
     public function availableForUnit(int$unitId):array{$s=$this->database->prepare('SELECT p.*,u.name unit_name FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id WHERE p.is_active=1 AND (p.unit_id=:unit OR p.unit_id IS NULL) ORDER BY p.name,p.id');$s->execute(['unit'=>$unitId]);return$s->fetchAll();}
     /** @return array<string,mixed>|null */
-    public function find(int$id):?array{$s=$this->database->prepare('SELECT p.*,u.name unit_name FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id WHERE p.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
+    public function find(int$id):?array{$s=$this->database->prepare('SELECT p.*,u.name unit_name,m.shortname moodle_shortname FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id LEFT JOIN moodle_courses m ON m.id=p.moodle_course_id WHERE p.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
+    public function syncFromMoodle():int{$sql="INSERT INTO finance_products(moodle_course_id,name,description,value,max_installments,billing_types,minutes_to_expire,is_active) SELECT m.id,m.fullname,CONCAT('Curso sincronizado do Moodle: ',m.shortname),0,1,'PIX,CREDIT_CARD',1440,0 FROM moodle_courses m LEFT JOIN finance_products p ON p.moodle_course_id=m.id WHERE p.id IS NULL AND m.moodle_course_id>1";$this->database->exec($sql);return(int)$this->database->query('SELECT ROW_COUNT()')->fetchColumn();}
     /** @param list<string> $billingTypes */
     public function save(?int$id,?int$unitId,string$name,?string$description,float$value,int$maxInstallments,array$billingTypes,int$minutes,bool$active):int
     {
