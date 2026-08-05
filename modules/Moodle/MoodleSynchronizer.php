@@ -17,6 +17,7 @@ final readonly class MoodleSynchronizer
         foreach($batch as$course){$courseId=(int)($course['id']??0);$this->repository->upsertCourse($course);$courses++;$next=max($next,$courseId);
             foreach($this->client->enrolledUsers($courseId)as$user){$userId=(int)($user['id']??0);if($userId<1)continue;$this->repository->upsertUser($user);$users[$userId]=true;$this->repository->upsertEnrolment($courseId,$userId,(int)($user['enrolledcourses'][0]['timestart']??0),(int)($user['enrolledcourses'][0]['timeend']??0));$enrolments++;}
         }
-        return['courses'=>$courses,'users'=>count($users),'enrolments'=>$enrolments,'cursor'=>$next,'complete'=>count($available)<=count($batch)];
+        $reconciliation=$this->repository->reconcileAutomatically();
+        return['courses'=>$courses,'users'=>count($users),'enrolments'=>$enrolments,'cursor'=>$next,'complete'=>count($available)<=count($batch),'linked'=>$reconciliation['linked'],'conflicts'=>$reconciliation['conflicts']];
     }
 }

@@ -35,3 +35,12 @@ Não haverá vínculo automático por nome isolado.
 ## Segurança
 
 O serviço externo do Moodle deve conter somente as funções necessárias. O token deve pertencer a um usuário técnico dedicado, ter restrição de IP quando possível e nunca ser enviado por mensagens ou registrado em logs.
+# Conciliação de alunos
+
+O Moodle permanece como origem oficial de alunos e matrículas enquanto a integração está em validação. O PAINEL INTER importa os dados em modo somente leitura.
+
+- CPF normalizado e único tem prioridade para o vínculo automático.
+- E-mail normalizado e único é usado apenas quando não existe correspondência por CPF.
+- Correspondências divergentes ou duplicadas ficam marcadas como conflito.
+- Ausências ficam pendentes para revisão manual em **Alunos → Conciliação Moodle**.
+- O vínculo manual registra o usuário revisor; nenhuma informação é escrita no Moodle.

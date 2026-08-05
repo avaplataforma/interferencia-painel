@@ -531,6 +531,13 @@ $tests['carrega integração Moodle somente leitura'] = static function () use (
     assertTrue(!str_contains($client,'enrol_manual_enrol_users'));
 };
 
+$tests['carrega conciliação segura de alunos do Moodle'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_580000_add_moodle_reconciliation.php'));
+    assertTrue(is_file($rootPath.'/views/moodle/reconciliation.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleRepository.php'),'reconcileAutomatically'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'Conciliação Moodle'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
