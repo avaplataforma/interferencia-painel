@@ -67,6 +67,17 @@ final readonly class UserRepository
         return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, COUNT(DISTINCT s.unit_id) AS unit_count FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id LEFT JOIN roles r ON r.id = ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id = u.id GROUP BY u.id ORDER BY u.name")->fetchAll();
     }
 
+    /** @param list<int> $unitIds @return list<array<string,mixed>> */
+    public function activeForUnits(array $unitIds): array
+    {
+        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));$statement=$this->database->prepare("SELECT u.id,u.name,u.email,GROUP_CONCAT(DISTINCT s.unit_id ORDER BY s.unit_id) unit_ids FROM users u INNER JOIN user_unit_scopes s ON s.user_id=u.id WHERE u.is_active=1 AND s.unit_id IN ($marks) GROUP BY u.id ORDER BY u.name");$statement->execute($unitIds);return$statement->fetchAll();
+    }
+
+    public function activeInUnit(int $userId,int $unitId): bool
+    {
+        $statement=$this->database->prepare('SELECT COUNT(*) FROM users u INNER JOIN user_unit_scopes s ON s.user_id=u.id WHERE u.id=:user AND s.unit_id=:unit AND u.is_active=1');$statement->execute(['user'=>$userId,'unit'=>$unitId]);return(int)$statement->fetchColumn()===1;
+    }
+
     /** @return list<array{id: int, code: string, name: string}> */
     public function availableRoles(): array
     {
