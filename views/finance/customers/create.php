@@ -1,0 +1,17 @@
+<?php declare(strict_types=1); /** @var Closure(mixed):string $escape */ ?>
+<header class="section-heading"><div><span class="status">Alunos · Cadastro</span><h1>Novo aluno</h1><p class="meta">Cadastre o aluno na unidade e crie o cliente financeiro correspondente no Asaas.</p></div><a class="button-secondary" href="<?= $escape($basePath) ?>/finance/customers"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i> Cancelar</a></header>
+<?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
+<?php if(!$writeEnabled):?><p class="alert alert-warning">O cadastro real está desativado no modo seguro.</p><?php endif;?>
+<section class="card"><div class="card-body"><form method="post" action="<?= $escape($basePath) ?>/finance/customers"><?= $csrfField ?><div class="form-grid">
+<div class="form-field"><label for="student-unit">Unidade <span class="required">*</span></label><select id="student-unit" name="unit_id" required><option value="">Selecione</option><?php foreach($units as$unit):?><option value="<?= (int)$unit['id'] ?>"><?= $escape($unit['name']) ?></option><?php endforeach;?></select></div>
+<div class="form-field"><label for="student-name">Nome completo <span class="required">*</span></label><input id="student-name" name="name" maxlength="160" required></div>
+<div class="form-field"><label for="student-email">E-mail <span class="required">*</span></label><input id="student-email" name="email" type="email" maxlength="190" data-normalize="email" required></div>
+<div class="form-field"><label for="student-document">CPF/CNPJ <span class="required">*</span></label><input id="student-document" name="cpf_cnpj" inputmode="numeric" maxlength="18" data-mask="document" required></div>
+<div class="form-field"><label for="student-mobile">Celular <span class="required">*</span></label><input id="student-mobile" name="mobile_phone" inputmode="tel" maxlength="16" data-mask="phone" required></div>
+<div class="form-field"><label for="student-phone">Telefone</label><input id="student-phone" name="phone" inputmode="tel" maxlength="16" data-mask="phone"></div>
+<div class="form-field"><label for="student-postal">CEP <span class="required">*</span></label><input id="student-postal" name="postal_code" inputmode="numeric" maxlength="9" placeholder="00000-000" required></div>
+<div class="form-field"><label for="student-address">Endereço <span class="required">*</span></label><input id="student-address" name="address" maxlength="255" required></div>
+<div class="form-field"><label for="student-number">Número <span class="required">*</span></label><input id="student-number" name="address_number" maxlength="40" required></div>
+<div class="form-field"><label for="student-complement">Complemento</label><input id="student-complement" name="complement" maxlength="120"></div>
+<div class="form-field"><label for="student-province">Bairro <span class="required">*</span></label><input id="student-province" name="province" maxlength="120" required></div>
+</div><div class="alert alert-warning"><strong>Importante:</strong> este cadastro cria um aluno ativo e também um cliente no Asaas. Para interessados ainda em prospecção, utilize CRM → Leads.</div><div class="form-actions"><button class="button-primary" type="submit"<?= $writeEnabled?'':' disabled' ?>><i class="fa-solid fa-user-graduate" aria-hidden="true"></i> Cadastrar aluno</button></div></form></div></section>

@@ -112,6 +112,11 @@ final readonly class FinanceRepository
         $s=$this->database->prepare("SELECT * FROM finance_customers WHERE id=:id AND unit_id=:unit AND student_status='active' AND is_deleted=0 LIMIT 1");
         $s->execute(['id'=>$id,'unit'=>$unitId]);$row=$s->fetch();return is_array($row)?$row:null;
     }
+
+    public function customerIdByAsaas(string$asaasId):?int
+    {
+        $s=$this->database->prepare('SELECT id FROM finance_customers WHERE asaas_customer_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;
+    }
     /** @return array{payments:int,subscriptions:int,checkouts:int} */
     public function customerDependencies(int$id):array
     {

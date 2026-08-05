@@ -25,6 +25,13 @@ final readonly class AsaasClient
     public function paymentsWriteEnabled(): bool { return $this->paymentsWriteEnabled; }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function createCustomer(array $payload): array
+    {
+        if (!$this->paymentsWriteEnabled) throw new RuntimeException('A criação real de alunos está bloqueada.');
+        return $this->request('POST', '/customers', $payload);
+    }
+
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
     public function updateCustomer(string $customerId, array $payload): array
     {
         if (!$this->paymentsWriteEnabled) throw new RuntimeException('A alteração real de clientes está bloqueada.');
