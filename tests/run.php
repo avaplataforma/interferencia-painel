@@ -514,6 +514,23 @@ $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath)
     assertTrue(is_file($rootPath.'/views/finance/customers/create.php'));
 };
 
+$tests['carrega integração Moodle somente leitura'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_570000_create_moodle_integration.php'));
+    assertTrue(is_file($rootPath.'/views/moodle/settings.php'));
+    assertTrue(str_contains($routes,"'/admin/integrations/moodle'"));
+    assertTrue(str_contains($routes,'syncBatch'));
+    assertTrue(str_contains($bootstrap,'MoodleSynchronizer'));
+    assertTrue(str_contains($layout,'Integração Moodle'));
+    assertTrue(str_contains($client,'core_webservice_get_site_info'));
+    assertTrue(str_contains($client,'core_enrol_get_enrolled_users'));
+    assertTrue(!str_contains($client,'core_user_create_users'));
+    assertTrue(!str_contains($client,'enrol_manual_enrol_users'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

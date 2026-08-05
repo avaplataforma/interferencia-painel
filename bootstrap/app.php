@@ -44,6 +44,10 @@ use Interferencia\Modules\Finance\IntegrationRepository;
 use Interferencia\Modules\Finance\CatalogRepository;
 use Interferencia\Modules\Tickets\TicketRepository;
 use Interferencia\Modules\Tickets\DepartmentRepository;
+use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
+use Interferencia\Modules\Moodle\MoodleClient;
+use Interferencia\Modules\Moodle\MoodleRepository;
+use Interferencia\Modules\Moodle\MoodleSynchronizer;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -119,6 +123,11 @@ $tickets = new TicketRepository($database);
 $ticketDepartments = new DepartmentRepository($database);
 $ticketFiles = new MediaStorage($rootPath . '/storage/tickets');
 $financeIntegrations = new IntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
+$moodleIntegrations = new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
+$moodleSettings=$moodleIntegrations->settings();
+$moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$moodleSettings['token'],$moodleSettings['is_active']);
+$moodleRepository=new MoodleRepository($database);
+$moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $asaasSettings=$financeIntegrations->asaas();
 $asaasEnvironment=$asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment');
 $asaasApiKey=$asaasSettings['configured']&&$asaasSettings['is_active']?(string)$asaasSettings['api_key']:(string)$config->get('app.asaas_api_key');
@@ -161,6 +170,7 @@ $view->share([
         'tickets_create' => $auth->can('tickets.create'),
         'tickets_manage' => $auth->can('tickets.manage'),
         'ticket_departments' => $auth->can('tickets.departments.manage'),
+        'moodle_settings' => $auth->can('moodle.settings.manage'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
@@ -169,6 +179,6 @@ $view->share([
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer);
 
 return new Application($router);

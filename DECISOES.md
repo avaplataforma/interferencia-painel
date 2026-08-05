@@ -1,5 +1,13 @@
 # Decisões do Projeto
 
+## 05/08/2026 — Cadastro unificado e Moodle
+
+- O PAINEL INTER será a fonte central de identidade, atendimento, contratos e financeiro dos alunos.
+- O Moodle continuará como ambiente acadêmico para cursos, acessos, matrículas, progresso, notas e conclusão.
+- A integração começará somente para leitura, importando cursos, usuários matriculados e matrículas em lotes.
+- Nenhuma pessoa será vinculada automaticamente apenas pelo nome; correspondências ambíguas exigirão revisão administrativa.
+- O token do Moodle será armazenado criptografado e acessível somente ao Admin System.
+
 Este documento registra decisões arquiteturais duradouras. Mudanças futuras
 devem acrescentar uma nova entrada, preservando o histórico e o motivo.
 

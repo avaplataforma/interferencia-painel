@@ -42,6 +42,10 @@ use Interferencia\Modules\Finance\IntegrationRepository;
 use Interferencia\Modules\Finance\CatalogRepository;
 use Interferencia\Modules\Tickets\TicketRepository;
 use Interferencia\Modules\Tickets\DepartmentRepository;
+use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
+use Interferencia\Modules\Moodle\MoodleClient;
+use Interferencia\Modules\Moodle\MoodleRepository;
+use Interferencia\Modules\Moodle\MoodleSynchronizer;
 
 return static function (
     Router $router,
@@ -80,6 +84,10 @@ return static function (
     TicketRepository $tickets,
     DepartmentRepository $ticketDepartments,
     MediaStorage $ticketFiles,
+    MoodleIntegrationRepository $moodleIntegrations,
+    MoodleClient $moodleClient,
+    MoodleRepository $moodleRepository,
+    MoodleSynchronizer $moodleSynchronizer,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -485,6 +493,13 @@ return static function (
     $router->post('/admin/integrations/asaas/sync/reset',static function(Request$request)use($finance,$session,$basePath):Response{if((string)$request->input('confirm_reset','')!=='1'){$session->flash('finance_settings.error','Confirme o reinício da sincronização.');}else{$finance->resetSync();$session->flash('finance_settings.message','Sincronização preparada para uma nova conferência completa. Nenhum dado local foi apagado.');}return Response::redirect($basePath.'/admin/integrations/asaas#synchronization');},$manageFinanceSettings);
     $router->post('/admin/integrations/asaas',static function(Request$request)use($financeIntegrations,$auth,$session,$basePath):Response{try{$key=trim((string)$request->input('api_key',''));if($key==='')throw new RuntimeException('Informe a chave da API.');$financeIntegrations->saveAsaas($key,$auth->user()->id,$request->input('is_active')==='1');$session->flash('finance_settings.message','Conexão do Asaas salva com segurança.');}catch(Throwable$e){$session->flash('finance_settings.error',$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/asaas');},$manageFinanceSettings);
     $router->post('/admin/integrations/asaas/webhook/test',static function()use($finance,$session,$basePath):Response{$id='local_test_'.bin2hex(random_bytes(8));try{$finance->registerWebhook($id,'LOCAL_WEBHOOK_TEST',null);$finance->finishWebhook($id);$finance->registerWebhook($id,'LOCAL_WEBHOOK_TEST',null);$session->flash('finance_settings.message','Teste interno concluído: processamento e idempotência estão funcionando.');}catch(Throwable$e){$session->flash('finance_settings.error','Falha no teste interno: '.$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/asaas#webhook-diagnostics');},$manageFinanceSettings);
+
+    $manageMoodleSettings=[$requireAuth,new RequirePermission($auth,'moodle.settings.manage')];
+    $router->get('/admin/integrations/moodle',static function()use($view,$moodleIntegrations,$moodleClient,$moodleRepository,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('moodle/settings',['title'=>'Integração Moodle — '.$browserTitle,'settings'=>$moodleIntegrations->settings(),'connectionReady'=>$moodleClient->ready(),'encryptionReady'=>$moodleIntegrations->encryptionReady(),'summary'=>$moodleRepository->summary(),'courses'=>$moodleRepository->coursesList(),'message'=>$session->get('moodle_settings.message'),'error'=>$session->get('moodle_settings.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$manageMoodleSettings);
+    $router->post('/admin/integrations/moodle',static function(Request$request)use($moodleIntegrations,$auth,$session,$basePath):Response{try{$moodleIntegrations->save((string)$request->input('base_url',''),trim((string)$request->input('token','')),$auth->user()->id,$request->input('is_active')==='1');$session->flash('moodle_settings.message','Conexão do Moodle salva com segurança.');}catch(Throwable$e){$session->flash('moodle_settings.error',$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/moodle');},$manageMoodleSettings);
+    $router->post('/admin/integrations/moodle/test',static function()use($moodleClient,$moodleIntegrations,$session,$basePath):Response{try{$info=$moodleClient->siteInfo();$moodleIntegrations->recordTest(null);$session->flash('moodle_settings.message','Conexão confirmada com '.(string)($info['sitename']??'o Moodle').'.');}catch(Throwable$e){$moodleIntegrations->recordTest($e->getMessage());$session->flash('moodle_settings.error','Falha no teste: '.$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/moodle');},$manageMoodleSettings);
+    $router->post('/admin/integrations/moodle/sync',static function()use($moodleSynchronizer,$moodleIntegrations,$session,$basePath):Response{try{$settings=$moodleIntegrations->settings();$result=$moodleSynchronizer->syncBatch($settings['sync_complete']?0:$settings['sync_cursor']);$moodleIntegrations->advanceSync($result['cursor'],$result['complete']);$session->flash('moodle_settings.message',sprintf('%d curso(s), %d usuário(s) e %d matrícula(s) conferidos.%s',$result['courses'],$result['users'],$result['enrolments'],$result['complete']?' Sincronização concluída.':' Continue com o próximo lote.'));}catch(Throwable$e){$moodleIntegrations->recordSync($e->getMessage());$session->flash('moodle_settings.error','Falha na sincronização: '.$e->getMessage());}return Response::redirect($basePath.'/admin/integrations/moodle#synchronization');},$manageMoodleSettings);
+    $router->post('/admin/integrations/moodle/sync/reset',static function()use($moodleIntegrations,$session,$basePath):Response{$moodleIntegrations->resetSync();$session->flash('moodle_settings.message','Conferência preparada para reiniciar. Nenhum dado foi apagado.');return Response::redirect($basePath.'/admin/integrations/moodle#synchronization');},$manageMoodleSettings);
 
     $manageWhatsAppLines=[$requireAuth,new RequirePermission($auth,'whatsapp.lines.manage')];
     $router->get('/whatsapp/lines',static function()use($view,$whatsappLines,$session,$basePath,$browserTitle):Response{return$view->render('whatsapp/lines/index',['title'=>'Linhas do WhatsApp — '.$browserTitle,'lines'=>$whatsappLines->all(),'message'=>$session->get('whatsapp_lines.message'),'error'=>$session->get('whatsapp_lines.error'),'basePath'=>$basePath]);},$manageWhatsAppLines);
