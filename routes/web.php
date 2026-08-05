@@ -326,14 +326,12 @@ return static function (
     $manageContacts = [$requireAuth, new RequirePermission($auth, 'crm.contacts.manage')];
     $contactUnit = static fn (): ?array => $unitContext->current();
 
-    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $tags, $followUps, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
+    $router->get('/crm/contacts', static function (Request $request) use ($view, $contacts, $tags, $contactUnit, $unitContext, $session, $basePath, $browserTitle): Response {
         $unit = $contactUnit(); if ($unit === null) return Response::text("Nenhuma unidade ativa.\n", 422);
         $search = trim((string) $request->queryValue('q', ''));
         $tagId=max(0,(int)$request->queryValue('tag','0'));
         $items=$unit['id']===null?$contacts->allForUnits(array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()),$search,$tagId):$contacts->all((int)$unit['id'],$search,$tagId);
-        $unitIds=$unit['id']===null?array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available()):[(int)$unit['id']];
-        $followUpItems=$followUps->allForUnits($unitIds,'pending','',0,'');
-        return $view->render('crm/contacts/index', ['title'=>'Leads — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'tags'=>$tags->all(true), 'selectedTag'=>$tagId, 'unit'=>$unit, 'followUps'=>array_slice($followUpItems,0,10), 'followUpSummary'=>$followUps->summary($unitIds), 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
+        return $view->render('crm/contacts/index', ['title'=>'Leads — '.$browserTitle, 'contacts'=>$items, 'search'=>$search, 'tags'=>$tags->all(true), 'selectedTag'=>$tagId, 'unit'=>$unit, 'message'=>$session->get('contacts.message'), 'error'=>$session->get('contacts.error'), 'basePath'=>$basePath]);
     }, $viewContacts);
 
     $router->get('/crm/contacts/{id:\d+}', static function (Request $request,array $params) use ($view,$contacts,$followUps,$unitContext,$contactUnit,$auth,$session,$basePath,$browserTitle): Response {
