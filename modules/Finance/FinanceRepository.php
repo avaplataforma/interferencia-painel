@@ -107,12 +107,12 @@ final readonly class FinanceRepository
     }
 
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
-    public function fullyLinkedStudents(array $unitIds,string $search=''):array
+    public function studentDirectory(array $unitIds,bool $includeLegacy=false,string $search=''):array
     {
-        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));$params=$unitIds;
-        $where="f.unit_id IN ({$marks}) AND f.student_status='active' AND f.is_deleted=0 AND f.asaas_customer_id IS NOT NULL AND m.reconciliation_status='linked' AND m.suspended=0";
+        if($unitIds===[]&&!$includeLegacy)return[];$params=[];$scope=[];if($unitIds!==[]){$marks=implode(',',array_fill(0,count($unitIds),'?'));$scope[]="f.unit_id IN ({$marks})";$params=$unitIds;}if($includeLegacy)$scope[]='f.unit_id IS NULL';
+        $where='('.implode(' OR ',$scope).") AND f.student_status='active' AND f.is_deleted=0";
         if($search!==''){$where.=' AND (f.name LIKE ? OR f.email LIKE ? OR f.cpf_cnpj LIKE ? OR m.username LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);}
-        $sql="SELECT f.id,f.name,f.email,f.cpf_cnpj,f.mobile_phone,f.phone,u.name unit_name,m.username,m.fullname moodle_name,m.moodle_user_id,COUNT(DISTINCT me.moodle_course_id) active_courses FROM finance_customers f INNER JOIN units u ON u.id=f.unit_id INNER JOIN moodle_users m ON m.finance_customer_id=f.id LEFT JOIN moodle_enrolments me ON me.moodle_user_id=m.moodle_user_id AND me.is_active=1 WHERE {$where} GROUP BY f.id,m.id ORDER BY f.name LIMIT 500";
+        $sql="SELECT f.id,f.name,f.email,f.cpf_cnpj,f.mobile_phone,f.phone,f.asaas_customer_id,u.name unit_name,MAX(m.username) username,MAX(m.moodle_user_id) moodle_user_id,MAX(CASE WHEN m.reconciliation_status='linked' AND m.suspended=0 THEN 1 ELSE 0 END) moodle_linked,COUNT(DISTINCT me.moodle_course_id) active_courses,CASE WHEN f.unit_id IS NULL THEN 'missing_unit' WHEN NULLIF(f.asaas_customer_id,'') IS NULL THEN 'missing_asaas' WHEN COUNT(DISTINCT m.id)=0 THEN 'missing_moodle' WHEN MAX(CASE WHEN m.reconciliation_status='linked' AND m.suspended=0 THEN 1 ELSE 0 END)=0 THEN 'moodle_review' ELSE 'complete' END integration_status FROM finance_customers f LEFT JOIN units u ON u.id=f.unit_id LEFT JOIN moodle_users m ON m.finance_customer_id=f.id LEFT JOIN moodle_enrolments me ON me.moodle_user_id=m.moodle_user_id AND me.is_active=1 WHERE {$where} GROUP BY f.id,u.name ORDER BY f.name LIMIT 500";
         $s=$this->database->prepare($sql);$s->execute($params);return$s->fetchAll();
     }
 
