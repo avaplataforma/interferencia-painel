@@ -525,7 +525,8 @@ $tests['carrega integração Moodle somente leitura'] = static function () use (
     assertTrue(str_contains($routes,"'/admin/integrations/moodle'"));
     assertTrue(str_contains($routes,'syncBatch'));
     assertTrue(str_contains($bootstrap,'MoodleSynchronizer'));
-    assertTrue(str_contains($layout,'Integração Moodle'));
+    assertTrue(str_contains($layout,'>Integrações</a>'));
+    assertTrue(is_file($rootPath.'/views/admin/integrations.php'));
     assertTrue(str_contains($client,'core_webservice_get_site_info'));
     assertTrue(str_contains($client,'core_enrol_get_enrolled_users'));
     assertTrue(!str_contains($client,'core_user_create_users'));
@@ -536,7 +537,7 @@ $tests['carrega conciliação segura de alunos do Moodle'] = static function () 
     assertTrue(is_file($rootPath.'/database/migrations/20260805_580000_add_moodle_reconciliation.php'));
     assertTrue(is_file($rootPath.'/views/moodle/reconciliation.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleRepository.php'),'reconcileAutomatically'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'Conciliação Moodle'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),"'/students/moodle-reconciliation'"));
 };
 
 $tests['organiza campos complementares do Moodle'] = static function () use ($rootPath): void {
