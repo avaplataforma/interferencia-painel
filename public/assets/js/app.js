@@ -296,3 +296,72 @@ document.querySelectorAll('[data-contact-unit-form]').forEach((form) => {
   unit.addEventListener('change', updateResponsibles);
   updateResponsibles();
 });
+
+document.querySelectorAll('[data-ticket-contacts]').forEach((picker) => {
+  const unit = document.querySelector('#ticket-unit');
+  const search = picker.querySelector('#ticket-contact-search');
+  const contactId = picker.querySelector('#ticket-contact-id');
+  const results = picker.querySelector('[data-ticket-contact-results]');
+  const help = picker.querySelector('[data-ticket-contact-help]');
+  if (!(unit instanceof HTMLSelectElement) || !(search instanceof HTMLInputElement) || !(contactId instanceof HTMLInputElement) || !(results instanceof HTMLElement)) return;
+
+  let contacts = [];
+  try { contacts = JSON.parse(picker.dataset.ticketContacts || '[]'); } catch (_) { contacts = []; }
+
+  const clear = () => {
+    contactId.value = '';
+    delete search.dataset.selected;
+    search.setCustomValidity('');
+  };
+  const render = () => {
+    clear();
+    const term = search.value.trim().toLocaleLowerCase('pt-BR');
+    const selectedUnit = Number(unit.value || 0);
+    results.replaceChildren();
+    if (term.length < 2 || selectedUnit < 1) { results.hidden = true; return; }
+    const matches = contacts.filter((contact) => Number(contact.unit_id) === selectedUnit && [contact.name, contact.phone, contact.email].join(' ').toLocaleLowerCase('pt-BR').includes(term)).slice(0, 12);
+    matches.forEach((contact) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'ticket-contact-option';
+      const title = document.createElement('strong');
+      title.textContent = contact.name;
+      const meta = document.createElement('small');
+      meta.textContent = [contact.phone, contact.email].filter(Boolean).join(' · ');
+      button.append(title, meta);
+      button.addEventListener('click', () => {
+        search.value = contact.name;
+        search.dataset.selected = '1';
+        contactId.value = String(contact.id);
+        results.hidden = true;
+        if (help) help.textContent = `Aluno/Contato selecionado: ${contact.name}`;
+      });
+      results.append(button);
+    });
+    if (matches.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'meta';
+      empty.textContent = 'Nenhum cadastro encontrado nesta unidade.';
+      results.append(empty);
+    }
+    results.hidden = false;
+  };
+
+  unit.addEventListener('change', () => {
+    search.value = '';
+    clear();
+    results.hidden = true;
+    if (help) help.textContent = 'Comece a digitar para localizar um cadastro da unidade escolhida.';
+  });
+  search.addEventListener('input', render);
+  search.addEventListener('focus', render);
+  search.form?.addEventListener('submit', (event) => {
+    if (contactId.value) return;
+    event.preventDefault();
+    search.setCustomValidity('Selecione um aluno ou contato na lista de resultados.');
+    search.reportValidity();
+  });
+  document.addEventListener('click', (event) => {
+    if (event.target instanceof Element && !event.target.closest('.ticket-contact-picker')) results.hidden = true;
+  });
+});
