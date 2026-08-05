@@ -32,7 +32,8 @@ final readonly class ContactManager
 
         $clean = ['status_id'=>$statusId, 'responsible_user_id'=>$responsible ?: null, 'name'=>trim((string)$data['name'],), 'phone'=>$this->nullable($data['phone'] ?? null), 'email'=>$this->nullable($data['email'] ?? null), 'document'=>$this->nullable($data['document'] ?? null), 'course'=>$this->nullable($data['course'] ?? null), 'interest_score'=>$score, 'origin_city'=>$this->nullable($data['origin_city'] ?? null), 'registration_source'=>$source, 'registered_at'=>$registered->format('Y-m-d H:i:s'), 'notes'=>$this->nullable($data['notes'] ?? null), 'is_active'=>(int)(($data['is_active'] ?? null)==='1')];
         $phoneDigits=preg_replace('/\D/','',(string)($data['phone']??''));if(!in_array(strlen((string)$phoneDigits),[10,11],true))throw new RuntimeException('Informe um telefone com DDD válido.');
-        $documentDigits=preg_replace('/\D/','',(string)($data['document']??''));if(!$this->validDocument((string)$documentDigits))throw new RuntimeException('Informe um CPF ou CNPJ válido.');
+        $documentDigits=preg_replace('/\D/','',(string)($data['document']??''));if($documentDigits!==''&&!$this->validDocument((string)$documentDigits))throw new RuntimeException('Informe um CPF ou CNPJ válido.');
+        if($documentDigits!==''){$conflict=$this->contacts->documentConflict($documentDigits,$id);if($conflict!==null)throw new RuntimeException($conflict['type']==='student'?'Este CPF já pertence ao aluno '.$conflict['name'].'.':'Este CPF já pertence ao lead '.$conflict['name'].'.');}
         $tagIds=array_values(array_unique(array_map('intval',is_array($data['tags']??null)?$data['tags']:[])));if($tagIds===[])throw new RuntimeException('Selecione pelo menos uma etiqueta.');if(!$this->tags->validIds($tagIds))throw new RuntimeException('Uma ou mais etiquetas são inválidas.');
         $saved=$this->contacts->save($id, $unitId, $creatorId, $clean);
         $this->tags->syncContact($saved,$tagIds);

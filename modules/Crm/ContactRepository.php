@@ -73,6 +73,27 @@ final readonly class ContactRepository
         return is_array($row) ? $row : null;
     }
 
+    /** @return array<string,mixed>|null */
+    public function findByDocument(string$document,?int$exceptId=null):?array
+    {
+        $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;
+        $sql="SELECT c.*,u.name unit_name FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id WHERE REPLACE(REPLACE(REPLACE(c.document,'.',''),'-',''),'/','')=:document";$params=['document'=>$digits];
+        if($exceptId!==null){$sql.=' AND c.id<>:except';$params['except']=$exceptId;}$sql.=' LIMIT 1';$s=$this->database->prepare($sql);$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
+    public function markEnrolled(int$contactId):void
+    {
+        $s=$this->database->prepare("UPDATE crm_contacts c INNER JOIN crm_statuses s ON s.code='enrolled' SET c.status_id=s.id WHERE c.id=:id");$s->execute(['id'=>$contactId]);
+    }
+
+    /** @return array{type:string,id:int,name:string}|null */
+    public function documentConflict(string$document,?int$exceptContactId=null):?array
+    {
+        $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;
+        $leadSql="SELECT 'lead' type,id,name FROM crm_contacts WHERE REPLACE(REPLACE(REPLACE(document,'.',''),'-',''),'/','')=:document";$params=['document'=>$digits];if($exceptContactId!==null){$leadSql.=' AND id<>:except';$params['except']=$exceptContactId;}$leadSql.=' LIMIT 1';$lead=$this->database->prepare($leadSql);$lead->execute($params);$row=$lead->fetch();if(is_array($row))return['type'=>'lead','id'=>(int)$row['id'],'name'=>(string)$row['name']];
+        $student=$this->database->prepare("SELECT id,name FROM finance_customers WHERE REPLACE(REPLACE(REPLACE(cpf_cnpj,'.',''),'-',''),'/','')=:document AND is_deleted=0 LIMIT 1");$student->execute(['document'=>$digits]);$row=$student->fetch();return is_array($row)?['type'=>'student','id'=>(int)$row['id'],'name'=>(string)$row['name']]:null;
+    }
+
     /** @param list<int> $unitIds @return array<string,mixed>|null */
     public function findForUnits(int $id, array $unitIds): ?array
     {

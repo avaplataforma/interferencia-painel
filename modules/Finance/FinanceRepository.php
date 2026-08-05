@@ -117,6 +117,12 @@ final readonly class FinanceRepository
     {
         $s=$this->database->prepare('SELECT id FROM finance_customers WHERE asaas_customer_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;
     }
+
+    /** @return array<string,mixed>|null */
+    public function customerByDocument(string$document):?array
+    {
+        $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;$s=$this->database->prepare("SELECT c.*,u.name unit_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:document AND c.is_deleted=0 LIMIT 1");$s->execute(['document'=>$digits]);$row=$s->fetch();return is_array($row)?$row:null;
+    }
     /** @return array{payments:int,subscriptions:int,checkouts:int} */
     public function customerDependencies(int$id):array
     {

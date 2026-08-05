@@ -499,11 +499,18 @@ $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath)
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
     $asaas=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
+    $leadForm=(string)file_get_contents($rootPath.'/views/crm/contacts/form.php');
+    $contactManager=(string)file_get_contents($rootPath.'/modules/Crm/ContactManager.php');
+    $financeRepository=(string)file_get_contents($rootPath.'/modules/Finance/FinanceRepository.php');
     assertTrue(str_contains($routes,"'/finance/customers/create'"));
     assertTrue(str_contains($routes,'createCustomer(['));
     assertTrue(str_contains($layout,'/finance/customers/create'));
     assertTrue(str_contains($layout,'>Leads</a>'));
     assertTrue(str_contains($asaas,'function createCustomer'));
+    assertTrue(str_contains($leadForm,'(opcional para Lead)'));
+    assertTrue(str_contains($contactManager,'documentConflict'));
+    assertTrue(str_contains($financeRepository,'function customerByDocument'));
+    assertTrue(str_contains($routes,'markEnrolled'));
     assertTrue(is_file($rootPath.'/views/finance/customers/create.php'));
 };
 
