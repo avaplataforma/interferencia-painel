@@ -574,6 +574,7 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php'),'2. Curso contratado'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php'),'5. Atendente'));
     assertTrue(is_file($rootPath.'/database/migrations/20260805_650000_add_attendant_to_student_enrollments.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php'),'Excluir matrícula'));
     assertTrue(str_contains($layout,'>Cadastro</a>'));
 };
 
