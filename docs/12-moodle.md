@@ -32,6 +32,16 @@ Não haverá vínculo automático por nome isolado.
 4. Matrícula e suspensão controladas pelo Painel.
 5. Consulta de progresso, notas e conclusão.
 
+## Fluxo de matrícula
+
+1. O aluno possui um único Cadastro no Painel.
+2. A Matrícula vincula esse aluno a um curso previamente sincronizado do Moodle.
+3. O curso e preço financeiro orienta a cobrança emitida pelo Asaas.
+4. Após a confirmação financeira, o acesso acadêmico poderá ser liberado no Moodle.
+5. Login e instruções serão enviados por canal seguro; senhas permanentes nunca serão exibidas ou armazenadas em texto simples.
+
+Cursos novos são trazidos pelo botão **Sincronizar cursos**, usando a integração oficial somente leitura enquanto a escrita no Moodle não estiver habilitada.
+
 ## Segurança
 
 O serviço externo do Moodle deve conter somente as funções necessárias. O token deve pertencer a um usuário técnico dedicado, ter restrição de IP quando possível e nunca ser enviado por mensagens ou registrado em logs.

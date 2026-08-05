@@ -552,6 +552,18 @@ $tests['organiza campos complementares do Moodle'] = static function () use ($ro
     assertTrue(str_contains($customer,'Dados acadêmicos'));
 };
 
+$tests['prepara fluxo unificado de matrículas'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260805_600000_create_student_enrollments.php'));
+    assertTrue(is_file($rootPath.'/modules/Moodle/EnrollmentRepository.php'));
+    assertTrue(is_file($rootPath.'/views/moodle/enrollments/index.php'));
+    assertTrue(is_file($rootPath.'/views/moodle/enrollments/form.php'));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    assertTrue(str_contains($routes,"'/students/enrollments'"));
+    assertTrue(str_contains($layout,'>Matrículas</a>'));
+    assertTrue(str_contains($layout,'>Cadastro</a>'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
