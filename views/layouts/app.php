@@ -203,6 +203,10 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .connection-awaiting_official_api { color: #8a5a00; background: #fff3cd; }
     .connection-connected { color: #176b3a; background: #eaf8ef; }
     .connection-paused { color: #6b7280; background: #edf1f4; }
+    .student-course-list { display: grid; gap: .35rem; min-width: 13rem; }
+    .student-course-list span { display: flex; align-items: flex-start; gap: .4rem; line-height: 1.35; }
+    .student-course-list i { margin-top: .18rem; color: var(--inter-accent); }
+    .student-integrations { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; min-width: 18rem; }
     .whatsapp-line-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(16rem,1fr)); gap: 1rem; margin-top: 1.25rem; }
     .whatsapp-line-card { display: flex; align-items: flex-start; flex-direction: column; min-height: 17rem; padding: 1.2rem; border: 1px solid #dfe5e9; border-radius: .9rem; background: #fff; box-shadow: 0 .3rem 1rem rgb(23 33 43 / 5%); }
     .whatsapp-line-icon { display: grid; place-items: center; width: 3rem; height: 3rem; margin: 1rem 0 .6rem; border-radius: 50%; color: #fff; background: #198754; font-size: 1.2rem; }
