@@ -485,6 +485,11 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     assertTrue(is_string($layout) && str_contains($layout,'>Tickets'));
     assertTrue(is_string($layout) && str_contains($layout,'ticketAlerts'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'Aluno/Contato vinculado'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260804_550000_create_ticket_departments_and_attachments.php'));
+    assertTrue(is_file($rootPath.'/modules/Tickets/DepartmentRepository.php'));
+    assertTrue(is_file($rootPath.'/views/tickets/departments/index.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-contact-results'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'ADM · Setores'));
 };
 
 $failures = 0;
