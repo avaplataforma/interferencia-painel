@@ -127,7 +127,6 @@ final readonly class FinanceRepository
     {
         $s=$this->database->prepare('SELECT id FROM finance_customers WHERE asaas_customer_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;
     }
-    public function paymentIdByAsaas(string$id):?int{$s=$this->database->prepare('SELECT id FROM finance_payments WHERE asaas_payment_id=:id LIMIT 1');$s->execute(['id'=>$id]);$value=$s->fetchColumn();return$value===false?null:(int)$value;}
 
     /** @return array<string,mixed>|null */
     public function customerByDocument(string$document):?array
