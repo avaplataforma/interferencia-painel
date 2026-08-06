@@ -1,5 +1,23 @@
 # Decisões do Projeto
 
+## 06/08/2026 — AVA Central e múltiplos Moodles
+
+**Status:** aceita
+
+- Uma organização poderá usar simultaneamente Moodle próprio e Moodle Central.
+- O Moodle Central inicial será `avacursos.com.br` e poderá atender várias
+  organizações com cursos compartilhados/revendidos.
+- Organizações sem Moodle próprio poderão operar somente no AVA Central.
+- A integração será modelada por plataformas de aprendizagem; não haverá um
+  único campo “Moodle da organização”.
+- Uma matrícula comercial poderá gerar entregas acadêmicas em um ou mais AVAs.
+- IDs de usuário, curso e matrícula remotos serão únicos somente dentro da
+  plataforma correspondente.
+- No AVA Central, a conta da pessoa será reutilizada e o cancelamento suspenderá
+  a matrícula específica, não o usuário global que possa ter outros acessos.
+- Cada organização visualizará apenas os acessos e resultados acadêmicos que
+  patrocinou ou que esteja autorizada a acompanhar.
+
 ## 06/08/2026 — Plataforma Mundo Inter e sites das franquias
 
 **Status:** aceita

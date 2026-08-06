@@ -54,6 +54,11 @@ Credenciais do Asaas, WhatsApp, Moodle, e-mail e armazenamento serão guardadas
 por organização, criptografadas com chave-mestra externa ao banco. Webhooks terão
 rota e segredo capazes de identificar a organização antes do processamento.
 
+O AVA Central é uma integração de plataforma compartilhada e sua credencial não
+será duplicada entre organizações. A autorização de uso, o catálogo licenciado e
+as entregas acadêmicas serão vinculados individualmente a cada organização. AVAs
+dedicados continuarão com credenciais próprias da organização.
+
 ## Evolução técnica
 
 1. Criar `organizations`, `organization_domains` e vínculos de usuários.

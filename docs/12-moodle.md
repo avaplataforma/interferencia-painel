@@ -4,6 +4,10 @@
 
 O PAINEL INTER será o cadastro central de pessoas, alunos, contratos, atendimento e financeiro. O Moodle permanecerá responsável por cursos, acesso acadêmico, matrículas, progresso, notas e conclusão.
 
+Uma organização poderá usar vários Moodles. O modelo definitivo diferencia o
+AVA Central compartilhado (`avacursos.com.br`) dos AVAs dedicados de cada
+organização e está documentado em `18-multiplos-avas.md`.
+
 ## Fase 1 — conferência somente leitura
 
 - Token armazenado criptografado.
@@ -39,6 +43,10 @@ Não haverá vínculo automático por nome isolado.
 3. O curso e preço financeiro orienta a cobrança emitida pelo Asaas.
 4. Após a confirmação financeira, o acesso acadêmico poderá ser liberado no Moodle.
 5. Login e instruções serão enviados por canal seguro; senhas permanentes nunca serão exibidas ou armazenadas em texto simples.
+
+No modelo com múltiplos AVAs, uma matrícula comercial poderá gerar mais de uma
+entrega acadêmica. Cada entrega terá curso, conta, progresso e situação próprios
+na plataforma correspondente.
 
 Cursos novos são trazidos pelo botão **Sincronizar cursos**, usando a integração oficial somente leitura enquanto a escrita no Moodle não estiver habilitada.
 
@@ -81,7 +89,9 @@ O Moodle permanece como origem oficial de alunos e matrículas enquanto a integr
 
 - Exibe progresso, último acesso e situação do AVA por matrícula e unidade permitida.
 - Permite abrir Ticket e Nova matrícula com o aluno já selecionado.
-- Perfis de gestão podem suspender ou reativar o usuário no AVA; a suspensão vale para todos os cursos do aluno.
+- Perfis de gestão podem suspender ou reativar o acesso da matrícula ao curso.
+  No AVA Central, a conta global da pessoa será preservada para não interromper
+  outros cursos ou acessos legítimos originados por outra organização.
 - A atualização do progresso usa `core_completion_get_course_completion_status` e depende dessa função estar habilitada no serviço web do Moodle.
 - A situação pedagógica é classificada automaticamente em regular, aguardando liberação, bloqueado, nunca acessou, inativo há 7/15/30 dias ou progresso parado há 15 dias.
 - Os filtros de risco usam somente alunos e unidades permitidos ao usuário conectado.

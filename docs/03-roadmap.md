@@ -94,3 +94,14 @@ risco, migrações revisadas, critérios de aceite atendidos e plano de rollback
 - [ ] Pré-visualização, rascunho, publicação e auditoria.
 - [ ] Checkout Asaas integrado ao fluxo de pedido, matrícula e AVA.
 - [ ] Carrinho, recuperação de abandono e split em fase posterior.
+
+## Fase AVA — múltiplas plataformas
+
+- [x] Definir AVA Central compartilhado e AVAs dedicados por organização.
+- [x] Definir matrícula comercial com uma ou mais entregas acadêmicas.
+- [ ] Criar cadastro de plataformas e autorização por organização.
+- [ ] Converter `avacursos.com.br` na primeira plataforma central.
+- [ ] Tornar IDs, sincronizações e saúde dependentes da plataforma.
+- [ ] Mapear ofertas para cursos remotos em um ou mais AVAs.
+- [ ] Alterar suspensão global para suspensão segura por matrícula/curso.
+- [ ] Testar uma organização fictícia usando AVA Central e AVA dedicado.

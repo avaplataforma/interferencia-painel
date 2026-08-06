@@ -13,8 +13,8 @@ de código e separando com rigor os dados e as configurações de cada organiza�
   WhatsApp, tickets, documentos e integrações.
 - **Site da franquia:** presença institucional, unidades, páginas comerciais,
   catálogo de cursos, campanhas, captação de leads e futura loja virtual.
-- **AVA:** Moodle independente de cada organização quando contratado, hospedado
-  em infraestrutura e domínio próprios e integrado ao PAINEL INTER.
+- **AVA:** uma organização poderá usar seu Moodle dedicado, o Moodle Central
+  `avacursos.com.br`, ou ambos, sempre integrados ao PAINEL INTER.
 - **Administração Mundo Inter:** gestão interna de organizações, domínios,
   planos, limites, saúde das integrações e auditoria da plataforma.
 
