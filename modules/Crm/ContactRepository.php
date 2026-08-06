@@ -10,7 +10,7 @@ use Throwable;
 
 final readonly class ContactRepository
 {
-    public function __construct(private PDO $database) {}
+    public function __construct(private PDO $database, private int $organizationId) {}
 
     /** @return list<array<string, mixed>> */
     public function all(int $unitId, string $search = '', int $tagId = 0): array
@@ -77,20 +77,20 @@ final readonly class ContactRepository
     public function findByDocument(string$document,?int$exceptId=null):?array
     {
         $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;
-        $sql="SELECT c.*,u.name unit_name FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id WHERE REPLACE(REPLACE(REPLACE(c.document,'.',''),'-',''),'/','')=:document";$params=['document'=>$digits];
+        $sql="SELECT c.*,u.name unit_name FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id WHERE c.organization_id=:organization AND REPLACE(REPLACE(REPLACE(c.document,'.',''),'-',''),'/','')=:document";$params=['organization'=>$this->organizationId,'document'=>$digits];
         if($exceptId!==null){$sql.=' AND c.id<>:except';$params['except']=$exceptId;}$sql.=' LIMIT 1';$s=$this->database->prepare($sql);$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function markEnrolled(int$contactId):void
     {
-        $s=$this->database->prepare("UPDATE crm_contacts c INNER JOIN crm_statuses s ON s.code='enrolled' SET c.status_id=s.id WHERE c.id=:id");$s->execute(['id'=>$contactId]);
+        $s=$this->database->prepare("UPDATE crm_contacts c INNER JOIN crm_statuses s ON s.code='enrolled' AND s.organization_id=c.organization_id SET c.status_id=s.id WHERE c.id=:id AND c.organization_id=:organization");$s->execute(['id'=>$contactId,'organization'=>$this->organizationId]);
     }
 
     /** @return array{type:string,id:int,name:string}|null */
     public function documentConflict(string$document,?int$exceptContactId=null):?array
     {
         $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;
-        $leadSql="SELECT 'lead' type,id,name FROM crm_contacts WHERE REPLACE(REPLACE(REPLACE(document,'.',''),'-',''),'/','')=:document";$params=['document'=>$digits];if($exceptContactId!==null){$leadSql.=' AND id<>:except';$params['except']=$exceptContactId;}$leadSql.=' LIMIT 1';$lead=$this->database->prepare($leadSql);$lead->execute($params);$row=$lead->fetch();if(is_array($row))return['type'=>'lead','id'=>(int)$row['id'],'name'=>(string)$row['name']];
+        $leadSql="SELECT 'lead' type,id,name FROM crm_contacts WHERE organization_id=:organization AND REPLACE(REPLACE(REPLACE(document,'.',''),'-',''),'/','')=:document";$params=['organization'=>$this->organizationId,'document'=>$digits];if($exceptContactId!==null){$leadSql.=' AND id<>:except';$params['except']=$exceptContactId;}$leadSql.=' LIMIT 1';$lead=$this->database->prepare($leadSql);$lead->execute($params);$row=$lead->fetch();if(is_array($row))return['type'=>'lead','id'=>(int)$row['id'],'name'=>(string)$row['name']];
         $student=$this->database->prepare("SELECT id,name FROM finance_customers WHERE REPLACE(REPLACE(REPLACE(cpf_cnpj,'.',''),'-',''),'/','')=:document AND is_deleted=0 LIMIT 1");$student->execute(['document'=>$digits]);$row=$student->fetch();return is_array($row)?['type'=>'student','id'=>(int)$row['id'],'name'=>(string)$row['name']]:null;
     }
 
@@ -120,11 +120,11 @@ final readonly class ContactRepository
         $statement->execute(['contact' => $contactId, 'actor' => $actorId, 'type' => $type, 'description' => $description]);
     }
 
-    public function statusName(int $id): string { $s=$this->database->prepare('SELECT name FROM crm_statuses WHERE id=:id');$s->execute(['id'=>$id]);return(string)($s->fetchColumn()?:'Não definido'); }
+    public function statusName(int $id): string { $s=$this->database->prepare('SELECT name FROM crm_statuses WHERE id=:id AND organization_id=:organization');$s->execute(['id'=>$id,'organization'=>$this->organizationId]);return(string)($s->fetchColumn()?:'Não definido'); }
     public function userName(int $id): string { $s=$this->database->prepare('SELECT name FROM users WHERE id=:id');$s->execute(['id'=>$id]);return(string)($s->fetchColumn()?:'Não definido'); }
 
     /** @return list<array<string, mixed>> */
-    public function statuses(): array { return $this->database->query('SELECT id, code, name, color FROM crm_statuses WHERE is_active=1 ORDER BY sort_order, name')->fetchAll(); }
+    public function statuses(): array { $s=$this->database->prepare('SELECT id,code,name,color FROM crm_statuses WHERE is_active=1 AND organization_id=? ORDER BY sort_order,name');$s->execute([$this->organizationId]);return$s->fetchAll(); }
 
     /** @return list<array<string, mixed>> */
     public function users(int $unitId): array
@@ -133,15 +133,15 @@ final readonly class ContactRepository
         $statement->execute(['unit' => $unitId]); return $statement->fetchAll();
     }
 
-    public function statusExists(int $id): bool { $s=$this->database->prepare('SELECT COUNT(*) FROM crm_statuses WHERE id=:id AND is_active=1'); $s->execute(['id'=>$id]); return (int)$s->fetchColumn()>0; }
+    public function statusExists(int $id): bool { $s=$this->database->prepare('SELECT COUNT(*) FROM crm_statuses WHERE id=:id AND organization_id=:organization AND is_active=1'); $s->execute(['id'=>$id,'organization'=>$this->organizationId]); return (int)$s->fetchColumn()>0; }
     public function setExternalStatus(int $contactId,int $statusId):void{$s=$this->database->prepare('UPDATE crm_contacts SET status_id=:status WHERE id=:contact');$s->execute(['status'=>$statusId,'contact'=>$contactId]);}
     public function userBelongsToUnit(int $userId, int $unitId): bool { $s=$this->database->prepare('SELECT COUNT(*) FROM user_unit_scopes WHERE user_id=:user AND unit_id=:unit'); $s->execute(['user'=>$userId,'unit'=>$unitId]); return (int)$s->fetchColumn()>0; }
 
     /** @return array<string,mixed>|null */
-    public function activeUnitByCode(string $code):?array{$s=$this->database->prepare('SELECT id,code,name FROM units WHERE code=:code AND is_active=1 LIMIT 1');$s->execute(['code'=>$code]);$row=$s->fetch();return is_array($row)?$row:null;}
-    public function externalDuplicate(string $submissionId,int $unitId,?string $phone,?string $email):?int{$sql='SELECT id FROM crm_contacts WHERE external_submission_id=:submission OR (unit_id=:unit AND ((:phone_check IS NOT NULL AND phone=:phone_value) OR (:email_check IS NOT NULL AND email=:email_value))) LIMIT 1';$s=$this->database->prepare($sql);$s->execute(['submission'=>$submissionId,'unit'=>$unitId,'phone_check'=>$phone,'phone_value'=>$phone,'email_check'=>$email,'email_value'=>$email]);$id=$s->fetchColumn();return $id===false?null:(int)$id;}
+    public function activeUnitByCode(string $code):?array{$s=$this->database->prepare('SELECT id,code,name FROM units WHERE code=:code AND organization_id=:organization AND is_active=1 LIMIT 1');$s->execute(['code'=>$code,'organization'=>$this->organizationId]);$row=$s->fetch();return is_array($row)?$row:null;}
+    public function externalDuplicate(string $submissionId,int $unitId,?string $phone,?string $email):?int{$sql='SELECT id FROM crm_contacts WHERE organization_id=:organization AND (external_submission_id=:submission OR (unit_id=:unit AND ((:phone_check IS NOT NULL AND phone=:phone_value) OR (:email_check IS NOT NULL AND email=:email_value)))) LIMIT 1';$s=$this->database->prepare($sql);$s->execute(['organization'=>$this->organizationId,'submission'=>$submissionId,'unit'=>$unitId,'phone_check'=>$phone,'phone_value'=>$phone,'email_check'=>$email,'email_value'=>$email]);$id=$s->fetchColumn();return $id===false?null:(int)$id;}
     /** @param array<string,mixed> $data */
-    public function createExternal(array $data):int{$sql="INSERT INTO crm_contacts (unit_id,status_id,name,phone,email,course,interest_score,origin_city,registration_source,external_submission_id,consent_at,privacy_notice_version,registered_at,notes,is_active) SELECT :unit_id,id,:name,:phone,:email,:course,:interest_score,:origin_city,'external_form',:external_submission_id,:consent_at,:privacy_notice_version,:registered_at,:notes,1 FROM crm_statuses WHERE code='new'";$s=$this->database->prepare($sql);$s->execute($data);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,null,'created','Contato recebido por site externo.');return$id;}
+    public function createExternal(array $data):int{$sql="INSERT INTO crm_contacts (organization_id,unit_id,status_id,name,phone,email,course,interest_score,origin_city,registration_source,external_submission_id,consent_at,privacy_notice_version,registered_at,notes,is_active) SELECT :organization,:unit_id,id,:name,:phone,:email,:course,:interest_score,:origin_city,'external_form',:external_submission_id,:consent_at,:privacy_notice_version,:registered_at,:notes,1 FROM crm_statuses WHERE code='new' AND organization_id=:organization_status";$s=$this->database->prepare($sql);$data+=['organization'=>$this->organizationId,'organization_status'=>$this->organizationId];$s->execute($data);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,null,'created','Contato recebido por site externo.');return$id;}
     public function allowExternalRequest(string $fingerprint,int $limit=30):bool{$window=gmdate('Y-m-d H:i:00');$s=$this->database->prepare('INSERT INTO external_form_rate_limits (fingerprint,window_started_at,request_count) VALUES (:fingerprint,:window,1) ON DUPLICATE KEY UPDATE request_count=request_count+1');$s->execute(['fingerprint'=>$fingerprint,'window'=>$window]);$q=$this->database->prepare('SELECT request_count FROM external_form_rate_limits WHERE fingerprint=:fingerprint AND window_started_at=:window');$q->execute(['fingerprint'=>$fingerprint,'window'=>$window]);return(int)$q->fetchColumn()<=$limit;}
 
     /** @param array<string, mixed> $data */
@@ -149,11 +149,11 @@ final readonly class ContactRepository
     {
         try {
             if ($id === null) {
-                $sql = 'INSERT INTO crm_contacts (unit_id,status_id,responsible_user_id,name,phone,email,document,course,interest_score,origin_city,registration_source,registered_at,notes,is_active,created_by) VALUES (:unit_id,:status_id,:responsible_user_id,:name,:phone,:email,:document,:course,:interest_score,:origin_city,:registration_source,:registered_at,:notes,:is_active,:created_by)';
-                $data += ['unit_id' => $unitId, 'created_by' => $creatorId];
+                $sql = 'INSERT INTO crm_contacts (organization_id,unit_id,status_id,responsible_user_id,name,phone,email,document,course,interest_score,origin_city,registration_source,registered_at,notes,is_active,created_by) VALUES (:organization_id,:unit_id,:status_id,:responsible_user_id,:name,:phone,:email,:document,:course,:interest_score,:origin_city,:registration_source,:registered_at,:notes,:is_active,:created_by)';
+                $data += ['organization_id'=>$this->organizationId,'unit_id' => $unitId, 'created_by' => $creatorId];
             } else {
-                $sql = 'UPDATE crm_contacts SET status_id=:status_id,responsible_user_id=:responsible_user_id,name=:name,phone=:phone,email=:email,document=:document,course=:course,interest_score=:interest_score,origin_city=:origin_city,registration_source=:registration_source,registered_at=:registered_at,notes=:notes,is_active=:is_active WHERE id=:id AND unit_id=:unit_id';
-                $data += ['id' => $id, 'unit_id' => $unitId];
+                $sql = 'UPDATE crm_contacts SET status_id=:status_id,responsible_user_id=:responsible_user_id,name=:name,phone=:phone,email=:email,document=:document,course=:course,interest_score=:interest_score,origin_city=:origin_city,registration_source=:registration_source,registered_at=:registered_at,notes=:notes,is_active=:is_active WHERE id=:id AND unit_id=:unit_id AND organization_id=:organization_id';
+                $data += ['id' => $id, 'unit_id' => $unitId,'organization_id'=>$this->organizationId];
             }
             $statement = $this->database->prepare($sql); $statement->execute($data);
             return $id ?? (int) $this->database->lastInsertId();

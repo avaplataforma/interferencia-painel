@@ -44,6 +44,9 @@ $tests['carrega a fundação multiempresa com resolução segura por domínio'] 
     assertTrue(str_contains($bootstrap, 'new UnitRepository($database, $organizationId)'));
     $units=(string)file_get_contents($rootPath.'/modules/Organization/UnitRepository.php');
     assertTrue(str_contains($units, 'organization_id'));
+    assertTrue(in_array('20260806_750000_scope_crm_by_organization', array_map(static fn($migration): string => $migration->id(), $repository->all()), true));
+    $crm=(string)file_get_contents($rootPath.'/modules/Crm/ContactRepository.php');
+    assertTrue(str_contains($crm, 'private int $organizationId'));
 };
 
 $tests['mantém integração financeira segura por padrão'] = static function (): void {

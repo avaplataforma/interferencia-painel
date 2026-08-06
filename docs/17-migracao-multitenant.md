@@ -21,6 +21,7 @@ financeiro, WhatsApp, AVA ou atendimento, e só depois permitir novas franquias.
 - [ ] Tornar o contexto obrigatório nos repositórios antes de cadastrar a segunda organização.
 - [x] Restringir autenticação, usuários e unidades à organização resolvida pelo domínio.
 - [ ] Propagar o contexto pelos repositórios de CRM, alunos, financeiro, WhatsApp e tickets.
+- [x] Isolar Leads, etiquetas, status e formulários externos por organização.
 
 ### 3. Isolamento dos módulos
 
