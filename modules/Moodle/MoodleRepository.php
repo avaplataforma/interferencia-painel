@@ -38,7 +38,7 @@ final readonly class MoodleRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function coursesList():array{return$this->database->query('SELECT * FROM moodle_courses ORDER BY fullname LIMIT 100')->fetchAll();}
+    public function coursesList():array{return$this->database->query('SELECT * FROM moodle_courses ORDER BY fullname LIMIT 500')->fetchAll();}
 
     /** @return list<array<string,mixed>> */
     public function profileFieldsCatalog():array{return$this->database->query('SELECT f.*,COUNT(v.id) value_count FROM moodle_profile_fields f LEFT JOIN moodle_user_profile_values v ON v.field_id=f.id GROUP BY f.id ORDER BY f.source_name')->fetchAll();}
