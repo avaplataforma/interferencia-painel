@@ -604,6 +604,7 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
 
 $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260806_720000_add_moodle_learning_progress.php'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_730000_track_moodle_progress_changes.php'));
     assertTrue(is_file($rootPath.'/modules/Moodle/PedagogicalSynchronizer.php'));
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
@@ -614,6 +615,8 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/ava-status'"));
     assertTrue(str_contains($view,'/tickets/create?student='));
     assertTrue(str_contains($view,'/students/enrollments/create?student='));
+    assertTrue(str_contains($view,'Sem acesso há 15 dias'));
+    assertTrue(str_contains($view,'riskLabels'));
 };
 
 $failures = 0;
