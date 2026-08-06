@@ -4,6 +4,8 @@
 
 Quando o webhook do Asaas confirmar uma cobrança vinculada a uma matrícula, o Painel tenta liberar automaticamente o aluno no AVA. O processo é idempotente: reutiliza usuários existentes por CPF ou e-mail, evita matrículas duplicadas e registra falhas como pendências sem interromper o recebimento do webhook financeiro.
 
+A automação vale somente para matrículas criadas após a data de ativação registrada em `AVA_AUTO_RELEASE_FROM`. Matrículas anteriores permanecem no fluxo manual e não são processadas retroativamente.
+
 O sininho informa acessos liberados que ainda aguardam o envio das credenciais e liberações automáticas que exigem revisão.
 
 ## Permissões sobre cobranças

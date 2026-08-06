@@ -14,6 +14,7 @@ final readonly class AvaEnrollmentReleaser
         private IntegrationRepository $integrations,
         private MoodleRepository $moodle,
         private EnrollmentRepository $enrollments,
+        private string $automaticFrom,
     ) {}
 
     /** @return array{status:string,ava_user_id?:int,course_id?:int} */
@@ -23,6 +24,11 @@ final readonly class AvaEnrollmentReleaser
             $context = $this->enrollments->releaseContextForAutomation($enrollmentId);
             if ($context === null) {
                 throw new RuntimeException('Matrícula não encontrada.');
+            }
+            $automaticFrom = strtotime($this->automaticFrom);
+            $enrollmentCreatedAt = strtotime((string) $context['created_at']);
+            if ($automaticFrom === false || $enrollmentCreatedAt === false || $enrollmentCreatedAt < $automaticFrom) {
+                return ['status' => 'manual_flow'];
             }
             if (!in_array($context['status'], ['payment_confirmed', 'payment_waived'], true)) {
                 throw new RuntimeException('O acesso exige pagamento confirmado ou dispensa administrativa registrada.');
