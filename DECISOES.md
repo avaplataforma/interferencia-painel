@@ -1,5 +1,26 @@
 # Decisões do Projeto
 
+## 06/08/2026 — Assinatura eletrônica própria
+
+**Status:** aceita com validação jurídica antes da produção
+
+- O Mundo Inter desenvolverá assinatura eletrônica própria para contratos de
+  matrícula, termos e documentos privados aceitos pelas partes.
+- O fluxo não será divulgado como assinatura qualificada ICP-Brasil e manterá
+  integração externa disponível quando esse nível for exigido.
+- A assinatura será baseada em identidade, canal verificado, código de uso
+  único, intenção expressa, documento imutável, hash e pacote de evidências.
+- Imagem ou desenho da rubrica será apenas visual e não constituirá a prova
+  principal.
+- Contratos congelarão curso, preço, campanha, unidade, condições e versões dos
+  termos; qualquer mudança material exigirá novo documento e novas assinaturas.
+- Alunos menores terão fluxo próprio para responsável legal, e o responsável
+  financeiro poderá ser uma pessoa distinta.
+- PDF final, anexos e evidências serão privados, versionados, auditáveis e
+  verificáveis por código ou QR Code com dados pessoais mascarados.
+- Modelos contratuais, retenção e requisitos de cada tipo documental serão
+  aprovados por assessoria jurídica antes da ativação.
+
 ## 06/08/2026 — Múltiplos gateways de pagamento
 
 **Status:** aceita

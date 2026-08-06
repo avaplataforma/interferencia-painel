@@ -18,6 +18,8 @@ de código e separando com rigor os dados e as configurações de cada organiza�
 - **Administração Mundo Inter:** gestão interna de organizações, domínios,
   planos, limites, fornecedores, licenças de catálogos, saúde das integrações e
   auditoria da plataforma.
+- **Assinatura eletrônica:** geração e assinatura de contratos e termos com
+  documentos imutáveis, autenticação e pacote de evidências.
 
 ## Hierarquia organizacional
 

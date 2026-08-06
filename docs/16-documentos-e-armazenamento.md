@@ -49,3 +49,10 @@ A decisão do provedor será feita por custo, região, compatibilidade S3,
 versionamento, lifecycle, criptografia e recuperação. Opções possíveis incluem
 OVH Object Storage, DigitalOcean Spaces e Google Cloud Storage. O código dependerá
 de um contrato interno, e não de uma API específica espalhada pelos módulos.
+
+## Documentos assinados
+
+Contratos e termos assinados utilizarão o mesmo armazenamento privado, mas serão
+imutáveis e versionados. PDF final, anexos e pacote de evidências terão hashes e
+retenção próprios. A arquitetura do serviço está documentada em
+`21-assinatura-eletronica.md`.

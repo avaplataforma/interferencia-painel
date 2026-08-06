@@ -121,3 +121,14 @@ risco, migrações revisadas, critérios de aceite atendidos e plano de rollback
 - [ ] Mapear ofertas para cursos remotos em um ou mais AVAs.
 - [ ] Alterar suspensão global para suspensão segura por matrícula/curso.
 - [ ] Testar uma organização fictícia usando AVA Central e AVA dedicado.
+
+## Fase Contratos — assinatura eletrônica
+
+- [x] Definir níveis, limites e pacote de evidências do serviço próprio.
+- [ ] Validar juridicamente modelos, papéis, retenção e critérios de uso.
+- [ ] Criar modelos e versões imutáveis de contratos e termos.
+- [ ] Criar envelopes, múltiplos signatários e autenticação por código único.
+- [ ] Gerar PDF final, relatório de evidências, QR Code e verificador.
+- [ ] Cobrir aluno menor, responsável legal e responsável financeiro.
+- [ ] Testar adulteração, expiração, reuso e isolamento entre organizações.
+- [ ] Executar piloto interno antes de substituir o processo atual.
