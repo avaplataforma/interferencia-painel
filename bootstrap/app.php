@@ -51,6 +51,7 @@ use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleSynchronizer;
 use Interferencia\Modules\Moodle\EnrollmentRepository;
 use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
+use Interferencia\Modules\Moodle\AvaAccessNotifier;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -133,6 +134,7 @@ $moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$mood
 $moodleRepository=new MoodleRepository($database);
 $studentEnrollments=new EnrollmentRepository($database);
 $avaEnrollmentReleaser=new AvaEnrollmentReleaser($moodleClient,$moodleIntegrations,$moodleRepository,$studentEnrollments,(string)$config->get('app.ava_auto_release_from'));
+$avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations);
 $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $asaasSettings=$financeIntegrations->asaas();
 $asaasEnvironment=$asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment');
@@ -188,6 +190,6 @@ $view->share([
     'avaAlerts' => $avaAlerts,
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$studentEnrollments,$avaEnrollmentReleaser);
+$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router);

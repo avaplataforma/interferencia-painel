@@ -8,6 +8,8 @@ A automação vale somente para matrículas criadas após a data de ativação r
 
 O sininho informa acessos liberados que ainda aguardam o envio das credenciais e liberações automáticas que exigem revisão.
 
+Após uma nova liberação, o Painel tenta enviar as instruções de acesso por e-mail e registra o resultado no histórico da matrícula. Falhas de comunicação não desfazem a matrícula no AVA e permanecem visíveis no sininho para reenvio manual.
+
 ## Permissões sobre cobranças
 
 - Administrador Global e SEDE podem emitir, alterar e cancelar cobranças pendentes ou vencidas.

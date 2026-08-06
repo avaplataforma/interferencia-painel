@@ -102,7 +102,7 @@ final readonly class EnrollmentRepository
     public function avaNotificationSummary(array$unitIds):array
     {
         if($unitIds===[])return['ready'=>0,'failed'=>0];$marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT SUM(e.moodle_enrolment_status='released' AND NOT EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id)) ready,SUM(e.status='payment_confirmed' AND e.moodle_enrolment_status='not_released' AND e.ava_last_error IS NOT NULL) failed FROM student_enrollments e WHERE e.unit_id IN ($marks)";
+        $sql="SELECT SUM(e.moodle_enrolment_status='released' AND NOT EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status='opened')) ready,SUM((e.status='payment_confirmed' AND e.moodle_enrolment_status='not_released' AND e.ava_last_error IS NOT NULL) OR (e.moodle_enrolment_status='released' AND EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status='failed') AND NOT EXISTS(SELECT 1 FROM ava_access_communications ok WHERE ok.enrollment_id=e.id AND ok.status='opened'))) failed FROM student_enrollments e WHERE e.unit_id IN ($marks)";
         $s=$this->database->prepare($sql);$s->execute($unitIds);$row=$s->fetch()?:[];return['ready'=>(int)($row['ready']??0),'failed'=>(int)($row['failed']??0)];
     }
 
@@ -111,6 +111,12 @@ final readonly class EnrollmentRepository
         if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
         $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,mu.username FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=? AND e.unit_id IN ($marks) AND e.moodle_enrolment_status='released' LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
+    public function accessCommunicationContextForAutomation(int$id):?array
+    {
+        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,mu.username FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=:id AND e.moodle_enrolment_status='released' LIMIT 1";
+        $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function accessCommunications(int$id):array
@@ -122,6 +128,12 @@ final readonly class EnrollmentRepository
     {
         if(!in_array($channel,['whatsapp','email'],true))throw new RuntimeException('Canal de comunicação inválido.');$destination=trim($destination);if($destination==='')throw new RuntimeException('Destinatário não informado.');
         $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO ava_access_communications(enrollment_id,channel,destination,created_by) VALUES(:enrollment,:channel,:destination,:user)");$s->execute(['enrollment'=>$id,'channel'=>$channel,'destination'=>$destination,'user'=>$userId]);$label=$channel==='whatsapp'?'WhatsApp':'e-mail';$communicationId=(int)$this->database->lastInsertId();$this->recordEvent($id,'access-opened:'.$communicationId,'access_sent','Instruções de acesso preparadas para envio por '.$label.'.',$userId);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
+
+    public function recordAutomaticAccessCommunication(int$id,string$channel,string$destination,string$status,?string$error):void
+    {
+        if(!in_array($channel,['whatsapp','email'],true)||!in_array($status,['opened','failed'],true))throw new RuntimeException('Comunicação de acesso inválida.');$destination=trim($destination);$error=$error===null?null:mb_substr(trim($error),0,500);
+        $this->database->beginTransaction();try{$s=$this->database->prepare('INSERT INTO ava_access_communications(enrollment_id,channel,destination,status,error_message,created_by) VALUES(:enrollment,:channel,:destination,:status,:error,NULL)');$s->execute(['enrollment'=>$id,'channel'=>$channel,'destination'=>$destination,'status'=>$status,'error'=>$error]);$communicationId=(int)$this->database->lastInsertId();$this->recordEvent($id,'access-auto:'.$communicationId,$status==='opened'?'access_sent':'access_send_failed',$status==='opened'?'Instruções de acesso enviadas automaticamente por e-mail.':'Falha no envio automático das instruções: '.($error?:'erro não informado').'.');$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
     private function recordEvent(int $enrollmentId,string $key,string $type,string $description,?int $userId=null): void

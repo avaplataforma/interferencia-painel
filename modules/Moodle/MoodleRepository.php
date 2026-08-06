@@ -37,6 +37,13 @@ final readonly class MoodleRepository
         return['courses'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_courses')->fetchColumn(),'users'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_users')->fetchColumn(),'enrolments'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_enrolments WHERE is_active=1')->fetchColumn(),'linked'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_users WHERE finance_customer_id IS NOT NULL')->fetchColumn(),'review'=>(int)$this->database->query('SELECT COUNT(*) FROM moodle_users WHERE finance_customer_id IS NULL')->fetchColumn()];
     }
 
+    /** @return array{summary:array{students:int,enrolments:int,released:int,pending:int,inactive:int},students:list<array<string,mixed>>} */
+    public function pedagogicalDashboard(array$unitIds,string$search=''):array
+    {
+        if($unitIds===[])return['summary'=>['students'=>0,'enrolments'=>0,'released'=>0,'pending'=>0,'inactive'=>0],'students'=>[]];$marks=implode(',',array_fill(0,count($unitIds),'?'));$params=$unitIds;$where="f.unit_id IN ($marks) AND f.is_deleted=0";if($search!==''){$where.=' AND (f.name LIKE ? OR f.cpf_cnpj LIKE ? OR c.fullname LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term);}
+        $sql="SELECT f.id customer_id,f.name,f.cpf_cnpj,u.name unit_name,c.fullname course_name,e.status finance_status,e.moodle_enrolment_status,me.is_active,me.time_start,me.time_end,mu.suspended,CAST(JSON_UNQUOTE(JSON_EXTRACT(mu.raw_json,'$.lastaccess')) AS UNSIGNED) last_access FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN units u ON u.id=e.unit_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id LEFT JOIN moodle_enrolments me ON me.moodle_user_id=e.ava_user_id AND me.moodle_course_id=c.moodle_course_id WHERE $where ORDER BY f.name,c.fullname LIMIT 300";$s=$this->database->prepare($sql);$s->execute($params);$students=$s->fetchAll();$unique=[];$released=0;$pending=0;$inactive=0;foreach($students as$row){$unique[(int)$row['customer_id']]=true;if($row['moodle_enrolment_status']==='released')$released++;else$pending++;if((int)($row['suspended']??0)===1||(isset($row['is_active'])&&(int)$row['is_active']===0))$inactive++;}return['summary'=>['students'=>count($unique),'enrolments'=>count($students),'released'=>$released,'pending'=>$pending,'inactive'=>$inactive],'students'=>$students];
+    }
+
     /** @return list<array<string,mixed>> */
     public function coursesList():array{return$this->database->query('SELECT * FROM moodle_courses ORDER BY fullname LIMIT 500')->fetchAll();}
 
