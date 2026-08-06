@@ -68,6 +68,19 @@ final readonly class Config
         return $value;
     }
 
+    public function path(string $key): string
+    {
+        $value = $this->get($key);
+
+        if (!is_string($value)) {
+            throw new RuntimeException(sprintf('Configuração de caminho inválida: %s', $key));
+        }
+
+        $normalized = '/' . trim($value, '/');
+
+        return $normalized === '/' ? '' : $normalized;
+    }
+
     public function bool(string $key): bool
     {
         $value = $this->get($key);
@@ -79,4 +92,3 @@ final readonly class Config
         return $value;
     }
 }
-

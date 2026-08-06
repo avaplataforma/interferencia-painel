@@ -91,7 +91,7 @@ if (!is_int($sessionLifetime)) {
 
 $session = new Session(
     $config->string('session.name'),
-    $config->string('app.base_path'),
+    $config->path('app.base_path'),
     $sessionLifetime,
     $config->bool('session.secure'),
     $config->bool('session.http_only'),
@@ -146,7 +146,7 @@ $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas
 $asaasSynchronizer = new AsaasSynchronizer($asaas,$finance);
 $asaasWebhook = new AsaasWebhookVerifier($asaasWebhookToken);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
-$router = new Router($config->string('app.base_path'), $csrf);
+$router = new Router($config->path('app.base_path'), $csrf);
 $view = new View($rootPath . '/views');
 $unitContext = new UnitContext($auth, $units, $session);
 $currentUser = $auth->user();
@@ -155,7 +155,7 @@ if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext
 $whatsappAlertLineIds=$currentUser!==null&&$auth->can('whatsapp.inbox.view')?array_map(static fn(array $line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($currentUser->id)):[];
 $avaAlerts=$currentUser!==null&&$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary(array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available())):['ready'=>0,'failed'=>0];
 $view->share([
-    'basePath' => $config->string('app.base_path'),
+    'basePath' => $config->path('app.base_path'),
     'csrfField' => $csrf->field(),
     'currentUser' => $currentUser,
     'navigation' => [

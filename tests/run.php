@@ -141,10 +141,12 @@ $tests['carrega ambiente sem sobrescrever valores existentes'] = static function
 };
 
 $tests['consulta configuração com notação por pontos'] = static function (): void {
-    $config = new Config(['app' => ['name' => 'Painel', 'debug' => false]]);
+    $config = new Config(['app' => ['name' => 'Painel', 'debug' => false, 'root_path' => '/', 'nested_path' => '/painel/']]);
 
     assertSame('Painel', $config->string('app.name'));
     assertSame(false, $config->bool('app.debug'));
+    assertSame('', $config->path('app.root_path'));
+    assertSame('/painel', $config->path('app.nested_path'));
     assertSame('padrão', $config->get('app.ausente', 'padrão'));
 };
 

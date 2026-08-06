@@ -99,7 +99,7 @@ return static function (
     AvaEnrollmentReleaser $avaEnrollmentReleaser,
     AvaAccessNotifier $avaAccessNotifier,
 ): void {
-    $basePath = $config->string('app.base_path');
+    $basePath = $config->path('app.base_path');
     $browserTitle = $config->string('app.browser_title');
     $requireAuth = new RequireAuth($auth, $basePath);
     $requireGuest = new RequireGuest($auth, $basePath);
@@ -109,7 +109,7 @@ return static function (
             'title' => $browserTitle,
             'name' => $config->string('app.name'),
             'environment' => $config->string('app.environment'),
-            'basePath' => $config->string('app.base_path'),
+            'basePath' => $config->path('app.base_path'),
         ]);
     });
     $router->get('/checkout/return/{status:success|cancel|expired}',static function(Request$request,array$params)use($view,$browserTitle):Response{$messages=['success'=>['Pagamento enviado','Recebemos a conclusão do checkout. A confirmação financeira será atualizada pelo Asaas.'],'cancel'=>['Checkout cancelado','Nenhuma confirmação de pagamento foi registrada. Solicite um novo link se desejar continuar.'],'expired'=>['Link expirado','Este checkout perdeu a validade. Solicite um novo link de pagamento.']];$status=(string)$params['status'];return$view->renderStandalone('finance/checkout-return',['title'=>$messages[$status][0].' — '.$browserTitle,'heading'=>$messages[$status][0],'message'=>$messages[$status][1],'success'=>$status==='success']);});
