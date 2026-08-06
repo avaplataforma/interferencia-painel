@@ -531,11 +531,14 @@ $tests['carrega integração Moodle com liberação assistida'] = static functio
     assertTrue(str_contains($client,'core_webservice_get_site_info'));
     assertTrue(str_contains($client,'core_enrol_get_enrolled_users'));
     assertTrue(str_contains($client,'core_user_create_users'));
+    assertTrue(str_contains($client,'core_user_update_users'));
     assertTrue(str_contains($client,'enrol_manual_enrol_users'));
     assertTrue(str_contains($routes,'release-ava'));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_670000_add_ava_release_to_enrollments.php'));
     assertTrue(str_contains($routes,"'/admin/ava'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_680000_add_payment_waiver_to_enrollments.php'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_690000_create_moodle_unit_mappings.php'));
+    assertTrue(str_contains($routes,"'/admin/ava/unit-mappings'"));
 };
 
 $tests['carrega conciliação segura de alunos do Moodle'] = static function () use ($rootPath): void {

@@ -14,3 +14,12 @@
 <div class="form-field form-field-full"><label for="waiver-reason">Motivo da bolsa ou cortesia <span class="required">*</span></label><textarea id="waiver-reason" name="reason" minlength="10" maxlength="500" rows="4" placeholder="Ex.: Bolsa integral aprovada pela direção..." required></textarea><small>Obrigatório para auditoria. Entre 10 e 500 caracteres.</small></div>
 </div><div class="alert alert-warning"><strong>Atenção:</strong> esta operação dispensa a cobrança no Asaas. Após salvar, confirme a liberação na tela de Matrículas.</div><button class="button-primary" type="submit"><i class="fa-solid fa-graduation-cap"></i> Autorizar liberação especial</button></form>
 </div></section>
+<section class="card mt-4" id="unit-mappings"><div class="card-body"><div class="page-heading"><div><p class="eyebrow">Unidades</p><h2>Vincular Polo Presencial</h2><p class="meta">Relacione cada valor usado no AVA à Unidade correspondente no Painel. Esse vínculo será aplicado na liberação dos cursos.</p></div></div>
+<?php if($unitField===null):?>
+<div class="alert alert-warning"><strong>Campo ainda não localizado.</strong> Sincronize os campos acadêmicos em Integração AVA para carregar “Polo Presencial”.</div>
+<?php elseif($unitMappings===[]):?>
+<div class="alert alert-warning">Nenhum valor de Polo Presencial foi encontrado nos usuários sincronizados do AVA.</div>
+<?php else:?><div class="table-responsive"><table><thead><tr><th>Polo Presencial no AVA</th><th>Unidade no Painel</th><th>Ação</th></tr></thead><tbody>
+<?php foreach($unitMappings as$mapping):?><tr><td><strong><?= $escape($mapping['field_value']) ?></strong></td><td colspan="2"><form class="inline-form" method="post" action="<?= $escape($basePath) ?>/admin/ava/unit-mappings"><?= $csrfField ?><input type="hidden" name="field_value" value="<?= $escape($mapping['field_value']) ?>"><select name="unit_id" aria-label="Unidade correspondente"><option value="0">Não vinculado</option><?php foreach($units as$unit):?><option value="<?= (int)$unit['id'] ?>" <?= (int)($mapping['unit_id']??0)===(int)$unit['id']?'selected':'' ?>><?= $escape($unit['name']) ?></option><?php endforeach;?></select><button class="button-secondary" type="submit"><i class="fa-solid fa-link"></i> Salvar vínculo</button></form></td></tr><?php endforeach;?>
+</tbody></table></div><?php endif;?>
+</div></section>

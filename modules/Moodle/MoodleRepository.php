@@ -40,6 +40,26 @@ final readonly class MoodleRepository
     /** @return list<array<string,mixed>> */
     public function coursesList():array{return$this->database->query('SELECT * FROM moodle_courses ORDER BY fullname LIMIT 500')->fetchAll();}
 
+    /** @return array<string,mixed>|null */
+    public function unitField():?array{$s=$this->database->query("SELECT * FROM moodle_profile_fields WHERE LOWER(source_name)='polo presencial' OR LOWER(shortname) IN ('polo_presencial','polopresencial') ORDER BY id LIMIT 1");$row=$s->fetch();return is_array($row)?$row:null;}
+
+    /** @return list<array<string,mixed>> */
+    public function unitFieldMappings():array
+    {
+        $field=$this->unitField();if($field===null)return[];$s=$this->database->prepare("SELECT values_list.field_value,m.unit_id,u.name unit_name FROM (SELECT DISTINCT TRIM(field_value) field_value FROM moodle_user_profile_values WHERE field_id=:field AND NULLIF(TRIM(field_value),'') IS NOT NULL) values_list LEFT JOIN moodle_unit_mappings m ON m.field_id=:field2 AND m.field_value=values_list.field_value LEFT JOIN units u ON u.id=m.unit_id ORDER BY values_list.field_value");$s->execute(['field'=>(int)$field['id'],'field2'=>(int)$field['id']]);return$s->fetchAll();
+    }
+
+    public function saveUnitMapping(string$fieldValue,?int$unitId):void
+    {
+        $field=$this->unitField();$fieldValue=trim($fieldValue);if($field===null)throw new \RuntimeException('O campo Polo Presencial ainda não foi localizado no AVA. Execute a sincronização.');if($fieldValue==='')throw new \RuntimeException('Valor de polo inválido.');$this->database->beginTransaction();try{$d=$this->database->prepare('DELETE FROM moodle_unit_mappings WHERE field_id=:field AND field_value=:value');$d->execute(['field'=>(int)$field['id'],'value'=>$fieldValue]);if($unitId!==null){$check=$this->database->prepare('SELECT COUNT(*) FROM units WHERE id=:unit AND is_active=1');$check->execute(['unit'=>$unitId]);if((int)$check->fetchColumn()!==1)throw new \RuntimeException('Unidade inválida.');$this->database->prepare('DELETE FROM moodle_unit_mappings WHERE field_id=:field AND unit_id=:unit')->execute(['field'=>(int)$field['id'],'unit'=>$unitId]);$i=$this->database->prepare('INSERT INTO moodle_unit_mappings(field_id,field_value,unit_id) VALUES(:field,:value,:unit)');$i->execute(['field'=>(int)$field['id'],'value'=>$fieldValue,'unit'=>$unitId]);}$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
+
+    /** @return array{type:string,value:string}|null */
+    public function unitCustomFieldForUnit(int$unitId):?array
+    {
+        $s=$this->database->prepare('SELECT f.shortname type,m.field_value value FROM moodle_unit_mappings m INNER JOIN moodle_profile_fields f ON f.id=m.field_id WHERE m.unit_id=:unit LIMIT 1');$s->execute(['unit'=>$unitId]);$row=$s->fetch();return is_array($row)?['type'=>(string)$row['type'],'value'=>(string)$row['value']]:null;
+    }
+
     /** @return list<array<string,mixed>> */
     public function profileFieldsCatalog():array{return$this->database->query('SELECT f.*,COUNT(v.id) value_count FROM moodle_profile_fields f LEFT JOIN moodle_user_profile_values v ON v.field_id=f.id GROUP BY f.id ORDER BY f.source_name')->fetchAll();}
 

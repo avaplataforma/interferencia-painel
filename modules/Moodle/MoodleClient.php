@@ -47,6 +47,12 @@ final readonly class MoodleClient
         $this->call('enrol_manual_enrol_users',['enrolments'=>[['roleid'=>5,'userid'=>$userId,'courseid'=>$courseId]]]);
     }
 
+    /** @param list<array{type:string,value:string}> $customFields */
+    public function updateUserCustomFields(int$userId,array$customFields):void
+    {
+        if($userId<1||$customFields===[])return;$this->call('core_user_update_users',['users'=>[['id'=>$userId,'customfields'=>$customFields]]]);
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {
