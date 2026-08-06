@@ -623,6 +623,8 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     $synchronizer=(string)file_get_contents($rootPath.'/modules/Moodle/PedagogicalSynchronizer.php');
     assertTrue(str_contains($synchronizer,'Código: nocriteriaset'));
     assertTrue(str_contains($view,'Sem critérios no AVA'));
+    assertTrue(str_contains($view,'Dados de acesso do aluno'));
+    assertTrue(str_contains($view,"fa-key"));
 };
 
 $failures = 0;
