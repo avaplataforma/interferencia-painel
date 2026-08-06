@@ -95,6 +95,17 @@ risco, migrações revisadas, critérios de aceite atendidos e plano de rollback
 - [ ] Checkout Asaas integrado ao fluxo de pedido, matrícula e AVA.
 - [ ] Carrinho, recuperação de abandono e split em fase posterior.
 
+## Fase Catálogos — fornecedores e distribuição
+
+- [x] Definir separação entre fornecedor, curso canônico, oferta e publicação.
+- [x] Definir licenciamento seletivo de catálogos por organização.
+- [ ] Criar cadastro de fornecedores, contratos e conexões.
+- [ ] Criar área de importação, curadoria e deduplicação.
+- [ ] Criar catálogo canônico e mapeamento das entregas acadêmicas.
+- [ ] Criar licenças e regras comerciais por organização.
+- [ ] Criar ofertas e publicação seletiva nas vitrines dos sites.
+- [ ] Testar dois fornecedores e duas organizações usando dados fictícios.
+
 ## Fase AVA — múltiplas plataformas
 
 - [x] Definir AVA Central compartilhado e AVAs dedicados por organização.

@@ -16,7 +16,8 @@ de código e separando com rigor os dados e as configurações de cada organiza�
 - **AVA:** uma organização poderá usar seu Moodle dedicado, o Moodle Central
   `avacursos.com.br`, ou ambos, sempre integrados ao PAINEL INTER.
 - **Administração Mundo Inter:** gestão interna de organizações, domínios,
-  planos, limites, saúde das integrações e auditoria da plataforma.
+  planos, limites, fornecedores, licenças de catálogos, saúde das integrações e
+  auditoria da plataforma.
 
 ## Hierarquia organizacional
 

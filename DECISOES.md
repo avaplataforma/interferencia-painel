@@ -1,5 +1,24 @@
 # Decisões do Projeto
 
+## 06/08/2026 — Fornecedores e múltiplos catálogos
+
+**Status:** aceita
+
+- O Mundo Inter integrará vários fornecedores de cursos para revenda.
+- Fornecedor, item importado, curso canônico, oferta comercial, publicação no
+  site e entrega acadêmica serão registros distintos e rastreáveis.
+- Nenhum curso importado será publicado ou vendido automaticamente.
+- O Admin Mundo Inter controlará os conectores, contratos, custos, curadoria e
+  licenças de catálogo concedidas a cada organização.
+- Cada organização verá somente os cursos licenciados para ela e escolherá quais
+  ofertas publicar em sua vitrine, dentro das regras comerciais permitidas.
+- Preço, desconto, custo, comissão e entrega contratados serão congelados na
+  matrícula ou pedido para preservar o histórico.
+- Um curso comercial poderá ter origem em um fornecedor e ser entregue no AVA
+  Central, no AVA dedicado ou em múltiplas plataformas.
+- As integrações serão independentes e idempotentes; a falha de um fornecedor
+  não bloqueará os demais catálogos.
+
 ## 06/08/2026 — AVA Central e múltiplos Moodles
 
 **Status:** aceita

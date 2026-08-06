@@ -22,8 +22,13 @@ injetar PHP ou JavaScript arbitrário pelo painel administrativo.
 
 ## Catálogo de cursos
 
-O curso terá um registro canônico no Mundo Inter e poderá ser associado ao curso
-correspondente do Moodle de cada organização. A publicação no site acrescentará:
+O Mundo Inter receberá catálogos de vários fornecedores. Os itens importados
+passarão por curadoria e serão vinculados a um curso canônico antes de poderem
+ser licenciados para uma organização. A arquitetura completa está documentada
+em `19-fornecedores-e-catalogos.md`.
+
+O curso canônico poderá ser associado a uma ou mais entregas acadêmicas nos AVAs.
+A publicação no site acrescentará:
 
 - título comercial, resumo e descrição completa;
 - capa, galeria, modalidade, carga horária e requisitos;
@@ -35,6 +40,10 @@ correspondente do Moodle de cada organização. A publicação no site acrescent
 
 Preço e disponibilidade podem variar por organização e unidade sem alterar o
 curso acadêmico sincronizado do AVA.
+
+Cada organização verá e publicará somente ofertas licenciadas para ela. Uma
+sincronização do fornecedor nunca publicará, retirará ou modificará uma vitrine
+automaticamente sem passar pelas regras de curadoria e publicação.
 
 ## Jornada pública
 
