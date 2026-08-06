@@ -92,6 +92,24 @@ final readonly class EnrollmentRepository
         $message=mb_substr(trim($message),0,500);$s=$this->database->prepare('UPDATE student_enrollments SET ava_last_error=:error WHERE id=:id');$s->execute(['error'=>$message,'id'=>$id]);if($s->rowCount()===1)$this->recordEvent($id,'ava-release-failed:'.$id.':'.hash('sha256',$message),'ava_release_failed','Falha ao liberar no AVA: '.$message,$userId);
     }
 
+    public function accessCommunicationContext(int$id,array$allowedUnits):?array
+    {
+        if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
+        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,mu.username FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=? AND e.unit_id IN ($marks) AND e.moodle_enrolment_status='released' LIMIT 1";
+        $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
+    public function accessCommunications(int$id):array
+    {
+        $s=$this->database->prepare('SELECT c.*,u.name user_name FROM ava_access_communications c LEFT JOIN users u ON u.id=c.created_by WHERE c.enrollment_id=:id ORDER BY c.created_at DESC,c.id DESC');$s->execute(['id'=>$id]);return$s->fetchAll();
+    }
+
+    public function recordAccessCommunication(int$id,string$channel,string$destination,int$userId):void
+    {
+        if(!in_array($channel,['whatsapp','email'],true))throw new RuntimeException('Canal de comunicação inválido.');$destination=trim($destination);if($destination==='')throw new RuntimeException('Destinatário não informado.');
+        $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO ava_access_communications(enrollment_id,channel,destination,created_by) VALUES(:enrollment,:channel,:destination,:user)");$s->execute(['enrollment'=>$id,'channel'=>$channel,'destination'=>$destination,'user'=>$userId]);$label=$channel==='whatsapp'?'WhatsApp':'e-mail';$communicationId=(int)$this->database->lastInsertId();$this->recordEvent($id,'access-opened:'.$communicationId,'access_sent','Instruções de acesso preparadas para envio por '.$label.'.',$userId);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
+
     private function recordEvent(int $enrollmentId,string $key,string $type,string $description,?int $userId=null): void
     {
         $s=$this->database->prepare('INSERT IGNORE INTO student_enrollment_events(enrollment_id,event_key,event_type,description,created_by) VALUES(:enrollment,:event_key,:event_type,:description,:created_by)');$s->execute(['enrollment'=>$enrollmentId,'event_key'=>$key,'event_type'=>$type,'description'=>$description,'created_by'=>$userId]);

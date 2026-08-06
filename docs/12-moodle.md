@@ -53,6 +53,13 @@ O serviço externo do Moodle deve conter somente as funções necessárias. O to
 - A opção automática é o padrão recomendado e delega ao AVA o envio seguro das instruções.
 - Quando for escolhida a senha baseada no CPF, ela permanece válida sem troca obrigatória; a política de senhas do Moodle continua prevalecendo.
 - A configuração afeta apenas novas contas; usuários existentes não têm suas senhas alteradas.
+
+### Comunicação do acesso
+
+- Após a liberação, a matrícula oferece uma mensagem padronizada com endereço do AVA, login, curso e Unidade.
+- O atendente pode copiar a mensagem ou abrir sua composição no WhatsApp e no e-mail.
+- Cada abertura de canal é registrada com data, destino e usuário responsável, sem afirmar entrega que ainda não foi confirmada pelo provedor.
+- O acesso pode ser reenviado e todo o movimento permanece no histórico da matrícula.
 # Conciliação de alunos
 
 O Moodle permanece como origem oficial de alunos e matrículas enquanto a integração está em validação. O PAINEL INTER importa os dados em modo somente leitura.
