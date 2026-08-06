@@ -7,7 +7,7 @@ use RuntimeException;
 
 final readonly class EnrollmentRepository
 {
-    public function __construct(private PDO $database){}
+    public function __construct(private PDO $database,private int $organizationId=0){}
 
     public function all(array $unitIds): array
     {

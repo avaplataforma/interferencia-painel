@@ -128,7 +128,7 @@ $whatsappCloudApi = new CloudApiClient(
     (string) $config->get('app.whatsapp_graph_version'),
     $config->bool('app.whatsapp_send_enabled'),
 );
-$finance = new FinanceRepository($database);
+$finance = new FinanceRepository($database,$organizationId);
 $financeCatalog = new CatalogRepository($database);
 $financeCampaigns = new CampaignRepository($database);
 $tickets = new TicketRepository($database);
@@ -139,7 +139,7 @@ $moodleIntegrations = new MoodleIntegrationRepository($database,new SecretCipher
 $moodleSettings=$moodleIntegrations->settings();
 $moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$moodleSettings['token'],$moodleSettings['is_active']);
 $moodleRepository=new MoodleRepository($database);
-$studentEnrollments=new EnrollmentRepository($database);
+$studentEnrollments=new EnrollmentRepository($database,$organizationId);
 $avaEnrollmentReleaser=new AvaEnrollmentReleaser($moodleClient,$moodleIntegrations,$moodleRepository,$studentEnrollments,(string)$config->get('app.ava_auto_release_from'));
 $avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations);
 $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);

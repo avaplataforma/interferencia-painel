@@ -8,7 +8,7 @@ use PDO;
 
 final readonly class FinanceRepository
 {
-    public function __construct(private PDO $database) {}
+    public function __construct(private PDO $database, private int $organizationId = 0) {}
 
     /** @param list<int> $unitIds @return array{customers:int,payments:int,open_value:float,received_value:float,legacy_customers:int,legacy_payments:int} */
     public function summary(array $unitIds, bool $includeLegacy): array
