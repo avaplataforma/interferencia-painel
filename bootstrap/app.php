@@ -14,6 +14,7 @@ use Interferencia\Kernel\Security\Csrf;
 use Interferencia\Kernel\Security\SecretCipher;
 use Interferencia\Kernel\Database\Connection;
 use Interferencia\Kernel\Validation\Validator;
+use Interferencia\Kernel\Http\Request;
 use Interferencia\Modules\Identity\Auth;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Identity\UserRepository;
@@ -23,6 +24,7 @@ use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
+use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
@@ -102,8 +104,12 @@ $session->start();
 
 $csrf = new Csrf($session);
 $database = (new Connection($config))->pdo();
-$users = new UserRepository($database);
-$units = new UnitRepository($database);
+$request = Request::fromGlobals();
+$organizations = new OrganizationRepository($database);
+$currentOrganization = $organizations->findActiveByHost((string) $request->header('host', ''));
+$organizationId = $currentOrganization?->id ?? 0;
+$users = new UserRepository($database, $organizationId);
+$units = new UnitRepository($database, $organizationId);
 $roles = new RoleRepository($database);
 $contacts = new ContactRepository($database);
 $tags = new TagRepository($database);
@@ -158,6 +164,7 @@ $view->share([
     'basePath' => $config->path('app.base_path'),
     'csrfField' => $csrf->field(),
     'currentUser' => $currentUser,
+    'currentOrganization' => $currentOrganization,
     'navigation' => [
         'users' => $auth->can('users.manage'),
         'units' => $auth->can('units.manage'),
@@ -194,4 +201,4 @@ $view->share([
 $registerRoutes = require $rootPath . '/routes/web.php';
 $registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
-return new Application($router);
+return new Application($router, $request);

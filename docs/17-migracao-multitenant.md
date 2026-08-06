@@ -19,6 +19,8 @@ financeiro, WhatsApp, AVA ou atendimento, e só depois permitir novas franquias.
 - [x] Criar a organização inicial e associar as seis unidades existentes.
 - [x] Adicionar resolução de contexto organizacional sem mudar o comportamento visível.
 - [ ] Tornar o contexto obrigatório nos repositórios antes de cadastrar a segunda organização.
+- [x] Restringir autenticação, usuários e unidades à organização resolvida pelo domínio.
+- [ ] Propagar o contexto pelos repositórios de CRM, alunos, financeiro, WhatsApp e tickets.
 
 ### 3. Isolamento dos módulos
 

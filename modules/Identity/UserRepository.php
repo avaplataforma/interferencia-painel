@@ -12,14 +12,16 @@ use Throwable;
 
 final readonly class UserRepository
 {
-    public function __construct(private PDO $database)
+    public function __construct(private PDO $database, private ?int $organizationId = null)
     {
     }
 
     public function findByEmail(string $email): ?User
     {
-        $statement = $this->database->prepare('SELECT * FROM `users` WHERE `email` = :email LIMIT 1');
-        $statement->execute(['email' => strtolower(trim($email))]);
+        $sql='SELECT u.* FROM users u WHERE u.email=:email';$parameters=['email'=>strtolower(trim($email))];
+        if($this->organizationId!==null){$sql.=" AND EXISTS(SELECT 1 FROM organization_users membership WHERE membership.user_id=u.id AND membership.organization_id=:organization AND membership.status='active')";$parameters['organization']=$this->organizationId;}
+        $statement = $this->database->prepare($sql.' LIMIT 1');
+        $statement->execute($parameters);
         $row = $statement->fetch();
 
         return is_array($row) ? $this->hydrate($row) : null;
@@ -27,8 +29,10 @@ final readonly class UserRepository
 
     public function findById(int $id): ?User
     {
-        $statement = $this->database->prepare('SELECT * FROM `users` WHERE `id` = :id LIMIT 1');
-        $statement->execute(['id' => $id]);
+        $sql='SELECT u.* FROM users u WHERE u.id=:id';$parameters=['id'=>$id];
+        if($this->organizationId!==null){$sql.=" AND EXISTS(SELECT 1 FROM organization_users membership WHERE membership.user_id=u.id AND membership.organization_id=:organization AND membership.status='active')";$parameters['organization']=$this->organizationId;}
+        $statement = $this->database->prepare($sql.' LIMIT 1');
+        $statement->execute($parameters);
         $row = $statement->fetch();
 
         return is_array($row) ? $this->hydrate($row) : null;
@@ -46,6 +50,7 @@ final readonly class UserRepository
                 'password_hash' => $passwordHash,
             ]);
             $userId = (int) $this->database->lastInsertId();
+            if($this->organizationId!==null){$membership=$this->database->prepare("INSERT INTO organization_users(organization_id,user_id,status,is_owner) VALUES(?,?,'active',1)");$membership->execute([$this->organizationId,$userId]);}
             $role = $this->database->prepare("INSERT INTO `user_roles` (`user_id`, `role_id`) SELECT :user_id, `id` FROM `roles` WHERE `code` = 'super_admin'");
             $role->execute(['user_id' => $userId]);
             $scopes = $this->database->prepare('INSERT INTO `user_unit_scopes` (`user_id`, `unit_id`) SELECT :user_id, `id` FROM `units`');
@@ -64,7 +69,8 @@ final readonly class UserRepository
     /** @return list<array<string, mixed>> */
     public function allForManagement(): array
     {
-        return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, COUNT(DISTINCT s.unit_id) AS unit_count FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id LEFT JOIN roles r ON r.id = ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id = u.id GROUP BY u.id ORDER BY u.name")->fetchAll();
+        if($this->organizationId===null)return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, COUNT(DISTINCT s.unit_id) AS unit_count FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id LEFT JOIN roles r ON r.id = ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id = u.id GROUP BY u.id ORDER BY u.name")->fetchAll();
+        $statement=$this->database->prepare("SELECT u.id,u.name,u.email,u.is_active,u.last_login_at,GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') roles,COUNT(DISTINCT scoped.id) unit_count FROM users u INNER JOIN organization_users membership ON membership.user_id=u.id AND membership.organization_id=? AND membership.status='active' LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id=u.id LEFT JOIN units scoped ON scoped.id=s.unit_id AND scoped.organization_id=membership.organization_id GROUP BY u.id ORDER BY u.name");$statement->execute([$this->organizationId]);return$statement->fetchAll();
     }
 
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
@@ -87,7 +93,8 @@ final readonly class UserRepository
     /** @return list<array{id: int, code: string, name: string}> */
     public function availableUnits(): array
     {
-        return $this->database->query('SELECT id, code, name FROM units WHERE is_active = 1 ORDER BY name')->fetchAll();
+        if($this->organizationId===null)return $this->database->query('SELECT id, code, name FROM units WHERE is_active = 1 ORDER BY name')->fetchAll();
+        $statement=$this->database->prepare('SELECT id,code,name FROM units WHERE is_active=1 AND organization_id=? ORDER BY name');$statement->execute([$this->organizationId]);return$statement->fetchAll();
     }
 
     /** @return list<int> */
@@ -101,8 +108,10 @@ final readonly class UserRepository
     /** @return list<int> */
     public function unitIds(int $userId): array
     {
-        $statement = $this->database->prepare('SELECT unit_id FROM user_unit_scopes WHERE user_id = :id');
-        $statement->execute(['id' => $userId]);
+        $sql='SELECT s.unit_id FROM user_unit_scopes s INNER JOIN units u ON u.id=s.unit_id WHERE s.user_id=:id';$parameters=['id'=>$userId];
+        if($this->organizationId!==null){$sql.=' AND u.organization_id=:organization';$parameters['organization']=$this->organizationId;}
+        $statement = $this->database->prepare($sql);
+        $statement->execute($parameters);
         return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
     }
 
@@ -126,6 +135,7 @@ final readonly class UserRepository
             $statement = $this->database->prepare('INSERT INTO users (name, email, password_hash, is_active) VALUES (:name, :email, :hash, :active)');
             $statement->execute(['name' => trim($name), 'email' => strtolower(trim($email)), 'hash' => $passwordHash, 'active' => (int) $active]);
             $id = (int) $this->database->lastInsertId();
+            if($this->organizationId!==null){$membership=$this->database->prepare("INSERT INTO organization_users(organization_id,user_id,status) VALUES(?,?,'active')");$membership->execute([$this->organizationId,$id]);}
             $this->syncRelations($id, $roleIds, $unitIds);
             $this->database->commit();
             return $id;
@@ -178,8 +188,7 @@ final readonly class UserRepository
     /** @return list<string> */
     public function unitScopes(int $userId): array
     {
-        $statement = $this->database->prepare('SELECT u.code FROM units u INNER JOIN user_unit_scopes s ON s.unit_id = u.id WHERE s.user_id = :user_id AND u.is_active = 1 ORDER BY u.code');
-        $statement->execute(['user_id' => $userId]);
+        $sql='SELECT u.code FROM units u INNER JOIN user_unit_scopes s ON s.unit_id = u.id WHERE s.user_id = :user_id AND u.is_active = 1';$parameters=['user_id'=>$userId];if($this->organizationId!==null){$sql.=' AND u.organization_id=:organization';$parameters['organization']=$this->organizationId;}$statement=$this->database->prepare($sql.' ORDER BY u.code');$statement->execute($parameters);
 
         return array_values(array_filter($statement->fetchAll(PDO::FETCH_COLUMN), 'is_string'));
     }
@@ -187,10 +196,7 @@ final readonly class UserRepository
     /** @return list<string> */
     public function activeUnitCodes(): array
     {
-        return array_values(array_filter(
-            $this->database->query('SELECT code FROM units WHERE is_active = 1 ORDER BY code')->fetchAll(PDO::FETCH_COLUMN),
-            'is_string',
-        ));
+        if($this->organizationId===null)$rows=$this->database->query('SELECT code FROM units WHERE is_active = 1 ORDER BY code')->fetchAll(PDO::FETCH_COLUMN);else{$statement=$this->database->prepare('SELECT code FROM units WHERE is_active=1 AND organization_id=? ORDER BY code');$statement->execute([$this->organizationId]);$rows=$statement->fetchAll(PDO::FETCH_COLUMN);}return array_values(array_filter($rows,'is_string'));
     }
 
     public function recordFailedLogin(int $userId, int $lockAfter = 5, int $lockMinutes = 15): void

@@ -10,13 +10,13 @@ use Interferencia\Kernel\Log\RequestContext;
 
 final readonly class Application
 {
-    public function __construct(private Router $router)
+    public function __construct(private Router $router, private ?Request $request = null)
     {
     }
 
     public function run(): void
     {
-        $response = $this->router->dispatch(Request::fromGlobals());
+        $response = $this->router->dispatch($this->request ?? Request::fromGlobals());
         $securityHeaders = [
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'DENY',

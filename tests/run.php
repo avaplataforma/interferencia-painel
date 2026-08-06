@@ -39,6 +39,11 @@ $tests['carrega a fundação multiempresa com resolução segura por domínio'] 
     assertSame('painel.mundointer.com.br', OrganizationRepository::normalizeHost('painel.mundointer.com.br.'));
     assertSame(null, OrganizationRepository::normalizeHost('domínio inválido/empresa'));
     assertTrue(is_file($rootPath.'/modules/Organization/OrganizationContext.php'));
+    $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
+    assertTrue(str_contains($bootstrap, 'findActiveByHost'));
+    assertTrue(str_contains($bootstrap, 'new UnitRepository($database, $organizationId)'));
+    $units=(string)file_get_contents($rootPath.'/modules/Organization/UnitRepository.php');
+    assertTrue(str_contains($units, 'organization_id'));
 };
 
 $tests['mantém integração financeira segura por padrão'] = static function (): void {
