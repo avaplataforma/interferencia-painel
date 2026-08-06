@@ -1,4 +1,9 @@
-# Financeiro e Asaas
+# Financeiro e gateways de pagamento
+
+O Asaas é o primeiro provedor e a integração principal da operação atual. O
+modelo multitenant definitivo permitirá conexões diferentes por organização sem
+alterar pedidos, matrículas e histórico financeiro. Consulte
+`20-gateways-de-pagamento.md`.
 
 ## Liberação acadêmica após pagamento
 
@@ -20,8 +25,8 @@ Após uma nova liberação, o Painel tenta enviar as instruções de acesso por 
 A exclusão de clientes é exclusiva do Administrador Global e é bloqueada quando existem cobranças, assinaturas ou checkouts vinculados. Essa proteção evita a remoção indireta de recursos financeiros no Asaas.
 
 O módulo Financeiro centraliza clientes, cobranças e recebimentos por unidade,
-respeitando os mesmos escopos do CRM e WhatsApp. A integração usa a API oficial
-do Asaas.
+respeitando os mesmos escopos do CRM e WhatsApp. A primeira integração usa a API
+oficial do Asaas.
 
 ## Implantação
 

@@ -50,9 +50,14 @@ Perfis previstos:
 
 ## Integrações
 
-Credenciais do Asaas, WhatsApp, Moodle, e-mail e armazenamento serão guardadas
-por organização, criptografadas com chave-mestra externa ao banco. Webhooks terão
-rota e segredo capazes de identificar a organização antes do processamento.
+Credenciais dos gateways de pagamento, WhatsApp, Moodle, e-mail e armazenamento
+serão guardadas por organização, criptografadas com chave-mestra externa ao
+banco. Webhooks terão rota e segredo capazes de identificar a organização e a
+conexão externa antes do processamento.
+
+O Asaas será a primeira conexão financeira, mas não será embutido como regra de
+domínio. Cada organização poderá possuir conexão principal e alternativas em
+provedores homologados, com capacidades e roteamento próprios.
 
 O AVA Central é uma integração de plataforma compartilhada e sua credencial não
 será duplicada entre organizações. A autorização de uso, o catálogo licenciado e

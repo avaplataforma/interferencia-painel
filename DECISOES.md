@@ -1,5 +1,22 @@
 # Decisões do Projeto
 
+## 06/08/2026 — Múltiplos gateways de pagamento
+
+**Status:** aceita
+
+- O Asaas continuará como primeiro gateway e integração principal da operação
+  atual, mas não será uma dependência estrutural do domínio financeiro.
+- Cada organização poderá possuir uma conexão principal e futuras conexões
+  alternativas em gateways homologados, como PagBank/PagSeguro ou Stone.
+- Cliente, pedido, matrícula, cobrança e pagamento terão IDs internos; IDs dos
+  gateways serão referências subordinadas à conexão correspondente.
+- Formas de pagamento, recorrência, checkout, split e estorno serão habilitados
+  conforme as capacidades reais de cada conexão.
+- Cobranças e assinaturas existentes permanecerão no gateway de origem; uma
+  troca afetará novas operações a partir de uma data de corte controlada.
+- Webhooks, credenciais, idempotência, auditoria e conciliação serão isolados por
+  organização e conexão financeira.
+
 ## 06/08/2026 — Fornecedores e múltiplos catálogos
 
 **Status:** aceita

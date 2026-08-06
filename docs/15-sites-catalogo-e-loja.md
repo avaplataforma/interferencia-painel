@@ -55,7 +55,7 @@ Visitante
   → Lead identificado por organização, unidade, curso e campanha
   → Conversão em aluno
   → Matrícula
-  → Cobrança Asaas
+  → Cobrança no gateway configurado
   → Confirmação por webhook
   → Liberação no AVA
 ```
@@ -67,7 +67,8 @@ o contexto da organização.
 ## Loja virtual
 
 A primeira versão será um **checkout assistido**: o site envia a intenção ao
-PAINEL INTER e usa checkout/link do Asaas. Dados de cartão não passarão nem serão
+PAINEL INTER e usa o checkout/link do gateway configurado para a organização. O
+Asaas será o primeiro provedor. Dados de cartão não passarão nem serão
 armazenados nos servidores do Mundo Inter.
 
 Evoluções previstas:
@@ -75,11 +76,11 @@ Evoluções previstas:
 - carrinho com um ou mais produtos compatíveis;
 - cupom ou campanha com validade e regras;
 - escolha de unidade e modalidade;
-- PIX, boleto, cartão e assinatura conforme disponibilidade no Asaas;
+- PIX, boleto, cartão e assinatura conforme capacidade da conexão escolhida;
 - pedido com estados próprios, separado de cobrança e matrícula;
 - recuperação de checkout abandonado;
 - emissão de comprovante e comunicações transacionais;
-- split financeiro conforme contrato da organização/unidade.
+- split financeiro conforme contrato e capacidade do gateway utilizado.
 
 Pagamento aprovado não deverá liberar acesso diretamente. O webhook atualiza o
 pedido e uma regra idempotente confirma matrícula e liberação no AVA.

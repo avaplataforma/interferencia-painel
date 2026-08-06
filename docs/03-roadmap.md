@@ -59,13 +59,18 @@ de negócio.
 - Monitoramento, alertas, backup e recuperação testada.
 - Otimização de desempenho e revisão de segurança.
 
-## Fase financeira — Asaas
+## Fase financeira — gateways de pagamento
 
 - [x] Fundação local, permissões por unidade e conexão protegida.
 - [x] Sincronização inicial de clientes e cobranças antigas.
 - [ ] Conciliação do legado com unidades e contatos do CRM.
 - [ ] Emissão, assinaturas, links e checkout por curso.
 - [ ] Split e relatórios por polo.
+- [x] Definir abstração multigateway e conexões por organização.
+- [ ] Encapsular o Asaas como primeiro conector financeiro.
+- [ ] Tornar clientes, cobranças, tentativas e eventos independentes do gateway.
+- [ ] Validar capacidades, roteamento e troca com um conector fictício.
+- [ ] Integrar um segundo gateway em sandbox antes de qualquer piloto real.
 
 ## Regra de passagem
 
@@ -92,7 +97,7 @@ risco, migrações revisadas, critérios de aceite atendidos e plano de rollback
 - [ ] Catálogo e página comercial de curso usando a fonte canônica do painel.
 - [ ] Formulário de interesse integrado ao CRM, com campanha, origem e UTM.
 - [ ] Pré-visualização, rascunho, publicação e auditoria.
-- [ ] Checkout Asaas integrado ao fluxo de pedido, matrícula e AVA.
+- [ ] Checkout do gateway configurado integrado a pedido, matrícula e AVA.
 - [ ] Carrinho, recuperação de abandono e split em fase posterior.
 
 ## Fase Catálogos — fornecedores e distribuição
