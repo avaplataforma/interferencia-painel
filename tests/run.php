@@ -602,6 +602,20 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
     assertTrue(str_contains($layout,'>Cadastro</a>'));
 };
 
+$tests['carrega acompanhamento pedagógico e ações do AVA'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_720000_add_moodle_learning_progress.php'));
+    assertTrue(is_file($rootPath.'/modules/Moodle/PedagogicalSynchronizer.php'));
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/moodle/pedagogical.php');
+    assertTrue(str_contains($client,'core_completion_get_course_completion_status'));
+    assertTrue(str_contains($client,'setUserSuspended'));
+    assertTrue(str_contains($routes,"'/students/pedagogical/sync'"));
+    assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/ava-status'"));
+    assertTrue(str_contains($view,'/tickets/create?student='));
+    assertTrue(str_contains($view,'/students/enrollments/create?student='));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

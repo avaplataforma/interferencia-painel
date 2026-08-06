@@ -53,6 +53,19 @@ final readonly class MoodleClient
         if($userId<1||$customFields===[])return;$this->call('core_user_update_users',['users'=>[['id'=>$userId,'customfields'=>$customFields]]]);
     }
 
+    public function setUserSuspended(int$userId,bool$suspended):void
+    {
+        if($userId<1)throw new RuntimeException('Usuário inválido para alteração de acesso ao AVA.');
+        $this->call('core_user_update_users',['users'=>[['id'=>$userId,'suspended'=>$suspended?1:0]]]);
+    }
+
+    /** @return array<string,mixed> */
+    public function courseCompletionStatus(int$userId,int$courseId):array
+    {
+        if($userId<1||$courseId<1)throw new RuntimeException('Aluno ou curso inválido para consultar o progresso.');
+        return$this->call('core_completion_get_course_completion_status',['userid'=>$userId,'courseid'=>$courseId]);
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {

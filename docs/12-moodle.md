@@ -76,3 +76,10 @@ O Moodle permanece como origem oficial de alunos e matrículas enquanto a integr
 - O Admin System define quais campos aparecem, quais são ignorados e o significado de cada um no Painel.
 - O mapeamento não sobrescreve automaticamente dados principais do Painel ou informações financeiras do Asaas.
 - Campos vazios e campos marcados para ignorar não aparecem na ficha do aluno.
+
+## Painel pedagógico
+
+- Exibe progresso, último acesso e situação do AVA por matrícula e unidade permitida.
+- Permite abrir Ticket e Nova matrícula com o aluno já selecionado.
+- Perfis de gestão podem suspender ou reativar o usuário no AVA; a suspensão vale para todos os cursos do aluno.
+- A atualização do progresso usa `core_completion_get_course_completion_status` e depende dessa função estar habilitada no serviço web do Moodle.
