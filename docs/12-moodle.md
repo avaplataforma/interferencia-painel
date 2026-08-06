@@ -86,3 +86,4 @@ O Moodle permanece como origem oficial de alunos e matrículas enquanto a integr
 - A situação pedagógica é classificada automaticamente em regular, aguardando liberação, bloqueado, nunca acessou, inativo há 7/15/30 dias ou progresso parado há 15 dias.
 - Os filtros de risco usam somente alunos e unidades permitidos ao usuário conectado.
 - O comando `php bin/console moodle:pedagogical:sync` atualiza diariamente o último acesso e o progresso, com trava contra execuções simultâneas.
+- Cursos sem critérios de conclusão continuam com o último acesso sincronizado e são identificados como `Sem critérios no AVA`, sem gerar falha operacional.
