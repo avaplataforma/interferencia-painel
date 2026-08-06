@@ -14,6 +14,12 @@
 <div class="form-field form-field-full"><label for="waiver-reason">Motivo da bolsa ou cortesia <span class="required">*</span></label><textarea id="waiver-reason" name="reason" minlength="10" maxlength="500" rows="4" placeholder="Ex.: Bolsa integral aprovada pela direção..." required></textarea><small>Obrigatório para auditoria. Entre 10 e 500 caracteres.</small></div>
 </div><div class="alert alert-warning"><strong>Atenção:</strong> esta operação dispensa a cobrança no Asaas. Após salvar, confirme a liberação na tela de Matrículas.</div><button class="button-primary" type="submit"><i class="fa-solid fa-graduation-cap"></i> Autorizar liberação especial</button></form>
 </div></section>
+<section class="card mt-4" id="password-policy"><div class="card-body"><div class="page-heading"><div><p class="eyebrow">Acesso dos alunos</p><h2>Login e senha inicial</h2><p class="meta">O login dos novos alunos será sempre o CPF somente com números. Escolha como a senha inicial será criada.</p></div></div>
+<form method="post" action="<?= $escape($basePath) ?>/admin/ava/password-policy" data-confirm-submit="Alterar a política para os próximos alunos criados no AVA?"><?= $csrfField ?>
+<div class="form-field"><label for="initial-password-mode">Política de senha inicial</label><select id="initial-password-mode" name="initial_password_mode" required><option value="automatic" <?= $avaSettings['initial_password_mode']==='automatic'?'selected':'' ?>>Automática pelo AVA (recomendado)</option><option value="cpf5" <?= $avaSettings['initial_password_mode']==='cpf5'?'selected':'' ?>>5 primeiros dígitos do CPF</option></select></div>
+<div class="alert alert-warning"><strong>Segurança:</strong> ao usar cinco dígitos do CPF, o AVA exigirá a troca da senha no primeiro acesso. A política de segurança configurada no Moodle também poderá rejeitar senhas tão curtas.</div>
+<button class="button-primary" type="submit"><i class="fa-solid fa-shield-halved"></i> Salvar política de acesso</button></form>
+</div></section>
 <section class="card mt-4" id="unit-mappings"><div class="card-body"><div class="page-heading"><div><p class="eyebrow">Unidades</p><h2>Vincular Polo Presencial</h2><p class="meta">Relacione cada valor usado no AVA à Unidade correspondente no Painel. Esse vínculo será aplicado na liberação dos cursos.</p></div></div>
 <?php if($unitField===null):?>
 <div class="alert alert-warning"><strong>Campo ainda não localizado.</strong> Sincronize os campos acadêmicos em Integração AVA para carregar “Polo Presencial”.</div>
