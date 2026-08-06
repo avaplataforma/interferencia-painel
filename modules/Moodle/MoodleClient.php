@@ -65,7 +65,12 @@ final readonly class MoodleClient
         if(!is_string($response))throw new RuntimeException('Falha de comunicação com o Moodle'.($error!==''?': '.$error:'').'.');
         $data=json_decode($response,true);
         if($status<200||$status>=300||!is_array($data))throw new RuntimeException('O Moodle retornou uma resposta inválida.');
-        if(isset($data['exception']))throw new RuntimeException((string)($data['message']??'O Moodle recusou a operação.'));
+        if(isset($data['exception'])){
+            $message=trim((string)($data['message']??'O Moodle recusou a operação.'));
+            $errorCode=trim((string)($data['errorcode']??''));
+            $diagnostic='Função Moodle: '.$function.($errorCode!==''?' | Código: '.$errorCode:'');
+            throw new RuntimeException($message.' ('.$diagnostic.')');
+        }
         return$data;
     }
 }
