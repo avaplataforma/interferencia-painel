@@ -1,5 +1,40 @@
 # Decisões do Projeto
 
+## 06/08/2026 — Plataforma Mundo Inter e sites das franquias
+
+**Status:** aceita
+
+- **Marca do ecossistema:** Mundo Inter.
+- **Domínio central:** `mundointer.com.br`.
+- **Produto de gestão:** PAINEL INTER, publicado em
+  `painel.mundointer.com.br`.
+- A aplicação evoluirá para uma plataforma multitenant de organizações e
+  unidades, com isolamento obrigatório de dados, usuários e integrações.
+- Cada organização poderá usar domínio e identidade visual próprios.
+- Cada franquia/rede poderá publicar um site institucional personalizado com
+  unidades, páginas e catálogo de cursos.
+- O catálogo público reutilizará cursos, preços e campanhas administrados no
+  PAINEL INTER, sem duplicar a fonte de dados.
+- A loja começará com checkout hospedado pelo Asaas; dados de cartão não serão
+  processados nem armazenados pelo Mundo Inter.
+- O fluxo comercial integrará site, lead, aluno, matrícula, cobrança e AVA de
+  forma rastreável e idempotente.
+- O Moodle continuará externo à aplicação central e poderá ser independente por
+  organização, com domínio e infraestrutura próprios.
+- A operação atual será migrada e estabilizada na nova VPS antes da primeira
+  alteração estrutural multitenant.
+
+### Consequências
+
+- Tabelas de negócio receberão `organization_id` progressivamente.
+- Domínios serão configurações verificadas e não servirão, isoladamente, como
+  mecanismo de autorização.
+- Site público e painel usarão superfícies e sessões separadas, embora
+  compartilhem catálogo e eventos de negócio.
+- Nenhuma segunda organização real será ativada antes de testes automatizados de
+  isolamento entre tenants.
+- Arquivos e documentos evoluirão para armazenamento privado compatível com S3.
+
 ## 05/08/2026 — Cadastro unificado e Moodle
 
 - O PAINEL INTER será a fonte central de identidade, atendimento, contratos e financeiro dos alunos.

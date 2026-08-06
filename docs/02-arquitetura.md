@@ -96,3 +96,16 @@ deve conhecer conceitos como lead, conversa, campanha ou unidade comercial.
 - Política de filas e execução assíncrona.
 - Estratégia de deploy, rollback, backup e monitoramento.
 - Modelo final de autorização e isolamento entre unidades.
+
+## Evolução para o Mundo Inter
+
+A arquitetura permanece um monólito modular no primeiro ciclo multitenant. O
+contexto de organização será resolvido antes da autenticação e propagado aos
+repositórios, filas, arquivos, auditoria e integrações. Os detalhes e a ordem de
+migração estão em `13-mundo-inter.md`, `14-multitenancy.md` e
+`17-migracao-multitenant.md`.
+
+O site institucional e o catálogo público formarão uma superfície separada do
+painel autenticado. Ambos usarão casos de uso e dados canônicos dos módulos, sem
+acesso direto de templates públicos às tabelas administrativas. A arquitetura do
+site e da futura loja está em `15-sites-catalogo-e-loja.md`.

@@ -71,3 +71,26 @@ de negócio.
 
 Uma fase só é concluída com documentação atualizada, testes proporcionais ao
 risco, migrações revisadas, critérios de aceite atendidos e plano de rollback.
+
+## Fase Mundo Inter — estabilização e multitenancy
+
+- [x] Definir visão do ecossistema, hierarquia e domínios centrais.
+- [x] Definir estratégia inicial de isolamento por organização.
+- [x] Definir arquitetura de sites, catálogo e loja das franquias.
+- [x] Definir estratégia de documentos em armazenamento privado compatível com
+  S3.
+- [ ] Concluir migração da produção atual para a VPS exclusiva.
+- [ ] Criar organização, domínios e vínculos organizacionais.
+- [ ] Converter a operação atual na primeira organização.
+- [ ] Propagar `organization_id` pelos módulos com testes de acesso cruzado.
+- [ ] Validar uma segunda organização somente com dados de teste.
+
+## Fase Sites — presença institucional e catálogo
+
+- [ ] Identidade visual, domínio e tema por organização.
+- [ ] Páginas institucionais, unidades, contato, privacidade e SEO.
+- [ ] Catálogo e página comercial de curso usando a fonte canônica do painel.
+- [ ] Formulário de interesse integrado ao CRM, com campanha, origem e UTM.
+- [ ] Pré-visualização, rascunho, publicação e auditoria.
+- [ ] Checkout Asaas integrado ao fluxo de pedido, matrícula e AVA.
+- [ ] Carrinho, recuperação de abandono e split em fase posterior.
