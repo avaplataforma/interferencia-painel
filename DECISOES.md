@@ -102,6 +102,10 @@
 ### Consequências
 
 - Tabelas de negócio receberão `organization_id` progressivamente.
+- A primeira organização técnica é `interferencia`; todas as unidades e usuários
+  atuais são vinculados a ela durante a migração de fundação.
+- O domínio é normalizado e resolvido no servidor. Host desconhecido nunca
+  recebe automaticamente os dados da organização inicial.
 - Domínios serão configurações verificadas e não servirão, isoladamente, como
   mecanismo de autorização.
 - Site público e painel usarão superfícies e sessões separadas, embora

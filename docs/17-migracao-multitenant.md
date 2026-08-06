@@ -15,9 +15,10 @@ financeiro, WhatsApp, AVA ou atendimento, e só depois permitir novas franquias.
 
 ### 2. Fundação organizacional
 
-- Criar organizações, domínios, marcas e vínculos de usuários.
-- Criar a organização inicial e associar as seis unidades existentes.
-- Adicionar contexto organizacional sem mudar o comportamento visível.
+- [x] Criar organizações, domínios, marcas e vínculos de usuários.
+- [x] Criar a organização inicial e associar as seis unidades existentes.
+- [x] Adicionar resolução de contexto organizacional sem mudar o comportamento visível.
+- [ ] Tornar o contexto obrigatório nos repositórios antes de cadastrar a segunda organização.
 
 ### 3. Isolamento dos módulos
 

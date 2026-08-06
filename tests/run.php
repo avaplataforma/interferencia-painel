@@ -18,6 +18,7 @@ use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 use Interferencia\Kernel\Security\SecretCipher;
+use Interferencia\Modules\Organization\OrganizationRepository;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -30,6 +31,15 @@ if (!is_file($autoload)) {
 require $autoload;
 
 $tests = [];
+
+$tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
+    $repository = new MigrationRepository($rootPath.'/database/migrations');
+    assertTrue(in_array('20260806_740000_create_organization_foundation', array_map(static fn($migration): string => $migration->id(), $repository->all()), true));
+    assertSame('painel.mundointer.com.br', OrganizationRepository::normalizeHost('PAINEL.MUNDOINTER.COM.BR:443'));
+    assertSame('painel.mundointer.com.br', OrganizationRepository::normalizeHost('painel.mundointer.com.br.'));
+    assertSame(null, OrganizationRepository::normalizeHost('domínio inválido/empresa'));
+    assertTrue(is_file($rootPath.'/modules/Organization/OrganizationContext.php'));
+};
 
 $tests['mantém integração financeira segura por padrão'] = static function (): void {
     assertTrue(!(new AsaasClient('sandbox',''))->ready());
