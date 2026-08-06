@@ -48,6 +48,7 @@ use Interferencia\Modules\Moodle\MoodleClient;
 use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleSynchronizer;
 use Interferencia\Modules\Moodle\EnrollmentRepository;
+use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
 
 return static function (
     Router $router,
@@ -92,6 +93,7 @@ return static function (
     MoodleRepository $moodleRepository,
     MoodleSynchronizer $moodleSynchronizer,
     EnrollmentRepository $studentEnrollments,
+    AvaEnrollmentReleaser $avaEnrollmentReleaser,
 ): void {
     $basePath = $config->string('app.base_path');
     $browserTitle = $config->string('app.browser_title');
@@ -122,16 +124,16 @@ return static function (
         $whatsappMessages->receive($payload,$whatsappCloudApi,$whatsappMedia);
         return Response::text("EVENT_RECEIVED\n");
     });
-    $router->postWithoutCsrf('/api/asaas/webhook',static function(Request$request)use($asaasWebhook,$finance,$financeCatalog,$studentEnrollments):Response{
+    $router->postWithoutCsrf('/api/asaas/webhook',static function(Request$request)use($asaasWebhook,$finance,$financeCatalog,$studentEnrollments,$avaEnrollmentReleaser):Response{
         if(!$asaasWebhook->valid($request->header('asaas-access-token')))return Response::text("Acesso recusado.\n",401);
         $payload=json_decode($request->body(),true);if(!is_array($payload))return Response::text("JSON inválido.\n",400);
         $eventId=trim((string)($payload['id']??''));$eventType=trim((string)($payload['event']??''));$payment=is_array($payload['payment']??null)?$payload['payment']:null;$subscription=is_array($payload['subscription']??null)?$payload['subscription']:null;$checkout=is_array($payload['checkout']??null)?$payload['checkout']:null;
         if($eventId===''||$eventType==='')return Response::text("Evento inválido.\n",400);
         $resource=$payment??$subscription??$checkout;if(!$finance->registerWebhook($eventId,$eventType,is_array($resource)?(string)($resource['id']??''):null))return Response::text("EVENT_RECEIVED\n");
-        try{if($payment!==null){$finance->upsertPayment($payment);$studentEnrollments->handlePaymentUpdate((string)($payment['id']??''),(string)($payment['status']??''));}if($subscription!==null)$finance->upsertSubscription($subscription);if($checkout!==null)$financeCatalog->updateFromWebhook($checkout);$finance->finishWebhook($eventId);}catch(Throwable$e){$finance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
+        try{if($payment!==null){$finance->upsertPayment($payment);$confirmedEnrollment=$studentEnrollments->handlePaymentUpdate((string)($payment['id']??''),(string)($payment['status']??''));if($confirmedEnrollment!==null){try{$avaEnrollmentReleaser->release($confirmedEnrollment);}catch(Throwable){}}}if($subscription!==null)$finance->upsertSubscription($subscription);if($checkout!==null)$financeCatalog->updateFromWebhook($checkout);$finance->finishWebhook($eventId);}catch(Throwable$e){$finance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
         return Response::text("EVENT_RECEIVED\n");
     });
-    $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages,$tickets):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$availableUnitIds=array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available());$follow=['overdue'=>0,'today'=>0,'future'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?$availableUnitIds:[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}$ticketAlerts=$auth->can('tickets.view')?$tickets->notificationSummary($user->id,$availableUnitIds):['open'=>0,'unread'=>0,'overdue'=>0];return Response::json(['followups'=>$follow,'whatsapp'=>$whatsapp,'tickets'=>$ticketAlerts,'total'=>$follow['overdue']+$follow['today']+$whatsapp['unread']+$ticketAlerts['unread']+$ticketAlerts['overdue']]);},[$requireAuth]);
+    $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages,$tickets,$studentEnrollments):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$availableUnitIds=array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available());$follow=['overdue'=>0,'today'=>0,'future'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?$availableUnitIds:[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}$ticketAlerts=$auth->can('tickets.view')?$tickets->notificationSummary($user->id,$availableUnitIds):['open'=>0,'unread'=>0,'overdue'=>0];$ava=$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary($availableUnitIds):['ready'=>0,'failed'=>0];return Response::json(['followups'=>$follow,'whatsapp'=>$whatsapp,'tickets'=>$ticketAlerts,'ava'=>$ava,'total'=>$follow['overdue']+$follow['today']+$whatsapp['unread']+$ticketAlerts['unread']+$ticketAlerts['overdue']+$ava['ready']+$ava['failed']]);},[$requireAuth]);
 
     $ticketUnitIds=static fn():array=>array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());
     $viewTickets=[$requireAuth,new RequirePermission($auth,'tickets.view')];

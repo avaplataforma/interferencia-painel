@@ -62,12 +62,12 @@ final readonly class EnrollmentRepository
         $s=$this->database->prepare("UPDATE student_enrollments SET finance_payment_id=:payment,status='awaiting_payment' WHERE id=:id AND finance_payment_id IS NULL");$s->execute(['payment'=>$paymentId,'id'=>$id]);if($s->rowCount()===1)$this->recordEvent($id,'payment-linked:'.$id.':'.$paymentId,'charge_created','Cobrança emitida e vinculada à matrícula.');
     }
 
-    public function handlePaymentUpdate(string $asaasPaymentId,string $status): void
+    public function handlePaymentUpdate(string $asaasPaymentId,string $status): ?int
     {
-        $s=$this->database->prepare('SELECT e.id,e.status FROM student_enrollments e INNER JOIN finance_payments p ON p.id=e.finance_payment_id WHERE p.asaas_payment_id=:payment LIMIT 1');$s->execute(['payment'=>$asaasPaymentId]);$enrollment=$s->fetch();if(!is_array($enrollment))return;
+        $s=$this->database->prepare('SELECT e.id,e.status FROM student_enrollments e INNER JOIN finance_payments p ON p.id=e.finance_payment_id WHERE p.asaas_payment_id=:payment LIMIT 1');$s->execute(['payment'=>$asaasPaymentId]);$enrollment=$s->fetch();if(!is_array($enrollment))return null;
         $id=(int)$enrollment['id'];
-        if(in_array($status,['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_confirmed' WHERE id=:id AND status<>'payment_confirmed'")->execute(['id'=>$id]);$this->recordEvent($id,'payment-confirmed:'.$asaasPaymentId,'payment_confirmed','Pagamento confirmado pelo Asaas. Aguardando liberação no AVA.');return;}
-        if(in_array($status,['CANCELED','REFUNDED'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_interrupted' WHERE id=:id")->execute(['id'=>$id]);$this->recordEvent($id,'payment-interrupted:'.$asaasPaymentId.':'.$status,'payment_interrupted',$status==='REFUNDED'?'Pagamento estornado no Asaas.':'Cobrança cancelada no Asaas.');}
+        if(in_array($status,['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_confirmed' WHERE id=:id AND status<>'payment_confirmed'")->execute(['id'=>$id]);$this->recordEvent($id,'payment-confirmed:'.$asaasPaymentId,'payment_confirmed','Pagamento confirmado pelo Asaas. Liberação automática no AVA iniciada.');return$id;}
+        if(in_array($status,['CANCELED','REFUNDED'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_interrupted' WHERE id=:id")->execute(['id'=>$id]);$this->recordEvent($id,'payment-interrupted:'.$asaasPaymentId.':'.$status,'payment_interrupted',$status==='REFUNDED'?'Pagamento estornado no Asaas.':'Cobrança cancelada no Asaas.');}return null;
     }
 
     public function releaseContext(int$id,array$allowedUnits):?array
@@ -77,7 +77,13 @@ final readonly class EnrollmentRepository
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
     }
 
-    public function markReleased(int$id,int$avaUserId,int$courseId,int$customerId,int$userId,array$avaUser):void
+    public function releaseContextForAutomation(int$id):?array
+    {
+        $sql="SELECT e.id,e.finance_customer_id,e.unit_id,e.status,e.moodle_enrolment_status,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
+        $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
+    public function markReleased(int$id,int$avaUserId,int$courseId,int$customerId,?int$userId,array$avaUser):void
     {
         $this->database->beginTransaction();
         try{$this->database->prepare("UPDATE student_enrollments SET moodle_enrolment_status='released',ava_user_id=:ava_user,ava_released_at=NOW(),ava_released_by=:released_by,ava_last_error=NULL WHERE id=:id AND status IN ('payment_confirmed','payment_waived') AND moodle_enrolment_status<>'released'")->execute(['ava_user'=>$avaUserId,'released_by'=>$userId,'id'=>$id]);
@@ -87,9 +93,17 @@ final readonly class EnrollmentRepository
         }catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
-    public function recordReleaseFailure(int$id,string$message,int$userId):void
+    public function recordReleaseFailure(int$id,string$message,?int$userId):void
     {
         $message=mb_substr(trim($message),0,500);$s=$this->database->prepare('UPDATE student_enrollments SET ava_last_error=:error WHERE id=:id');$s->execute(['error'=>$message,'id'=>$id]);if($s->rowCount()===1)$this->recordEvent($id,'ava-release-failed:'.$id.':'.hash('sha256',$message),'ava_release_failed','Falha ao liberar no AVA: '.$message,$userId);
+    }
+
+    /** @return array{ready:int,failed:int} */
+    public function avaNotificationSummary(array$unitIds):array
+    {
+        if($unitIds===[])return['ready'=>0,'failed'=>0];$marks=implode(',',array_fill(0,count($unitIds),'?'));
+        $sql="SELECT SUM(e.moodle_enrolment_status='released' AND NOT EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id)) ready,SUM(e.status='payment_confirmed' AND e.moodle_enrolment_status='not_released' AND e.ava_last_error IS NOT NULL) failed FROM student_enrollments e WHERE e.unit_id IN ($marks)";
+        $s=$this->database->prepare($sql);$s->execute($unitIds);$row=$s->fetch()?:[];return['ready'=>(int)($row['ready']??0),'failed'=>(int)($row['failed']??0)];
     }
 
     public function accessCommunicationContext(int$id,array$allowedUnits):?array

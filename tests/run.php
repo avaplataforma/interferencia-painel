@@ -536,6 +536,9 @@ $tests['carrega integração Moodle com liberação assistida'] = static functio
     assertTrue(str_contains($client,"'Função Moodle: '") && str_contains($client,"'errorcode'"));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php'),'reconciled_by'));
     assertTrue(str_contains($routes,'release-ava'));
+    assertTrue(is_file($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php'));
+    assertTrue(str_contains($routes,'$avaEnrollmentReleaser->release($confirmedEnrollment)'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php'),'avaNotificationSummary'));
     assertTrue(!str_contains($routes,'static function(array$params)'));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_670000_add_ava_release_to_enrollments.php'));
     assertTrue(str_contains($routes,"'/admin/ava'"));
