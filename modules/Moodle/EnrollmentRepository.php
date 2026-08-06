@@ -81,7 +81,7 @@ final readonly class EnrollmentRepository
     {
         $this->database->beginTransaction();
         try{$this->database->prepare("UPDATE student_enrollments SET moodle_enrolment_status='released',ava_user_id=:ava_user,ava_released_at=NOW(),ava_released_by=:released_by,ava_last_error=NULL WHERE id=:id AND status IN ('payment_confirmed','payment_waived') AND moodle_enrolment_status<>'released'")->execute(['ava_user'=>$avaUserId,'released_by'=>$userId,'id'=>$id]);
-            $this->database->prepare("UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status='linked',match_method='assisted_release',reconciled_by=:user,reconciled_at=NOW() WHERE moodle_user_id=:ava_user")->execute(['customer'=>$customerId,'user'=>$userId,'ava_user'=>$avaUserId]);
+            $this->database->prepare("UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status='linked',match_method='assisted_release',reviewed_by=:user,matched_at=NOW() WHERE moodle_user_id=:ava_user")->execute(['customer'=>$customerId,'user'=>$userId,'ava_user'=>$avaUserId]);
             $this->database->prepare('INSERT INTO moodle_enrolments(moodle_course_id,moodle_user_id,time_start,is_active) VALUES(:course,:ava_user,NOW(),1) ON DUPLICATE KEY UPDATE is_active=1,time_start=COALESCE(time_start,NOW()),synced_at=NOW()')->execute(['course'=>$courseId,'ava_user'=>$avaUserId]);
             $this->recordEvent($id,'ava-released:'.$id.':'.$avaUserId.':'.$courseId,'ava_released','Acesso ao curso liberado no AVA.',$userId);$this->database->commit();
         }catch(\Throwable$e){$this->database->rollBack();throw$e;}
