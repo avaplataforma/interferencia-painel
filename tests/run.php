@@ -516,7 +516,7 @@ $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath)
     assertTrue(is_file($rootPath.'/views/finance/customers/create.php'));
 };
 
-$tests['carrega integração Moodle somente leitura'] = static function () use ($rootPath): void {
+$tests['carrega integração Moodle com liberação assistida'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
     $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
@@ -530,8 +530,10 @@ $tests['carrega integração Moodle somente leitura'] = static function () use (
     assertTrue(is_file($rootPath.'/views/admin/integrations.php'));
     assertTrue(str_contains($client,'core_webservice_get_site_info'));
     assertTrue(str_contains($client,'core_enrol_get_enrolled_users'));
-    assertTrue(!str_contains($client,'core_user_create_users'));
-    assertTrue(!str_contains($client,'enrol_manual_enrol_users'));
+    assertTrue(str_contains($client,'core_user_create_users'));
+    assertTrue(str_contains($client,'enrol_manual_enrol_users'));
+    assertTrue(str_contains($routes,'release-ava'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_670000_add_ava_release_to_enrollments.php'));
 };
 
 $tests['carrega conciliação segura de alunos do Moodle'] = static function () use ($rootPath): void {

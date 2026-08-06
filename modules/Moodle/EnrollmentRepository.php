@@ -61,6 +61,28 @@ final readonly class EnrollmentRepository
         if(in_array($status,['CANCELED','REFUNDED'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_interrupted' WHERE id=:id")->execute(['id'=>$id]);$this->recordEvent($id,'payment-interrupted:'.$asaasPaymentId.':'.$status,'payment_interrupted',$status==='REFUNDED'?'Pagamento estornado no Asaas.':'Cobrança cancelada no Asaas.');}
     }
 
+    public function releaseContext(int$id,array$allowedUnits):?array
+    {
+        if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
+        $sql="SELECT e.id,e.finance_customer_id,e.status,e.moodle_enrolment_status,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
+        $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
+    public function markReleased(int$id,int$avaUserId,int$courseId,int$customerId,int$userId,array$avaUser):void
+    {
+        $this->database->beginTransaction();
+        try{$this->database->prepare("UPDATE student_enrollments SET moodle_enrolment_status='released',ava_user_id=:ava_user,ava_released_at=NOW(),ava_released_by=:released_by,ava_last_error=NULL WHERE id=:id AND status='payment_confirmed' AND moodle_enrolment_status<>'released'")->execute(['ava_user'=>$avaUserId,'released_by'=>$userId,'id'=>$id]);
+            $this->database->prepare("UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status='linked',match_method='assisted_release',reconciled_by=:user,reconciled_at=NOW() WHERE moodle_user_id=:ava_user")->execute(['customer'=>$customerId,'user'=>$userId,'ava_user'=>$avaUserId]);
+            $this->database->prepare('INSERT INTO moodle_enrolments(moodle_course_id,moodle_user_id,time_start,is_active) VALUES(:course,:ava_user,NOW(),1) ON DUPLICATE KEY UPDATE is_active=1,time_start=COALESCE(time_start,NOW()),synced_at=NOW()')->execute(['course'=>$courseId,'ava_user'=>$avaUserId]);
+            $this->recordEvent($id,'ava-released:'.$id.':'.$avaUserId.':'.$courseId,'ava_released','Acesso ao curso liberado no AVA.',$userId);$this->database->commit();
+        }catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
+
+    public function recordReleaseFailure(int$id,string$message,int$userId):void
+    {
+        $message=mb_substr(trim($message),0,500);$s=$this->database->prepare('UPDATE student_enrollments SET ava_last_error=:error WHERE id=:id');$s->execute(['error'=>$message,'id'=>$id]);if($s->rowCount()===1)$this->recordEvent($id,'ava-release-failed:'.$id.':'.hash('sha256',$message),'ava_release_failed','Falha ao liberar no AVA: '.$message,$userId);
+    }
+
     private function recordEvent(int $enrollmentId,string $key,string $type,string $description,?int $userId=null): void
     {
         $s=$this->database->prepare('INSERT IGNORE INTO student_enrollment_events(enrollment_id,event_key,event_type,description,created_by) VALUES(:enrollment,:event_key,:event_type,:description,:created_by)');$s->execute(['enrollment'=>$enrollmentId,'event_key'=>$key,'event_type'=>$type,'description'=>$description,'created_by'=>$userId]);

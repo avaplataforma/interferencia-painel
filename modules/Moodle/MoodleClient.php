@@ -27,6 +27,26 @@ final readonly class MoodleClient
         $data=$this->call('core_enrol_get_enrolled_users',['courseid'=>$courseId]);return array_values(array_filter($data,'is_array'));
     }
 
+    /** @return list<array<string,mixed>> */
+    public function usersByField(string$field,string$value):array
+    {
+        if(!in_array($field,['email','idnumber','username'],true)||trim($value)==='')return[];
+        $data=$this->call('core_user_get_users_by_field',['field'=>$field,'values'=>[trim($value)]]);return array_values(array_filter($data,'is_array'));
+    }
+
+    /** @param array<string,mixed> $user @return array<string,mixed> */
+    public function createUser(array$user):array
+    {
+        $data=$this->call('core_user_create_users',['users'=>[$user]]);$created=$data[0]??null;if(!is_array($created)||!isset($created['id']))throw new RuntimeException('O AVA não confirmou a criação do usuário.');return$created;
+    }
+
+    public function enrolStudent(int$userId,int$courseId):void
+    {
+        if($userId<1||$courseId<1)throw new RuntimeException('Usuário ou curso inválido para matrícula no AVA.');
+        foreach($this->enrolledUsers($courseId)as$user)if((int)($user['id']??0)===$userId)return;
+        $this->call('enrol_manual_enrol_users',['enrolments'=>[['roleid'=>5,'userid'=>$userId,'courseid'=>$courseId]]]);
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {
