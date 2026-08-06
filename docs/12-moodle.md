@@ -85,3 +85,4 @@ O Moodle permanece como origem oficial de alunos e matrículas enquanto a integr
 - A atualização do progresso usa `core_completion_get_course_completion_status` e depende dessa função estar habilitada no serviço web do Moodle.
 - A situação pedagógica é classificada automaticamente em regular, aguardando liberação, bloqueado, nunca acessou, inativo há 7/15/30 dias ou progresso parado há 15 dias.
 - Os filtros de risco usam somente alunos e unidades permitidos ao usuário conectado.
+- O comando `php bin/console moodle:pedagogical:sync` atualiza diariamente o último acesso e o progresso, com trava contra execuções simultâneas.

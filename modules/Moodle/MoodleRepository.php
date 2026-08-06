@@ -47,7 +47,7 @@ final readonly class MoodleRepository
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
     public function progressCandidates(array$unitIds,int$limit=100):array
     {
-        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));$sql="SELECT me.id moodle_enrolment_id,me.moodle_user_id,me.moodle_course_id FROM moodle_enrolments me INNER JOIN moodle_users mu ON mu.moodle_user_id=me.moodle_user_id INNER JOIN finance_customers f ON f.id=mu.finance_customer_id WHERE me.is_active=1 AND mu.suspended=0 AND f.is_deleted=0 AND f.unit_id IN ($marks) ORDER BY COALESCE(me.progress_synced_at,'2000-01-01') LIMIT ".max(1,min(300,$limit));$s=$this->database->prepare($sql);$s->execute($unitIds);return$s->fetchAll();
+        if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));$sql="SELECT me.id moodle_enrolment_id,me.moodle_user_id,me.moodle_course_id,mu.username FROM moodle_enrolments me INNER JOIN moodle_users mu ON mu.moodle_user_id=me.moodle_user_id INNER JOIN finance_customers f ON f.id=mu.finance_customer_id WHERE me.is_active=1 AND mu.suspended=0 AND f.is_deleted=0 AND f.unit_id IN ($marks) ORDER BY COALESCE(me.progress_synced_at,'2000-01-01') LIMIT ".max(1,min(300,$limit));$s=$this->database->prepare($sql);$s->execute($unitIds);return$s->fetchAll();
     }
 
     public function saveProgress(int$enrolmentId,?float$percent,string$status,?string$error):void

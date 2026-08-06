@@ -617,6 +617,9 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'/students/enrollments/create?student='));
     assertTrue(str_contains($view,'Sem acesso há 15 dias'));
     assertTrue(str_contains($view,'riskLabels'));
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+    assertTrue(str_contains($console,"moodle:pedagogical:sync"));
+    assertTrue(str_contains($console,'pedagogical-sync.lock'));
 };
 
 $failures = 0;

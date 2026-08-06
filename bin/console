@@ -16,6 +16,10 @@ use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Moodle\MoodleRepository;
+use Interferencia\Modules\Moodle\MoodleClient;
+use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
+use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
+use Interferencia\Kernel\Security\SecretCipher;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -43,6 +47,8 @@ Comandos disponíveis:
   user:create-admin  Cria o primeiro administrador de forma interativa
   whatsapp:media:sync  Recupera mídias pendentes da Cloud API
   moodle:profiles:rebuild  Organiza campos complementares já sincronizados
+
+  moodle:pedagogical:sync  Atualiza progresso e último acesso dos alunos
 
 TEXT);
         exit(0);
@@ -124,6 +130,13 @@ TEXT);
         $result=(new MoodleRepository($connection->pdo()))->rebuildProfileFieldsFromStoredUsers();
         fwrite(STDOUT,sprintf("Perfis conferidos: %d; campos complementares encontrados: %d.\n",$result['users'],$result['fields']));
         exit(0);
+    }
+
+    if ($command === 'moodle:pedagogical:sync') {
+        $lockPath=$rootPath.'/storage/pedagogical-sync.lock';$lock=fopen($lockPath,'c');
+        if($lock===false||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('A sincronização pedagógica já está em execução.');
+        try{$database=$connection->pdo();$settings=(new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key'))))->settings();$client=new MoodleClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']);$repository=new MoodleRepository($database);$unitIds=array_map('intval',$database->query('SELECT id FROM units WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN));$result=(new PedagogicalSynchronizer($client,$repository))->sync($unitIds,300);fwrite(STDOUT,sprintf("Acompanhamento atualizado: %d matrícula(s); falhas: %d.\n",$result['updated'],$result['failed']));exit($result['updated']===0&&$result['failed']>0?1:0);}
+        finally{flock($lock,LOCK_UN);fclose($lock);}
     }
 
     $migrator = new Migrator(

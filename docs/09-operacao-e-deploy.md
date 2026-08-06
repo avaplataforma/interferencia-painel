@@ -68,3 +68,7 @@ Quando dependências externas forem adicionadas, o projeto deverá versionar
 Antes de atualizar, registre o commit ativo. Em uma emergência, retorne ao commit
 anterior aprovado e regenere o autoload. Não use `git reset --hard` em um
 diretório com mudanças não investigadas.
+
+## Sincronização pedagógica diária
+
+Executar `php bin/console moodle:pedagogical:sync` uma vez ao dia como o usuário do domínio. O processo atualiza último acesso, conclusão e alertas do painel Pedagógico. A VPS registra a saída em `storage/logs/pedagogical-sync.log` e impede duas execuções simultâneas.
