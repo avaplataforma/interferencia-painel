@@ -51,7 +51,7 @@ O serviço externo do Moodle deve conter somente as funções necessárias. O to
 - Novas contas criadas pelo Painel usam o CPF, somente com números, como login no AVA.
 - O Admin System escolhe entre senha automática gerada pelo AVA ou os cinco primeiros dígitos do CPF.
 - A opção automática é o padrão recomendado e delega ao AVA o envio seguro das instruções.
-- Quando for escolhida a senha baseada no CPF, a troca no primeiro acesso é obrigatória e a política de senhas do Moodle continua prevalecendo.
+- Quando for escolhida a senha baseada no CPF, ela permanece válida sem troca obrigatória; a política de senhas do Moodle continua prevalecendo.
 - A configuração afeta apenas novas contas; usuários existentes não têm suas senhas alteradas.
 # Conciliação de alunos
 

@@ -541,7 +541,7 @@ $tests['carrega integração Moodle com liberação assistida'] = static functio
     assertTrue(str_contains($routes,"'/admin/ava/unit-mappings'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_700000_add_ava_password_policy.php'));
     assertTrue(str_contains($routes,"'/admin/ava/password-policy'"));
-    assertTrue(str_contains($routes,"'auth_forcepasswordchange'"));
+    assertTrue(str_contains($routes,'substr($document,0,5)'));
 };
 
 $tests['carrega conciliação segura de alunos do Moodle'] = static function () use ($rootPath): void {

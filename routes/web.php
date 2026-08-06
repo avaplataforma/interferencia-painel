@@ -549,7 +549,7 @@ return static function (
                 if($moodleClient->usersByField('username',$username)!==[])throw new RuntimeException('Já existe outro usuário com este CPF como login no AVA. Revise o cadastro antes de continuar.');
                 $userPayload=['username'=>$username,'firstname'=>$first,'lastname'=>$last,'email'=>$email,'idnumber'=>$document,'auth'=>'manual','lang'=>'pt_br','customfields'=>[$unitField]];
                 $passwordMode=$moodleIntegrations->settings()['initial_password_mode'];
-                if($passwordMode==='cpf5'){$userPayload['password']=substr($document,0,5);$userPayload['preferences']=[['type'=>'auth_forcepasswordchange','value'=>'1']];}else{$userPayload['createpassword']=1;}
+                if($passwordMode==='cpf5'){$userPayload['password']=substr($document,0,5);}else{$userPayload['createpassword']=1;}
                 $created=$moodleClient->createUser($userPayload);
                 $avaUser=['id'=>(int)$created['id'],'username'=>(string)($created['username']??$username),'firstname'=>$first,'lastname'=>$last,'fullname'=>trim($first.' '.$last),'email'=>$email,'idnumber'=>$document,'suspended'=>0];
             }
