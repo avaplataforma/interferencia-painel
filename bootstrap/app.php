@@ -169,6 +169,9 @@ $asaasWebhookToken=$asaasSettings['configured']?(string)$asaasSettings['webhook_
 $splitLifecycle=static function(string$phase,array$context)use($franchiseContracts,$organizationId):mixed{if($phase==='prepare')return$franchiseContracts->prepareSplit($organizationId,(float)$context['gross'],(string)$context['reference']);$prepared=$context['prepared'];if($phase==='complete'){$franchiseContracts->completeSplit((int)$prepared['attempt_id'],$context['result']);return null;}if($phase==='fail')$franchiseContracts->failSplit((int)$prepared['attempt_id'],(string)$context['error']);return null;};
 $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas_payments_write_enabled'),$splitLifecycle);
 $franchiseContractBilling = new FranchiseContractBillingService($franchiseContracts,$asaas);
+$franchiseSandboxTests = new \Interferencia\Modules\Organization\FranchiseSandboxBillingRepository($database);
+$asaasSandbox = new AsaasClient('sandbox',$asaasSandboxSettings['configured']&&$asaasSandboxSettings['is_active']?(string)$asaasSandboxSettings['api_key']:'',true);
+$franchiseSandboxBilling = new \Interferencia\Modules\Organization\FranchiseSandboxBillingService($franchiseSandboxTests,$asaasSandbox);
 $asaasSynchronizer = new AsaasSynchronizer($asaas,$finance);
 $asaasWebhook = new AsaasWebhookVerifier([$asaasWebhookToken,(string)$asaasSandboxSettings['webhook_token']]);
 $auth = new Auth($users,new PasswordHasher(),$session,$csrf,$isCentralContext?'platform':'franchise');
@@ -227,8 +230,10 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
     'avaAlerts' => $avaAlerts,
+    'centralSandboxContracts' => $isCentralContext ? $franchiseSandboxTests->eligibleContracts() : [],
+    'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $platformSettingsRepository, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);

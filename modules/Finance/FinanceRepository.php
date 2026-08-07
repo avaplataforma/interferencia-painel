@@ -148,6 +148,14 @@ final readonly class FinanceRepository
     public function customerPayment(int$customerId,int$paymentId):?array{$s=$this->database->prepare('SELECT * FROM finance_payments WHERE id=:id AND finance_customer_id=:customer AND is_deleted=0 LIMIT 1');$s->execute(['id'=>$paymentId,'customer'=>$customerId]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function paymentIdByAsaas(string$asaasId):?int{$s=$this->database->prepare('SELECT id FROM finance_payments WHERE asaas_payment_id=:id LIMIT 1');$s->execute(['id'=>$asaasId]);$id=$s->fetchColumn();return$id===false?null:(int)$id;}
     public function markPaymentDeleted(int$id):void{$s=$this->database->prepare("UPDATE finance_payments SET is_deleted=1,status='CANCELED',synced_at=NOW() WHERE id=:id");$s->execute(['id'=>$id]);}
+    public function updateFranchiseSandboxTest(array$payment):void
+    {
+        $paymentId=trim((string)($payment['id']??''));$reference=trim((string)($payment['externalReference']??''));
+        if($paymentId===''&&$reference==='')return;
+        $invoice=trim((string)($payment['invoiceUrl']??$payment['bankSlipUrl']??''));
+        $s=$this->database->prepare('UPDATE franchise_sandbox_billing_tests SET asaas_payment_id=COALESCE(asaas_payment_id,:payment),status=:status,invoice_url=COALESCE(:invoice,invoice_url),error_message=NULL,last_synced_at=NOW() WHERE asaas_payment_id=:payment_match OR external_reference=:reference');
+        $s->execute(['payment'=>$paymentId!==''?$paymentId:null,'status'=>(string)($payment['status']??'PENDING'),'invoice'=>$invoice!==''?$invoice:null,'payment_match'=>$paymentId,'reference'=>$reference]);
+    }
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
     public function crmCandidates(array$customer,array$unitIds):array
     {

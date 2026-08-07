@@ -31,6 +31,14 @@ if (!is_file($autoload)) {
 require $autoload;
 
 $tests = [];
+$tests['carrega fluxo financeiro Sandbox por franquia']=static function()use($rootPath):void{
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_910000_create_franchise_sandbox_billing_tests.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseSandboxBillingService.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/asaas-sandbox.php');
+    assertTrue(str_contains($migration,'franchise_sandbox_billing_tests'));
+    assertTrue(str_contains($service,"new \\DateTimeImmutable('tomorrow')"));
+    assertTrue(str_contains($view,'Teste financeiro por franquia'));
+};
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
     $repository = new MigrationRepository($rootPath.'/database/migrations');
