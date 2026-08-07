@@ -38,6 +38,8 @@ $tests['carrega fluxo financeiro Sandbox por franquia']=static function()use($ro
     assertTrue(str_contains($migration,'franchise_sandbox_billing_tests'));
     assertTrue(str_contains($service,"new \\DateTimeImmutable('tomorrow')"));
     assertTrue(str_contains($view,'Teste financeiro por franquia'));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($routes,"str_starts_with(\$reference,'mundo-inter:sandbox:franchise-test:')"));
 };
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
