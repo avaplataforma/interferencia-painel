@@ -320,6 +320,7 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     table { width: 100%; min-width: 42rem; margin-top: 1rem; background: #fff; }
     th, td { padding: .8rem .85rem; border-bottom: 1px solid #e3e7ea; vertical-align: middle; text-align: left; }
     .guest-card { width: min(30rem, calc(100% - 2rem)); }
+    .guest-card-wide { width: min(82rem, calc(100% - 3rem)); }
     @media (min-width: 576px) { .d-sm-block { display: block; } .col-sm-6 { width: 50%; } }
     @media (min-width: 768px) { .col-md-4 { width: 33.333%; } .p-md-5 { padding: 3rem; } }
     @media (min-width: 992px) { .d-lg-none { display: none; } .px-lg-4 { padding-inline: 1.5rem; } }
@@ -330,7 +331,7 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
 </head>
 <body data-base-path="<?= $escape($basePath) ?>" data-current-user-id="<?= $authenticated?(int)$currentUser->id:'' ?>">
 <?php if (!$authenticated): ?>
-  <div class="min-vh-100 d-grid align-items-center py-4"><main class="guest-card mx-auto bg-white border rounded-4 shadow-sm p-4 p-md-5"><?= $content ?></main></div>
+  <div class="min-vh-100 d-grid align-items-center py-4"><main class="guest-card<?= !empty($wideGuest)?' guest-card-wide':'' ?> mx-auto bg-white border rounded-4 shadow-sm p-4 p-md-5"><?= $content ?></main></div>
 <?php else: ?>
   <div class="app-shell d-flex">
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
