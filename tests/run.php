@@ -48,6 +48,7 @@ $tests['vincula franquias ao histórico contratual']=static function()use($rootP
     assertTrue(str_contains($migration,'WHERE NOT EXISTS'));
     assertTrue(str_contains($view,'Histórico contratual'));
     assertTrue(str_contains($list,'fa-file-signature'));
+    assertTrue(str_contains($list,'Login exclusivo'));
 };
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
