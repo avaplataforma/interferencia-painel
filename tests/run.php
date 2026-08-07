@@ -834,6 +834,16 @@ $tests['aplica split contratual nas novas cobranças das franquias'] = static fu
     assertTrue(str_contains($client,"str_starts_with(\$reference,'painel:')"));
 };
 
+$tests['separa Asaas Sandbox da conexão de produção'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_900000_separate_asaas_environments.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Finance/IntegrationRepository.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/asaas.php');
+    assertTrue(str_contains($migration,'finance_integrations_provider_environment_unique'));
+    assertTrue(str_contains($repository,"asaas(string \$environment='production')"));
+    assertTrue(str_contains($view,'Webhook do Sandbox'));
+    assertTrue(str_contains($view,'$aact_hmlg_'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
