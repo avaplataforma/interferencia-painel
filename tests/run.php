@@ -624,6 +624,11 @@ $tests['organiza a administração central da rede'] = static function () use ($
     assertTrue(str_contains($tickets,'function centralAll'));
     assertTrue(is_file($rootPath.'/views/admin/platform/tickets.php'));
     assertTrue(is_file($rootPath.'/views/admin/platform/branding.php'));
+    $franchiseIndex=(string)file_get_contents($rootPath.'/views/admin/organizations/index.php');
+    $franchiseForm=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    assertTrue(str_contains($franchiseIndex,'<h1>Franquias</h1>'));
+    assertTrue(str_contains($franchiseForm,"'Nova franquia'"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'> ADM Central</span>'));
 };
 
 $tests['personaliza a identidade do ADM Central'] = static function () use ($rootPath): void {

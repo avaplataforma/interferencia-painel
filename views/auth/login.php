@@ -3,7 +3,7 @@
 declare(strict_types=1);
 ?>
 <img class="login-logo" src="<?= $escape($assetBasePath.$brandLogo) ?>" alt="Logo <?= $escape($brandName) ?>">
-<span class="status"><?= !empty($isCentralContext)?'ADM Central':'Acesso da organização' ?></span>
+<span class="status"><?= !empty($isCentralContext)?'ADM Central':'Acesso da franquia' ?></span>
 <h1><?= $escape($brandLoginTitle) ?></h1>
 <p><?= $escape($brandWelcomeText) ?></p>
 <?php if ($error !== null): ?><p class="alert" role="alert"><?= $escape($error) ?></p><?php endif; ?>
