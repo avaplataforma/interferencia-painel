@@ -12,7 +12,21 @@ final readonly class DocumentManager
 {
     private const MAX_BYTES = 26214400;
     private const CENTRAL_CATEGORIES = ['institucional'=>'Institucional','juridico'=>'Jurídico','financeiro'=>'Financeiro','contratos'=>'Contratos','suporte'=>'Suporte','outros'=>'Outros'];
-    private const FRANCHISE_CATEGORIES = ['cadastral'=>'Cadastral','juridico'=>'Jurídico','financeiro'=>'Financeiro','contratos'=>'Contratos','marketing'=>'Marketing','operacional'=>'Operacional','outros'=>'Outros'];
+    private const FRANCHISE_CATEGORIES = [
+        'contrato_social'=>'Contrato Social',
+        'cartao_cnpj'=>'Cartão CNPJ',
+        'cnh_gestor'=>'CNH do gestor',
+        'documento_gestor'=>'RG/CPF do gestor',
+        'comprovante_endereco'=>'Comprovante de endereço',
+        'certidoes'=>'Certidões',
+        'cadastral'=>'Outros documentos cadastrais',
+        'juridico'=>'Jurídico',
+        'financeiro'=>'Financeiro',
+        'contratos'=>'Contratos',
+        'marketing'=>'Marketing',
+        'operacional'=>'Operacional',
+        'outros'=>'Outros',
+    ];
     private const MIME_TYPES = [
         'application/pdf','image/jpeg','image/png','image/webp','text/plain','text/csv',
         'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',

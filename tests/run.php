@@ -995,11 +995,15 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     assertTrue(str_contains($manager,"storeFranchise((int)\$organizationId,'Documentos'"));
     assertTrue(str_contains($manager,'FILEINFO_MIME_TYPE'));
     assertTrue(str_contains($manager,'deleted_at=NOW()'));
+    assertTrue(str_contains($manager,"'contrato_social'=>'Contrato Social'"));
+    assertTrue(str_contains($manager,"'cnh_gestor'=>'CNH do gestor'"));
     assertTrue(str_contains($routes,"'/admin/documents'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/documents'"));
+    assertTrue(str_contains($routes,"'franchiseDocuments'=>\$documents->all('franchise',\$id)"));
     assertTrue(str_contains($routes,"'Cache-Control'=>'private, no-store'"));
     assertTrue(str_contains($view,'Nova versão'));
     assertTrue(str_contains($view,'histórico'));
+    assertTrue(is_file($rootPath.'/views/admin/organizations/documents.php'));
 };
 
 $failures = 0;

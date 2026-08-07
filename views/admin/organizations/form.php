@@ -10,8 +10,9 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 <div class="organization-editor">
   <div class="page-header">
     <div><p class="eyebrow">Mundo Inter · ADM Central</p><h1><?= $editing?'Editar franquia':'Cadastrar franquia' ?></h1><p>Dados, acesso e identidade visual organizados em uma única jornada.</p></div>
-    <div class="page-actions"><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
+    <div class="page-actions"><?php if($editing):?><a class="button button-secondary" href="#documentos"><i class="fa-solid fa-folder-open"></i> Documentos</a><?php endif;?><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
   </div>
+  <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
   <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 
   <form class="organization-editor-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><?= $csrfField ?>
@@ -81,5 +82,6 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 
     <footer class="organization-savebar"><p class="meta"><i class="fa-solid fa-shield-halved"></i> O financeiro e o modelo comercial são concluídos no fluxo de implantação, após a conferência.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar franquia</button></footer>
   </form>
+  <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
 </div>
 <script>document.querySelectorAll('.color-field').forEach(function(group){var picker=group.querySelector('input[type=color]'),text=group.querySelector('[data-color-text]');picker.addEventListener('input',function(){text.value=picker.value;});});</script>
