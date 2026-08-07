@@ -328,7 +328,7 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
 <?php else: ?>
   <div class="app-shell d-flex">
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
-      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($assetBasePath.$brandLogo) ?>" alt=""><span><?= $escape($brandName) ?></span></a>
+      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($assetBasePath.$brandFavicon) ?>" alt=""><span><?= $escape($brandName) ?></span></a>
       <nav class="nav flex-column gap-1">
         <?php require __DIR__ . '/navigation.php'; ?>
       </nav>
