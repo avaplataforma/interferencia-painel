@@ -45,6 +45,11 @@ $tests['carrega a fundação multiempresa com resolução segura por domínio'] 
     $units=(string)file_get_contents($rootPath.'/modules/Organization/UnitRepository.php');
     assertTrue(str_contains($units, 'organization_id'));
     assertTrue(in_array('20260806_750000_scope_crm_by_organization', array_map(static fn($migration): string => $migration->id(), $repository->all()), true));
+    assertTrue(in_array('20260806_780000_add_organization_panel_identity', array_map(static fn($migration): string => $migration->id(), $repository->all()), true));
+    assertSame('franquia-tijucas', OrganizationRepository::normalizeSlug('Franquia-Tijucas'));
+    assertSame(null, OrganizationRepository::normalizeSlug('admin'));
+    assertSame(null, OrganizationRepository::normalizeSlug('franquia/invalida'));
+    assertTrue(str_contains($bootstrap, 'findActiveByPanelSlug'));
     $crm=(string)file_get_contents($rootPath.'/modules/Crm/ContactRepository.php');
     assertTrue(str_contains($crm, 'private int $organizationId'));
 };

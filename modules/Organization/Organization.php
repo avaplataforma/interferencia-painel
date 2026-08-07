@@ -10,6 +10,7 @@ final readonly class Organization
         public int $id,
         public string $publicId,
         public string $code,
+        public ?string $panelSlug,
         public string $legalName,
         public string $displayName,
         public string $timezone,
@@ -18,6 +19,10 @@ final readonly class Organization
         public ?string $secondaryColor,
         public ?string $logoPath,
         public ?string $faviconPath,
+        public ?string $loginTitle,
+        public ?string $loginWelcomeText,
+        public ?string $supportEmail,
+        public ?string $supportPhone,
     ) {
     }
 }

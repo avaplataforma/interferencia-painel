@@ -17,11 +17,11 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title><?= $escape($title) ?></title>
-  <link rel="icon" type="image/png" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
-  <link rel="apple-touch-icon" href="<?= $escape($basePath) ?>/assets/media/painel-inter-icon.png">
-  <link href="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
-  <link href="<?= $escape($basePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css" rel="stylesheet">
-  <link href="<?= $escape($basePath) ?>/assets/vendor/fontawesome/css/solid.min.css" rel="stylesheet">
+  <link rel="icon" type="image/png" href="<?= $escape($assetBasePath.$brandFavicon) ?>">
+  <link rel="apple-touch-icon" href="<?= $escape($assetBasePath.$brandFavicon) ?>">
+  <link href="<?= $escape($assetBasePath) ?>/assets/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
+  <link href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css" rel="stylesheet">
+  <link href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/solid.min.css" rel="stylesheet">
   <style>
     .nav-group:not([open]) + .adm-extensions { display: none; }
     .adm-extensions { display: contents; }
@@ -59,14 +59,15 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .mobile-menu > summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #aeb8c1; border-radius: .45rem; background: #fff; color: #536170; cursor: pointer; list-style: none; font-size: 1.2rem; }
     .mobile-menu > summary::-webkit-details-marker { display: none; }
     .mobile-menu-panel { position: absolute; z-index: 1060; top: calc(100% + .7rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: .75rem; background: #fff; border: 1px solid #dfe5e9; border-radius: .75rem; box-shadow: 0 1rem 2.5rem rgb(23 33 43 / 16%); }
-    :root { --inter-accent: #ed1c24; --inter-accent-dark: #c81018; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
+    :root { --inter-accent: <?= $escape($currentOrganization?->primaryColor ?? '#ed1c24') ?>; --inter-accent-dark: #c81018; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
     body { background: var(--inter-bg); color: var(--inter-ink); }
     .app-shell { min-height: 100vh; }
     .min-width-0 { min-width: 0; }
     .sidebar { width: 17rem; background: #fff; border-right: 1px solid #e2e8ec; }
     .brand { color: var(--inter-ink); text-decoration: none; font-size: 1.12rem; font-weight: 800; letter-spacing: -.02em; }
     .brand-logo { display: block; width: 2.35rem; height: 2.35rem; border-radius: 50%; object-fit: cover; }
-    .login-logo { display: block; width: 6rem; height: 6rem; margin: 0 auto 1.25rem; border-radius: 50%; object-fit: cover; }
+    .login-logo { display: block; width: min(18rem,90%); height: 8rem; margin: 0 auto 1.25rem; object-fit: contain; }
+    .input-prefix{display:flex;align-items:center;margin-top:.4rem;border:1px solid #bcc6ce;border-radius:.55rem;background:#f8fafb;overflow:hidden}.input-prefix span{padding:0 .8rem;color:var(--inter-muted);white-space:nowrap}.input-prefix input{margin:0!important;border:0!important;border-left:1px solid #dce3e8!important;border-radius:0!important;background:#fff}
     .sidebar .nav, .mobile-menu .nav { display: flex; flex-direction: column; width: 100%; }
     .sidebar a.nav-link, .mobile-menu a.nav-link { display: block; width: 100%; color: #536170; border-radius: .65rem; padding: .72rem .8rem; font-weight: 650; text-decoration: none; line-height: 1.25; }
     .sidebar a.nav-link:hover, .sidebar a.nav-link:focus, .mobile-menu a.nav-link:hover, .mobile-menu a.nav-link:focus { color: var(--inter-accent-dark); background: #fff0f1; text-decoration: none; }
@@ -318,7 +319,7 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
 <?php else: ?>
   <div class="app-shell d-flex">
     <aside class="sidebar desktop-sidebar flex-shrink-0 p-3">
-      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt=""><span>PAINEL INTER</span></a>
+      <a class="brand d-flex align-items-center gap-2 mb-4" href="<?= $escape($basePath) ?>/"><img class="brand-logo" src="<?= $escape($assetBasePath.$brandLogo) ?>" alt=""><span><?= $escape($brandName) ?></span></a>
       <nav class="nav flex-column gap-1">
         <a class="nav-link" href="<?= $escape($basePath) ?>/"><i class="fa-solid fa-house fa-fw" aria-hidden="true"></i>Visão geral</a>
         <?php if($navigation['organizations']??false):?><a class="nav-link adm-extension" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-network-wired fa-fw"></i>ADM · Organizações</a><?php endif;?>
@@ -365,11 +366,11 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     </div>
   </div>
 <?php endif; ?>
-<script src="<?= $escape($basePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/vendor/bootstrap/bootstrap.bundle.min.js"></script>
 <style>.message-media-preview{display:block;width:min(18rem,100%);max-height:18rem;margin-bottom:.45rem;border-radius:.65rem;object-fit:cover}.message-audio-preview{display:block;width:min(20rem,100%);margin-bottom:.45rem}.template-preview-card .template-confirm{grid-column:2/-1;display:flex;align-items:center;gap:.55rem;margin:0}.template-preview-card .template-confirm input{width:auto;margin:0}.template-preview-card>button{grid-column:2;justify-self:start;margin:0}.template-preview-card>[data-template-status]{grid-column:3;align-self:center}@media(max-width:900px){.template-preview-card .template-confirm,.template-preview-card>button,.template-preview-card>[data-template-status]{grid-column:1/-1}}</style>
 <style>.finance-section-tabs{display:flex;gap:1.25rem;margin:-.25rem 0 1.4rem;border-bottom:1px solid #dce3e8}.finance-section-tabs a{padding:.8rem .15rem .7rem;border-bottom:3px solid transparent;color:#65727e;font-weight:750;text-decoration:none}.finance-section-tabs a.active{border-color:var(--inter-accent);color:var(--inter-ink)}</style>
 <style>.ticket-filters{display:grid;grid-template-columns:minmax(15rem,1.5fr) repeat(3,minmax(9rem,.65fr)) auto auto;gap:.55rem;margin-bottom:1rem}.ticket-filters>*{min-height:2.85rem;margin:0!important}.ticket-table{overflow:hidden;border:1px solid #dce3e8;border-radius:.8rem;background:#fff}.ticket-table table{margin:0}.ticket-table tr.ticket-unread{background:#fff7f7}.ticket-subject{display:flex;align-items:center;gap:.6rem;color:var(--inter-ink);text-decoration:none}.ticket-subject>span:last-child{display:grid}.ticket-subject small{color:var(--inter-muted);font-weight:400}.ticket-unread-dot{width:.55rem;height:.55rem;border-radius:50%;background:var(--inter-accent)}.ticket-priority{display:inline-flex;padding:.22rem .5rem;border-radius:999px;font-size:.76rem;font-weight:750}.priority-low{color:#536170;background:#edf1f4}.priority-normal{color:#185ea8;background:#e8f2ff}.priority-high{color:#9a6000;background:#fff0c7}.priority-urgent{color:#b4232c;background:#ffe5e7}.ticket-detail-grid{display:grid;grid-template-columns:minmax(0,1fr) 19rem;gap:1.25rem}.ticket-description-card,.ticket-conversation,.ticket-side-card{padding:1.1rem;border:1px solid #dce3e8;border-radius:.85rem;background:#fff}.ticket-detail-meta{display:flex;align-items:center;flex-wrap:wrap;gap:.6rem;margin-bottom:1rem}.ticket-conversation{margin-top:1.25rem}.ticket-comment{margin:.75rem 0;padding:.85rem;border-radius:.7rem;background:#f6f8fa}.ticket-comment header{display:flex;justify-content:space-between;gap:1rem}.ticket-comment p{margin:.5rem 0 0}.ticket-side-card{margin-bottom:1rem}.ticket-side-card form{display:grid;gap:.55rem;margin-top:.75rem}.ticket-side-card form>*{margin:0!important}.ticket-timeline{display:grid;gap:.8rem;margin:0;padding-left:1.2rem}.ticket-timeline li span,.ticket-timeline li small{display:block;color:var(--inter-muted);font-size:.8rem}@media(max-width:991.98px){.ticket-filters{grid-template-columns:1fr 1fr}.ticket-detail-grid{grid-template-columns:1fr}}@media(max-width:575.98px){.ticket-filters{grid-template-columns:1fr}}</style>
 <style>.ticket-contact-picker{position:relative}.ticket-contact-results{position:absolute;z-index:30;top:calc(100% - 1.15rem);left:0;right:0;max-height:19rem;overflow:auto;padding:.35rem;border:1px solid #c9d2da;border-radius:.7rem;background:#fff;box-shadow:0 .8rem 2rem rgba(15,23,42,.14)}.ticket-contact-option{display:grid;width:100%;gap:.12rem;padding:.7rem .8rem;border:0;border-radius:.5rem;background:#fff;color:var(--inter-ink);text-align:left}.ticket-contact-option:hover,.ticket-contact-option:focus{background:#fff0f1}.ticket-contact-option small{color:var(--inter-muted)}.ticket-users{display:grid;grid-template-columns:repeat(auto-fill,minmax(15rem,1fr));gap:.55rem;margin:1rem 0;padding:1rem;border:1px solid #dce3e8;border-radius:.75rem}.ticket-users label{display:flex;align-items:flex-start;gap:.55rem;padding:.65rem;border-radius:.55rem;background:#f7f9fa}.ticket-users label span,.ticket-users label small{display:block}.ticket-attachment{display:flex;align-items:center;gap:.55rem;margin:.45rem 0;padding:.55rem;border-radius:.55rem;background:#f6f8fa;text-decoration:none}.ticket-attachment span,.ticket-attachment small{display:block}</style>
-<script src="<?= $escape($basePath) ?>/assets/js/app.js?v=15"></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/app.js?v=16"></script>
 </body>
 </html>

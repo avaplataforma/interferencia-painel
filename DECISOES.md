@@ -1,5 +1,14 @@
 # Decisões do Projeto
 
+## 06/08/2026 — Endereços do ecossistema Mundo Inter
+
+- O ADM Central usa `https://mundointer.com.br/` e aceita somente usuários Admin System.
+- Cada franquia acessa seu painel privado por `https://mundointer.com.br/nome-da-franquia/`.
+- O endereço interno é único e define a organização antes da autenticação; credenciais de outra organização são recusadas.
+- O login central usa a marca Mundo Inter. Cada franquia poderá usar logo, favicon, cores e textos próprios.
+- O site público de cada franquia usa seu domínio próprio, apontado por DNS para a infraestrutura Mundo Inter.
+- O serviço de e-mail da franquia permanece no provedor atual; registros MX, SPF, DKIM e DMARC não serão alterados pelo Painel.
+
 ## 06/08/2026 — Assinatura eletrônica própria
 
 **Status:** aceita com validação jurídica antes da produção

@@ -106,7 +106,16 @@ $csrf = new Csrf($session);
 $database = (new Connection($config))->pdo();
 $request = Request::fromGlobals();
 $organizations = new OrganizationRepository($database);
-$currentOrganization = $organizations->findActiveByHost((string) $request->header('host', ''));
+$configuredBasePath=$config->path('app.base_path');
+$requestPath=$request->path();
+$relativePath=$configuredBasePath!==''&&str_starts_with($requestPath,$configuredBasePath.'/')?substr($requestPath,strlen($configuredBasePath)):$requestPath;
+$firstSegment=explode('/',trim($relativePath,'/'))[0]??'';
+$requestHost=OrganizationRepository::normalizeHost((string)$request->header('host',''));
+$centralHost=OrganizationRepository::normalizeHost($config->string('app.central_host'));
+$tenantOrganization=$requestHost===$centralHost&&$firstSegment!==''?$organizations->findActiveByPanelSlug($firstSegment):null;
+$isCentralContext=$requestHost===$centralHost&&$tenantOrganization===null;
+$currentOrganization=$tenantOrganization??($isCentralContext?$organizations->findActiveByCode('interferencia'):$organizations->findActiveByHost((string)$request->header('host','')));
+$effectiveBasePath=$configuredBasePath.($tenantOrganization!==null?'/'.$tenantOrganization->panelSlug:'');
 $organizationId = $currentOrganization?->id ?? 0;
 $users = new UserRepository($database, $organizationId);
 $units = new UnitRepository($database, $organizationId);
@@ -152,7 +161,7 @@ $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas
 $asaasSynchronizer = new AsaasSynchronizer($asaas,$finance);
 $asaasWebhook = new AsaasWebhookVerifier($asaasWebhookToken);
 $auth = new Auth($users, new PasswordHasher(), $session, $csrf);
-$router = new Router($config->path('app.base_path'), $csrf);
+$router = new Router($effectiveBasePath, $csrf);
 $view = new View($rootPath . '/views');
 $unitContext = new UnitContext($auth, $units, $session);
 $currentUser = $auth->user();
@@ -161,7 +170,12 @@ if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext
 $whatsappAlertLineIds=$currentUser!==null&&$auth->can('whatsapp.inbox.view')?array_map(static fn(array $line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($currentUser->id)):[];
 $avaAlerts=$currentUser!==null&&$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary(array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available())):['ready'=>0,'failed'=>0];
 $view->share([
-    'basePath' => $config->path('app.base_path'),
+    'basePath' => $effectiveBasePath,
+    'assetBasePath' => $configuredBasePath,
+    'isCentralContext' => $isCentralContext,
+    'brandName' => $isCentralContext ? 'MUNDO INTER' : ($currentOrganization?->displayName ?? 'MUNDO INTER'),
+    'brandLogo' => $isCentralContext ? '/assets/media/mundo-inter-logo.png' : ($currentOrganization?->logoPath ?? '/assets/media/painel-inter.png'),
+    'brandFavicon' => $isCentralContext ? '/assets/media/mundo-inter-favicon.png' : ($currentOrganization?->faviconPath ?? '/assets/media/painel-inter-icon.png'),
     'csrfField' => $csrf->field(),
     'currentUser' => $currentUser,
     'currentOrganization' => $currentOrganization,
@@ -190,7 +204,7 @@ $view->share([
         'tickets_manage' => $auth->can('tickets.manage'),
         'ticket_departments' => $auth->can('tickets.departments.manage'),
         'moodle_settings' => $auth->can('moodle.settings.manage'),
-        'organizations' => $auth->isSuperAdmin() && ($currentOrganization?->code === 'interferencia'),
+        'organizations' => $isCentralContext && $auth->isSuperAdmin() && ($currentOrganization?->code === 'interferencia'),
     ],
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
@@ -200,6 +214,6 @@ $view->share([
     'avaAlerts' => $avaAlerts,
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);

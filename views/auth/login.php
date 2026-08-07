@@ -1,20 +1,12 @@
 <?php
 
 declare(strict_types=1);
-
-/** @var Closure(mixed): string $escape */
-/** @var string $csrfField */
-/** @var string|null $error */
-/** @var string $email */
-/** @var string $basePath */
 ?>
-<img class="login-logo" src="<?= $escape($basePath) ?>/assets/media/painel-inter.png" alt="Símbolo do PAINEL INTER">
-<span class="status">Acesso seguro</span>
-<h1>PAINEL INTER</h1>
-<p>Use suas credenciais para continuar.</p>
-<?php if ($error !== null): ?>
-  <p class="alert" role="alert"><?= $escape($error) ?></p>
-<?php endif; ?>
+<img class="login-logo" src="<?= $escape($assetBasePath.$brandLogo) ?>" alt="Logo <?= $escape($brandName) ?>">
+<span class="status"><?= !empty($isCentralContext)?'ADM Central':'Acesso da organização' ?></span>
+<h1><?= $escape($currentOrganization?->loginTitle ?: $brandName) ?></h1>
+<p><?= $escape($currentOrganization?->loginWelcomeText ?: 'Use suas credenciais para continuar.') ?></p>
+<?php if ($error !== null): ?><p class="alert" role="alert"><?= $escape($error) ?></p><?php endif; ?>
 <form method="post" action="<?= $escape($basePath) ?>/login" novalidate>
   <?= $csrfField ?>
   <label for="email">E-mail</label>
