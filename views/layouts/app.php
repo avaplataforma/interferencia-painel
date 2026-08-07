@@ -60,7 +60,7 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .mobile-menu > summary { display: grid; place-items: center; width: 2.4rem; height: 2.4rem; border: 1px solid #aeb8c1; border-radius: .45rem; background: #fff; color: #536170; cursor: pointer; list-style: none; font-size: 1.2rem; }
     .mobile-menu > summary::-webkit-details-marker { display: none; }
     .mobile-menu-panel { position: absolute; z-index: 1060; top: calc(100% + .7rem); left: 0; width: min(19rem, calc(100vw - 2rem)); padding: .75rem; background: #fff; border: 1px solid #dfe5e9; border-radius: .75rem; box-shadow: 0 1rem 2.5rem rgb(23 33 43 / 16%); }
-    :root { --inter-accent: <?= $escape($currentOrganization?->primaryColor ?? '#ed1c24') ?>; --inter-accent-dark: #c81018; --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
+    :root { --inter-accent: <?= $escape($brandPrimaryColor) ?>; --inter-secondary: <?= $escape($brandSecondaryColor) ?>; --inter-accent-dark: color-mix(in srgb,var(--inter-accent) 78%,black); --inter-ink: #17212b; --inter-muted: #647383; --inter-bg: #f3f6f8; }
     body { background: var(--inter-bg); color: var(--inter-ink); }
     .app-shell { min-height: 100vh; }
     .min-width-0 { min-width: 0; }

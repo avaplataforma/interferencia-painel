@@ -626,6 +626,20 @@ $tests['organiza a administração central da rede'] = static function () use ($
     assertTrue(is_file($rootPath.'/views/admin/platform/branding.php'));
 };
 
+$tests['personaliza a identidade do ADM Central'] = static function () use ($rootPath): void {
+    $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/platform/branding.php');
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_790000_create_platform_settings.php'));
+    assertTrue(is_file($rootPath.'/modules/Organization/PlatformSettingsRepository.php'));
+    assertTrue(is_file($rootPath.'/modules/Organization/PlatformBrandingStorage.php'));
+    assertTrue(str_contains($bootstrap,'PlatformSettingsRepository'));
+    assertTrue(str_contains($bootstrap,"'brandPrimaryColor'"));
+    assertTrue(str_contains($routes,"post('/admin/platform/branding'"));
+    assertTrue(str_contains($form,'enctype="multipart/form-data"'));
+    assertTrue(str_contains($form,'name="login_welcome_text"'));
+};
+
 $tests['prepara fluxo unificado de matrículas'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260805_600000_create_student_enrollments.php'));
     assertTrue(is_file($rootPath.'/database/migrations/20260805_610000_link_enrollments_to_payments.php'));

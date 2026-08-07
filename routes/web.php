@@ -23,6 +23,8 @@ use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Organization\OrganizationBrandingStorage;
+use Interferencia\Modules\Organization\PlatformBrandingStorage;
+use Interferencia\Modules\Organization\PlatformSettingsRepository;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
@@ -64,6 +66,7 @@ return static function (
     Validator $validator,
     Auth $auth,
     OrganizationRepository $organizations,
+    PlatformSettingsRepository $platformSettings,
     int $organizationId,
     UserRepository $users,
     UserManager $userManager,
@@ -109,6 +112,7 @@ return static function (
     $requireGuest = new RequireGuest($auth, $basePath);
     $platformAdmin=static fn():bool=>$basePath===$config->path('app.base_path')&&$auth->isSuperAdmin()&&(($organizations->findRecord($organizationId)['code']??'')==='interferencia');
     $organizationBranding=new OrganizationBrandingStorage(dirname(__DIR__).'/public/assets/organizations');
+    $platformBranding=new PlatformBrandingStorage(dirname(__DIR__).'/public/assets/platform');
 
     $router->get('/admin/organizations',static function()use($view,$organizations,$platformAdmin,$session,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/index',['title'=>'Organizações — '.$browserTitle,'organizations'=>$organizations->allWithPrimaryDomain(),'message'=>$session->get('organizations.message'),'error'=>$session->get('organizations.error'),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->get('/admin/organizations/create',static function()use($view,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/form',['title'=>'Nova organização — '.$browserTitle,'organization'=>null,'domains'=>[],'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
@@ -128,7 +132,24 @@ return static function (
     $router->post('/admin/organizations',static fn(Request$request):Response=>$saveOrganization($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/organizations/{id:\d+}',static fn(Request$request,array$params):Response=>$saveOrganization($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->get('/admin/tickets',static function(Request$request)use($view,$tickets,$platformAdmin,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);$status=(string)($request->queryValue('status','')??'');$search=trim((string)($request->queryValue('q','')??''));return$view->render('admin/platform/tickets',['title'=>'Tickets da rede — '.$browserTitle,'tickets'=>$tickets->centralAll($status,$search),'summary'=>$tickets->centralSummary(),'status'=>$status,'search'=>$search,'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'tickets.manage')]);
-    $router->get('/admin/platform/branding',static function()use($view,$platformAdmin,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/platform/branding',['title'=>'Personalização — '.$browserTitle,'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/platform/branding',static function()use($view,$platformSettings,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);
+        return$view->render('admin/platform/branding',['title'=>'Personalização — '.$browserTitle,'settings'=>$platformSettings->settings(),'message'=>$session->get('platform_branding.message'),'error'=>$session->get('platform_branding.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/platform/branding',static function(Request$request)use($platformSettings,$platformBranding,$platformAdmin,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);
+        try{
+            $platformSettings->save(['display_name'=>$request->input('display_name',''),'primary_color'=>$request->input('primary_color',''),'secondary_color'=>$request->input('secondary_color',''),'login_title'=>$request->input('login_title',''),'login_welcome_text'=>$request->input('login_welcome_text',''),'support_email'=>$request->input('support_email',''),'support_phone'=>$request->input('support_phone','')]);
+            $settings=$platformSettings->settings();$logoPath=(string)$settings['logo_path'];$faviconPath=(string)$settings['favicon_path'];
+            $logo=$request->file('logo');if($logo!==null&&!$logo->isEmpty())$logoPath=$platformBranding->store($logo,'logo');
+            $favicon=$request->file('favicon');if($favicon!==null&&!$favicon->isEmpty())$faviconPath=$platformBranding->store($favicon,'favicon');
+            if($request->input('remove_logo')==='1')$logoPath='/assets/media/mundo-inter-logo.png';
+            if($request->input('remove_favicon')==='1')$faviconPath='/assets/media/mundo-inter-favicon.png';
+            $platformSettings->updateBrandingPaths($logoPath,$faviconPath);
+            $session->flash('platform_branding.message','Personalização do ADM Central salva.');
+        }catch(Throwable$e){$session->flash('platform_branding.error',$e->getMessage());}
+        return Response::redirect($basePath.'/admin/platform/branding');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $router->get('/status', static function () use ($config, $view, $browserTitle): Response {
         return $view->render('status', [

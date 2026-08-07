@@ -25,6 +25,7 @@ use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
+use Interferencia\Modules\Organization\PlatformSettingsRepository;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
@@ -106,6 +107,8 @@ $csrf = new Csrf($session);
 $database = (new Connection($config))->pdo();
 $request = Request::fromGlobals();
 $organizations = new OrganizationRepository($database);
+$platformSettingsRepository = new PlatformSettingsRepository($database);
+$platformSettings = $platformSettingsRepository->settings();
 $configuredBasePath=$config->path('app.base_path');
 $requestPath=$request->path();
 $relativePath=$configuredBasePath!==''&&str_starts_with($requestPath,$configuredBasePath.'/')?substr($requestPath,strlen($configuredBasePath)):$requestPath;
@@ -173,9 +176,13 @@ $view->share([
     'basePath' => $effectiveBasePath,
     'assetBasePath' => $configuredBasePath,
     'isCentralContext' => $isCentralContext,
-    'brandName' => $isCentralContext ? 'MUNDO INTER' : ($currentOrganization?->displayName ?? 'MUNDO INTER'),
-    'brandLogo' => $isCentralContext ? '/assets/media/mundo-inter-logo.png' : ($currentOrganization?->logoPath ?? '/assets/media/painel-inter.png'),
-    'brandFavicon' => $isCentralContext ? '/assets/media/mundo-inter-favicon.png' : ($currentOrganization?->faviconPath ?? '/assets/media/painel-inter-icon.png'),
+    'brandName' => $isCentralContext ? (string) $platformSettings['display_name'] : ($currentOrganization?->displayName ?? 'MUNDO INTER'),
+    'brandLogo' => $isCentralContext ? (string) $platformSettings['logo_path'] : ($currentOrganization?->logoPath ?? '/assets/media/painel-inter.png'),
+    'brandFavicon' => $isCentralContext ? (string) $platformSettings['favicon_path'] : ($currentOrganization?->faviconPath ?? '/assets/media/painel-inter-icon.png'),
+    'brandPrimaryColor' => $isCentralContext ? (string) $platformSettings['primary_color'] : ($currentOrganization?->primaryColor ?? '#ed1c24'),
+    'brandSecondaryColor' => $isCentralContext ? (string) $platformSettings['secondary_color'] : ($currentOrganization?->secondaryColor ?? '#082d72'),
+    'brandLoginTitle' => $isCentralContext ? (string) ($platformSettings['login_title'] ?: $platformSettings['display_name']) : ($currentOrganization?->loginTitle ?: ($currentOrganization?->displayName ?? 'MUNDO INTER')),
+    'brandWelcomeText' => $isCentralContext ? (string) ($platformSettings['login_welcome_text'] ?: 'Use suas credenciais para continuar.') : ($currentOrganization?->loginWelcomeText ?: 'Use suas credenciais para continuar.'),
     'csrfField' => $csrf->field(),
     'currentUser' => $currentUser,
     'currentOrganization' => $currentOrganization,
@@ -214,6 +221,6 @@ $view->share([
     'avaAlerts' => $avaAlerts,
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $platformSettingsRepository, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);
