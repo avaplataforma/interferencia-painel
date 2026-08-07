@@ -43,7 +43,7 @@ final readonly class FranchiseContractRepository
 
     public function find(int $id): ?array
     {
-        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
+        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email,a.manager_phone,a.postal_code,a.address,a.address_number,a.address_complement,a.neighborhood FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function create(int $applicationId,int $templateId,array $data,?int $userId): int
@@ -83,6 +83,43 @@ final readonly class FranchiseContractRepository
         $s=$this->db->prepare("UPDATE franchise_contracts SET status='signed',signer_name=:name,signer_email=:email,signer_document=:document,signer_ip=:ip,signer_user_agent=:agent,evidence_hash=:hash,signed_at=:signed_at,viewed_at=COALESCE(viewed_at,NOW()) WHERE id=:id AND status IN('sent','viewed')");
         $s->execute(['name'=>$name,'email'=>$email,'document'=>$document,'ip'=>mb_substr($ip,0,64),'agent'=>mb_substr($userAgent,0,500),'hash'=>$hash,'signed_at'=>$signedAt,'id'=>$contract['id']]);if($s->rowCount()===0)throw new RuntimeException('O contrato já foi concluído ou cancelado.');
         $this->db->prepare("UPDATE franchise_applications SET contract_status='signed' WHERE id=:id")->execute(['id'=>$contract['franchise_application_id']]);return(int)$contract['id'];
+    }
+
+    public function beginBilling(int $id,string $billingType,string $dueDate): array
+    {
+        $contract=$this->find($id);if($contract===null)throw new RuntimeException('Contrato não encontrado.');
+        if($contract['status']!=='signed')throw new RuntimeException('A cobrança só pode ser emitida depois da assinatura do contrato.');
+        if((int)$contract['billing_required']!==1||(float)$contract['billing_amount']<=0)throw new RuntimeException('Este contrato não possui cobrança prevista.');
+        if(!in_array($billingType,['PIX','BOLETO','CREDIT_CARD'],true))throw new RuntimeException('Selecione uma forma de pagamento válida.');
+        $date=DateTimeImmutable::createFromFormat('!Y-m-d',$dueDate);if($date===false||$date->format('Y-m-d')!==$dueDate||$date<new DateTimeImmutable('today'))throw new RuntimeException('Informe um vencimento válido, a partir de hoje.');
+        $s=$this->db->prepare("UPDATE franchise_contracts SET billing_issue_state='issuing',billing_type=:type,billing_due_date=:due,billing_error=NULL WHERE id=:id AND asaas_payment_id IS NULL AND billing_issue_state IN('not_issued','failed')");
+        $s->execute(['type'=>$billingType,'due'=>$dueDate,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('A cobrança já foi emitida ou está sendo processada.');
+        return$contract;
+    }
+
+    public function storeAsaasCustomer(int$id,string$customerId):void
+    {
+        $this->db->prepare('UPDATE franchise_contracts SET asaas_customer_id=:customer WHERE id=:id')->execute(['customer'=>$customerId,'id'=>$id]);
+    }
+
+    public function completeBilling(int$id,array$payment):void
+    {
+        $paymentId=(string)($payment['id']??'');if(!preg_match('/^pay_[A-Za-z0-9]+$/',$paymentId))throw new RuntimeException('O Asaas não retornou uma cobrança válida.');
+        $status=(string)($payment['status']??'PENDING');$invoice=self::nullable($payment['invoiceUrl']??$payment['bankSlipUrl']??'');$paid=in_array($status,['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true)?date('Y-m-d H:i:s'):null;
+        $s=$this->db->prepare("UPDATE franchise_contracts SET asaas_payment_id=:payment,asaas_payment_status=:status,asaas_invoice_url=:invoice,billing_issue_state=:state,billing_issued_at=NOW(),billing_paid_at=:paid,billing_last_synced_at=NOW(),billing_error=NULL WHERE id=:id AND billing_issue_state='issuing'");
+        $s->execute(['payment'=>$paymentId,'status'=>$status,'invoice'=>$invoice,'state'=>$paid===null?'issued':'paid','paid'=>$paid,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Não foi possível registrar a cobrança emitida.');
+    }
+
+    public function failBilling(int$id,string$message):void
+    {
+        $this->db->prepare("UPDATE franchise_contracts SET billing_issue_state='failed',billing_error=:error WHERE id=:id AND asaas_payment_id IS NULL")->execute(['error'=>mb_substr($message,0,500),'id'=>$id]);
+    }
+
+    public function syncBilling(int$id,array$payment):void
+    {
+        $status=(string)($payment['status']??'');if($status==='')throw new RuntimeException('O Asaas não retornou a situação da cobrança.');
+        $paid=in_array($status,['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true);$invoice=self::nullable($payment['invoiceUrl']??$payment['bankSlipUrl']??'');
+        $this->db->prepare("UPDATE franchise_contracts SET asaas_payment_status=:status,asaas_invoice_url=COALESCE(:invoice,asaas_invoice_url),billing_issue_state=:state,billing_paid_at=CASE WHEN :paid=1 THEN COALESCE(billing_paid_at,NOW()) ELSE billing_paid_at END,billing_last_synced_at=NOW(),billing_error=NULL WHERE id=:id")->execute(['status'=>$status,'invoice'=>$invoice,'state'=>$paid?'paid':'issued','paid'=>$paid?1:0,'id'=>$id]);
     }
 
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}

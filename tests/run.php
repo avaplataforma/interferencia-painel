@@ -739,6 +739,21 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     assertTrue(str_contains($repository,"contract_status='signed'"));
 };
 
+$tests['integra cobrança de contratos de franquia ao Asaas sem duplicidade'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_840000_add_franchise_contract_billing.php'));
+    assertTrue(is_file($rootPath.'/modules/Organization/FranchiseContractBillingService.php'));
+    $client=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractBillingService.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($client,'customersByCpfCnpj'));
+    assertTrue(str_contains($service,"mundo-inter:franchise-contract:"));
+    assertTrue(str_contains($repository,"status']!=='signed'"));
+    assertTrue(str_contains($repository,"billing_issue_state='issuing'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/billing'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/billing/sync'"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

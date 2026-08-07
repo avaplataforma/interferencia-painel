@@ -117,6 +117,21 @@ final readonly class AsaasClient
         return $this->get('/customers', $offset, $limit);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function customersByCpfCnpj(string $cpfCnpj): array
+    {
+        $cpfCnpj = preg_replace('/\D/', '', $cpfCnpj) ?? '';
+        if (!in_array(strlen($cpfCnpj), [11, 14], true)) throw new RuntimeException('CPF/CNPJ inválido para consulta no Asaas.');
+        return $this->get('/customers', 0, 100, ['cpfCnpj' => $cpfCnpj])['data'];
+    }
+
+    /** @return array<string,mixed> */
+    public function payment(string $paymentId): array
+    {
+        if (!preg_match('/^pay_[A-Za-z0-9]+$/', $paymentId)) throw new RuntimeException('Identificador da cobrança inválido.');
+        return $this->request('GET', '/payments/' . rawurlencode($paymentId), []);
+    }
+
     /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
     public function listPayments(int $offset = 0, int $limit = 100): array
     {
@@ -143,11 +158,11 @@ final readonly class AsaasClient
     }
 
     /** @return array{data:list<array<string,mixed>>,hasMore:bool,totalCount:int,offset:int,limit:int} */
-    private function get(string $path, int $offset, int $limit): array
+    private function get(string $path, int $offset, int $limit, array $filters = []): array
     {
         if (!$this->ready()) throw new RuntimeException('A conexão com o Asaas ainda não está configurada corretamente.');
         $offset = max(0, $offset); $limit = max(1, min(100, $limit));
-        $url = self::BASES[$this->environment] . $path . '?' . http_build_query(['offset'=>$offset,'limit'=>$limit]);
+        $url = self::BASES[$this->environment] . $path . '?' . http_build_query(array_merge(['offset'=>$offset,'limit'=>$limit], $filters));
         $curl = curl_init($url);
         if ($curl === false) throw new RuntimeException('Não foi possível iniciar a conexão com o Asaas.');
         curl_setopt_array($curl, [
