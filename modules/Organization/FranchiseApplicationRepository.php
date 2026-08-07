@@ -66,6 +66,7 @@ final readonly class FranchiseApplicationRepository
     public function approve(int$id,int$organizationId):void
     {
         $s=$this->db->prepare("UPDATE franchise_applications SET organization_id=:organization,status='approved',reviewed_at=NOW() WHERE id=:id AND organization_id IS NULL");$s->execute(['organization'=>$organizationId,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Solicitação não encontrada ou já aprovada.');
+        $this->db->prepare('UPDATE franchise_contracts SET organization_id=:organization WHERE franchise_application_id=:id')->execute(['organization'=>$organizationId,'id'=>$id]);
     }
 
     private static function digits(string$value):string{return preg_replace('/\D/','',$value)??'';}

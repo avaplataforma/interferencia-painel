@@ -8,7 +8,7 @@ $currentPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PH
 $isStudentRegistration = str_contains($currentPath, '/crm/contacts/create');
 $crmOpen = str_contains($currentPath, '/crm') && !$isStudentRegistration;
 $admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms|ticket-departments)(?:/|$)#', $currentPath) === 1 || str_contains($currentPath, '/whatsapp/lines') || str_contains($currentPath, '/whatsapp/templates') || str_contains($currentPath, '/admin/integrations') || str_contains($currentPath, '/admin/finance') || str_contains($currentPath, '/admin/ava') || str_contains($currentPath, '/admin/platform');
-$franchisesOpen = str_contains($currentPath, '/admin/organizations');
+$franchisesOpen = str_contains($currentPath, '/admin/organizations') || str_contains($currentPath, '/admin/franchise-');
 $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentPath, '/students/') || $isStudentRegistration;
 ?>
 <!doctype html>
