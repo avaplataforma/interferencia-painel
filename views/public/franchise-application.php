@@ -3,7 +3,7 @@
   .public-intake-header img{flex:0 0 5.25rem;width:5.25rem;height:5.25rem;object-fit:contain}
   .public-intake-header h1{margin:.15rem 0 .35rem;font-size:clamp(1.7rem,3vw,2.45rem)}
   .public-intake-header p{margin:0;max-width:54rem}
-  .public-intake-form{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
+  .public-intake-form{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem;max-width:none!important}
   .public-intake-card{grid-column:1/-1;padding:1.25rem;border:1px solid #e0e5e9;border-radius:1rem;background:#f9fafb}
   .public-intake-card-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
   .public-intake-card-heading{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem}
