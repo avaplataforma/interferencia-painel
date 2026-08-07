@@ -3,9 +3,13 @@
 declare(strict_types=1);
 
 use Interferencia\Kernel\Database\Migration;
-use PDO;
 
 return new class implements Migration {
+    public function id(): string
+    {
+        return '20260807_900000_separate_asaas_environments';
+    }
+
     public function up(PDO $db): void
     {
         $db->exec('ALTER TABLE finance_integrations DROP INDEX finance_integrations_provider_unique, ADD UNIQUE KEY finance_integrations_provider_environment_unique(provider, environment)');
