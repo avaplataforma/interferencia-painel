@@ -183,6 +183,7 @@ $alertUnitIds=[];
 if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext->current();$alertUnitIds=$alertUnit===null?[]:($alertUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$alertUnit['id']]);}
 $whatsappAlertLineIds=$currentUser!==null&&$auth->can('whatsapp.inbox.view')?array_map(static fn(array $line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($currentUser->id)):[];
 $avaAlerts=$currentUser!==null&&$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary(array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available())):['ready'=>0,'failed'=>0];
+$centralBillingAlerts=$isCentralContext&&$currentUser!==null&&$auth->can('billing.manage')?$franchiseContracts->billingAlerts():['overdue'=>0,'billing_failures'=>0,'pending_activation'=>0,'split_pending'=>0,'split_failures'=>0];
 $view->share([
     'basePath' => $effectiveBasePath,
     'assetBasePath' => $configuredBasePath,
@@ -230,6 +231,7 @@ $view->share([
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
     'avaAlerts' => $avaAlerts,
+    'centralBillingAlerts' => $centralBillingAlerts,
     'centralSandboxContracts' => $isCentralContext ? $franchiseSandboxTests->eligibleContracts() : [],
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);

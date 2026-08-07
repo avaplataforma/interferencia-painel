@@ -844,10 +844,17 @@ $tests['controla regras comerciais e financeiro das franquias'] = static functio
     assertTrue(str_contains($migration,'commercial_flow_status'));
     assertTrue(str_contains($repository,'activateCommercialFlow'));
     assertTrue(str_contains($repository,'billingDashboard'));
+    assertTrue(str_contains($repository,'billingAlerts'));
     assertTrue(str_contains($routes,"'/admin/franchise-billing'"));
     assertTrue(str_contains($routes,'activate-commercial-flow'));
     assertTrue(str_contains($navigation,'/admin/franchise-billing'));
     assertTrue(is_file($rootPath.'/views/admin/franchise-billing/index.php'));
+    $dashboard=(string)file_get_contents($rootPath.'/views/admin/franchise-billing/index.php');
+    assertTrue(str_contains($dashboard,'Financeiro das franquias'));
+    assertTrue(str_contains($dashboard,'Histórico de splits e repasses'));
+    assertTrue(str_contains($dashboard,'Comissão Mundo Inter'));
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    assertTrue(str_contains($layout,'Notificações da rede'));
 };
 
 $tests['aplica split contratual nas novas cobranças das franquias'] = static function () use ($rootPath): void {
