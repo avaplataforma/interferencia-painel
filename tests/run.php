@@ -613,6 +613,19 @@ $tests['carrega personalização visual das organizações'] = static function (
     assertTrue(is_string($form) && str_contains($form, 'enctype="multipart/form-data"') && str_contains($form, 'name="favicon"'));
 };
 
+$tests['organiza a administração central da rede'] = static function () use ($rootPath): void {
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $tickets=(string)file_get_contents($rootPath.'/modules/Tickets/TicketRepository.php');
+    assertTrue(str_contains($navigation,'>FRANQUIAS</span>'));
+    assertTrue(str_contains($navigation,'/admin/tickets'));
+    assertTrue(str_contains($navigation,'/admin/platform/branding'));
+    assertTrue(str_contains($routes,"'/admin/tickets'"));
+    assertTrue(str_contains($tickets,'function centralAll'));
+    assertTrue(is_file($rootPath.'/views/admin/platform/tickets.php'));
+    assertTrue(is_file($rootPath.'/views/admin/platform/branding.php'));
+};
+
 $tests['prepara fluxo unificado de matrículas'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260805_600000_create_student_enrollments.php'));
     assertTrue(is_file($rootPath.'/database/migrations/20260805_610000_link_enrollments_to_payments.php'));

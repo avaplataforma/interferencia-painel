@@ -1,11 +1,19 @@
 <a class="nav-link" href="<?= $escape($basePath) ?>/"><i class="fa-solid fa-house fa-fw" aria-hidden="true"></i>Visão geral</a>
 <?php if (!empty($isCentralContext)): ?>
-  <a class="nav-link" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-network-wired fa-fw" aria-hidden="true"></i>Franquias</a>
+  <details class="nav-group" <?= $franchisesOpen ? 'open' : '' ?>>
+    <summary><span><i class="fa-solid fa-network-wired fa-fw" aria-hidden="true"></i>FRANQUIAS</span></summary>
+    <div class="nav-submenu">
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-magnifying-glass fa-fw" aria-hidden="true"></i>Consultar</a>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/organizations/create"><i class="fa-solid fa-plus fa-fw" aria-hidden="true"></i>Cadastro</a>
+    </div>
+  </details>
+  <a class="nav-link" href="<?= $escape($basePath) ?>/admin/tickets"><i class="fa-solid fa-ticket fa-fw" aria-hidden="true"></i>TICKETS</a>
   <details class="nav-group" <?= $admOpen ? 'open' : '' ?>>
     <summary><span><i class="fa-solid fa-gear fa-fw" aria-hidden="true"></i>ADM</span></summary>
     <div class="nav-submenu">
       <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users"><i class="fa-solid fa-user-tie fa-fw" aria-hidden="true"></i>Colaboradores</a><?php endif; ?>
       <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles"><i class="fa-solid fa-user-shield fa-fw" aria-hidden="true"></i>Perfis e permissões</a><?php endif; ?>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/branding"><i class="fa-solid fa-palette fa-fw" aria-hidden="true"></i>Personalização</a>
     </div>
   </details>
 <?php else: ?>

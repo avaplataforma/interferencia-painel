@@ -10,6 +10,20 @@ final readonly class TicketRepository
 {
     public function __construct(private PDO $db) {}
 
+    public function centralAll(string $status='',string $search=''):array
+    {
+        $sql="SELECT t.*,o.display_name organization_name,un.name unit_name,requester.name requester_name,department.name department_name FROM tickets t INNER JOIN organizations o ON o.id=t.organization_id INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN ticket_departments department ON department.id=t.department_id WHERE 1=1";$params=[];
+        if(in_array($status,['open','in_progress','waiting','resolved','closed'],true)){$sql.=' AND t.status=?';$params[]=$status;}
+        if($search!==''){$sql.=' AND (t.subject LIKE ? OR t.description LIKE ? OR o.display_name LIKE ? OR requester.name LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);}
+        $sql.=" ORDER BY CASE t.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'waiting' THEN 2 ELSE 3 END,CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated_at DESC LIMIT 200";$s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
+    }
+
+    public function centralSummary():array
+    {
+        $row=$this->db->query("SELECT COUNT(*) total,SUM(status NOT IN('resolved','closed')) open,SUM(status NOT IN('resolved','closed') AND due_at<NOW()) overdue,SUM(status IN('resolved','closed')) completed FROM tickets")->fetch()?:[];
+        return['total'=>(int)($row['total']??0),'open'=>(int)($row['open']??0),'overdue'=>(int)($row['overdue']??0),'completed'=>(int)($row['completed']??0)];
+    }
+
     public function all(int$userId,bool$manage,array$unitIds,string$scope='',string$status='',string$priority='',string$search=''):array
     {
         if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));

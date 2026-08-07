@@ -127,6 +127,8 @@ return static function (
     };
     $router->post('/admin/organizations',static fn(Request$request):Response=>$saveOrganization($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/organizations/{id:\d+}',static fn(Request$request,array$params):Response=>$saveOrganization($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/tickets',static function(Request$request)use($view,$tickets,$platformAdmin,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);$status=(string)($request->queryValue('status','')??'');$search=trim((string)($request->queryValue('q','')??''));return$view->render('admin/platform/tickets',['title'=>'Tickets da rede — '.$browserTitle,'tickets'=>$tickets->centralAll($status,$search),'summary'=>$tickets->centralSummary(),'status'=>$status,'search'=>$search,'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'tickets.manage')]);
+    $router->get('/admin/platform/branding',static function()use($view,$platformAdmin,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/platform/branding',['title'=>'Personalização — '.$browserTitle,'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $router->get('/status', static function () use ($config, $view, $browserTitle): Response {
         return $view->render('status', [
