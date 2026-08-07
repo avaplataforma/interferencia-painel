@@ -1,0 +1,19 @@
+<?php $active=(bool)($settings['is_active']??false);$configured=(bool)($settings['configured']??false); ?>
+<style>
+.ava-platform{max-width:78rem;margin:0 auto}.ava-hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2rem;align-items:center}.ava-status{display:flex;align-items:center;gap:.8rem;padding:1rem 1.2rem;border:1px solid #dce3e8;border-radius:1rem;background:#fff}.ava-status i{font-size:1.35rem;color:<?= $active&&$configured?'#078342':'#b97700' ?>}.ava-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(18rem,.75fr);gap:1rem;margin-top:1rem}.ava-card{padding:1.5rem}.ava-card h2{margin-top:0}.ava-card label{display:block;margin-bottom:1rem}.ava-card input{width:100%}.ava-actions{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}.ava-security{display:grid;gap:.8rem}.ava-security div{display:flex;gap:.7rem;align-items:flex-start;padding:.9rem;border-radius:.8rem;background:#f6f8fa}.ava-security i{margin-top:.2rem;color:var(--inter-accent)}@media(max-width:800px){.ava-hero,.ava-grid{grid-template-columns:1fr}.ava-status{width:100%}}
+</style>
+<div class="ava-platform">
+ <header class="page-header ava-hero"><div><p class="eyebrow">ADM Central · Integrações</p><h1>AVA Cursos</h1><p>Conexão global com o Moodle compartilhado <strong>avacursos.com.br</strong>.</p></div><div class="ava-status"><i class="fa-solid <?= $active&&$configured?'fa-circle-check':'fa-clock' ?>"></i><div><strong><?= $active&&$configured?'Integração ativa':'Configuração pendente' ?></strong><small><?= $configured?'Credencial terminada em ••••'.$escape((string)$settings['token_last4']):'Informe o token do serviço Moodle' ?></small></div></div></header>
+ <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
+ <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
+ <div class="ava-grid">
+  <form class="card ava-card" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/ava-cursos"><?= $csrfField ?>
+   <h2>Conexão central</h2><p class="meta">Esta credencial é usada pelas franquias autorizadas a utilizar o catálogo e os cursos compartilhados.</p>
+   <label>Endereço do Moodle *<input type="url" required name="base_url" value="<?= $escape((string)($settings['base_url']?:'https://avacursos.com.br')) ?>" placeholder="https://avacursos.com.br"></label>
+   <label>Token do serviço web <?= $configured?'':'*' ?><input type="password" name="token" <?= $configured?'':'required' ?> autocomplete="new-password" placeholder="<?= $configured?'Deixe vazio para preservar o token atual':'Cole o token gerado no Moodle' ?>"><small>O token nunca volta a ser exibido nesta tela.</small></label>
+   <label class="checkbox-row"><input type="checkbox" name="is_active" value="1" <?= $active?'checked':'' ?>> Ativar a integração após salvar</label>
+   <div class="ava-actions"><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar conexão</button><?php if($configured):?><button class="button button-secondary" type="submit" formaction="<?= $escape($basePath) ?>/admin/platform/integrations/ava-cursos/test"><i class="fa-solid fa-plug-circle-check"></i> Testar conexão</button><?php endif;?></div>
+  </form>
+  <aside class="card ava-card"><h2>Segurança</h2><div class="ava-security"><div><i class="fa-solid fa-lock"></i><span>Token criptografado e centralizado; a franquia não visualiza a credencial.</span></div><div><i class="fa-solid fa-building-shield"></i><span>Cada franquia recebe somente o escopo de cursos e alunos autorizado.</span></div><div><i class="fa-solid fa-puzzle-piece"></i><span>O conector <strong>Mundo Inter</strong> será instalado uma única vez neste Moodle.</span></div></div><?php if(!$encryptionReady):?><div class="alert alert-danger">A chave-mestra de criptografia precisa ser configurada antes de salvar.</div><?php endif;?></aside>
+ </div>
+</div>

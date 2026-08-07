@@ -150,3 +150,24 @@ da pessoa antes de bloquear a conta.
 4. Validar o fluxo atual após a conversão.
 5. Cadastrar um AVA dedicado fictício e testar uma matrícula com duas entregas.
 6. Somente depois vincular uma franquia externa real ao AVA Central.
+
+## Fundação implementada no ADM Central
+
+- `ava_connections` centraliza o AVA Cursos e os Moodles próprios sem expor tokens às franquias.
+- `organization_ava_settings` define se cada franquia usa o AVA compartilhado, o próprio ou ambos.
+- A aba **AVA** do cadastro da franquia concentra essa escolha e os testes de conexão.
+- **ADM → Integrações → AVA Cursos** administra a credencial global de `avacursos.com.br`.
+- **ADM → Painel Inter** monitora disponibilidade, versão do conector e erros por Moodle.
+- A integração Moodle antiga é copiada para o registro compartilhado durante a migração, preservando o fluxo que já está em produção.
+
+## Conector Moodle Mundo Inter
+
+O código-fonte do plugin fica em `integrations/moodle/local_mundointer` e deve ser instalado em cada Moodle como `local/mundointer`. Apenas criar uma pasta `/painel` na raiz não registra capacidades, serviços web nem atualizações no Moodle.
+
+A primeira versão fornece:
+
+- serviço web autenticado para diagnóstico e versão;
+- serviço predefinido com as funções acadêmicas usadas pelo Mundo Inter;
+- identificador anônimo da instalação;
+- configuração do endereço do ADM Central;
+- base segura para futuras personalizações do painel, notas e experiência do aluno.

@@ -19,6 +19,7 @@
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/branding"><i class="fa-solid fa-palette fa-fw" aria-hidden="true"></i>Personalização</a>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/document-types"><i class="fa-solid fa-folder-tree fa-fw" aria-hidden="true"></i>Documentos</a>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-plug fa-fw" aria-hidden="true"></i>Integrações</a>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/painel-inter"><i class="fa-solid fa-chalkboard-user fa-fw" aria-hidden="true"></i>Painel Inter</a>
     </div>
   </details>
 <?php else: ?>

@@ -1017,6 +1017,33 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     assertTrue(str_contains($navigation,'/admin/document-types'));
 };
 
+$tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atual'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_960000_create_central_ava_connections.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $ava=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    assertTrue(str_contains($migration,'CREATE TABLE ava_connections'));
+    assertTrue(str_contains($migration,'CREATE TABLE organization_ava_settings'));
+    assertTrue(str_contains($migration,"'shared:ava-cursos'"));
+    assertTrue(str_contains($repository,'final readonly class AvaConnectionRepository'));
+    assertTrue(str_contains($repository,"['shared','own','both']"));
+    assertTrue(str_contains($repository,'SecretCipher'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/ava-cursos'"));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter'"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/ava'"));
+    assertTrue(str_contains($form,'data-organization-tab="ava"'));
+    assertTrue(str_contains($ava,'Somente nosso AVA (AVA Cursos)'));
+    assertTrue(str_contains($ava,'AVA Cursos + AVA próprio'));
+    assertTrue(str_contains($navigation,'/admin/platform/painel-inter'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/version.php'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php'));
+    $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    assertTrue(str_contains($services,'local_mundointer_ping'));
+    assertTrue(str_contains($services,'core_user_create_users'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

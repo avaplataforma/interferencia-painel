@@ -22,6 +22,7 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
    <button class="organization-tab" type="button" role="tab" data-organization-tab="contatos"><i class="fa-solid fa-address-book"></i> Responsáveis</button>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="endereco"><i class="fa-solid fa-location-dot"></i> Endereço</button>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="marca"><i class="fa-solid fa-palette"></i> Personalização</button>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-graduation-cap"></i> AVA</button><?php endif;?>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="documentos"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif;?>
   </nav>
 
@@ -92,5 +93,6 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 
     <footer class="organization-savebar" data-organization-savebar><p class="meta"><i class="fa-solid fa-shield-halved"></i> O financeiro e o modelo comercial são concluídos no fluxo de implantação, após a conferência.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar franquia</button></footer>
   </form>
+  <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
 </div>

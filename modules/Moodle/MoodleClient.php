@@ -15,6 +15,9 @@ final readonly class MoodleClient
     /** @return array<string,mixed> */
     public function siteInfo():array{return$this->call('core_webservice_get_site_info');}
 
+    /** @return array<string,mixed> */
+    public function connectorInfo():array{return$this->call('local_mundointer_ping');}
+
     /** @return list<array<string,mixed>> */
     public function courses():array
     {
