@@ -22,6 +22,7 @@ use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
+use Interferencia\Modules\Organization\OrganizationBrandingStorage;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
@@ -107,11 +108,23 @@ return static function (
     $requireAuth = new RequireAuth($auth, $basePath);
     $requireGuest = new RequireGuest($auth, $basePath);
     $platformAdmin=static fn():bool=>$basePath===$config->path('app.base_path')&&$auth->isSuperAdmin()&&(($organizations->findRecord($organizationId)['code']??'')==='interferencia');
+    $organizationBranding=new OrganizationBrandingStorage(dirname(__DIR__).'/public/assets/organizations');
 
     $router->get('/admin/organizations',static function()use($view,$organizations,$platformAdmin,$session,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/index',['title'=>'Organizações — '.$browserTitle,'organizations'=>$organizations->allWithPrimaryDomain(),'message'=>$session->get('organizations.message'),'error'=>$session->get('organizations.error'),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->get('/admin/organizations/create',static function()use($view,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/form',['title'=>'Nova organização — '.$browserTitle,'organization'=>null,'domains'=>[],'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->get('/admin/organizations/{id:\d+}/edit',static function(Request$request,array$params)use($view,$organizations,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);$organization=$organizations->findRecord((int)$params['id']);if($organization===null)return Response::text("Organização não encontrada.\n",404);return$view->render('admin/organizations/form',['title'=>'Editar organização — '.$browserTitle,'organization'=>$organization,'domains'=>$organizations->domains((int)$params['id']),'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $saveOrganization=static function(Request$request,?int$id=null)use($organizations,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);try{$organizations->save($id,(string)$request->input('code',''),(string)$request->input('panel_slug',''),(string)$request->input('legal_name',''),(string)$request->input('display_name',''),(string)$request->input('status','active'),(string)$request->input('site_host',''),$request->input('domain_active')==='1');$session->flash('organizations.message',$id===null?'Organização cadastrada.':'Organização atualizada.');return Response::redirect($basePath.'/admin/organizations');}catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());return Response::redirect($basePath.($id===null?'/admin/organizations/create':"/admin/organizations/{$id}/edit"));}};
+    $saveOrganization=static function(Request$request,?int$id=null)use($organizations,$organizationBranding,$platformAdmin,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);
+        try{
+            $id=$organizations->save($id,['code'=>$request->input('code',''),'panel_slug'=>$request->input('panel_slug',''),'legal_name'=>$request->input('legal_name',''),'display_name'=>$request->input('display_name',''),'status'=>$request->input('status','active'),'site_host'=>$request->input('site_host',''),'domain_active'=>$request->input('domain_active')==='1','primary_color'=>$request->input('primary_color','#ed1c24'),'secondary_color'=>$request->input('secondary_color',''),'login_title'=>$request->input('login_title',''),'login_welcome_text'=>$request->input('login_welcome_text',''),'support_email'=>$request->input('support_email',''),'support_phone'=>$request->input('support_phone','')]);
+            $record=$organizations->findRecord($id);$logoPath=$record['logo_path']??null;$faviconPath=$record['favicon_path']??null;
+            $logo=$request->file('logo');if($logo!==null&&!$logo->isEmpty())$logoPath=$organizationBranding->store($id,$logo,'logo');
+            $favicon=$request->file('favicon');if($favicon!==null&&!$favicon->isEmpty())$faviconPath=$organizationBranding->store($id,$favicon,'favicon');
+            if($request->input('remove_logo')==='1')$logoPath=null;if($request->input('remove_favicon')==='1')$faviconPath=null;
+            $organizations->updateBrandingPaths($id,is_string($logoPath)?$logoPath:null,is_string($faviconPath)?$faviconPath:null);
+            $session->flash('organizations.message','Organização e identidade visual salvas.');return Response::redirect($basePath.'/admin/organizations');
+        }catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());return Response::redirect($basePath.($id===null?'/admin/organizations/create':"/admin/organizations/{$id}/edit"));}
+    };
     $router->post('/admin/organizations',static fn(Request$request):Response=>$saveOrganization($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/organizations/{id:\d+}',static fn(Request$request,array$params):Response=>$saveOrganization($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
