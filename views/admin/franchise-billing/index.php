@@ -7,7 +7,7 @@ $pendingTotal=(int)($summary['pending_activation']??0)+(int)($summary['split_pen
 $hasFilters=(int)$filters['organization_id']>0||$filters['status']!==''||$filters['from']!==''||$filters['to']!=='';
 ?>
 <style>
-.franchise-finance-page{width:min(96rem,calc(100vw - 19rem));max-width:none;position:relative;left:50%;transform:translateX(-50%)}
+.franchise-finance-page{width:100%;max-width:100%;min-width:0}
 .franchise-finance-header{align-items:center;margin-bottom:1.25rem}.franchise-finance-header h1{margin-bottom:.25rem}
 .franchise-finance-metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.85rem;margin-bottom:1rem}.franchise-finance-metrics .metric-card{min-height:7.25rem}
 .franchise-finance-metrics .metric-card>span{display:flex;align-items:center;gap:.4rem}.franchise-finance-metrics .metric-card>span i{color:var(--inter-accent)}
@@ -15,10 +15,10 @@ $hasFilters=(int)$filters['organization_id']>0||$filters['status']!==''||$filter
 .franchise-finance-toolbar label{margin:0}.franchise-finance-toolbar select,.franchise-finance-toolbar input{width:100%}
 .franchise-finance-toolbar-actions{display:flex;gap:.5rem;align-items:center}.franchise-finance-toolbar-actions .button{height:2.85rem;white-space:nowrap}.franchise-finance-toolbar-actions .button-icon{width:2.85rem}
 .franchise-finance-notice{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem}.franchise-finance-notice p{margin:0}
-.franchise-finance-section .card-header{align-items:center}.franchise-finance-section .card-header h2{margin-bottom:.2rem}
+.franchise-finance-section{min-width:0;overflow:hidden}.franchise-finance-section .card-header{align-items:center}.franchise-finance-section .card-header h2{margin-bottom:.2rem}.franchise-finance-section .table-responsive{width:100%;max-width:100%;overflow-x:auto}
 .franchise-finance-table th{white-space:nowrap}.franchise-finance-table td{vertical-align:middle}.franchise-finance-table .billing-main{min-width:11rem}.franchise-finance-table .billing-contract{min-width:13rem}.franchise-finance-table .billing-actions{min-width:8.5rem}
 .franchise-finance-table .page-actions{justify-content:flex-start;flex-wrap:nowrap}.franchise-finance-table .button-icon{flex:0 0 2.65rem}
-@media(max-width:1399.98px){.franchise-finance-page{width:100%;left:auto;transform:none}.franchise-finance-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.franchise-finance-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.franchise-finance-toolbar-actions{grid-column:1/-1;justify-content:flex-end}}
+@media(max-width:1399.98px){.franchise-finance-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.franchise-finance-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.franchise-finance-toolbar-actions{grid-column:1/-1;justify-content:flex-end}}
 @media(max-width:767.98px){.franchise-finance-metrics{grid-template-columns:1fr 1fr}.franchise-finance-toolbar{grid-template-columns:1fr}.franchise-finance-toolbar-actions{grid-column:auto;justify-content:stretch}.franchise-finance-toolbar-actions .button-primary{flex:1}.franchise-finance-notice{align-items:flex-start;flex-direction:column}}
 @media(max-width:479.98px){.franchise-finance-metrics{grid-template-columns:1fr}}
 </style>

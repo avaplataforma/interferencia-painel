@@ -897,6 +897,8 @@ $tests['controla regras comerciais e financeiro das franquias'] = static functio
     assertTrue(str_contains($dashboard,'Comissão Mundo Inter'));
     assertTrue(str_contains($dashboard,'franchise-finance-toolbar'));
     assertTrue(str_contains($dashboard,'franchise-finance-metrics'));
+    assertTrue(str_contains($dashboard,'.franchise-finance-page{width:100%;max-width:100%;min-width:0}'));
+    assertTrue(!str_contains($dashboard,'transform:translateX(-50%)'));
     assertTrue(str_contains($dashboard,'Período inicial'));
     $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
     assertTrue(str_contains($layout,'Notificações da rede'));
