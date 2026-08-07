@@ -732,7 +732,7 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
-    assertTrue(str_contains($routes,"'/contrato/{token:[a-f0-9]+'"));
+    assertTrue(str_contains($routes,"'/contrato/{token:[a-f0-9]+}'"));
     assertTrue(str_contains($routes,"'/admin/franchise-contracts'"));
     assertTrue(str_contains($navigation,'>Contratos</a>'));
     assertTrue(str_contains($repository,"evidence_hash"));
