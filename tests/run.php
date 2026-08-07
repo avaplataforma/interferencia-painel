@@ -51,7 +51,7 @@ $tests['vincula franquias ao histórico contratual']=static function()use($rootP
     assertTrue(str_contains($list,'Login exclusivo'));
     $overview=(string)file_get_contents($rootPath.'/views/admin/organizations/overview.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
-    assertTrue(str_contains($overview,'Checklist operacional'));
+    assertTrue(str_contains($overview,'Implantação da franquia'));
     assertTrue(str_contains($overview,'fa-file-signature'));
     assertTrue(str_contains($overview,'Wallet Asaas e split'));
     assertTrue(str_contains($overview,'Ativar operação comercial'));
