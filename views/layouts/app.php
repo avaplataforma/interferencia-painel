@@ -91,6 +91,10 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .quick-link:hover { color: var(--inter-accent-dark); border-color: #f3a4a7; box-shadow: 0 .5rem 1.5rem rgb(90 15 19 / 8%); }
     .quick-link span, .meta { color: var(--inter-muted); font-size: .9rem; }
     .status { color: var(--inter-accent); font-weight: 700; }
+    .badge { display: inline-flex; align-items: center; gap: .35rem; width: fit-content; padding: .3rem .62rem; border-radius: 999px; font-size: .78rem; font-weight: 750; line-height: 1.2; white-space: nowrap; }
+    .badge-success { color: #176b3a; background: #eaf8ef; border: 1px solid #b9e5c9; }
+    .badge-warning { color: #8a5a00; background: #fff4cc; border: 1px solid #efd47c; }
+    .badge-danger { color: #a3131b; background: #fff0f1; border: 1px solid #f3b8bc; }
     .required-mark { color: var(--inter-accent); font-weight: 800; }
     main select:required:invalid { color: var(--inter-accent); }
     main select option { color: var(--inter-ink); }
