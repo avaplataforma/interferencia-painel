@@ -754,6 +754,19 @@ $tests['integra cobrança de contratos de franquia ao Asaas sem duplicidade'] = 
     assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/billing/sync'"));
 };
 
+$tests['separa usuários centrais dos usuários das franquias'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_850000_separate_platform_identity.php'));
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260806_850000_separate_platform_identity.php');
+    $users=(string)file_get_contents($rootPath.'/modules/Identity/UserRepository.php');
+    $auth=(string)file_get_contents($rootPath.'/modules/Identity/Auth.php');
+    $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
+    assertTrue(str_contains($migration,'CREATE TABLE platform_users'));
+    assertTrue(str_contains($migration,'CREATE TABLE platform_roles'));
+    assertTrue(str_contains($users,"platform_users"));
+    assertTrue(str_contains($auth,"auth.realm"));
+    assertTrue(str_contains($bootstrap,"?'platform':'franchise'"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

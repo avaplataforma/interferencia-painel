@@ -17,6 +17,7 @@ final class Auth
         private readonly PasswordHasher $hasher,
         private readonly Session $session,
         private readonly Csrf $csrf,
+        private readonly string $realm = 'franchise',
     ) {
     }
 
@@ -40,6 +41,7 @@ final class Auth
         $this->users->recordSuccessfulLogin($user->id, $newHash);
         $this->session->regenerate();
         $this->session->put('auth.user_id', $user->id);
+        $this->session->put('auth.realm', $this->realm);
         $this->csrf->rotate();
         $this->resolvedUser = $user;
         $this->resolved = true;
@@ -56,7 +58,9 @@ final class Auth
         $this->resolved = true;
         $id = $this->session->get('auth.user_id');
 
-        if (!is_int($id)) {
+        if (!is_int($id) || $this->session->get('auth.realm') !== $this->realm) {
+            $this->session->forget('auth.user_id');
+            $this->session->forget('auth.realm');
             return null;
         }
 
