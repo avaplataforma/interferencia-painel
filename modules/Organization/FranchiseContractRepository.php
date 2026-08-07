@@ -14,7 +14,7 @@ final readonly class FranchiseContractRepository
 
     public function templates(bool $onlyActive=false): array
     {
-        return $this->db->query('SELECT t.*,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.template_id=t.id) usage_count FROM franchise_contract_templates t'.($onlyActive?' WHERE t.is_active=1':'').' ORDER BY t.is_active DESC,t.title')->fetchAll();
+        return $this->db->query('SELECT t.*,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.template_id=t.id) usage_count,(SELECT COUNT(*) FROM franchise_contract_templates v WHERE COALESCE(v.parent_template_id,v.id)=COALESCE(t.parent_template_id,t.id)) version_count FROM franchise_contract_templates t'.($onlyActive?' WHERE t.is_active=1':'').' ORDER BY t.is_active DESC,t.title,t.updated_at DESC')->fetchAll();
     }
 
     public function template(?int $id): ?array
@@ -28,7 +28,23 @@ final readonly class FranchiseContractRepository
         if(mb_strlen($title)<4||$version===''||mb_strlen(ContractContent::visibleText($body))<100)throw new RuntimeException('Informe título, versão e conteúdo completo do modelo.');
         $params=['title'=>$title,'version'=>$version,'body'=>$body,'active'=>($data['is_active']??false)?1:0];
         if($id===null){$s=$this->db->prepare('INSERT INTO franchise_contract_templates(title,version,body,is_active) VALUES(:title,:version,:body,:active)');$s->execute($params);return(int)$this->db->lastInsertId();}
-        $params['id']=$id;$s=$this->db->prepare('UPDATE franchise_contract_templates SET title=:title,version=:version,body=:body,is_active=:active WHERE id=:id');$s->execute($params);return$id;
+        $params['id']=$id;$s=$this->db->prepare('UPDATE franchise_contract_templates SET title=:title,version=:version,body=:body,is_active=:active WHERE id=:id');$s->execute($params);
+        if($params['active']===1){$template=$this->template($id);$root=(int)(($template['parent_template_id']??null)?:$id);$siblings=$this->db->prepare('UPDATE franchise_contract_templates SET is_active=0 WHERE COALESCE(parent_template_id,id)=:root AND id<>:id');$siblings->execute(['root'=>$root,'id'=>$id]);}
+        return$id;
+    }
+
+    public function templateVersions(int $id): array
+    {
+        $template=$this->template($id);if($template===null)return[];$root=(int)($template['parent_template_id']?:$template['id']);
+        $s=$this->db->prepare('SELECT t.*,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.template_id=t.id) usage_count FROM franchise_contract_templates t WHERE COALESCE(t.parent_template_id,t.id)=:root ORDER BY t.updated_at DESC,t.id DESC');$s->execute(['root'=>$root]);return$s->fetchAll();
+    }
+
+    public function duplicateTemplate(int $id): int
+    {
+        $template=$this->template($id);if($template===null)throw new RuntimeException('Modelo de contrato não encontrado.');
+        $root=(int)($template['parent_template_id']?:$template['id']);$version=$this->nextTemplateVersion((string)$template['version']);$existing=array_map(static fn(array$row):string=>(string)$row['version'],$this->templateVersions($id));while(in_array($version,$existing,true))$version=$this->nextTemplateVersion($version);
+        $s=$this->db->prepare('INSERT INTO franchise_contract_templates(parent_template_id,title,version,body,is_active) VALUES(:parent,:title,:version,:body,0)');
+        $s->execute(['parent'=>$root,'title'=>$template['title'],'version'=>$version,'body'=>$template['body']]);return(int)$this->db->lastInsertId();
     }
 
     public function removeTemplate(int $id): string
@@ -36,7 +52,8 @@ final readonly class FranchiseContractRepository
         if ($this->template($id) === null) throw new RuntimeException('Modelo de contrato não encontrado.');
         $usage = $this->db->prepare('SELECT COUNT(*) FROM franchise_contracts WHERE template_id=:id');
         $usage->execute(['id' => $id]);
-        if ((int) $usage->fetchColumn() > 0) {
+        $related=$this->db->prepare('SELECT COUNT(*) FROM franchise_contract_templates WHERE COALESCE(parent_template_id,id)=COALESCE((SELECT parent_template_id FROM franchise_contract_templates WHERE id=:id),:id)');$related->execute(['id'=>$id]);
+        if ((int) $usage->fetchColumn() > 0 || (int)$related->fetchColumn()>1) {
             $archive = $this->db->prepare('UPDATE franchise_contract_templates SET is_active=0 WHERE id=:id');
             $archive->execute(['id' => $id]);
             return 'archived';
@@ -58,7 +75,7 @@ final readonly class FranchiseContractRepository
 
     public function find(int $id): ?array
     {
-        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email,a.manager_phone,a.postal_code,a.address,a.address_number,a.address_complement,a.neighborhood,o.asaas_wallet_id,o.asaas_wallet_status,o.split_enabled FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
+        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email,a.manager_phone,a.postal_code,a.address,a.address_number,a.address_complement,a.neighborhood,o.asaas_wallet_id,o.asaas_wallet_status,o.split_enabled,pu.name cancelled_by_name FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id LEFT JOIN platform_users pu ON pu.id=c.cancelled_by WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function create(int $applicationId,int $templateId,array $data,?int $userId): int
@@ -86,6 +103,19 @@ final readonly class FranchiseContractRepository
     {
         $s=$this->db->prepare("UPDATE franchise_contracts SET status='sent',sent_at=NOW() WHERE id=:id AND status='draft'");$s->execute(['id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Somente contratos em rascunho podem ser enviados.');
         $this->db->prepare("UPDATE franchise_applications a INNER JOIN franchise_contracts c ON c.franchise_application_id=a.id SET a.contract_status='sent' WHERE c.id=:id")->execute(['id'=>$id]);
+    }
+
+    public function cancel(int $id,string $reason,?int $userId): void
+    {
+        $reason=trim($reason);if(mb_strlen($reason)<10)throw new RuntimeException('Informe um motivo de cancelamento com pelo menos 10 caracteres.');
+        $contract=$this->find($id);if($contract===null)throw new RuntimeException('Contrato não encontrado.');if($contract['status']==='cancelled')throw new RuntimeException('Este contrato já está cancelado.');
+        $this->db->beginTransaction();
+        try{
+            $s=$this->db->prepare("UPDATE franchise_contracts SET status='cancelled',cancelled_reason=:reason,cancelled_at=NOW(),cancelled_by=:user,commercial_flow_status='blocked' WHERE id=:id AND status<>'cancelled'");$s->execute(['reason'=>mb_substr($reason,0,500),'user'=>$userId,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Não foi possível cancelar o contrato.');
+            $latest=$this->db->prepare("SELECT status FROM franchise_contracts WHERE franchise_application_id=:application AND id<>:id AND status<>'cancelled' ORDER BY contract_number DESC,id DESC LIMIT 1");$latest->execute(['application'=>$contract['franchise_application_id'],'id'=>$id]);$applicationStatus=$latest->fetchColumn()?:'cancelled';
+            $this->db->prepare('UPDATE franchise_applications SET contract_status=:status WHERE id=:id')->execute(['status'=>$applicationStatus,'id'=>$contract['franchise_application_id']]);
+            $this->recordBillingEvent($id,'contract_cancelled','Contrato cancelado. Motivo: '.mb_substr($reason,0,430),$userId);$this->db->commit();
+        }catch(\Throwable$e){if($this->db->inTransaction())$this->db->rollBack();throw$e;}
     }
 
     public function publicContract(string $token,bool $markViewed=true): ?array
@@ -170,7 +200,7 @@ final readonly class FranchiseContractRepository
         if($organization>0){$where[]='c.organization_id=:organization';$params['organization']=$organization;}
         if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$from)===1){$where[]='COALESCE(c.billing_due_date,DATE(c.updated_at))>=:date_from';$params['date_from']=$from;}
         if(preg_match('/^\d{4}-\d{2}-\d{2}$/',$to)===1){$where[]='COALESCE(c.billing_due_date,DATE(c.updated_at))<=:date_to';$params['date_to']=$to;}
-        $statusSql=['paid'=>"c.billing_issue_state='paid'",'overdue'=>"c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()",'failed'=>"(c.billing_issue_state='failed' OR c.commercial_flow_status='blocked')",'pending'=>"c.status='signed' AND (c.commercial_flow_status<>'active' OR c.billing_issue_state='not_issued')",'active'=>"c.commercial_flow_status='active'"];
+        $statusSql=['paid'=>"c.billing_issue_state='paid'",'overdue'=>"c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()",'failed'=>"c.status<>'cancelled' AND (c.billing_issue_state='failed' OR c.commercial_flow_status='blocked')",'pending'=>"c.status='signed' AND (c.commercial_flow_status<>'active' OR c.billing_issue_state='not_issued')",'active'=>"c.status='signed' AND c.commercial_flow_status='active'"];
         if(isset($statusSql[$status]))$where[]=$statusSql[$status];$clause=$where===[]?'':' WHERE '.implode(' AND ',$where);
         $summaryStatement=$this->db->prepare("SELECT COUNT(*) total_contracts,SUM(c.status='signed') signed_contracts,SUM(c.billing_issue_state='paid') paid,SUM(c.billing_issue_state='failed') failures,SUM(c.commercial_flow_status='active') active_flows,SUM(c.status='signed' AND c.commercial_flow_status<>'active') pending_activation,SUM(c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()) overdue,SUM(c.sales_fee_percentage>0 AND (o.asaas_wallet_id IS NULL OR o.asaas_wallet_status<>'validated' OR o.split_enabled<>1)) split_pending,SUM(CASE WHEN c.billing_issue_state='paid' THEN COALESCE(c.billing_amount,c.monthly_fixed_amount,0) ELSE 0 END) paid_amount,SUM(CASE WHEN c.billing_required=1 AND c.billing_issue_state IN('not_issued','issuing','issued') THEN COALESCE(c.billing_amount,c.monthly_fixed_amount,0) ELSE 0 END) open_amount,SUM(CASE WHEN c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE() THEN COALESCE(c.billing_amount,c.monthly_fixed_amount,0) ELSE 0 END) overdue_amount FROM franchise_contracts c LEFT JOIN organizations o ON o.id=c.organization_id".$clause);$summaryStatement->execute($params);$summary=$summaryStatement->fetch();
         $splitWhere=[];$splitParams=[];if($organization>0){$splitWhere[]='s.organization_id=:split_organization';$splitParams['split_organization']=$organization;}if(isset($params['date_from'])){$splitWhere[]='DATE(s.created_at)>=:split_from';$splitParams['split_from']=$params['date_from'];}if(isset($params['date_to'])){$splitWhere[]='DATE(s.created_at)<=:split_to';$splitParams['split_to']=$params['date_to'];}$splitClause=$splitWhere===[]?'':' WHERE '.implode(' AND ',$splitWhere);
@@ -183,7 +213,7 @@ final readonly class FranchiseContractRepository
 
     public function billingAlerts():array
     {
-        $row=$this->db->query("SELECT SUM(c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()) overdue,SUM(c.billing_issue_state='failed') billing_failures,SUM(c.status='signed' AND c.commercial_flow_status<>'active') pending_activation,SUM(c.sales_fee_percentage>0 AND (o.asaas_wallet_id IS NULL OR o.asaas_wallet_status<>'validated' OR o.split_enabled<>1)) split_pending,(SELECT COUNT(*) FROM franchise_split_attempts s WHERE s.status='failed') split_failures FROM franchise_contracts c LEFT JOIN organizations o ON o.id=c.organization_id")->fetch()?:[];
+        $row=$this->db->query("SELECT SUM(c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()) overdue,SUM(c.status<>'cancelled' AND c.billing_issue_state='failed') billing_failures,SUM(c.status='signed' AND c.commercial_flow_status<>'active') pending_activation,SUM(c.status='signed' AND c.sales_fee_percentage>0 AND (o.asaas_wallet_id IS NULL OR o.asaas_wallet_status<>'validated' OR o.split_enabled<>1)) split_pending,(SELECT COUNT(*) FROM franchise_split_attempts s WHERE s.status='failed') split_failures FROM franchise_contracts c LEFT JOIN organizations o ON o.id=c.organization_id")->fetch()?:[];
         return['overdue'=>(int)($row['overdue']??0),'billing_failures'=>(int)($row['billing_failures']??0),'pending_activation'=>(int)($row['pending_activation']??0),'split_pending'=>(int)($row['split_pending']??0),'split_failures'=>(int)($row['split_failures']??0)];
     }
 
@@ -219,6 +249,7 @@ final readonly class FranchiseContractRepository
 
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}
     private function render(string$body,array$a,string$conditions,string$term):string{$address=implode(', ',array_filter([$a['address'],$a['address_number'],$a['address_complement'],$a['neighborhood'],$a['city'],$a['state'],$a['postal_code']]));$escape=static fn(mixed$value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$map=['{{razao_social}}'=>$escape($a['legal_name']),'{{cnpj}}'=>$escape($a['cnpj']),'{{endereco_completo}}'=>$escape($address?:'endereço a confirmar'),'{{gestor_nome}}'=>$escape($a['manager_name']),'{{nome_franquia}}'=>$escape($a['display_name']),'{{condicoes_comerciais}}'=>nl2br($escape($conditions)),'{{vigencia}}'=>$escape($term),'{{cidade}}'=>$escape($a['city']?:'Tijucas/SC'),'{{data_extenso}}'=>$escape(date('d/m/Y'))];return strtr(ContractContent::toHtml($body),$map);}
+    private function nextTemplateVersion(string $version):string{if(preg_match('/^(\d+)(?:\.(\d+))?$/',$version,$match)===1)return$match[1].'.'.(((int)($match[2]??0))+1);return'v'.date('YmdHis').substr((string)hrtime(true),-6);}
     private static function money(mixed$value):?float{if($value===null||trim((string)$value)==='')return null;$normalized=trim((string)$value);if(str_contains($normalized,','))$normalized=str_replace(',','.',str_replace('.','',$normalized));return is_numeric($normalized)?round((float)$normalized,2):null;}
     private static function percentage(mixed$value):?float{$number=self::money($value);return$number===null?null:round($number,4);}
     private static function date(mixed$value):?string{$value=trim((string)$value);if($value==='')return null;$date=DateTimeImmutable::createFromFormat('!Y-m-d',$value);if($date===false||$date->format('Y-m-d')!==$value)throw new RuntimeException('Informe datas de vigência válidas.');return$value;}

@@ -760,6 +760,8 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     assertTrue(is_file($rootPath.'/modules/Organization/ContractContent.php'));
     assertTrue(is_file($rootPath.'/views/admin/franchise-contracts/index.php'));
     assertTrue(is_file($rootPath.'/views/admin/franchise-contract-templates/form.php'));
+    assertTrue(is_file($rootPath.'/views/admin/franchise-contract-templates/compare.php'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260807_930000_version_and_cancel_franchise_contracts.php'));
     assertTrue(is_file($rootPath.'/views/public/franchise-contract.php'));
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
@@ -773,7 +775,13 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     assertTrue(str_contains($repository,"evidence_hash"));
     assertTrue(str_contains($repository,"contract_status='signed'"));
     assertTrue(str_contains($repository,'removeTemplate'));
+    assertTrue(str_contains($repository,'duplicateTemplate'));
+    assertTrue(str_contains($repository,'templateVersions'));
+    assertTrue(str_contains($repository,'public function cancel'));
     assertTrue(str_contains($routes,"'/admin/franchise-contract-templates/{id:\\d+}/delete'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contract-templates/{id:\\d+}/duplicate'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contract-templates/{id:\\d+}/compare'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/cancel'"));
     assertTrue(str_contains($templateForm,'data-contract-rich-editor'));
     assertTrue(str_contains($javascript,'data-contract-editor'));
     assertTrue(str_contains($publicContract,'ContractContent::toHtml'));
