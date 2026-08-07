@@ -749,6 +749,9 @@ $tests['cria captação pública e análise de novas franquias'] = static functi
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     $applications=(string)file_get_contents($rootPath.'/views/admin/franchise-applications/index.php');
+    $applicationDetail=(string)file_get_contents($rootPath.'/views/admin/franchise-applications/show.php');
+    assertTrue(str_contains($applicationDetail,'application-data-grid'));
+    assertTrue(str_contains($applicationDetail,'application-contracts-header'));
     $organizationForm=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseApplicationRepository.php');
     assertTrue(str_contains($routes,"'/cadastro-franquia'"));
