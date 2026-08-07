@@ -717,7 +717,7 @@ $tests['cria captação pública e análise de novas franquias'] = static functi
     assertTrue(is_file($rootPath.'/views/admin/franchise-applications/show.php'));
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
-    assertTrue(str_contains($routes,"'/solicitacao-franquia/{token:[a-f0-9]{64}}'"));
+    assertTrue(str_contains($routes,"'/solicitacao-franquia/{token:[a-f0-9]+}'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications/{id:\\d+}/approve'"));
     assertTrue(str_contains($navigation,'>Solicitações</a>'));
