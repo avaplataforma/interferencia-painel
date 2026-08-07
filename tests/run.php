@@ -631,6 +631,7 @@ $tests['personaliza a identidade do ADM Central'] = static function () use ($roo
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $form=(string)file_get_contents($rootPath.'/views/admin/platform/branding.php');
     assertTrue(is_file($rootPath.'/database/migrations/20260806_790000_create_platform_settings.php'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_800000_activate_new_mundo_inter_brand.php'));
     assertTrue(is_file($rootPath.'/modules/Organization/PlatformSettingsRepository.php'));
     assertTrue(is_file($rootPath.'/modules/Organization/PlatformBrandingStorage.php'));
     assertTrue(str_contains($bootstrap,'PlatformSettingsRepository'));

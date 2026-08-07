@@ -143,8 +143,8 @@ return static function (
             $settings=$platformSettings->settings();$logoPath=(string)$settings['logo_path'];$faviconPath=(string)$settings['favicon_path'];
             $logo=$request->file('logo');if($logo!==null&&!$logo->isEmpty())$logoPath=$platformBranding->store($logo,'logo');
             $favicon=$request->file('favicon');if($favicon!==null&&!$favicon->isEmpty())$faviconPath=$platformBranding->store($favicon,'favicon');
-            if($request->input('remove_logo')==='1')$logoPath='/assets/media/mundo-inter-logo.png';
-            if($request->input('remove_favicon')==='1')$faviconPath='/assets/media/mundo-inter-favicon.png';
+            if($request->input('remove_logo')==='1')$logoPath='/assets/media/mundo-inter-logo.png?v=20260806';
+            if($request->input('remove_favicon')==='1')$faviconPath='/assets/media/mundo-inter-favicon.png?v=20260806';
             $platformSettings->updateBrandingPaths($logoPath,$faviconPath);
             $session->flash('platform_branding.message','Personalização do ADM Central salva.');
         }catch(Throwable$e){$session->flash('platform_branding.error',$e->getMessage());}
