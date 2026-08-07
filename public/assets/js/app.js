@@ -425,3 +425,77 @@ document.querySelectorAll('[data-contract-rich-editor]').forEach((form) => {
   form.addEventListener('submit', sync);
   sync();
 });
+
+document.querySelectorAll('.color-field').forEach((group) => {
+  const picker = group.querySelector('input[type="color"]');
+  const text = group.querySelector('[data-color-text]');
+  if (!(picker instanceof HTMLInputElement) || !(text instanceof HTMLInputElement)) return;
+  picker.addEventListener('input', () => { text.value = picker.value; });
+});
+
+(() => {
+  const tabs = Array.from(document.querySelectorAll('[data-organization-tab]'));
+  const panels = Array.from(document.querySelectorAll('[data-organization-panel]'));
+  const form = document.querySelector('.organization-editor-form');
+  const savebar = document.querySelector('[data-organization-savebar]');
+  if (tabs.length === 0) return;
+
+  const show = (requestedName, updateHash) => {
+    const name = tabs.some((tab) => tab.dataset.organizationTab === requestedName) ? requestedName : 'dados';
+    tabs.forEach((tab) => {
+      const active = tab.dataset.organizationTab === name;
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.organizationPanel !== name; });
+    if (savebar instanceof HTMLElement) savebar.hidden = name === 'documentos';
+    if (updateHash && history.replaceState) history.replaceState(null, '', `#${name}`);
+  };
+
+  tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.organizationTab || 'dados', true)));
+  if (form instanceof HTMLFormElement) {
+    form.addEventListener('submit', (event) => {
+      if (form.checkValidity()) return;
+      event.preventDefault();
+      const invalid = form.querySelector(':invalid');
+      const panel = invalid instanceof Element ? invalid.closest('[data-organization-panel]') : null;
+      if (panel instanceof HTMLElement) show(panel.dataset.organizationPanel || 'dados', true);
+      setTimeout(() => {
+        if (!(invalid instanceof HTMLElement)) return;
+        invalid.focus();
+        form.reportValidity();
+      }, 0);
+    });
+  }
+  show(location.hash.replace('#', '') || 'dados', false);
+})();
+
+(() => {
+  const form = document.querySelector('[data-document-upload-form]');
+  if (!(form instanceof HTMLFormElement)) return;
+  const replace = form.querySelector('[data-document-replace-id]');
+  const category = form.querySelector('[data-document-category]');
+  const title = form.querySelector('[data-document-upload-title]');
+  const help = form.querySelector('[data-document-upload-help]');
+  const cancel = form.querySelector('[data-document-version-cancel]');
+  if (!(replace instanceof HTMLInputElement) || !(category instanceof HTMLSelectElement) || !(title instanceof HTMLElement) || !(help instanceof HTMLElement) || !(cancel instanceof HTMLButtonElement)) return;
+
+  const reset = () => {
+    replace.value = '';
+    title.textContent = 'Novo documento';
+    help.textContent = 'Selecione o tipo e o arquivo que deseja anexar.';
+    cancel.hidden = true;
+  };
+  document.querySelectorAll('[data-document-version]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.addEventListener('click', () => {
+      replace.value = button.dataset.documentId || '';
+      category.value = button.dataset.documentCategory || '';
+      title.textContent = `Nova versão de ${button.dataset.documentName || 'documento'}`;
+      help.textContent = 'O arquivo atual será preservado no histórico.';
+      cancel.hidden = false;
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+  cancel.addEventListener('click', reset);
+})();

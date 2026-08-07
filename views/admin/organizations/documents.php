@@ -31,6 +31,3 @@ $typeIcons=['contrato_social'=>'fa-file-contract','cartao_cnpj'=>'fa-building-ci
   </div>
  </div>
 </section>
-<script>
-(function(){var form=document.querySelector('[data-document-upload-form]');if(!form)return;var replace=form.querySelector('[data-document-replace-id]'),category=form.querySelector('[data-document-category]'),title=form.querySelector('[data-document-upload-title]'),help=form.querySelector('[data-document-upload-help]'),cancel=form.querySelector('[data-document-version-cancel]');function reset(){replace.value='';title.textContent='Novo documento';help.textContent='Selecione o tipo e o arquivo que deseja anexar.';cancel.hidden=true;}document.querySelectorAll('[data-document-version]').forEach(function(button){button.addEventListener('click',function(){replace.value=button.dataset.documentId;category.value=button.dataset.documentCategory;title.textContent='Nova versão de '+button.dataset.documentName;help.textContent='O arquivo atual será preservado no histórico.';cancel.hidden=false;form.scrollIntoView({behavior:'smooth',block:'center'});});});cancel.addEventListener('click',reset);})();
-</script>

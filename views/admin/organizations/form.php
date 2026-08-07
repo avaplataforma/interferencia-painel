@@ -94,14 +94,3 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
   </form>
   <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
 </div>
-<script>
-document.querySelectorAll('.color-field').forEach(function(group){var picker=group.querySelector('input[type=color]'),text=group.querySelector('[data-color-text]');picker.addEventListener('input',function(){text.value=picker.value;});});
-(function(){
- var tabs=Array.from(document.querySelectorAll('[data-organization-tab]')),panels=Array.from(document.querySelectorAll('[data-organization-panel]')),form=document.querySelector('.organization-editor-form'),savebar=document.querySelector('[data-organization-savebar]');
- if(!tabs.length)return;
- function show(name,updateHash){if(!tabs.some(function(tab){return tab.dataset.organizationTab===name;}))name='dados';tabs.forEach(function(tab){var active=tab.dataset.organizationTab===name;tab.setAttribute('aria-selected',active?'true':'false');tab.tabIndex=active?0:-1;});panels.forEach(function(panel){panel.hidden=panel.dataset.organizationPanel!==name;});if(savebar)savebar.hidden=name==='documentos';if(updateHash&&history.replaceState)history.replaceState(null,'','#'+name);}
- tabs.forEach(function(tab){tab.addEventListener('click',function(){show(tab.dataset.organizationTab,true);});});
- if(form)form.addEventListener('submit',function(event){if(form.checkValidity())return;event.preventDefault();var invalid=form.querySelector(':invalid'),panel=invalid&&invalid.closest('[data-organization-panel]');if(panel)show(panel.dataset.organizationPanel,true);setTimeout(function(){if(invalid){invalid.focus();form.reportValidity();}},0);});
- show(location.hash.replace('#','')||'dados',false);
-})();
-</script>
