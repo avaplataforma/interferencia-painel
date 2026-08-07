@@ -748,9 +748,18 @@ $tests['cria captação pública e análise de novas franquias'] = static functi
     assertTrue(is_file($rootPath.'/views/admin/franchise-applications/show.php'));
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    $applications=(string)file_get_contents($rootPath.'/views/admin/franchise-applications/index.php');
+    $organizationForm=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseApplicationRepository.php');
+    assertTrue(str_contains($routes,"'/cadastro-franquia'"));
     assertTrue(str_contains($routes,"'/solicitacao-franquia/{token:[a-f0-9]+}'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications/{id:\\d+}/approve'"));
+    assertTrue(str_contains($applications,'Link permanente'));
+    assertTrue(str_contains($applications,'Ticket automático'));
+    assertTrue(str_contains($repository,'submitNew'));
+    assertTrue(str_contains($repository,'platform_tickets'));
+    assertTrue(!str_contains($organizationForm,'Financeiro Asaas'));
     assertTrue(str_contains($navigation,'>Solicitações</a>'));
 };
 

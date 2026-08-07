@@ -1,7 +1,8 @@
 <style>.guest-card{width:min(68rem,calc(100% - 2rem))}.public-intake-header{text-align:center;margin-bottom:1.5rem}.public-intake-header img{width:5rem;height:5rem;object-fit:contain}.public-intake-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.public-intake-form .full{grid-column:1/-1}.public-intake-section{grid-column:1/-1;padding-top:.75rem;border-top:1px solid #e3e7ea}.public-intake-section h2{margin:0 0 .25rem}.public-intake-form label{margin:0}.public-intake-form input,.public-intake-form textarea{width:100%}.public-intake-actions{grid-column:1/-1;display:flex;justify-content:flex-end}@media(max-width:700px){.public-intake-form{grid-template-columns:1fr}.public-intake-form .full,.public-intake-section,.public-intake-actions{grid-column:1}}</style>
-<header class="public-intake-header"><img src="<?= $escape($assetBasePath.$brandFavicon) ?>" alt=""><p class="eyebrow">Mundo Inter</p><h1>Cadastro da futura franquia</h1><p class="meta">Preencha os dados para iniciarmos a análise, o contrato e a configuração da parceria.</p></header>
+<?php $formAction=$formAction??$basePath.'/solicitacao-franquia/'.($token??''); ?>
+<header class="public-intake-header"><img src="<?= $escape($assetBasePath.$brandFavicon) ?>" alt=""><p class="eyebrow">Mundo Inter</p><h1>Cadastro de nova franquia</h1><p class="meta">Envie os dados iniciais. Nossa equipe fará a conferência e entrará em contato para definir o modelo de negócio, o contrato e a ativação.</p></header>
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
-<form class="public-intake-form" method="post" action="<?= $escape($basePath) ?>/solicitacao-franquia/<?= $escape($token) ?>"><?= $csrfField ?>
+<form class="public-intake-form" method="post" action="<?= $escape($formAction) ?>"><?= $csrfField ?>
   <div class="public-intake-section"><h2>Empresa</h2><p class="meta">Os campos com * são necessários para enviar.</p></div>
   <label>Nome da franquia *<input required maxlength="160" name="display_name" value="<?= $escape($application['display_name']??'') ?>"></label>
   <label>Razão social *<input required maxlength="190" name="legal_name" value="<?= $escape($application['legal_name']??'') ?>"></label>
@@ -26,9 +27,8 @@
   <label>Bairro<input maxlength="120" name="neighborhood" value="<?= $escape($application['neighborhood']??'') ?>"></label>
   <label>Cidade<input maxlength="120" name="city" value="<?= $escape($application['city']??'') ?>"></label>
   <label>UF<input maxlength="2" name="state" value="<?= $escape($application['state']??'') ?>"></label>
-  <div class="public-intake-section"><h2>Negociação</h2></div>
-  <label class="full">Observações<textarea name="negotiation_notes" rows="4" maxlength="3000" placeholder="Conte-nos informações importantes sobre a parceria."><?= $escape($application['negotiation_notes']??'') ?></textarea></label>
-  <label class="checkbox-row full"><input type="checkbox" name="billing_required" value="1" <?= (int)($application['billing_required']??0)===1?'checked':'' ?>> A negociação prevê cobrança recorrente ou pontual pelo Mundo Inter.</label>
+  <div class="public-intake-section"><h2>Informações adicionais</h2></div>
+  <label class="full">Observações<textarea name="negotiation_notes" rows="4" maxlength="3000" placeholder="Conte-nos informações importantes sobre a empresa e a futura parceria."><?= $escape($application['negotiation_notes']??'') ?></textarea></label>
   <p class="meta full"><i class="fa-solid fa-shield-halved"></i> O envio não ativa a franquia automaticamente. O ADM Central fará a conferência e entrará em contato.</p>
   <div class="public-intake-actions"><button class="button button-primary" type="submit"><i class="fa-solid fa-paper-plane"></i> Enviar cadastro para análise</button></div>
 </form>
