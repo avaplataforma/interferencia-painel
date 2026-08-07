@@ -20,7 +20,7 @@ final readonly class IntegrationRepository
         $api=$this->cipher->decrypt(isset($row['api_key_encrypted'])?(string)$row['api_key_encrypted']:null);
         return['environment'=>(string)($row['environment']??'sandbox'),'api_key'=>$api,'api_key_last4'=>(string)($row['api_key_last4']??''),'webhook_token'=>$this->cipher->decrypt(isset($row['webhook_token_encrypted'])?(string)$row['webhook_token_encrypted']:null),'is_active'=>(int)($row['is_active']??0)===1,'configured'=>$api!==''];
     }
-    public function saveAsaas(string$apiKey,int$userId,bool$active):void
+    public function saveAsaas(string$apiKey,?int$userId,bool$active):void
     {
         $environment=str_starts_with($apiKey,'$aact_hmlg_')?'sandbox':(str_starts_with($apiKey,'$aact_prod_')?'production':'');
         if($environment==='')throw new RuntimeException('A chave informada não possui um formato reconhecido pelo Asaas.');

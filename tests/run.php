@@ -798,6 +798,16 @@ $tests['configura wallet e split por franquia no ADM Central'] = static function
     assertTrue(is_file($rootPath.'/views/admin/organizations/finance.php'));
 };
 
+$tests['organiza integrações exclusivas do ADM Central'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    assertTrue(str_contains($routes,"'/admin/platform/integrations'"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/asaas'"));
+    assertTrue(str_contains($navigation,'/admin/platform/integrations'));
+    assertTrue(is_file($rootPath.'/views/admin/platform/integrations.php'));
+    assertTrue(is_file($rootPath.'/views/admin/platform/asaas.php'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

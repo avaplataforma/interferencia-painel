@@ -34,6 +34,11 @@ final readonly class OrganizationRepository
     public function allWithPrimaryDomain():array{return$this->database->query("SELECT o.*,d.host primary_host,d.status domain_status,(SELECT COUNT(*) FROM units u WHERE u.organization_id=o.id) unit_count,(SELECT COUNT(*) FROM organization_users m WHERE m.organization_id=o.id AND m.status='active') user_count FROM organizations o LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.is_primary=1 AND d.purpose='site' ORDER BY o.display_name")->fetchAll();}
     public function findRecord(int$id):?array{$s=$this->database->prepare('SELECT * FROM organizations WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function domains(int$id):array{$s=$this->database->prepare('SELECT * FROM organization_domains WHERE organization_id=:id ORDER BY is_primary DESC,purpose,host');$s->execute(['id'=>$id]);return$s->fetchAll();}
+    public function financeIntegrationSummary():array
+    {
+        $row=$this->database->query("SELECT COUNT(*) total,SUM(asaas_wallet_id IS NOT NULL) configured,SUM(asaas_wallet_status='validated') validated,SUM(split_enabled=1) split_enabled FROM organizations")->fetch()?:[];
+        return['total'=>(int)($row['total']??0),'configured'=>(int)($row['configured']??0),'validated'=>(int)($row['validated']??0),'split_enabled'=>(int)($row['split_enabled']??0)];
+    }
 
     public function save(?int$id,array$data):int
     {
