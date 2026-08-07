@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace Interferencia\Modules\Organization;
 
 use Interferencia\Kernel\Http\UploadedFile;
+use Interferencia\Modules\Storage\SpacesStorageManager;
 use RuntimeException;
 
 final readonly class OrganizationBrandingStorage
 {
-    public function __construct(private string $publicDirectory) {}
+    public function __construct(private string $publicDirectory,private ?SpacesStorageManager $spaces=null) {}
 
     public function store(int $organizationId, UploadedFile $file, string $kind): string
     {
@@ -19,6 +20,7 @@ final readonly class OrganizationBrandingStorage
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->temporaryPath);
         $extensions = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
         if (!is_string($mime) || !isset($extensions[$mime])) throw new RuntimeException('Envie uma imagem PNG, JPG ou WebP.');
+        $contents=file_get_contents($file->temporaryPath);if(!is_string($contents))throw new RuntimeException('Não foi possível ler a imagem.');$this->spaces?->storeFranchise($organizationId,'Personalizacao',$contents,$kind.'.'.$extensions[$mime],$mime);
         $directory = rtrim($this->publicDirectory, '/\\') . DIRECTORY_SEPARATOR . $organizationId;
         if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) throw new RuntimeException('Não foi possível preparar o diretório da marca.');
         foreach (glob($directory . DIRECTORY_SEPARATOR . $kind . '.*') ?: [] as $oldFile) if (is_file($oldFile)) @unlink($oldFile);

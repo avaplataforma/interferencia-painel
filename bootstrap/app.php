@@ -42,6 +42,8 @@ use Interferencia\Modules\WhatsApp\WebhookVerifier;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
 use Interferencia\Modules\WhatsApp\TemplateRepository;
 use Interferencia\Modules\WhatsApp\MediaStorage;
+use Interferencia\Modules\Storage\SpacesIntegrationRepository;
+use Interferencia\Modules\Storage\SpacesStorageManager;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
@@ -136,7 +138,10 @@ $externalForms = new ExternalFormRepository($database,$organizationId);
 $whatsappLines = new LineRepository($database);
 $whatsappMessages = new MessageRepository($database);
 $whatsappTemplates = new TemplateRepository($database);
-$whatsappMedia = new MediaStorage($rootPath . '/storage/whatsapp/media');
+$spacesIntegrations=new SpacesIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
+$spacesStorage=new SpacesStorageManager($spacesIntegrations);
+$storageScope=$isCentralContext?'central':'franchise';
+$whatsappMedia = new MediaStorage($rootPath . '/storage/whatsapp/media',$spacesStorage,$storageScope,$organizationId,'WhatsApp');
 $whatsappVerifyToken = $config->get('app.whatsapp_verify_token');
 $whatsappAppSecret = $config->get('app.whatsapp_app_secret');
 $whatsappWebhook = new WebhookVerifier(is_string($whatsappVerifyToken) ? $whatsappVerifyToken : '', is_string($whatsappAppSecret) ? $whatsappAppSecret : '');
@@ -150,7 +155,7 @@ $financeCatalog = new CatalogRepository($database);
 $financeCampaigns = new CampaignRepository($database);
 $tickets = new TicketRepository($database);
 $ticketDepartments = new DepartmentRepository($database);
-$ticketFiles = new MediaStorage($rootPath . '/storage/tickets');
+$ticketFiles = new MediaStorage($rootPath . '/storage/tickets',$spacesStorage,$storageScope,$organizationId,'Tickets');
 $financeIntegrations = new IntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $moodleIntegrations = new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $moodleSettings=$moodleIntegrations->settings();
@@ -236,6 +241,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);

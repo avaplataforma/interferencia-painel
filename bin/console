@@ -12,6 +12,8 @@ use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\WhatsApp\CloudApiClient;
 use Interferencia\Modules\WhatsApp\MediaStorage;
 use Interferencia\Modules\WhatsApp\MessageRepository;
+use Interferencia\Modules\Storage\SpacesIntegrationRepository;
+use Interferencia\Modules\Storage\SpacesStorageManager;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
@@ -105,7 +107,9 @@ TEXT);
             (string) $config->get('app.whatsapp_graph_version'),
             $config->bool('app.whatsapp_send_enabled'),
         );
-        $storage = new MediaStorage($rootPath . '/storage/whatsapp/media');
+        $database=$connection->pdo();
+        $spaces=new SpacesStorageManager(new SpacesIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key'))));
+        $storage = new MediaStorage($rootPath . '/storage/whatsapp/media',$spaces,'local',0,'WhatsApp');
         $result = $messages->syncPendingMedia($client, $storage, 50);
         if (!$result['available']) {
             throw new RuntimeException('Credenciais da Meta indisponíveis para receber mídias.');

@@ -956,6 +956,28 @@ $tests['avalia os requisitos obrigatórios da implantação'] = static function 
     assertSame(100,$implementation['progress']);
 };
 
+$tests['integra DigitalOcean Spaces com isolamento por franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_930000_create_spaces_storage.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Storage/SpacesIntegrationRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Storage/SpacesClient.php');
+    $manager=(string)file_get_contents($rootPath.'/modules/Storage/SpacesStorageManager.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $media=(string)file_get_contents($rootPath.'/modules/WhatsApp/MediaStorage.php');
+    $messages=(string)file_get_contents($rootPath.'/modules/WhatsApp/MessageRepository.php');
+    assertTrue(str_contains($migration,'object_storage_integrations'));
+    assertTrue(str_contains($migration,'object_storage_objects'));
+    assertTrue(str_contains($repository,'SecretCipher'));
+    assertTrue(str_contains($client,'AWS4-HMAC-SHA256'));
+    assertTrue(str_contains($client,"x-amz-acl']='private'"));
+    assertTrue(str_contains($manager,"CENTRAL_FOLDERS=['Personalizacao'"));
+    assertTrue(str_contains($manager,"FRANCHISE_FOLDERS=['Personalizacao','Alunos'"));
+    assertTrue(str_contains($manager,"str_pad((string)\$id,6,'0'"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/digital-ocean'"));
+    assertTrue(str_contains($media,"str_starts_with(\$relative,'spaces:')"));
+    assertTrue(str_contains($messages,'$storage->forFranchise($organizationId)'));
+    assertTrue(is_file($rootPath.'/views/admin/platform/digital-ocean.php'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
