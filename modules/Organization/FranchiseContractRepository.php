@@ -14,7 +14,7 @@ final readonly class FranchiseContractRepository
 
     public function templates(bool $onlyActive=false): array
     {
-        return $this->db->query('SELECT * FROM franchise_contract_templates'.($onlyActive?' WHERE is_active=1':'').' ORDER BY is_active DESC,title')->fetchAll();
+        return $this->db->query('SELECT t.*,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.template_id=t.id) usage_count FROM franchise_contract_templates t'.($onlyActive?' WHERE t.is_active=1':'').' ORDER BY t.is_active DESC,t.title')->fetchAll();
     }
 
     public function template(?int $id): ?array
@@ -24,11 +24,26 @@ final readonly class FranchiseContractRepository
 
     public function saveTemplate(?int $id,array $data): int
     {
-        $title=trim((string)($data['title']??''));$version=trim((string)($data['version']??''));$body=trim((string)($data['body']??''));
-        if(mb_strlen($title)<4||$version===''||mb_strlen($body)<100)throw new RuntimeException('Informe título, versão e conteúdo completo do modelo.');
+        $title=trim((string)($data['title']??''));$version=trim((string)($data['version']??''));$body=ContractContent::sanitize((string)($data['body']??''));
+        if(mb_strlen($title)<4||$version===''||mb_strlen(ContractContent::visibleText($body))<100)throw new RuntimeException('Informe título, versão e conteúdo completo do modelo.');
         $params=['title'=>$title,'version'=>$version,'body'=>$body,'active'=>($data['is_active']??false)?1:0];
         if($id===null){$s=$this->db->prepare('INSERT INTO franchise_contract_templates(title,version,body,is_active) VALUES(:title,:version,:body,:active)');$s->execute($params);return(int)$this->db->lastInsertId();}
         $params['id']=$id;$s=$this->db->prepare('UPDATE franchise_contract_templates SET title=:title,version=:version,body=:body,is_active=:active WHERE id=:id');$s->execute($params);return$id;
+    }
+
+    public function removeTemplate(int $id): string
+    {
+        if ($this->template($id) === null) throw new RuntimeException('Modelo de contrato não encontrado.');
+        $usage = $this->db->prepare('SELECT COUNT(*) FROM franchise_contracts WHERE template_id=:id');
+        $usage->execute(['id' => $id]);
+        if ((int) $usage->fetchColumn() > 0) {
+            $archive = $this->db->prepare('UPDATE franchise_contract_templates SET is_active=0 WHERE id=:id');
+            $archive->execute(['id' => $id]);
+            return 'archived';
+        }
+        $delete = $this->db->prepare('DELETE FROM franchise_contract_templates WHERE id=:id');
+        $delete->execute(['id' => $id]);
+        return 'deleted';
     }
 
     public function all(): array
@@ -203,7 +218,7 @@ final readonly class FranchiseContractRepository
     }
 
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}
-    private function render(string$body,array$a,string$conditions,string$term):string{$address=implode(', ',array_filter([$a['address'],$a['address_number'],$a['address_complement'],$a['neighborhood'],$a['city'],$a['state'],$a['postal_code']]));$map=['{{razao_social}}'=>$a['legal_name'],'{{cnpj}}'=>$a['cnpj'],'{{endereco_completo}}'=>$address?:'endereço a confirmar','{{gestor_nome}}'=>$a['manager_name'],'{{nome_franquia}}'=>$a['display_name'],'{{condicoes_comerciais}}'=>$conditions,'{{vigencia}}'=>$term,'{{cidade}}'=>$a['city']?:'Tijucas/SC','{{data_extenso}}'=>date('d/m/Y')];return strtr($body,array_map(static fn($v)=>(string)$v,$map));}
+    private function render(string$body,array$a,string$conditions,string$term):string{$address=implode(', ',array_filter([$a['address'],$a['address_number'],$a['address_complement'],$a['neighborhood'],$a['city'],$a['state'],$a['postal_code']]));$escape=static fn(mixed$value):string=>htmlspecialchars((string)$value,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');$map=['{{razao_social}}'=>$escape($a['legal_name']),'{{cnpj}}'=>$escape($a['cnpj']),'{{endereco_completo}}'=>$escape($address?:'endereço a confirmar'),'{{gestor_nome}}'=>$escape($a['manager_name']),'{{nome_franquia}}'=>$escape($a['display_name']),'{{condicoes_comerciais}}'=>nl2br($escape($conditions)),'{{vigencia}}'=>$escape($term),'{{cidade}}'=>$escape($a['city']?:'Tijucas/SC'),'{{data_extenso}}'=>$escape(date('d/m/Y'))];return strtr(ContractContent::toHtml($body),$map);}
     private static function money(mixed$value):?float{if($value===null||trim((string)$value)==='')return null;$normalized=trim((string)$value);if(str_contains($normalized,','))$normalized=str_replace(',','.',str_replace('.','',$normalized));return is_numeric($normalized)?round((float)$normalized,2):null;}
     private static function percentage(mixed$value):?float{$number=self::money($value);return$number===null?null:round($number,4);}
     private static function date(mixed$value):?string{$value=trim((string)$value);if($value==='')return null;$date=DateTimeImmutable::createFromFormat('!Y-m-d',$value);if($date===false||$date->format('Y-m-d')!==$value)throw new RuntimeException('Informe datas de vigência válidas.');return$value;}

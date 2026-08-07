@@ -757,17 +757,26 @@ $tests['cria captação pública e análise de novas franquias'] = static functi
 $tests['cria contratos e assinatura digital para franquias'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260806_830000_create_franchise_contracts.php'));
     assertTrue(is_file($rootPath.'/modules/Organization/FranchiseContractRepository.php'));
+    assertTrue(is_file($rootPath.'/modules/Organization/ContractContent.php'));
     assertTrue(is_file($rootPath.'/views/admin/franchise-contracts/index.php'));
     assertTrue(is_file($rootPath.'/views/admin/franchise-contract-templates/form.php'));
     assertTrue(is_file($rootPath.'/views/public/franchise-contract.php'));
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $templateForm=(string)file_get_contents($rootPath.'/views/admin/franchise-contract-templates/form.php');
+    $publicContract=(string)file_get_contents($rootPath.'/views/public/franchise-contract.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
     assertTrue(str_contains($routes,"'/contrato/{token:[a-f0-9]+}'"));
     assertTrue(str_contains($routes,"'/admin/franchise-contracts'"));
     assertTrue(str_contains($navigation,'>Contratos</a>'));
     assertTrue(str_contains($repository,"evidence_hash"));
     assertTrue(str_contains($repository,"contract_status='signed'"));
+    assertTrue(str_contains($repository,'removeTemplate'));
+    assertTrue(str_contains($routes,"'/admin/franchise-contract-templates/{id:\\d+}/delete'"));
+    assertTrue(str_contains($templateForm,'data-contract-rich-editor'));
+    assertTrue(str_contains($javascript,'data-contract-editor'));
+    assertTrue(str_contains($publicContract,'ContractContent::toHtml'));
 };
 
 $tests['integra cobrança de contratos de franquia ao Asaas sem duplicidade'] = static function () use ($rootPath): void {

@@ -365,3 +365,56 @@ document.querySelectorAll('[data-ticket-students]').forEach((picker) => {
     if (event.target instanceof Element && !event.target.closest('.ticket-contact-picker')) results.hidden = true;
   });
 });
+
+document.querySelectorAll('[data-contract-rich-editor]').forEach((form) => {
+  if (!(form instanceof HTMLFormElement)) return;
+  const editor = form.querySelector('[data-contract-editor]');
+  const input = form.querySelector('[data-contract-editor-input]');
+  const preview = form.querySelector('[data-contract-preview]');
+  if (!(editor instanceof HTMLElement) || !(input instanceof HTMLTextAreaElement)) return;
+  input.required = false;
+
+  let savedRange = null;
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) savedRange = range.cloneRange();
+  };
+  const restoreSelection = () => {
+    editor.focus();
+    const selection = window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    if (savedRange) selection.addRange(savedRange);
+  };
+  const sync = () => {
+    input.value = editor.innerHTML.trim();
+    if (preview instanceof HTMLElement) preview.innerHTML = editor.innerHTML;
+    saveSelection();
+  };
+
+  editor.addEventListener('input', sync);
+  editor.addEventListener('keyup', saveSelection);
+  editor.addEventListener('mouseup', saveSelection);
+  form.querySelectorAll('[data-editor-command]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('click', () => {
+      restoreSelection();
+      document.execCommand(button.dataset.editorCommand || '', false, button.dataset.editorValue || null);
+      sync();
+    });
+  });
+  form.querySelectorAll('[data-contract-variable]').forEach((button) => {
+    if (!(button instanceof HTMLButtonElement)) return;
+    button.addEventListener('mousedown', (event) => event.preventDefault());
+    button.addEventListener('click', () => {
+      restoreSelection();
+      document.execCommand('insertText', false, button.dataset.contractVariable || '');
+      sync();
+    });
+  });
+  form.addEventListener('submit', sync);
+  sync();
+});
