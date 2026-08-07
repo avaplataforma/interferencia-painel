@@ -709,6 +709,20 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,"fa-key"));
 };
 
+$tests['cria captação pública e análise de novas franquias'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_820000_create_franchise_applications.php'));
+    assertTrue(is_file($rootPath.'/modules/Organization/FranchiseApplicationRepository.php'));
+    assertTrue(is_file($rootPath.'/views/public/franchise-application.php'));
+    assertTrue(is_file($rootPath.'/views/admin/franchise-applications/index.php'));
+    assertTrue(is_file($rootPath.'/views/admin/franchise-applications/show.php'));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    assertTrue(str_contains($routes,"'/solicitacao-franquia/{token:[a-f0-9]{64}}'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-applications'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-applications/{id:\\d+}/approve'"));
+    assertTrue(str_contains($navigation,'>Solicitações</a>'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

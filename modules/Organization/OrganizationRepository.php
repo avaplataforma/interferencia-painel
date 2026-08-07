@@ -44,11 +44,11 @@ final readonly class OrganizationRepository
         if(preg_match('/^[a-z0-9][a-z0-9_-]{2,79}$/',$code)!==1)throw new RuntimeException('Informe um código interno válido.');
         if($panelSlug==='')throw new RuntimeException('Informe um endereço interno válido para a franquia.');
         if(mb_strlen($legal)<3||mb_strlen($display)<2)throw new RuntimeException('Informe a razão social e o nome de exibição.');
-        if(!self::validCnpj($cnpj))throw new RuntimeException('Informe um CNPJ válido para a franquia.');
+        if(!self::validCnpjDocument($cnpj))throw new RuntimeException('Informe um CNPJ válido para a franquia.');
         if(mb_strlen($managerName)<3||filter_var($managerEmail,FILTER_VALIDATE_EMAIL)===false||strlen(self::digits($managerPhone))<10)throw new RuntimeException('Informe nome, e-mail e telefone válidos para o gestor responsável.');
-        if($managerDocument!==''&&!self::validCpf($managerDocument))throw new RuntimeException('Informe um CPF válido para o gestor.');
+        if($managerDocument!==''&&!self::validCpfDocument($managerDocument))throw new RuntimeException('Informe um CPF válido para o gestor.');
         if($generalManagerEmail!==''&&filter_var($generalManagerEmail,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido para o gerente.');
-        if($generalManagerDocument!==''&&!self::validCpf($generalManagerDocument))throw new RuntimeException('Informe um CPF válido para o gerente.');
+        if($generalManagerDocument!==''&&!self::validCpfDocument($generalManagerDocument))throw new RuntimeException('Informe um CPF válido para o gerente.');
         if($generalManagerPhone!==''&&strlen(self::digits($generalManagerPhone))<10)throw new RuntimeException('Informe um telefone válido para o gerente.');
         if($state!==''&&preg_match('/^[A-Z]{2}$/',$state)!==1)throw new RuntimeException('Informe a UF com duas letras.');
         if(!in_array($status,['active','suspended'],true))throw new RuntimeException('Situação inválida.');
@@ -71,12 +71,12 @@ final readonly class OrganizationRepository
     public static function normalizeHost(string$host):?string{$value=strtolower(rtrim(trim($host),'.'));if(str_starts_with($value,'[')){$end=strpos($value,']');$value=$end===false?'':substr($value,1,$end-1);}elseif(substr_count($value,':')===1){$value=explode(':',$value,2)[0];}if($value===''||strlen($value)>253||filter_var($value,FILTER_VALIDATE_DOMAIN,FILTER_FLAG_HOSTNAME)===false)return null;return$value;}
     private static function normalizeColor(string$color):?string{$value=strtolower(trim($color));return preg_match('/^#[0-9a-f]{6}$/',$value)===1?$value:null;}
     private static function digits(string$value):string{return preg_replace('/\D/','',$value)??'';}
-    private static function validCpf(string$value):bool
+    public static function validCpfDocument(string$value):bool
     {
         if(strlen($value)!==11||preg_match('/^(\d)\1{10}$/',$value)===1)return false;
         for($position=9;$position<=10;$position++){$sum=0;for($index=0;$index<$position;$index++)$sum+=(int)$value[$index]*(($position+1)-$index);$digit=(10*($sum%11))%11;if($digit===10)$digit=0;if((int)$value[$position]!==$digit)return false;}return true;
     }
-    private static function validCnpj(string$value):bool
+    public static function validCnpjDocument(string$value):bool
     {
         if(strlen($value)!==14||preg_match('/^(\d)\1{13}$/',$value)===1)return false;
         foreach([[5,4,3,2,9,8,7,6,5,4,3,2],[6,5,4,3,2,9,8,7,6,5,4,3,2]]as$round=>$weights){$sum=0;foreach($weights as$index=>$weight)$sum+=(int)$value[$index]*$weight;$remainder=$sum%11;$digit=$remainder<2?0:11-$remainder;if((int)$value[12+$round]!==$digit)return false;}return true;

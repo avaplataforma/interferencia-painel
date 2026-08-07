@@ -5,6 +5,7 @@
     <div class="nav-submenu">
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-magnifying-glass fa-fw" aria-hidden="true"></i>Consultar</a>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/organizations/create"><i class="fa-solid fa-plus fa-fw" aria-hidden="true"></i>Cadastro</a>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/franchise-applications"><i class="fa-solid fa-file-signature fa-fw" aria-hidden="true"></i>Solicitações</a>
     </div>
   </details>
   <a class="nav-link" href="<?= $escape($basePath) ?>/admin/tickets"><i class="fa-solid fa-ticket fa-fw" aria-hidden="true"></i>TICKETS</a>

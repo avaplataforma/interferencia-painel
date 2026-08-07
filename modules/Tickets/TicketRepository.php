@@ -12,15 +12,15 @@ final readonly class TicketRepository
 
     public function centralAll(string $status='',string $search=''):array
     {
-        $sql="SELECT t.*,o.display_name organization_name,un.name unit_name,requester.name requester_name,department.name department_name FROM tickets t INNER JOIN organizations o ON o.id=t.organization_id INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN ticket_departments department ON department.id=t.department_id WHERE 1=1";$params=[];
-        if(in_array($status,['open','in_progress','waiting','resolved','closed'],true)){$sql.=' AND t.status=?';$params[]=$status;}
-        if($search!==''){$sql.=' AND (t.subject LIKE ? OR t.description LIKE ? OR o.display_name LIKE ? OR requester.name LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);}
-        $sql.=" ORDER BY CASE t.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'waiting' THEN 2 ELSE 3 END,CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.updated_at DESC LIMIT 200";$s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
+        $sql="SELECT * FROM (SELECT CAST(t.id AS CHAR) ticket_ref,t.id,NULL franchise_application_id,t.subject,t.description,t.priority,t.status,t.updated_at,o.display_name organization_name,un.name unit_name,requester.name requester_name,department.name department_name,'internal' source FROM tickets t INNER JOIN organizations o ON o.id=t.organization_id INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN ticket_departments department ON department.id=t.department_id UNION ALL SELECT CONCAT('F-',p.id) ticket_ref,p.id,p.franchise_application_id,p.subject,p.description,p.priority,p.status,p.updated_at,COALESCE(a.display_name,'Futura franquia') organization_name,'Formulário público' unit_name,p.requester_name,'Novas franquias' department_name,'franchise_application' source FROM platform_tickets p LEFT JOIN franchise_applications a ON a.id=p.franchise_application_id) central WHERE 1=1";$params=[];
+        if(in_array($status,['open','in_progress','waiting','resolved','closed'],true)){$sql.=' AND status=?';$params[]=$status;}
+        if($search!==''){$sql.=' AND (subject LIKE ? OR description LIKE ? OR organization_name LIKE ? OR requester_name LIKE ?)';$term='%'.$search.'%';array_push($params,$term,$term,$term,$term);}
+        $sql.=" ORDER BY CASE status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'waiting' THEN 2 ELSE 3 END,CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,updated_at DESC LIMIT 200";$s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
     }
 
     public function centralSummary():array
     {
-        $row=$this->db->query("SELECT COUNT(*) total,SUM(status NOT IN('resolved','closed')) open,SUM(status NOT IN('resolved','closed') AND due_at<NOW()) overdue,SUM(status IN('resolved','closed')) completed FROM tickets")->fetch()?:[];
+        $row=$this->db->query("SELECT COUNT(*) total,SUM(status NOT IN('resolved','closed')) open,SUM(status NOT IN('resolved','closed') AND due_at IS NOT NULL AND due_at<NOW()) overdue,SUM(status IN('resolved','closed')) completed FROM (SELECT status,due_at FROM tickets UNION ALL SELECT status,NULL due_at FROM platform_tickets) central")->fetch()?:[];
         return['total'=>(int)($row['total']??0),'open'=>(int)($row['open']??0),'overdue'=>(int)($row['overdue']??0),'completed'=>(int)($row['completed']??0)];
     }
 
