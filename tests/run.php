@@ -823,6 +823,17 @@ $tests['controla regras comerciais e financeiro das franquias'] = static functio
     assertTrue(is_file($rootPath.'/views/admin/franchise-billing/index.php'));
 };
 
+$tests['aplica split contratual nas novas cobranças das franquias'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_890000_create_franchise_split_attempts.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
+    assertTrue(str_contains($migration,'franchise_split_attempts'));
+    assertTrue(str_contains($repository,'prepareSplit'));
+    assertTrue(str_contains($repository,"100-$central"));
+    assertTrue(str_contains($client,"payload['split']"));
+    assertTrue(str_contains($client,"str_starts_with(\$reference,'painel:')"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

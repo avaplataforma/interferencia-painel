@@ -152,8 +152,9 @@ final readonly class FranchiseContractRepository
     public function billingDashboard(): array
     {
         $summary=$this->db->query("SELECT COUNT(*) total_contracts,SUM(c.status='signed') signed_contracts,SUM(c.billing_issue_state='paid') paid,SUM(c.billing_issue_state='failed') failures,SUM(c.commercial_flow_status='active') active_flows,SUM(c.status='signed' AND c.commercial_flow_status<>'active') pending_activation,SUM(c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()) overdue,SUM(c.sales_fee_percentage>0 AND (o.asaas_wallet_id IS NULL OR o.asaas_wallet_status<>'validated' OR o.split_enabled<>1)) split_pending FROM franchise_contracts c LEFT JOIN organizations o ON o.id=c.organization_id")->fetch();
+        $split=$this->db->query("SELECT SUM(status='submitted') split_submitted,SUM(status='failed') split_failures FROM franchise_split_attempts")->fetch();
         $contracts=$this->db->query("SELECT c.*,a.display_name franchise_name,o.asaas_wallet_status,o.asaas_wallet_id,o.split_enabled FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id ORDER BY FIELD(c.commercial_flow_status,'blocked','pending','active','inactive'),c.updated_at DESC LIMIT 100")->fetchAll();
-        return['summary'=>is_array($summary)?$summary:[],'contracts'=>$contracts];
+        return['summary'=>array_merge(is_array($summary)?$summary:[],is_array($split)?$split:[]),'contracts'=>$contracts];
     }
 
     public function billingEvents(int $contractId): array
@@ -164,6 +165,26 @@ final readonly class FranchiseContractRepository
     public function recordBillingEvent(int $contractId,string $type,string $description,?int $userId=null): void
     {
         $s=$this->db->prepare('INSERT INTO franchise_billing_events(contract_id,event_type,description,platform_user_id) VALUES(:contract,:type,:description,:user)');$s->execute(['contract'=>$contractId,'type'=>mb_substr($type,0,50),'description'=>mb_substr($description,0,500),'user'=>$userId]);
+    }
+
+    public function prepareSplit(int $organizationId,float $grossValue,string $externalReference): ?array
+    {
+        $s=$this->db->prepare("SELECT c.*,o.asaas_wallet_id,o.asaas_wallet_status,o.split_enabled FROM franchise_contracts c INNER JOIN organizations o ON o.id=c.organization_id WHERE c.organization_id=:organization AND c.status='signed' AND c.commercial_flow_status='active' AND (c.valid_from IS NULL OR c.valid_from<=CURDATE()) AND (c.valid_until IS NULL OR c.valid_until>=CURDATE()) ORDER BY c.contract_number DESC,c.id DESC LIMIT 1");$s->execute(['organization'=>$organizationId]);$contract=$s->fetch();
+        if(!is_array($contract))return null;$central=round((float)$contract['sales_fee_percentage'],4);if($central<=0)return null;
+        $wallet=self::nullable($contract['split_wallet_snapshot']??$contract['asaas_wallet_id']??null);if($wallet===null||$contract['asaas_wallet_status']!=='validated'||(int)$contract['split_enabled']!==1)throw new RuntimeException('O split desta franquia está bloqueado: valide a wallet no ADM Central.');
+        $franchise=round(100-$central,4);if($franchise<=0)throw new RuntimeException('O percentual contratado não deixa saldo válido para a franquia.');
+        $insert=$this->db->prepare("INSERT INTO franchise_split_attempts(organization_id,contract_id,external_reference,gross_value,central_percentage,franchise_percentage,wallet_id) VALUES(:organization,:contract,:reference,:gross,:central,:franchise,:wallet)");$insert->execute(['organization'=>$organizationId,'contract'=>$contract['id'],'reference'=>mb_substr($externalReference,0,120),'gross'=>round($grossValue,2),'central'=>$central,'franchise'=>$franchise,'wallet'=>$wallet]);
+        return['attempt_id'=>(int)$this->db->lastInsertId(),'contract_id'=>(int)$contract['id'],'split'=>[['walletId'=>$wallet,'percentualValue'=>$franchise,'externalReference'=>'mundo-inter:contract:'.$contract['id']]]];
+    }
+
+    public function completeSplit(int $attemptId,array $payment): void
+    {
+        $paymentId=(string)($payment['id']??'');$s=$this->db->prepare("UPDATE franchise_split_attempts SET status='submitted',asaas_payment_id=:payment,error_message=NULL WHERE id=:id AND status='prepared'");$s->execute(['payment'=>$paymentId!==''?$paymentId:null,'id'=>$attemptId]);
+    }
+
+    public function failSplit(int $attemptId,string $message): void
+    {
+        $s=$this->db->prepare("UPDATE franchise_split_attempts SET status='failed',error_message=:error WHERE id=:id AND status='prepared'");$s->execute(['error'=>mb_substr($message,0,500),'id'=>$attemptId]);
     }
 
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}

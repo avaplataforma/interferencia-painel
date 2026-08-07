@@ -13,7 +13,7 @@ final readonly class AsaasClient
         'production' => 'https://api.asaas.com/v3',
     ];
 
-    public function __construct(private string $environment, private string $apiKey, private bool $paymentsWriteEnabled = false) {}
+    public function __construct(private string $environment, private string $apiKey, private bool $paymentsWriteEnabled = false,private ?\Closure $splitLifecycle=null) {}
 
     public function environment(): string { return $this->environment; }
     public function ready(): bool
@@ -65,7 +65,7 @@ final readonly class AsaasClient
     public function createPayment(array $payload): array
     {
         if (!$this->paymentsWriteEnabled) throw new RuntimeException('A emissão real de cobranças ainda está bloqueada para o teste piloto.');
-        return $this->request('POST', '/payments', $payload);
+        return $this->requestWithCommercialSplit('/payments',$payload);
     }
 
     /** @return list<array<string,mixed>> */
@@ -145,7 +145,7 @@ final readonly class AsaasClient
     public function createSubscription(array $payload):array
     {
         if(!$this->paymentsWriteEnabled)throw new RuntimeException('A criação real de assinaturas está bloqueada.');
-        return$this->request('POST','/subscriptions',$payload);
+        return$this->requestWithCommercialSplit('/subscriptions',$payload);
     }
 
     /** @param array<string,mixed> $payload @return array<string,mixed> */
@@ -208,6 +208,13 @@ final readonly class AsaasClient
         $data=json_decode($response,true);
         if($status<200||$status>=300||!is_array($data)){$message=is_array($data)?(string)($data['errors'][0]['description']??'O Asaas recusou a cobrança.'):'O Asaas retornou uma resposta inválida.';throw new RuntimeException($message);}
         return $data;
+    }
+
+    private function requestWithCommercialSplit(string$path,array$payload):array
+    {
+        $reference=(string)($payload['externalReference']??'');$prepared=null;
+        if($this->splitLifecycle!==null&&str_starts_with($reference,'painel:')){$gross=(float)($payload['totalValue']??$payload['value']??0);$prepared=($this->splitLifecycle)('prepare',['gross'=>$gross,'reference'=>$reference]);if(is_array($prepared)&&isset($prepared['split']))$payload['split']=$prepared['split'];}
+        try{$result=$this->request('POST',$path,$payload);if(is_array($prepared))($this->splitLifecycle)('complete',['prepared'=>$prepared,'result'=>$result]);return$result;}catch(\Throwable$e){if(is_array($prepared))($this->splitLifecycle)('fail',['prepared'=>$prepared,'error'=>$e->getMessage()]);throw$e;}
     }
 
     private function assertPaymentWrite(string$paymentId):void
