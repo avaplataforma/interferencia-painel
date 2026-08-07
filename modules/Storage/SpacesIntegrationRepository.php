@@ -23,12 +23,12 @@ final readonly class SpacesIntegrationRepository
         $access = $includeSecrets ? $this->cipher->decrypt(isset($row['access_key_encrypted']) ? (string)$row['access_key_encrypted'] : null) : '';
         $secret = $includeSecrets ? $this->cipher->decrypt(isset($row['secret_key_encrypted']) ? (string)$row['secret_key_encrypted'] : null) : '';
         return [
-            'endpoint'=>(string)($row['endpoint']??'https://avaplataforma.nyc3.digitaloceanspaces.com'),
-            'bucket'=>(string)($row['bucket']??'avaplataforma'),
+            'endpoint'=>(string)($row['endpoint']??'https://mundointer.nyc3.digitaloceanspaces.com'),
+            'bucket'=>(string)($row['bucket']??'mundointer'),
             'region'=>(string)($row['region']??'nyc3'),
             'access_key'=>$access,'secret_key'=>$secret,
             'access_key_last4'=>(string)($row['access_key_last4']??''),'secret_key_last4'=>(string)($row['secret_key_last4']??''),
-            'central_prefix'=>(string)($row['central_prefix']??'Mundo Inter'),'franchises_prefix'=>(string)($row['franchises_prefix']??'Franquias'),
+            'central_prefix'=>(string)($row['central_prefix']??'adm-central'),'franchises_prefix'=>(string)($row['franchises_prefix']??'franquias'),
             'is_active'=>(int)($row['is_active']??0)===1,'configured'=>$includeSecrets ? $access!==''&&$secret!=='' : !empty($row),
             'last_tested_at'=>$row['last_tested_at']??null,'last_error'=>$row['last_error']??null,
         ];
@@ -40,17 +40,25 @@ final readonly class SpacesIntegrationRepository
         if (!$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não foi configurada.');
         $current=$this->settings();$endpoint=rtrim(trim((string)($data['endpoint']??'')),'/');$bucket=strtolower(trim((string)($data['bucket']??'')));
         $access=trim((string)($data['access_key']??''));$secret=trim((string)($data['secret_key']??''));
-        if($access==='')$access=(string)$current['access_key'];if($secret==='')$secret=(string)$current['secret_key'];
+        $replaceCredentials=$access!==''||$secret!=='';
         $parts=parse_url($endpoint);$host=strtolower((string)($parts['host']??''));
         if(($parts['scheme']??'')!=='https'||$host===''||!str_ends_with($host,'.digitaloceanspaces.com'))throw new RuntimeException('Informe um endpoint HTTPS válido da DigitalOcean Spaces.');
         if(preg_match('/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/',$bucket)!==1)throw new RuntimeException('Informe o nome válido do bucket.');
         $hostParts=explode('.',$host);$region=$hostParts[0]===$bucket?($hostParts[1]??''):($hostParts[0]??'');
         if(preg_match('/^[a-z0-9-]{3,20}$/',$region)!==1)throw new RuntimeException('Não foi possível identificar a região pelo endpoint.');
-        // Evita aceitar trechos copiados de campos mascarados ou segredos truncados.
-        if(strlen($access)<16||strlen($secret)<32)throw new RuntimeException('Informe o Access Key e o Secret Key completos, exatamente como foram gerados no DigitalOcean Spaces.');
-        $central=$this->prefix((string)($data['central_prefix']??'Mundo Inter'));$franchises=$this->prefix((string)($data['franchises_prefix']??'Franquias'));
+        // Uma troca de bucket não deve descriptografar nem regravar as credenciais existentes.
+        // Ao rotacionar a credencial, as duas partes completas precisam ser informadas juntas.
+        if($replaceCredentials&&($access===''||$secret===''||strlen($access)<16||strlen($secret)<32))throw new RuntimeException('Informe o Access Key e o Secret Key completos, exatamente como foram gerados no DigitalOcean Spaces.');
+        if(!$replaceCredentials&&!(bool)$current['configured'])throw new RuntimeException('Informe o Access Key e o Secret Key para configurar a integração.');
+        $central=$this->prefix((string)($data['central_prefix']??'adm-central'));$franchises=$this->prefix((string)($data['franchises_prefix']??'franquias'));
+        $active=(int)(($data['is_active']??false)===true);
+        if(!$replaceCredentials){
+            $sql='UPDATE object_storage_integrations SET endpoint=:endpoint,bucket=:bucket,region=:region,central_prefix=:central,franchises_prefix=:franchises,is_active=:active,updated_by=:user WHERE id=1';
+            $this->db->prepare($sql)->execute(['endpoint'=>$endpoint,'bucket'=>$bucket,'region'=>$region,'central'=>$central,'franchises'=>$franchises,'active'=>$active,'user'=>$userId]);
+            return;
+        }
         $sql="INSERT INTO object_storage_integrations(id,provider,endpoint,bucket,region,access_key_encrypted,access_key_last4,secret_key_encrypted,secret_key_last4,central_prefix,franchises_prefix,is_active,updated_by) VALUES(1,'digitalocean_spaces',:endpoint,:bucket,:region,:access,:access4,:secret,:secret4,:central,:franchises,:active,:user) ON DUPLICATE KEY UPDATE endpoint=VALUES(endpoint),bucket=VALUES(bucket),region=VALUES(region),access_key_encrypted=VALUES(access_key_encrypted),access_key_last4=VALUES(access_key_last4),secret_key_encrypted=VALUES(secret_key_encrypted),secret_key_last4=VALUES(secret_key_last4),central_prefix=VALUES(central_prefix),franchises_prefix=VALUES(franchises_prefix),is_active=VALUES(is_active),updated_by=VALUES(updated_by)";
-        $this->db->prepare($sql)->execute(['endpoint'=>$endpoint,'bucket'=>$bucket,'region'=>$region,'access'=>$this->cipher->encrypt($access),'access4'=>substr($access,-4),'secret'=>$this->cipher->encrypt($secret),'secret4'=>substr($secret,-4),'central'=>$central,'franchises'=>$franchises,'active'=>(int)(($data['is_active']??false)===true),'user'=>$userId]);
+        $this->db->prepare($sql)->execute(['endpoint'=>$endpoint,'bucket'=>$bucket,'region'=>$region,'access'=>$this->cipher->encrypt($access),'access4'=>substr($access,-4),'secret'=>$this->cipher->encrypt($secret),'secret4'=>substr($secret,-4),'central'=>$central,'franchises'=>$franchises,'active'=>$active,'user'=>$userId]);
     }
 
     public function markTest(?string $error): void

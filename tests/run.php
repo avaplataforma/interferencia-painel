@@ -968,6 +968,9 @@ $tests['integra DigitalOcean Spaces com isolamento por franquia'] = static funct
     assertTrue(str_contains($migration,'object_storage_objects'));
     assertTrue(str_contains($repository,'SecretCipher'));
     assertTrue(str_contains($repository,'strlen($secret)<32'));
+    assertTrue(str_contains($repository,'if(!$replaceCredentials)'));
+    assertTrue(str_contains($repository,"'https://mundointer.nyc3.digitaloceanspaces.com'"));
+    assertTrue(str_contains($repository,"'central_prefix'=>(string)(\$row['central_prefix']??'adm-central')"));
     assertTrue(str_contains($repository,"\$error!==null?',is_active=0'"));
     assertTrue(str_contains($client,'AWS4-HMAC-SHA256'));
     assertTrue(str_contains($client,"x-amz-acl']='private'"));

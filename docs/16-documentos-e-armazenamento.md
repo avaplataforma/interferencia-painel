@@ -3,7 +3,7 @@
 ## Estratégia
 
 Arquivos de alunos, organizações e sites não devem permanecer definitivamente
-no disco local da aplicação. A plataforma usa o bucket privado `avaplataforma`,
+no disco local da aplicação. A plataforma usa o bucket privado `mundointer`,
 no DigitalOcean Spaces, por meio da API compatível com S3. Os metadados, a
 autorização e os vínculos continuam no MariaDB.
 
@@ -17,8 +17,8 @@ Cada objeto recebe chave aleatória, sem dados pessoais legíveis, dentro desta
 estrutura:
 
 ```text
-Mundo Inter/{categoria}/{ano}/{mes}/{uuid}-{arquivo-seguro}
-Franquias/{id}-{codigo}/{categoria}/{ano}/{mes}/{uuid}-{arquivo-seguro}
+adm-central/{categoria}/{ano}/{mes}/{uuid}-{arquivo-seguro}
+franquias/{id}-{codigo}/{categoria}/{ano}/{mes}/{uuid}-{arquivo-seguro}
 ```
 
 O ADM Central possui as categorias Personalização, Contratos, Solicitações,
