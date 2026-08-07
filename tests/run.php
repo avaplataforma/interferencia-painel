@@ -47,8 +47,12 @@ $tests['vincula franquias ao histórico contratual']=static function()use($rootP
     $list=(string)file_get_contents($rootPath.'/views/admin/organizations/index.php');
     assertTrue(str_contains($migration,'WHERE NOT EXISTS'));
     assertTrue(str_contains($view,'Histórico contratual'));
-    assertTrue(str_contains($list,'fa-file-signature'));
+    assertTrue(str_contains($list,'Abrir ficha da franquia'));
     assertTrue(str_contains($list,'Login exclusivo'));
+    $overview=(string)file_get_contents($rootPath.'/views/admin/organizations/overview.php');
+    assertTrue(str_contains($overview,'Próxima ação'));
+    assertTrue(str_contains($overview,'fa-file-signature'));
+    assertTrue(str_contains($overview,'Configurar Asaas e split'));
 };
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
