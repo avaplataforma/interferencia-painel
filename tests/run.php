@@ -983,6 +983,25 @@ $tests['integra DigitalOcean Spaces com isolamento por franquia'] = static funct
     assertTrue(is_file($rootPath.'/views/admin/platform/digital-ocean.php'));
 };
 
+$tests['gerencia documentos privados com versões e isolamento por franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_940000_create_document_management.php');
+    $manager=(string)file_get_contents($rootPath.'/modules/Storage/DocumentManager.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/documents/index.php');
+    assertTrue(str_contains($migration,'managed_documents'));
+    assertTrue(str_contains($migration,'document_group'));
+    assertTrue(str_contains($migration,'version_number'));
+    assertTrue(str_contains($manager,'MAX_BYTES = 26214400'));
+    assertTrue(str_contains($manager,"storeFranchise((int)\$organizationId,'Documentos'"));
+    assertTrue(str_contains($manager,'FILEINFO_MIME_TYPE'));
+    assertTrue(str_contains($manager,'deleted_at=NOW()'));
+    assertTrue(str_contains($routes,"'/admin/documents'"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/documents'"));
+    assertTrue(str_contains($routes,"'Cache-Control'=>'private, no-store'"));
+    assertTrue(str_contains($view,'Nova versão'));
+    assertTrue(str_contains($view,'histórico'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

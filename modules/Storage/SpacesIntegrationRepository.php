@@ -14,6 +14,7 @@ final readonly class SpacesIntegrationRepository
     public function __construct(private PDO $db, private SecretCipher $cipher) {}
 
     public function encryptionReady(): bool { return $this->cipher->ready(); }
+    public function database(): PDO { return $this->db; }
 
     /** @return array<string,mixed> */
     public function settings(bool $includeSecrets = true): array

@@ -13,6 +13,7 @@ final readonly class SpacesStorageManager
     private const FRANCHISE_FOLDERS=['Personalizacao','Alunos','Tickets','Documentos','Contratos','Importacoes','Backups'];
     public function __construct(private SpacesIntegrationRepository$repository){}
     public function status():array{return$this->repository->settings(false)+$this->repository->summary()+['encryption_ready'=>$this->repository->encryptionReady()];}
+    public function documents():DocumentManager{return new DocumentManager($this->repository->database(),$this);}
     public function active():bool{$s=$this->repository->settings();return(bool)$s['is_active']&&(bool)$s['configured'];}
     public function save(array$data,?int$userId):void{$this->repository->save($data,$userId);}
 

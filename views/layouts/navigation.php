@@ -17,6 +17,7 @@
       <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/users"><i class="fa-solid fa-user-tie fa-fw" aria-hidden="true"></i>Colaboradores</a><?php endif; ?>
       <?php if ($navigation['roles'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/roles"><i class="fa-solid fa-user-shield fa-fw" aria-hidden="true"></i>Perfis e permissões</a><?php endif; ?>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/branding"><i class="fa-solid fa-palette fa-fw" aria-hidden="true"></i>Personalização</a>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/documents"><i class="fa-solid fa-folder-open fa-fw" aria-hidden="true"></i>Documentos</a>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-plug fa-fw" aria-hidden="true"></i>Integrações</a>
     </div>
   </details>
