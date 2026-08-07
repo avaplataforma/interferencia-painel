@@ -646,6 +646,21 @@ $tests['personaliza a identidade do ADM Central'] = static function () use ($roo
     assertTrue(str_contains($form,'name="login_welcome_text"'));
 };
 
+$tests['cadastra franquia com dados empresariais mínimos'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    assertTrue(is_file($rootPath.'/database/migrations/20260806_810000_add_franchise_company_and_contacts.php'));
+    assertTrue(str_contains($repository,'validCnpj'));
+    assertTrue(str_contains($repository,"'manager_email'"));
+    assertTrue(str_contains($routes,"'general_manager_name'"));
+    assertTrue(str_contains($form,'name="cnpj"'));
+    assertTrue(str_contains($form,'name="manager_name"'));
+    assertTrue(str_contains($form,'name="manager_email"'));
+    assertTrue(str_contains($form,'name="manager_phone"'));
+    assertTrue(!str_contains($form,'required maxlength="160" name="general_manager_name"'));
+};
+
 $tests['prepara fluxo unificado de matrículas'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260805_600000_create_student_enrollments.php'));
     assertTrue(is_file($rootPath.'/database/migrations/20260805_610000_link_enrollments_to_payments.php'));

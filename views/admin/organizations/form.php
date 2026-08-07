@@ -9,8 +9,33 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 <div class="form-section form-span-2"><h2>Dados da franquia</h2><p>Identificação jurídica e operacional usada pelo ADM Central.</p></div>
 <label>Nome de exibição *<input required maxlength="160" name="display_name" value="<?= $escape($organization['display_name']??'') ?>" placeholder="Ex.: Franquia Tijucas"></label>
 <label>Razão social *<input required maxlength="190" name="legal_name" value="<?= $escape($organization['legal_name']??'') ?>"></label>
+<label>CNPJ *<input required name="cnpj" inputmode="numeric" maxlength="18" data-mask="document" value="<?= $escape($organization['cnpj']??'') ?>" placeholder="00.000.000/0000-00"><small>O CNPJ será validado e não poderá se repetir.</small></label>
+<label>Nome fantasia <input maxlength="160" value="<?= $escape($organization['display_name']??'') ?>" disabled><small>É o mesmo nome de exibição informado acima.</small></label>
+<label>Inscrição estadual<input maxlength="40" name="state_registration" value="<?= $escape($organization['state_registration']??'') ?>"></label>
+<label>Inscrição municipal<input maxlength="40" name="municipal_registration" value="<?= $escape($organization['municipal_registration']??'') ?>"></label>
 <label>Código interno *<input required maxlength="80" name="code" value="<?= $escape($organization['code']??'') ?>" placeholder="franquia_tijucas"><small>Visível somente nos controles internos.</small></label>
 <label>Situação<select name="status"><option value="active" <?= ($organization['status']??'active')==='active'?'selected':'' ?>>Ativa</option><option value="suspended" <?= ($organization['status']??'')==='suspended'?'selected':'' ?>>Suspensa</option></select></label>
+
+<div class="form-section form-span-2"><h2>Contato principal</h2><p>Somente nome, e-mail e telefone do gestor são obrigatórios. Os demais dados poderão ser concluídos depois.</p></div>
+<label>Gestor responsável *<input required maxlength="160" name="manager_name" value="<?= $escape($organization['manager_name']??'') ?>"></label>
+<label>CPF do gestor<input name="manager_document" inputmode="numeric" maxlength="14" data-mask="document" value="<?= $escape($organization['manager_document']??'') ?>" placeholder="000.000.000-00"></label>
+<label>E-mail do gestor *<input required type="email" maxlength="190" name="manager_email" value="<?= $escape($organization['manager_email']??'') ?>"></label>
+<label>Telefone/WhatsApp do gestor *<input required name="manager_phone" inputmode="tel" maxlength="16" data-mask="phone" value="<?= $escape($organization['manager_phone']??'') ?>" placeholder="(00) 00000-0000"></label>
+
+<div class="form-section form-span-2"><h2>Gerente</h2><p>Cadastro opcional para contato operacional da franquia.</p></div>
+<label>Nome do gerente<input maxlength="160" name="general_manager_name" value="<?= $escape($organization['general_manager_name']??'') ?>"></label>
+<label>CPF do gerente<input name="general_manager_document" inputmode="numeric" maxlength="14" data-mask="document" value="<?= $escape($organization['general_manager_document']??'') ?>" placeholder="000.000.000-00"></label>
+<label>E-mail do gerente<input type="email" maxlength="190" name="general_manager_email" value="<?= $escape($organization['general_manager_email']??'') ?>"></label>
+<label>Telefone/WhatsApp do gerente<input name="general_manager_phone" inputmode="tel" maxlength="16" data-mask="phone" value="<?= $escape($organization['general_manager_phone']??'') ?>" placeholder="(00) 00000-0000"></label>
+
+<div class="form-section form-span-2"><h2>Endereço físico</h2><p>Opcional nesta etapa; poderá ser preenchido ou atualizado posteriormente.</p></div>
+<label>CEP<input name="postal_code" inputmode="numeric" maxlength="9" value="<?= $escape($organization['postal_code']??'') ?>" placeholder="00000-000"></label>
+<label>Endereço<input maxlength="190" name="address" value="<?= $escape($organization['address']??'') ?>"></label>
+<label>Número<input maxlength="30" name="address_number" value="<?= $escape($organization['address_number']??'') ?>"></label>
+<label>Complemento<input maxlength="120" name="address_complement" value="<?= $escape($organization['address_complement']??'') ?>"></label>
+<label>Bairro<input maxlength="120" name="neighborhood" value="<?= $escape($organization['neighborhood']??'') ?>"></label>
+<label>Cidade<input maxlength="120" name="city" value="<?= $escape($organization['city']??'') ?>"></label>
+<label>UF<input maxlength="2" name="state" value="<?= $escape($organization['state']??'') ?>" placeholder="SC" style="text-transform:uppercase"></label>
 
 <div class="form-section form-span-2"><h2>Endereços</h2><p>O painel é hospedado pelo Mundo Inter; o site público pode continuar usando o domínio e o e-mail atuais da franquia.</p></div>
 <label class="form-span-2">Endereço privado da franquia *<div class="input-prefix"><span>mundointer.com.br/</span><input required maxlength="100" name="panel_slug" value="<?= $escape($organization['panel_slug']??'') ?>" placeholder="nome-da-franquia"></div><small>Exclusivo para login e uso do painel privado.</small></label>
