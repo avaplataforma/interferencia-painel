@@ -12,31 +12,16 @@ final readonly class DocumentManager
 {
     private const MAX_BYTES = 26214400;
     private const CENTRAL_CATEGORIES = ['institucional'=>'Institucional','juridico'=>'Jurídico','financeiro'=>'Financeiro','contratos'=>'Contratos','suporte'=>'Suporte','outros'=>'Outros'];
-    private const FRANCHISE_CATEGORIES = [
-        'contrato_social'=>'Contrato Social',
-        'cartao_cnpj'=>'Cartão CNPJ',
-        'cnh_gestor'=>'CNH do gestor',
-        'documento_gestor'=>'RG/CPF do gestor',
-        'comprovante_endereco'=>'Comprovante de endereço',
-        'certidoes'=>'Certidões',
-        'cadastral'=>'Outros documentos cadastrais',
-        'juridico'=>'Jurídico',
-        'financeiro'=>'Financeiro',
-        'contratos'=>'Contratos',
-        'marketing'=>'Marketing',
-        'operacional'=>'Operacional',
-        'outros'=>'Outros',
-    ];
     private const MIME_TYPES = [
         'application/pdf','image/jpeg','image/png','image/webp','text/plain','text/csv',
         'application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
 
-    public function __construct(private PDO $db, private SpacesStorageManager $storage) {}
+    public function __construct(private PDO $db, private SpacesStorageManager $storage, private DocumentTypeRepository $documentTypes) {}
 
     /** @return array<string,string> */
-    public function categories(string $scope): array { return $scope === 'central' ? self::CENTRAL_CATEGORIES : self::FRANCHISE_CATEGORIES; }
+    public function categories(string $scope): array { return $scope === 'central' ? self::CENTRAL_CATEGORIES : $this->documentTypes->categories(); }
 
     /** @return list<array<string,mixed>> */
     public function all(string $scope, ?int $organizationId, string $category = ''): array
@@ -58,10 +43,9 @@ final readonly class DocumentManager
     public function upload(string $scope, ?int $organizationId, UploadedFile $file, string $title, string $category, string $description, ?int $replaceId, int $userId): int
     {
         if(!$this->storage->active())throw new RuntimeException('Ative e valide primeiro a integração com a DigitalOcean Spaces.');
-        $title=trim($title);$description=trim($description);
-        if(mb_strlen($title)<2||mb_strlen($title)>180)throw new RuntimeException('Informe um título entre 2 e 180 caracteres.');
-        if(mb_strlen($description)>1000)throw new RuntimeException('A descrição deve ter no máximo 1.000 caracteres.');
-        if(!isset($this->categories($scope)[$category]))throw new RuntimeException('Selecione uma categoria válida.');
+        $title=trim($title);$description=trim($description);$categories=$this->categories($scope);
+        if(mb_strlen($description)>1000)throw new RuntimeException('A observação deve ter no máximo 1.000 caracteres.');
+        if(!isset($categories[$category]))throw new RuntimeException('Selecione um tipo de documento válido.');
         if($file->isEmpty())throw new RuntimeException('Selecione um arquivo.');
         if($file->error!==UPLOAD_ERR_OK)throw new RuntimeException('Não foi possível receber o arquivo. Tente novamente.');
         if($file->size<1||$file->size>self::MAX_BYTES)throw new RuntimeException('O arquivo deve ter no máximo 25 MB.');
@@ -70,7 +54,8 @@ final readonly class DocumentManager
         $mime=(new \finfo(FILEINFO_MIME_TYPE))->buffer($content)?:'application/octet-stream';
         if(!in_array($mime,self::MIME_TYPES,true))throw new RuntimeException('Formato não permitido. Envie PDF, imagem, Word, Excel, CSV ou texto.');
         $group=$this->uuid();$version=1;
-        if($replaceId!==null){$previous=$this->find($replaceId,$scope,$organizationId);if($previous===null)throw new RuntimeException('O documento escolhido para versionamento não foi encontrado.');$group=(string)$previous['document_group'];$s=$this->db->prepare('SELECT COALESCE(MAX(version_number),0)+1 FROM managed_documents WHERE document_group=:group');$s->execute(['group'=>$group]);$version=(int)$s->fetchColumn();}
+        if($replaceId!==null){$previous=$this->find($replaceId,$scope,$organizationId);if($previous===null)throw new RuntimeException('O documento escolhido para versionamento não foi encontrado.');$group=(string)$previous['document_group'];$title=(string)$previous['title'];$category=(string)$previous['category'];$s=$this->db->prepare('SELECT COALESCE(MAX(version_number),0)+1 FROM managed_documents WHERE document_group=:group');$s->execute(['group'=>$group]);$version=(int)$s->fetchColumn();}
+        if($title==='')$title=$categories[$category]??'Documento';
         $originalName=mb_substr(trim($file->originalName)?:'documento',0,255);
         $path=$scope==='central'
             ?$this->storage->storeCentral('Documentos',$content,$originalName,$mime,$userId)

@@ -6,12 +6,13 @@ O módulo de Documentos usa a integração central com o DigitalOcean Spaces. Ne
 
 - Franquias: `franquias/{id-codigo}/Documentos`.
 
-No cadastro de cada franquia há uma área documental própria. Ela destaca a entrega
-de Contrato Social, Cartão CNPJ, CNH do gestor e comprovante de endereço, além de
-aceitar documentos jurídicos, financeiros, operacionais e outros anexos. Esses
+No cadastro de cada franquia há uma aba documental própria. Ela destaca os tipos
+obrigatórios definidos pela administração e aceita os demais anexos ativos. Esses
 arquivos nunca são misturados entre franquias.
-- A administração ocorre somente no cadastro de cada franquia. Não existe uma
-  biblioteca global de documentos no ADM Central.
+- Os arquivos são administrados somente no cadastro de cada franquia. Não existe
+  uma biblioteca global de arquivos no ADM Central.
+- O menu `ADM > Documentos` administra apenas a lista de tipos documentais, sua
+  ordem, obrigatoriedade e disponibilidade para novos anexos.
 - Upload, nova versão, visualização, download e arquivamento ficam reunidos nessa
   mesma área do cadastro.
 - A consulta sempre valida o escopo e a franquia antes de ler o objeto.

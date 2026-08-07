@@ -7,7 +7,7 @@ $authenticated = ($currentUser ?? null) !== null;
 $currentPath = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
 $isStudentRegistration = str_contains($currentPath, '/crm/contacts/create');
 $crmOpen = str_contains($currentPath, '/crm') && !$isStudentRegistration;
-$admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms|ticket-departments)(?:/|$)#', $currentPath) === 1 || str_contains($currentPath, '/whatsapp/lines') || str_contains($currentPath, '/whatsapp/templates') || str_contains($currentPath, '/admin/integrations') || str_contains($currentPath, '/admin/finance') || str_contains($currentPath, '/admin/ava') || str_contains($currentPath, '/admin/platform');
+$admOpen = preg_match('#/(users|units|roles|tags|statuses|external-forms|ticket-departments)(?:/|$)#', $currentPath) === 1 || str_contains($currentPath, '/whatsapp/lines') || str_contains($currentPath, '/whatsapp/templates') || str_contains($currentPath, '/admin/integrations') || str_contains($currentPath, '/admin/finance') || str_contains($currentPath, '/admin/ava') || str_contains($currentPath, '/admin/platform') || str_contains($currentPath, '/admin/document-types');
 $franchisesOpen = str_contains($currentPath, '/admin/organizations') || str_contains($currentPath, '/admin/franchise-');
 $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentPath, '/students/') || $isStudentRegistration;
 ?>

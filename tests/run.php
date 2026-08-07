@@ -985,9 +985,12 @@ $tests['integra DigitalOcean Spaces com isolamento por franquia'] = static funct
 
 $tests['gerencia documentos privados com versões e isolamento por franquia'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_940000_create_document_management.php');
+    $typesMigration=(string)file_get_contents($rootPath.'/database/migrations/20260807_950000_create_document_types.php');
     $manager=(string)file_get_contents($rootPath.'/modules/Storage/DocumentManager.php');
+    $types=(string)file_get_contents($rootPath.'/modules/Storage/DocumentTypeRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/organizations/documents.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     assertTrue(str_contains($migration,'managed_documents'));
     assertTrue(str_contains($migration,'document_group'));
@@ -996,15 +999,22 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     assertTrue(str_contains($manager,"storeFranchise((int)\$organizationId,'Documentos'"));
     assertTrue(str_contains($manager,'FILEINFO_MIME_TYPE'));
     assertTrue(str_contains($manager,'deleted_at=NOW()'));
-    assertTrue(str_contains($manager,"'contrato_social'=>'Contrato Social'"));
-    assertTrue(str_contains($manager,"'cnh_gestor'=>'CNH do gestor'"));
+    assertTrue(str_contains($typesMigration,'CREATE TABLE document_types'));
+    assertTrue(str_contains($typesMigration,"'contrato_social','Contrato Social',1"));
+    assertTrue(str_contains($types,'final readonly class DocumentTypeRepository'));
+    assertTrue(str_contains($types,"scope='franchise'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/documents'"));
     assertTrue(str_contains($routes,"'franchiseDocuments'=>\$documents->all('franchise',\$id)"));
+    assertTrue(str_contains($routes,"'/admin/document-types'"));
     assertTrue(str_contains($routes,"'Cache-Control'=>'private, no-store'"));
     assertTrue(str_contains($view,'name="replace_id"'));
-    assertTrue(str_contains($view,'Nova versão de:'));
+    assertTrue(str_contains($view,'data-document-version'));
+    assertTrue(str_contains($view,'>Observação<'));
+    assertTrue(!str_contains($view,'name="title"'));
+    assertTrue(str_contains($form,'data-organization-tab="documentos"'));
+    assertTrue(str_contains($form,'data-organization-panel="dados"'));
     assertTrue(!str_contains($view,'Gestão completa'));
-    assertTrue(!str_contains($navigation,'/admin/documents'));
+    assertTrue(str_contains($navigation,'/admin/document-types'));
 };
 
 $failures = 0;
