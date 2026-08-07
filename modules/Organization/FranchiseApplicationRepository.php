@@ -30,6 +30,12 @@ final readonly class FranchiseApplicationRepository
         $s=$this->db->prepare('SELECT a.*,o.display_name organization_name FROM franchise_applications a LEFT JOIN organizations o ON o.id=a.organization_id WHERE a.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
+    public function findByOrganization(int$organizationId):?array
+    {
+        $s=$this->db->prepare('SELECT a.*,o.display_name organization_name FROM franchise_applications a INNER JOIN organizations o ON o.id=a.organization_id WHERE a.organization_id=:organization ORDER BY a.id DESC LIMIT 1');
+        $s->execute(['organization'=>$organizationId]);$row=$s->fetch();return is_array($row)?$row:null;
+    }
+
     public function findPublic(string $token): ?array
     {
         if(preg_match('/^[a-f0-9]{64}$/',$token)!==1)return null;

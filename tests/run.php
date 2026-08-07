@@ -41,6 +41,14 @@ $tests['carrega fluxo financeiro Sandbox por franquia']=static function()use($ro
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     assertTrue(str_contains($routes,"str_starts_with(\$reference,'mundo-inter:sandbox:franchise-test:')"));
 };
+$tests['vincula franquias ao histórico contratual']=static function()use($rootPath):void{
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_920000_link_organizations_to_contract_history.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/contracts.php');
+    $list=(string)file_get_contents($rootPath.'/views/admin/organizations/index.php');
+    assertTrue(str_contains($migration,'WHERE NOT EXISTS'));
+    assertTrue(str_contains($view,'Histórico contratual'));
+    assertTrue(str_contains($list,'fa-file-signature'));
+};
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
     $repository = new MigrationRepository($rootPath.'/database/migrations');
