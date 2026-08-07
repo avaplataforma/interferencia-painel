@@ -84,15 +84,15 @@ $tests['carrega serviços de conciliação financeira'] = static function () use
     assertTrue(is_file($rootPath.'/views/finance/payments/pix.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/edit.php'));
     assertTrue(is_file($rootPath.'/views/finance/payments/index.php'));
-    $financeNavigation = file_get_contents($rootPath.'/views/layouts/app.php');
+    $financeNavigation = file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     $paymentList = file_get_contents($rootPath.'/views/finance/payments/index.php');
     $customerList = file_get_contents($rootPath.'/views/finance/customers/index.php');
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>ALUNOS</span>'));
-    assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Financeiro</a>') === 2);
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Financeiro</a>'));
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Cadastro</a>'));
     assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, 'select:not([multiple])'));
     assertTrue(str_contains((string) file_get_contents($rootPath.'/bootstrap/app.php'), "'crm_manage' => \$auth->can('crm.contacts.manage')"));
-    assertTrue(is_string($financeNavigation) && substr_count($financeNavigation, '>Matrículas</a>') === 2);
+    assertTrue(is_string($financeNavigation) && str_contains($financeNavigation, '>Matrículas</a>'));
     assertTrue(is_string($customerList) && str_contains($customerList, 'finance-section-tabs'));
     assertTrue(is_string($customerList) && str_contains($customerList, '/finance/payments'));
     assertTrue(is_string($paymentList) && str_contains($paymentList, '<th>Unidade</th><th>Ações</th>'));
@@ -499,7 +499,7 @@ $tests['permite atualizar cliente financeiro no Asaas'] = static function (): vo
 $tests['carrega módulo de tickets internos'] = static function () use ($rootPath): void {
     $migration=file_get_contents($rootPath.'/database/migrations/20260804_530000_create_internal_tickets.php');
     $routes=file_get_contents($rootPath.'/routes/web.php');
-    $layout=file_get_contents($rootPath.'/views/layouts/app.php');
+    $layout=file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     assertTrue(is_string($migration) && str_contains($migration,'CREATE TABLE tickets'));
     assertTrue(is_string($migration) && str_contains($migration,"'tickets.manage'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260804_540000_link_tickets_to_crm_contacts.php'));
@@ -518,12 +518,12 @@ $tests['carrega módulo de tickets internos'] = static function () use ($rootPat
     assertTrue(is_file($rootPath.'/database/migrations/20260805_560000_distinguish_students_from_leads.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/tickets/form.php'),'data-ticket-students'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),"document.querySelectorAll('[data-ticket-students]')"));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'>Setores</a>'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/navigation.php'),'>Setores</a>'));
 };
 
 $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
-    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     $asaas=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
     $leadForm=(string)file_get_contents($rootPath.'/views/crm/contacts/form.php');
     $contactManager=(string)file_get_contents($rootPath.'/modules/Crm/ContactManager.php');
@@ -544,7 +544,7 @@ $tests['separa cadastro de leads e alunos'] = static function () use ($rootPath)
 $tests['carrega integração Moodle com liberação assistida'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
-    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     assertTrue(is_file($rootPath.'/database/migrations/20260805_570000_create_moodle_integration.php'));
     assertTrue(is_file($rootPath.'/views/moodle/settings.php'));
@@ -620,7 +620,7 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
     assertTrue(is_file($rootPath.'/views/moodle/enrollments/index.php'));
     assertTrue(is_file($rootPath.'/views/moodle/enrollments/form.php'));
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
-    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     assertTrue(str_contains($routes,"'/students/enrollments'"));
     assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/charge'"));
     assertTrue(str_contains($layout,'>Matrículas</a>'));

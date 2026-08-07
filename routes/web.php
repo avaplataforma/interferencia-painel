@@ -212,7 +212,25 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function (Request $request) use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext, $contacts, $tags): Response {
+    $router->get('/', static function (Request $request) use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext, $contacts, $tags, $organizations, $platformAdmin): Response {
+        if ($platformAdmin()) {
+            $organizationRows = $organizations->allWithPrimaryDomain();
+            $activeOrganizations = array_values(array_filter($organizationRows, static fn (array $organization): bool => ($organization['status'] ?? '') === 'active'));
+            $activeDomains = array_values(array_filter($organizationRows, static fn (array $organization): bool => ($organization['domain_status'] ?? '') === 'active'));
+
+            return $view->render('admin/platform/dashboard', [
+                'title' => 'ADM Central — ' . $browserTitle,
+                'organizations' => array_slice($organizationRows, 0, 6),
+                'summary' => [
+                    'organizations' => count($organizationRows),
+                    'active' => count($activeOrganizations),
+                    'domains' => count($activeDomains),
+                    'users' => array_sum(array_map(static fn (array $organization): int => (int) ($organization['user_count'] ?? 0), $organizationRows)),
+                ],
+                'basePath' => $basePath,
+            ]);
+        }
+
         $dashboardUnit=$unitContext->current();
         $dashboardUnitIds=$dashboardUnit===null?[]:($dashboardUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$dashboardUnit['id']]);
         $source=(string)$request->queryValue('source','');
