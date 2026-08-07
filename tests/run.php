@@ -967,6 +967,8 @@ $tests['integra DigitalOcean Spaces com isolamento por franquia'] = static funct
     assertTrue(str_contains($migration,'object_storage_integrations'));
     assertTrue(str_contains($migration,'object_storage_objects'));
     assertTrue(str_contains($repository,'SecretCipher'));
+    assertTrue(str_contains($repository,'strlen($secret)<32'));
+    assertTrue(str_contains($repository,"\$error!==null?',is_active=0'"));
     assertTrue(str_contains($client,'AWS4-HMAC-SHA256'));
     assertTrue(str_contains($client,"x-amz-acl']='private'"));
     assertTrue(str_contains($manager,"CENTRAL_FOLDERS=['Personalizacao'"));

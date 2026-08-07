@@ -46,7 +46,8 @@ final readonly class SpacesIntegrationRepository
         if(preg_match('/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/',$bucket)!==1)throw new RuntimeException('Informe o nome válido do bucket.');
         $hostParts=explode('.',$host);$region=$hostParts[0]===$bucket?($hostParts[1]??''):($hostParts[0]??'');
         if(preg_match('/^[a-z0-9-]{3,20}$/',$region)!==1)throw new RuntimeException('Não foi possível identificar a região pelo endpoint.');
-        if(strlen($access)<12||strlen($secret)<16)throw new RuntimeException('Informe o Access Key e o Secret Key completos.');
+        // Evita aceitar trechos copiados de campos mascarados ou segredos truncados.
+        if(strlen($access)<16||strlen($secret)<32)throw new RuntimeException('Informe o Access Key e o Secret Key completos, exatamente como foram gerados no DigitalOcean Spaces.');
         $central=$this->prefix((string)($data['central_prefix']??'Mundo Inter'));$franchises=$this->prefix((string)($data['franchises_prefix']??'Franquias'));
         $sql="INSERT INTO object_storage_integrations(id,provider,endpoint,bucket,region,access_key_encrypted,access_key_last4,secret_key_encrypted,secret_key_last4,central_prefix,franchises_prefix,is_active,updated_by) VALUES(1,'digitalocean_spaces',:endpoint,:bucket,:region,:access,:access4,:secret,:secret4,:central,:franchises,:active,:user) ON DUPLICATE KEY UPDATE endpoint=VALUES(endpoint),bucket=VALUES(bucket),region=VALUES(region),access_key_encrypted=VALUES(access_key_encrypted),access_key_last4=VALUES(access_key_last4),secret_key_encrypted=VALUES(secret_key_encrypted),secret_key_last4=VALUES(secret_key_last4),central_prefix=VALUES(central_prefix),franchises_prefix=VALUES(franchises_prefix),is_active=VALUES(is_active),updated_by=VALUES(updated_by)";
         $this->db->prepare($sql)->execute(['endpoint'=>$endpoint,'bucket'=>$bucket,'region'=>$region,'access'=>$this->cipher->encrypt($access),'access4'=>substr($access,-4),'secret'=>$this->cipher->encrypt($secret),'secret4'=>substr($secret,-4),'central'=>$central,'franchises'=>$franchises,'active'=>(int)(($data['is_active']??false)===true),'user'=>$userId]);
@@ -54,7 +55,8 @@ final readonly class SpacesIntegrationRepository
 
     public function markTest(?string $error): void
     {
-        $s=$this->db->prepare('UPDATE object_storage_integrations SET last_tested_at=NOW(),last_error=:error WHERE id=1');$s->execute(['error'=>$error]);
+        $sql='UPDATE object_storage_integrations SET last_tested_at=NOW(),last_error=:error'.($error!==null?',is_active=0':'').' WHERE id=1';
+        $s=$this->db->prepare($sql);$s->execute(['error'=>$error]);
     }
 
     /** @param array<string,mixed> $meta */
