@@ -808,6 +808,21 @@ $tests['organiza integrações exclusivas do ADM Central'] = static function () 
     assertTrue(is_file($rootPath.'/views/admin/platform/asaas.php'));
 };
 
+$tests['controla regras comerciais e financeiro das franquias'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_880000_create_franchise_billing_control.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
+    assertTrue(str_contains($migration,'franchise_billing_events'));
+    assertTrue(str_contains($migration,'commercial_flow_status'));
+    assertTrue(str_contains($repository,'activateCommercialFlow'));
+    assertTrue(str_contains($repository,'billingDashboard'));
+    assertTrue(str_contains($routes,"'/admin/franchise-billing'"));
+    assertTrue(str_contains($routes,'activate-commercial-flow'));
+    assertTrue(str_contains($navigation,'/admin/franchise-billing'));
+    assertTrue(is_file($rootPath.'/views/admin/franchise-billing/index.php'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

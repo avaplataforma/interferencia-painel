@@ -33,7 +33,7 @@ final readonly class FranchiseContractRepository
 
     public function all(): array
     {
-        return $this->db->query("SELECT c.*,a.display_name franchise_name,a.cnpj FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id ORDER BY c.updated_at DESC")->fetchAll();
+        return $this->db->query("SELECT c.*,a.display_name franchise_name,a.cnpj,o.asaas_wallet_id,o.asaas_wallet_status,o.split_enabled FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id ORDER BY c.updated_at DESC")->fetchAll();
     }
 
     public function forApplication(int $applicationId): array
@@ -43,7 +43,7 @@ final readonly class FranchiseContractRepository
 
     public function find(int $id): ?array
     {
-        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email,a.manager_phone,a.postal_code,a.address,a.address_number,a.address_complement,a.neighborhood FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
+        $s=$this->db->prepare('SELECT c.*,a.display_name franchise_name,a.legal_name,a.cnpj,a.manager_name,a.manager_email,a.manager_phone,a.postal_code,a.address,a.address_number,a.address_complement,a.neighborhood,o.asaas_wallet_id,o.asaas_wallet_status,o.split_enabled FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE c.id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function create(int $applicationId,int $templateId,array $data,?int $userId): int
@@ -136,6 +136,34 @@ final readonly class FranchiseContractRepository
         if($linkId===''||$url==='')throw new RuntimeException('O Asaas não retornou um link recorrente válido.');
         $s=$this->db->prepare("UPDATE franchise_contracts SET asaas_payment_link_id=:link_id,asaas_payment_link_url=:url,recurring_link_issued_at=NOW(),billing_issue_state='issued',billing_issued_at=NOW(),billing_error=NULL WHERE id=:id AND asaas_payment_link_id IS NULL");
         $s->execute(['link_id'=>$linkId,'url'=>$url,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Este contrato já possui link recorrente.');
+    }
+
+    public function activateCommercialFlow(int $id,?int $userId): void
+    {
+        $contract=$this->find($id);if($contract===null)throw new RuntimeException('Contrato não encontrado.');
+        if($contract['status']!=='signed')throw new RuntimeException('O contrato precisa estar assinado antes de ativar a regra comercial.');
+        $percentage=(float)($contract['sales_fee_percentage']??0);$wallet=self::nullable($contract['asaas_wallet_id']??null);
+        if($percentage>0&&($wallet===null||($contract['asaas_wallet_status']??'')!=='validated'||(int)($contract['split_enabled']??0)!==1))throw new RuntimeException('Valide a carteira Asaas da franquia e habilite o split antes de ativar a regra comercial.');
+        $s=$this->db->prepare("UPDATE franchise_contracts SET commercial_flow_status='active',commercial_flow_activated_at=NOW(),split_wallet_snapshot=:wallet WHERE id=:id AND commercial_flow_status<>'active'");
+        $s->execute(['wallet'=>$wallet,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('A regra comercial deste contrato já está ativa.');
+        $this->recordBillingEvent($id,'commercial_flow_activated','Regra comercial ativada para novas vendas da franquia.',$userId);
+    }
+
+    public function billingDashboard(): array
+    {
+        $summary=$this->db->query("SELECT COUNT(*) total_contracts,SUM(c.status='signed') signed_contracts,SUM(c.billing_issue_state='paid') paid,SUM(c.billing_issue_state='failed') failures,SUM(c.commercial_flow_status='active') active_flows,SUM(c.status='signed' AND c.commercial_flow_status<>'active') pending_activation,SUM(c.status='signed' AND c.billing_required=1 AND c.billing_issue_state IN('not_issued','issued') AND c.billing_due_date<CURDATE()) overdue,SUM(c.sales_fee_percentage>0 AND (o.asaas_wallet_id IS NULL OR o.asaas_wallet_status<>'validated' OR o.split_enabled<>1)) split_pending FROM franchise_contracts c LEFT JOIN organizations o ON o.id=c.organization_id")->fetch();
+        $contracts=$this->db->query("SELECT c.*,a.display_name franchise_name,o.asaas_wallet_status,o.asaas_wallet_id,o.split_enabled FROM franchise_contracts c INNER JOIN franchise_applications a ON a.id=c.franchise_application_id LEFT JOIN organizations o ON o.id=c.organization_id ORDER BY FIELD(c.commercial_flow_status,'blocked','pending','active','inactive'),c.updated_at DESC LIMIT 100")->fetchAll();
+        return['summary'=>is_array($summary)?$summary:[],'contracts'=>$contracts];
+    }
+
+    public function billingEvents(int $contractId): array
+    {
+        $s=$this->db->prepare('SELECT e.*,u.name user_name FROM franchise_billing_events e LEFT JOIN platform_users u ON u.id=e.platform_user_id WHERE e.contract_id=:id ORDER BY e.created_at DESC,e.id DESC');$s->execute(['id'=>$contractId]);return$s->fetchAll();
+    }
+
+    public function recordBillingEvent(int $contractId,string $type,string $description,?int $userId=null): void
+    {
+        $s=$this->db->prepare('INSERT INTO franchise_billing_events(contract_id,event_type,description,platform_user_id) VALUES(:contract,:type,:description,:user)');$s->execute(['contract'=>$contractId,'type'=>mb_substr($type,0,50),'description'=>mb_substr($description,0,500),'user'=>$userId]);
     }
 
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}
