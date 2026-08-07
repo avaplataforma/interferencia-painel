@@ -84,6 +84,6 @@ body{margin:0;background:var(--canvas);color:var(--ink);font-family:Arial,sans-s
  <?php endif;?>
  </section>
 </main>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/app.js?v=18"></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/app.js?v=19"></script>
 </body>
 </html>
