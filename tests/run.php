@@ -829,7 +829,7 @@ $tests['aplica split contratual nas novas cobranças das franquias'] = static fu
     $client=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
     assertTrue(str_contains($migration,'franchise_split_attempts'));
     assertTrue(str_contains($repository,'prepareSplit'));
-    assertTrue(str_contains($repository,"100-$central"));
+    assertTrue(str_contains($repository,'100-$central'));
     assertTrue(str_contains($client,"payload['split']"));
     assertTrue(str_contains($client,"str_starts_with(\$reference,'painel:')"));
 };
