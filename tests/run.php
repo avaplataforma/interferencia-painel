@@ -767,6 +767,18 @@ $tests['separa usuários centrais dos usuários das franquias'] = static functio
     assertTrue(str_contains($bootstrap,"?'platform':'franchise'"));
 };
 
+$tests['mantém histórico contratual e modelos comerciais das franquias'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260806_860000_expand_franchise_contract_lifecycle.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $asaas=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($migration,'parent_contract_id'));
+    assertTrue(str_contains($migration,'commercial_model'));
+    assertTrue(str_contains($repository,"'fixed_plus_percentage','split_only'"));
+    assertTrue(str_contains($asaas,"'/paymentLinks'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/recurring-link'"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

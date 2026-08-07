@@ -148,6 +148,19 @@ final readonly class AsaasClient
         return$this->request('POST','/subscriptions',$payload);
     }
 
+    /** @param array<string,mixed> $payload @return array<string,mixed> */
+    public function createPaymentLink(array $payload): array
+    {
+        if (!$this->paymentsWriteEnabled) throw new RuntimeException('A criação real de links recorrentes está bloqueada.');
+        $link = $this->request('POST', '/paymentLinks', $payload);
+        $id = trim((string)($link['id'] ?? ''));
+        $url = trim((string)($link['url'] ?? $link['shortUrl'] ?? ''));
+        if ($id === '' || $url === '') throw new RuntimeException('O Asaas não retornou um link de pagamento válido.');
+        $host = strtolower((string)parse_url($url, PHP_URL_HOST));
+        if ($host !== 'asaas.com' && !str_ends_with($host, '.asaas.com')) throw new RuntimeException('O Asaas retornou um endereço de pagamento inválido.');
+        return $link;
+    }
+
     /** @return array<string,mixed> */
     public function updateSubscriptionStatus(string$subscriptionId,string$status):array
     {

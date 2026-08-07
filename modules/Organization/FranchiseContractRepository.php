@@ -52,10 +52,18 @@ final readonly class FranchiseContractRepository
         if(in_array((string)$a['status'],['invited','rejected','cancelled'],true))throw new RuntimeException('A solicitação ainda não está apta a receber contrato.');
         $conditions=trim((string)($data['commercial_terms']??''));$term=trim((string)($data['term']??''));if(mb_strlen($conditions)<5||mb_strlen($term)<3)throw new RuntimeException('Informe as condições comerciais e a vigência.');
         $content=$this->render((string)$template['body'],$a,$conditions,$term);$title=trim((string)($data['title']??''))?:((string)$template['title'].' — '.(string)$a['display_name']);
-        $amount=self::money($data['billing_amount']??null);$billing=($data['billing_required']??false)===true;
-        if($billing&&($amount===null||$amount<=0))throw new RuntimeException('Informe o valor da cobrança prevista.');
-        $s=$this->db->prepare("INSERT INTO franchise_contracts(franchise_application_id,organization_id,template_id,title,content,public_token,status,billing_required,billing_amount,billing_description,created_by) VALUES(:application,:organization,:template,:title,:content,:token,'draft',:billing,:amount,:description,:created_by)");
-        $s->execute(['application'=>$applicationId,'organization'=>$a['organization_id'],'template'=>$templateId,'title'=>$title,'content'=>$content,'token'=>bin2hex(random_bytes(32)),'billing'=>$billing?1:0,'amount'=>$billing?$amount:null,'description'=>$billing?self::nullable($data['billing_description']??'Contrato de franquia'):null,'created_by'=>$userId]);
+        $model=(string)($data['commercial_model']??'');if(!in_array($model,['fixed_plus_percentage','split_only'],true))throw new RuntimeException('Selecione o modelo comercial do contrato.');
+        $monthly=self::money($data['monthly_fixed_amount']??null);$percentage=self::percentage($data['sales_fee_percentage']??null);
+        if($model==='fixed_plus_percentage'&&($monthly===null||$monthly<=0))throw new RuntimeException('Informe o valor da assinatura mensal.');
+        if($percentage===null||$percentage<0||$percentage>100)throw new RuntimeException('Informe um percentual por venda entre 0 e 100%.');
+        if($model==='split_only'&&$percentage<=0)throw new RuntimeException('Informe o percentual do Mundo Inter no split.');
+        $type=(string)($data['contract_type']??'new');if(!in_array($type,['new','renewal'],true))throw new RuntimeException('Tipo de contrato inválido.');
+        $parentId=(int)($data['parent_contract_id']??0);$parent=$parentId>0?$this->find($parentId):null;if($type==='renewal'&&($parent===null||(int)$parent['franchise_application_id']!==$applicationId))throw new RuntimeException('Selecione o contrato anterior que será renovado.');
+        $validFrom=self::date($data['valid_from']??null);$validUntil=self::date($data['valid_until']??null);if($validFrom!==null&&$validUntil!==null&&$validUntil<$validFrom)throw new RuntimeException('A vigência final deve ser posterior à inicial.');
+        $number=(int)$this->db->query('SELECT COALESCE(MAX(contract_number),0)+1 FROM franchise_contracts WHERE franchise_application_id='.(int)$applicationId)->fetchColumn();
+        $billing=$model==='fixed_plus_percentage';$description=self::nullable($data['billing_description']??'Assinatura mensal da franquia');
+        $s=$this->db->prepare("INSERT INTO franchise_contracts(parent_contract_id,contract_number,contract_type,valid_from,valid_until,commercial_model,monthly_fixed_amount,sales_fee_percentage,franchise_application_id,organization_id,template_id,title,content,public_token,status,billing_required,billing_amount,billing_description,created_by) VALUES(:parent,:number,:type,:valid_from,:valid_until,:model,:monthly,:percentage,:application,:organization,:template,:title,:content,:token,'draft',:billing,:amount,:description,:created_by)");
+        $s->execute(['parent'=>$parent['id']??null,'number'=>$number,'type'=>$type,'valid_from'=>$validFrom,'valid_until'=>$validUntil,'model'=>$model,'monthly'=>$monthly,'percentage'=>$percentage,'application'=>$applicationId,'organization'=>$a['organization_id'],'template'=>$templateId,'title'=>$title,'content'=>$content,'token'=>bin2hex(random_bytes(32)),'billing'=>$billing?1:0,'amount'=>$billing?$monthly:null,'description'=>$description,'created_by'=>$userId]);
         $this->db->prepare("UPDATE franchise_applications SET contract_status='draft' WHERE id=:id")->execute(['id'=>$applicationId]);return(int)$this->db->lastInsertId();
     }
 
@@ -122,8 +130,18 @@ final readonly class FranchiseContractRepository
         $this->db->prepare("UPDATE franchise_contracts SET asaas_payment_status=:status,asaas_invoice_url=COALESCE(:invoice,asaas_invoice_url),billing_issue_state=:state,billing_paid_at=CASE WHEN :paid=1 THEN COALESCE(billing_paid_at,NOW()) ELSE billing_paid_at END,billing_last_synced_at=NOW(),billing_error=NULL WHERE id=:id")->execute(['status'=>$status,'invoice'=>$invoice,'state'=>$paid?'paid':'issued','paid'=>$paid?1:0,'id'=>$id]);
     }
 
+    public function storeRecurringLink(int $id,array $link): void
+    {
+        $linkId=trim((string)($link['id']??''));$url=trim((string)($link['url']??$link['shortUrl']??''));
+        if($linkId===''||$url==='')throw new RuntimeException('O Asaas não retornou um link recorrente válido.');
+        $s=$this->db->prepare("UPDATE franchise_contracts SET asaas_payment_link_id=:link_id,asaas_payment_link_url=:url,recurring_link_issued_at=NOW(),billing_issue_state='issued',billing_issued_at=NOW(),billing_error=NULL WHERE id=:id AND asaas_payment_link_id IS NULL");
+        $s->execute(['link_id'=>$linkId,'url'=>$url,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Este contrato já possui link recorrente.');
+    }
+
     private function application(int$id): array{$s=$this->db->prepare('SELECT * FROM franchise_applications WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();if(!is_array($row))throw new RuntimeException('Solicitação não encontrada.');return$row;}
     private function render(string$body,array$a,string$conditions,string$term):string{$address=implode(', ',array_filter([$a['address'],$a['address_number'],$a['address_complement'],$a['neighborhood'],$a['city'],$a['state'],$a['postal_code']]));$map=['{{razao_social}}'=>$a['legal_name'],'{{cnpj}}'=>$a['cnpj'],'{{endereco_completo}}'=>$address?:'endereço a confirmar','{{gestor_nome}}'=>$a['manager_name'],'{{nome_franquia}}'=>$a['display_name'],'{{condicoes_comerciais}}'=>$conditions,'{{vigencia}}'=>$term,'{{cidade}}'=>$a['city']?:'Tijucas/SC','{{data_extenso}}'=>date('d/m/Y')];return strtr($body,array_map(static fn($v)=>(string)$v,$map));}
     private static function money(mixed$value):?float{if($value===null||trim((string)$value)==='')return null;$normalized=trim((string)$value);if(str_contains($normalized,','))$normalized=str_replace(',','.',str_replace('.','',$normalized));return is_numeric($normalized)?round((float)$normalized,2):null;}
+    private static function percentage(mixed$value):?float{$number=self::money($value);return$number===null?null:round($number,4);}
+    private static function date(mixed$value):?string{$value=trim((string)$value);if($value==='')return null;$date=DateTimeImmutable::createFromFormat('!Y-m-d',$value);if($date===false||$date->format('Y-m-d')!==$value)throw new RuntimeException('Informe datas de vigência válidas.');return$value;}
     private static function nullable(mixed$value):?string{$v=trim((string)$value);return$v===''?null:$v;}
 }

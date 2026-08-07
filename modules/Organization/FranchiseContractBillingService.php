@@ -30,6 +30,18 @@ final readonly class FranchiseContractBillingService
         $this->contracts->syncBilling($id,$this->asaas->payment($paymentId));
     }
 
+    public function issueRecurringLink(int $id): void
+    {
+        $contract=$this->contracts->find($id);if($contract===null)throw new RuntimeException('Contrato não encontrado.');
+        if($contract['status']!=='signed')throw new RuntimeException('O link só pode ser gerado depois da assinatura.');
+        if(($contract['commercial_model']??'')!=='fixed_plus_percentage'||(float)($contract['monthly_fixed_amount']??0)<=0)throw new RuntimeException('Este contrato não possui assinatura mensal fixa.');
+        if(!empty($contract['asaas_payment_link_id']))throw new RuntimeException('Este contrato já possui link de assinatura.');
+        try{
+            $link=$this->asaas->createPaymentLink(['name'=>'Assinatura mensal #'.$id.' — '.(string)$contract['franchise_name'],'description'=>(string)($contract['billing_description']?:$contract['title']),'value'=>(float)$contract['monthly_fixed_amount'],'billingType'=>'UNDEFINED','chargeType'=>'RECURRENT','subscriptionCycle'=>'MONTHLY','notificationEnabled'=>false]);
+            $this->contracts->storeRecurringLink($id,$link);
+        }catch(Throwable$e){$this->contracts->failBilling($id,$e->getMessage());throw$e;}
+    }
+
     private function findOrCreateCustomer(array$contract):string
     {
         $document=preg_replace('/\D/','',(string)$contract['cnpj'])??'';
