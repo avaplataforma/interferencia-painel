@@ -34,6 +34,21 @@ final readonly class OrganizationRepository
     public function allWithPrimaryDomain():array{return$this->database->query("SELECT o.*,d.host primary_host,d.status domain_status,(SELECT COUNT(*) FROM units u WHERE u.organization_id=o.id) unit_count,(SELECT COUNT(*) FROM organization_users m WHERE m.organization_id=o.id AND m.status='active') user_count,(SELECT a.id FROM franchise_applications a WHERE a.organization_id=o.id ORDER BY a.id DESC LIMIT 1) franchise_application_id,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.organization_id=o.id) contract_count FROM organizations o LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.is_primary=1 AND d.purpose='site' ORDER BY o.display_name")->fetchAll();}
     public function findRecord(int$id):?array{$s=$this->database->prepare('SELECT * FROM organizations WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function domains(int$id):array{$s=$this->database->prepare('SELECT * FROM organization_domains WHERE organization_id=:id ORDER BY is_primary DESC,purpose,host');$s->execute(['id'=>$id]);return$s->fetchAll();}
+    /** @return array{active_admins:int,active_ava_integrations:int} */
+    public function implementationFacts(int$id):array
+    {
+        $admins=$this->database->prepare("SELECT COUNT(DISTINCT membership.user_id) FROM organization_users membership INNER JOIN users u ON u.id=membership.user_id WHERE membership.organization_id=:organization AND membership.status='active' AND u.is_active=1 AND (membership.is_owner=1 OR EXISTS(SELECT 1 FROM user_roles ur INNER JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=membership.user_id AND r.code='super_admin'))");
+        $admins->execute(['organization'=>$id]);
+        $ava=$this->database->prepare("SELECT COUNT(*) FROM moodle_integrations WHERE organization_id=:organization AND is_active=1 AND base_url IS NOT NULL AND base_url<>'' AND token_encrypted IS NOT NULL AND token_encrypted<>''");
+        $ava->execute(['organization'=>$id]);
+        return['active_admins'=>(int)$admins->fetchColumn(),'active_ava_integrations'=>(int)$ava->fetchColumn()];
+    }
+    public function setStatus(int$id,string$status):void
+    {
+        if(!in_array($status,['active','suspended'],true))throw new RuntimeException('Situação inválida.');
+        $s=$this->database->prepare('UPDATE organizations SET status=:status WHERE id=:id');$s->execute(['status'=>$status,'id'=>$id]);
+        if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
+    }
     public function financeIntegrationSummary():array
     {
         $row=$this->database->query("SELECT COUNT(*) total,SUM(asaas_wallet_id IS NOT NULL) configured,SUM(asaas_wallet_status='validated') validated,SUM(split_enabled=1) split_enabled FROM organizations")->fetch()?:[];

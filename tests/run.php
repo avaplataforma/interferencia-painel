@@ -803,6 +803,9 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     assertTrue(str_contains($viewEngine,'capture(string $templateName'));
     assertTrue(str_contains($javascript,'data-contract-editor'));
     assertTrue(str_contains($publicContract,'ContractContent::toHtml'));
+    assertTrue(str_contains($publicContract,'data-print-page'));
+    assertTrue(str_contains($publicContract,'@page{size:A4'));
+    assertTrue(str_contains($javascript,"closest('[data-print-page]')"));
 };
 
 $tests['integra cobrança de contratos de franquia ao Asaas sem duplicidade'] = static function () use ($rootPath): void {
@@ -892,6 +895,9 @@ $tests['controla regras comerciais e financeiro das franquias'] = static functio
     assertTrue(str_contains($dashboard,'Financeiro das franquias'));
     assertTrue(str_contains($dashboard,'Histórico de splits e repasses'));
     assertTrue(str_contains($dashboard,'Comissão Mundo Inter'));
+    assertTrue(str_contains($dashboard,'franchise-finance-toolbar'));
+    assertTrue(str_contains($dashboard,'franchise-finance-metrics'));
+    assertTrue(str_contains($dashboard,'Período inicial'));
     $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
     assertTrue(str_contains($layout,'Notificações da rede'));
 };
@@ -918,6 +924,34 @@ $tests['separa Asaas Sandbox da conexão de produção'] = static function () us
     assertTrue(str_contains($view,'$aact_hmlg_'));
     assertTrue(str_contains($view,'Diagnóstico do webhook'));
     assertTrue(str_contains($routes,"'webhookSummary'=>\$finance->webhookSummary()"));
+};
+
+$tests['protege a ativação pelo fluxo de implantação da franquia'] = static function () use ($rootPath): void {
+    $service=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseImplementation.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/overview.php');
+    assertTrue(str_contains($service,'ready_to_activate'));
+    assertTrue(str_contains($service,'Cadastro conferido'));
+    assertTrue(str_contains($service,'AVA e integrações vinculados'));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/activate'"));
+    assertTrue(str_contains($routes,"'status'=>'suspended'"));
+    assertTrue(str_contains($repository,'implementationFacts'));
+    assertTrue(str_contains($repository,'setStatus'));
+    assertTrue(str_contains($view,'Implantação da franquia'));
+    assertTrue(str_contains($view,'Ativação protegida'));
+    assertTrue(str_contains($routes,'ensureImplementationTicket'));
+    assertTrue(str_contains($view,'Criar ticket'));
+};
+
+$tests['avalia os requisitos obrigatórios da implantação'] = static function (): void {
+    $organization=['legal_name'=>'Inter Treinamento','display_name'=>'Inter','cnpj'=>'05095152000139','manager_name'=>'Gestor','manager_email'=>'gestor@example.com','manager_phone'=>'48999999999','panel_slug'=>'inter','logo_path'=>'/logo.png','favicon_path'=>'/favicon.png','asaas_wallet_status'=>'validated','asaas_wallet_id'=>'wallet','split_enabled'=>1,'status'=>'suspended'];
+    $domains=[['purpose'=>'site','status'=>'active','is_primary'=>1]];
+    $contract=['status'=>'signed','commercial_model'=>'split_only','sales_fee_percentage'=>20,'monthly_fixed_amount'=>0];
+    $implementation=\Interferencia\Modules\Organization\FranchiseImplementation::evaluate($organization,$domains,$contract,['active_admins'=>1,'active_ava_integrations'=>1]);
+    assertSame(8,$implementation['required_done']);
+    assertTrue($implementation['ready_to_activate']);
+    assertSame(100,$implementation['progress']);
 };
 
 $failures = 0;

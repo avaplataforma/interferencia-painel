@@ -193,7 +193,7 @@ $addressLocality = implode(' · ', array_filter([
           <label>Endereço privado *
             <div class="input-prefix"><span>mundointer.com.br/</span><input required name="panel_slug" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" placeholder="franquia-tijucas"></div>
           </label>
-          <label class="checkbox-row"><input type="checkbox" name="activate" value="1"> Ativar imediatamente após criar</label>
+          <p class="alert alert-info mb-0"><i class="fa-solid fa-shield-halved"></i> A franquia será criada suspensa e liberada somente após concluir o fluxo de implantação.</p>
           <button class="button button-primary" type="submit" data-confirm-submit="Aprovar esta solicitação e criar a franquia?">
             <i class="fa-solid fa-circle-check"></i> Aprovar solicitação
           </button>

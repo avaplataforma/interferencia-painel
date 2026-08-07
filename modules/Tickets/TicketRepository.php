@@ -10,6 +10,26 @@ final readonly class TicketRepository
 {
     public function __construct(private PDO $db) {}
 
+    /** @return list<string> */
+    public function implementationTicketSteps(int $applicationId):array
+    {
+        $s=$this->db->prepare("SELECT description FROM platform_tickets WHERE franchise_application_id=:application AND status NOT IN('resolved','closed') AND description LIKE '%[implantation-step:%'");
+        $s->execute(['application'=>$applicationId]);$steps=[];
+        foreach($s->fetchAll()as$row){if(preg_match('/\[implantation-step:([a-z0-9_-]+)\]/',(string)$row['description'],$match)===1)$steps[]=$match[1];}
+        return array_values(array_unique($steps));
+    }
+
+    public function ensureImplementationTicket(int $applicationId,string $stepId,string $label,string $detail,string $requesterName,string $requesterEmail):int
+    {
+        if(preg_match('/^[a-z0-9_-]+$/',$stepId)!==1)throw new \RuntimeException('Etapa de implantação inválida.');
+        $marker='[implantation-step:'.$stepId.']';
+        $existing=$this->db->prepare("SELECT id FROM platform_tickets WHERE franchise_application_id=:application AND status NOT IN('resolved','closed') AND description LIKE :marker ORDER BY id DESC LIMIT 1");
+        $existing->execute(['application'=>$applicationId,'marker'=>'%'.$marker.'%']);$id=(int)($existing->fetchColumn()?:0);if($id>0)return$id;
+        $description=$marker."\nPendência do fluxo guiado de implantação da franquia.\n\nEtapa: ".$label."\nCritério: ".$detail."\n\nConcluir a configuração no ADM Central e, após a conferência, encerrar este ticket.";
+        $s=$this->db->prepare("INSERT INTO platform_tickets(franchise_application_id,subject,requester_name,requester_email,description,priority,status) VALUES(:application,:subject,:name,:email,:description,'high','open')");
+        $s->execute(['application'=>$applicationId,'subject'=>'Implantação — '.$label,'name'=>$requesterName,'email'=>$requesterEmail!==''?$requesterEmail:null,'description'=>$description]);return(int)$this->db->lastInsertId();
+    }
+
     public function centralAll(string $status='',string $search=''):array
     {
         $sql="SELECT * FROM (SELECT CAST(t.id AS CHAR) ticket_ref,t.id,NULL franchise_application_id,t.subject,t.description,t.priority,t.status,t.updated_at,o.display_name organization_name,un.name unit_name,requester.name requester_name,department.name department_name,'internal' source FROM tickets t INNER JOIN organizations o ON o.id=t.organization_id INNER JOIN units un ON un.id=t.unit_id INNER JOIN users requester ON requester.id=t.requester_user_id INNER JOIN ticket_departments department ON department.id=t.department_id UNION ALL SELECT CONCAT('F-',p.id) ticket_ref,p.id,p.franchise_application_id,p.subject,p.description,p.priority,p.status,p.updated_at,COALESCE(a.display_name,'Futura franquia') organization_name,'Formulário público' unit_name,p.requester_name,'Novas franquias' department_name,'franchise_application' source FROM platform_tickets p LEFT JOIN franchise_applications a ON a.id=p.franchise_application_id) central WHERE 1=1";$params=[];

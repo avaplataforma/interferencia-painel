@@ -15,17 +15,9 @@ $splitReady=!$splitRequired||($walletReady&&(int)($organization['split_enabled']
 $monthlyRequired=$latest!==null&&($latest['commercial_model']??'')==='fixed_plus_percentage'&&(float)($latest['monthly_fixed_amount']??0)>0;
 $recurringReady=!$monthlyRequired||!empty($latest['asaas_payment_link_url']);
 $commercialActive=$latest!==null&&($latest['commercial_flow_status']??'pending')==='active';
-$canActivate=$organizationActive&&$contractSigned&&$splitReady&&$recurringReady;
+$canActivateCommercial=$organizationActive&&$contractSigned&&$splitReady&&$recurringReady;
 $contractStatus=$latest===null?'Sem contrato':($contractLabels[$latest['status']]??$latest['status']);
 $billingStatus=$latest===null?'Aguardando contrato':($billingLabels[$latest['billing_issue_state']??'not_issued']??'Não configurada');
-$steps=[
- ['label'=>'Cadastro da franquia','done'=>$organizationActive,'detail'=>$organizationActive?'Ativa':'Ative a franquia'],
- ['label'=>'Contrato comercial','done'=>$latest!==null,'detail'=>$latest===null?'Crie o primeiro contrato':'Contrato #'.(int)($latest['contract_number']??1)],
- ['label'=>'Assinatura','done'=>$contractSigned,'detail'=>$contractSigned?'Contrato assinado':'Aguardando assinatura'],
- ['label'=>'Wallet e split','done'=>$splitReady,'detail'=>$splitRequired?($splitReady?'Repasse configurado':'Valide a Wallet e ative o split'):'Contrato sem split'],
- ...($monthlyRequired?[['label'=>'Mensalidade recorrente','done'=>$recurringReady,'detail'=>$recurringReady?'Link pronto para envio':'Gere o link mensal']]:[]),
- ['label'=>'Operação comercial','done'=>$commercialActive,'detail'=>$commercialActive?'Ativa para novas vendas':'Aguardando ativação'],
-];
 ?>
 <div class="page-header"><div><p class="eyebrow">ADM Central · Franquia</p><h1><?= $escape((string)$organization['display_name']) ?></h1><p><?= $escape((string)$organization['legal_name']) ?> · <?= $escape((string)$organization['cnpj']) ?></p></div><div class="page-actions"><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-arrow-left"></i> Voltar</a><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/edit"><i class="fa-solid fa-pen"></i> Editar</a></div></div>
 <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?><?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
@@ -37,10 +29,25 @@ $steps=[
   <div class="col-md-6 col-xl-3"><section class="metric-card h-100"><span><i class="fa-solid fa-wallet"></i> Financeiro</span><strong><?= $escape($billingStatus) ?></strong><small><?= $escape($walletLabels[$organization['asaas_wallet_status']??'not_configured']??'Pendente') ?> · Split <?= (int)($organization['split_enabled']??0)===1?'ativo':'inativo' ?></small><a href="#operacao-comercial">Configurar operação</a></section></div>
 </div>
 
-<section class="card mb-4" id="operacao-comercial">
- <div class="card-header"><div><p class="eyebrow">Implantação</p><h2>Checklist operacional</h2><p class="meta">Conclua os itens para liberar cobranças e repasses das novas vendas.</p></div><span class="badge"><?= count(array_filter($steps,static fn(array$s):bool=>$s['done'])) ?>/<?= count($steps) ?></span></div>
+<section class="card mb-4" id="implantacao">
+ <div class="card-header"><div><p class="eyebrow">Fluxo guiado</p><h2>Implantação da franquia</h2><p class="meta">Conclua os requisitos em sequência. A ativação só é liberada quando a operação estiver pronta.</p></div><span class="badge <?= $implementation['ready_to_activate']?'badge-success':'badge-warning' ?>"><?= (int)$implementation['required_done'] ?>/<?= (int)$implementation['required_total'] ?> obrigatórios</span></div>
  <div class="p-4">
-  <div class="row g-3 mb-4"><?php foreach($steps as$step):?><div class="col-md-6 col-xl"><div class="border rounded-3 p-3 h-100"><i class="fa-solid <?= $step['done']?'fa-circle-check text-success':'fa-clock text-warning' ?>"></i><strong class="d-block mt-2"><?= $escape($step['label']) ?></strong><small class="meta"><?= $escape($step['detail']) ?></small></div></div><?php endforeach;?></div>
+  <div class="implementation-progress mb-4" role="progressbar" aria-valuenow="<?= (int)$implementation['progress'] ?>" aria-valuemin="0" aria-valuemax="100"><span style="width:<?= (int)$implementation['progress'] ?>%"></span></div>
+  <div class="row g-3"><?php foreach($implementation['steps'] as$position=>$step):?><?php
+   $action=(string)$step['action'];$href='';
+   if($action!==''){$href=str_starts_with($action,'#')?$action:(in_array($action,['/edit','/contracts'],true)?$basePath.'/admin/organizations/'.(int)$organization['id'].$action:$basePath.$action);}
+  ?><div class="col-md-6 col-xl-4"><article class="implementation-step <?= $step['done']?'is-done':'is-pending' ?> h-100">
+   <div class="implementation-step-icon"><i class="fa-solid <?= $escape((string)$step['icon']) ?>"></i></div>
+   <div class="implementation-step-content"><div class="d-flex justify-content-between gap-2"><small>Etapa <?= (int)$position+1 ?></small><span class="badge <?= $step['done']?'badge-success':'badge-warning' ?>"><?= $step['done']?'Concluída':'Pendente' ?></span></div><strong><?= $escape((string)$step['label']) ?></strong><p><?= $escape((string)$step['detail']) ?></p><?php if(!$step['done']):?><div class="implementation-step-actions"><?php if($href!==''):?><a href="<?= $escape($href) ?>">Resolver agora <i class="fa-solid fa-arrow-right"></i></a><?php endif;?><?php if($step['kind']==='required'&&$application!==null):?><?php if(in_array($step['id'],$implementationTickets,true)):?><a class="implementation-ticket-open" href="<?= $escape($basePath) ?>/admin/tickets?q=<?= rawurlencode((string)$step['label']) ?>"><i class="fa-solid fa-ticket"></i> Ticket aberto</a><?php else:?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/implementation/<?= $escape((string)$step['id']) ?>/ticket"><?= $csrfField ?><button type="submit"><i class="fa-regular fa-bell"></i> Criar ticket</button></form><?php endif;?><?php endif;?></div><?php endif;?></div>
+  </article></div><?php endforeach;?></div>
+  <div class="implementation-activation mt-4"><div><strong><?= $organizationActive?'Franquia ativa':'Ativação final' ?></strong><p class="meta mb-0"><?= $organizationActive?'O login exclusivo e a operação da franquia estão liberados.':($implementation['ready_to_activate']?'Todos os requisitos obrigatórios foram concluídos.':'Ainda faltam '.count($implementation['missing']).' requisito(s) obrigatório(s).') ?></p></div><?php if($organizationActive):?><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Ativa</span><?php else:?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/activate"><?= $csrfField ?><button class="button button-primary" type="submit" <?= !$implementation['ready_to_activate']?'disabled':'' ?>><i class="fa-solid fa-power-off"></i> Ativar franquia</button></form><?php endif;?></div>
+  <?php if(!$organizationActive&&!$implementation['ready_to_activate']):?><div class="alert alert-warning mt-3 mb-0"><strong>Ativação protegida.</strong> Conclua: <?= $escape(implode(', ',$implementation['missing'])) ?>.</div><?php endif;?>
+ </div>
+</section>
+
+<section class="card mb-4" id="operacao-comercial">
+ <div class="card-header"><div><p class="eyebrow">Financeiro</p><h2>Operação comercial</h2><p class="meta">Configure cobranças, repasses e as regras aplicadas às novas vendas.</p></div></div>
+ <div class="p-4">
   <?php if($latest!==null):?>
   <div class="row g-3 mb-4">
    <div class="col-md-4"><div class="metric-card h-100"><span>Comissão Mundo Inter</span><strong><?= number_format($centralPercentage,2,',','.') ?>%</strong><small>Percentual definido no contrato</small></div></div>
@@ -61,8 +68,8 @@ $steps=[
 
   <?php if($latest!==null):?><div class="border rounded-3 p-3"><div class="d-flex flex-wrap justify-content-between gap-3 align-items-center"><div><strong><i class="fa-solid fa-bolt"></i> Ações comerciais</strong><p class="meta mb-0"><?= $commercialActive?'A regra contratual já está ativa para as novas vendas.':'Ative somente depois de conferir assinatura, Wallet e percentuais.' ?></p></div><div class="page-actions">
    <?php if($monthlyRequired&&empty($latest['asaas_payment_link_url'])):?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/contracts/<?= (int)$latest['id'] ?>/recurring-link"><?= $csrfField ?><button class="button button-secondary" type="submit" <?= (!$contractSigned||!$asaasReady)?'disabled':'' ?>><i class="fa-solid fa-link"></i> Gerar link mensal</button></form><?php elseif($monthlyRequired):?><a class="button button-secondary" href="<?= $escape((string)$latest['asaas_payment_link_url']) ?>" target="_blank" rel="noopener"><i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir link mensal</a><?php endif;?>
-   <?php if(!$commercialActive):?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/contracts/<?= (int)$latest['id'] ?>/activate"><?= $csrfField ?><button class="button button-primary" type="submit" <?= !$canActivate?'disabled':'' ?>><i class="fa-solid fa-circle-play"></i> Ativar operação comercial</button></form><?php else:?><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Operação ativa</span><?php endif;?>
-  </div></div><?php if(!$canActivate&&!$commercialActive):?><div class="alert alert-warning mt-3 mb-0">Antes de ativar: <?= !$organizationActive?'ative a franquia; ':'' ?><?= !$contractSigned?'obtenha a assinatura do contrato; ':'' ?><?= !$splitReady?'valide a Wallet e habilite o split; ':'' ?><?= !$recurringReady?'gere o link da mensalidade; ':'' ?></div><?php endif;?></div><?php endif;?>
+   <?php if(!$commercialActive):?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/contracts/<?= (int)$latest['id'] ?>/activate"><?= $csrfField ?><button class="button button-primary" type="submit" <?= !$canActivateCommercial?'disabled':'' ?>><i class="fa-solid fa-circle-play"></i> Ativar operação comercial</button></form><?php else:?><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Operação ativa</span><?php endif;?>
+  </div></div><?php if(!$canActivateCommercial&&!$commercialActive):?><div class="alert alert-warning mt-3 mb-0">Antes de ativar: <?= !$organizationActive?'ative a franquia; ':'' ?><?= !$contractSigned?'obtenha a assinatura do contrato; ':'' ?><?= !$splitReady?'valide a Wallet e habilite o split; ':'' ?><?= !$recurringReady?'gere o link da mensalidade; ':'' ?></div><?php endif;?></div><?php endif;?>
  </div>
 </section>
 
