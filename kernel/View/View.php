@@ -39,19 +39,19 @@ final class View
     }
 
     /** @param array<string, mixed> $data */
-    private function capture(string $template, array $data): string
+    private function capture(string $templateName, array $data): string
     {
-        if (preg_match('#^[A-Za-z0-9/_-]+$#', $template) !== 1 || str_contains($template, '..')) {
-            throw new RuntimeException(sprintf('Nome de template inválido: %s', $template));
+        if (preg_match('#^[A-Za-z0-9/_-]+$#', $templateName) !== 1 || str_contains($templateName, '..')) {
+            throw new RuntimeException(sprintf('Nome de template inválido: %s', $templateName));
         }
 
         $path = rtrim($this->directory, DIRECTORY_SEPARATOR)
             . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, $template)
+            . str_replace('/', DIRECTORY_SEPARATOR, $templateName)
             . '.php';
 
         if (!is_file($path)) {
-            throw new RuntimeException(sprintf('Template não encontrado: %s', $template));
+            throw new RuntimeException(sprintf('Template não encontrado: %s', $templateName));
         }
 
         $escape = static fn (mixed $value): string => htmlspecialchars(

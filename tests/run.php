@@ -783,6 +783,8 @@ $tests['cria contratos e assinatura digital para franquias'] = static function (
     assertTrue(str_contains($routes,"'/admin/franchise-contract-templates/{id:\\d+}/compare'"));
     assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/cancel'"));
     assertTrue(str_contains($templateForm,'data-contract-rich-editor'));
+    $viewEngine=(string)file_get_contents($rootPath.'/kernel/View/View.php');
+    assertTrue(str_contains($viewEngine,'capture(string $templateName'));
     assertTrue(str_contains($javascript,'data-contract-editor'));
     assertTrue(str_contains($publicContract,'ContractContent::toHtml'));
 };
