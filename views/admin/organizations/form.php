@@ -3,7 +3,7 @@ $editing=is_array($organization);$siteDomain=null;
 foreach($domains as$domain){if(($domain['purpose']??'')==='site'&&($domain['is_primary']??0)){$siteDomain=$domain;break;}}
 $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['favicon_path']??'');
 ?>
-<div class="page-header"><div><p class="eyebrow">Mundo Inter · ADM Central</p><h1><?= $editing?'Personalizar franquia':'Nova franquia' ?></h1><p>Configure acesso, identidade visual, atendimento e presença pública da franquia.</p></div><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
+<div class="page-header"><div><p class="eyebrow">Mundo Inter · ADM Central</p><h1><?= $editing?'Personalizar franquia':'Nova franquia' ?></h1><p>Configure acesso, identidade visual, atendimento e presença pública da franquia.</p></div><div class="page-actions"><?php if($editing):?><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/finance"><i class="fa-solid fa-wallet"></i> Financeiro Asaas</a><?php endif;?><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/organizations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div></div>
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 <form class="card form-grid" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><?= $csrfField ?>
 <div class="form-section form-span-2"><h2>Dados da franquia</h2><p>Identificação jurídica e operacional usada pelo ADM Central.</p></div>

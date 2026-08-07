@@ -67,6 +67,18 @@ final readonly class OrganizationRepository
     }
     public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath):void
     {$s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');}
+    public function saveFinanceSettings(int$id,array$data):void
+    {
+        $wallet=trim((string)($data['asaas_wallet_id']??''));$status=(string)($data['asaas_wallet_status']??'not_configured');$split=($data['split_enabled']??false)===true;$notes=trim((string)($data['asaas_finance_notes']??''));
+        if($this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
+        if($wallet!==''&&preg_match('/^[A-Za-z0-9-]{20,80}$/',$wallet)!==1)throw new RuntimeException('Informe um Wallet ID válido do Asaas.');
+        if(!in_array($status,['not_configured','pending','validated','invalid'],true))throw new RuntimeException('Situação de validação inválida.');
+        if($wallet===''&&$status!=='not_configured')throw new RuntimeException('Informe o Wallet ID antes de alterar a situação.');
+        if($split&&($wallet===''||$status!=='validated'))throw new RuntimeException('O split só pode ser ativado após validar o Wallet ID da franquia.');
+        if(mb_strlen($notes)>500)throw new RuntimeException('As observações financeiras excedem 500 caracteres.');
+        $s=$this->database->prepare('UPDATE organizations SET asaas_wallet_id=:wallet,asaas_wallet_status=:status,asaas_wallet_validated_at=:validated,split_enabled=:split,asaas_finance_notes=:notes WHERE id=:id');
+        $s->execute(['wallet'=>$wallet!==''?$wallet:null,'status'=>$wallet===''?'not_configured':$status,'validated'=>$status==='validated'?date('Y-m-d H:i:s'):null,'split'=>(int)$split,'notes'=>$notes!==''?$notes:null,'id'=>$id]);
+    }
     public static function normalizeSlug(string$slug):?string{$value=strtolower(trim($slug));if(preg_match('/^[a-z0-9](?:[a-z0-9-]{1,98}[a-z0-9])?$/',$value)!==1)return null;$reserved=['admin','api','assets','checkout','context','crm','finance','login','logout','notifications','status','students','tickets','units','users','roles','tags','whatsapp'];return in_array($value,$reserved,true)?null:$value;}
     public static function normalizeHost(string$host):?string{$value=strtolower(rtrim(trim($host),'.'));if(str_starts_with($value,'[')){$end=strpos($value,']');$value=$end===false?'':substr($value,1,$end-1);}elseif(substr_count($value,':')===1){$value=explode(':',$value,2)[0];}if($value===''||strlen($value)>253||filter_var($value,FILTER_VALIDATE_DOMAIN,FILTER_FLAG_HOSTNAME)===false)return null;return$value;}
     private static function normalizeColor(string$color):?string{$value=strtolower(trim($color));return preg_match('/^#[0-9a-f]{6}$/',$value)===1?$value:null;}

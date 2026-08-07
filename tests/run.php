@@ -779,6 +779,25 @@ $tests['mantém histórico contratual e modelos comerciais das franquias'] = sta
     assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/recurring-link'"));
 };
 
+$tests['separa perfis centrais e perfis das franquias com matriz própria'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_870000_add_franchise_finance_and_role_matrix.php');
+    assertTrue(str_contains($migration,'platform_general_manager'));
+    assertTrue(str_contains($migration,"WHEN 'platform_agent' THEN 'Atendente'"));
+    assertTrue(str_contains($migration,"WHEN 'headquarters' THEN 'Gestor'"));
+    assertTrue(str_contains($migration,"WHEN 'manager' THEN 'Gerente'"));
+};
+
+$tests['configura wallet e split por franquia no ADM Central'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_870000_add_franchise_finance_and_role_matrix.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($migration,'asaas_wallet_id'));
+    assertTrue(str_contains($migration,'split_enabled'));
+    assertTrue(str_contains($repository,'saveFinanceSettings'));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/finance'"));
+    assertTrue(is_file($rootPath.'/views/admin/organizations/finance.php'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
