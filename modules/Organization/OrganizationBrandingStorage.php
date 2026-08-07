@@ -20,12 +20,12 @@ final readonly class OrganizationBrandingStorage
         $extensions = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp'];
         if (!is_string($mime) || !isset($extensions[$mime])) throw new RuntimeException('Envie uma imagem PNG, JPG ou WebP.');
         $directory = rtrim($this->publicDirectory, '/\\') . DIRECTORY_SEPARATOR . $organizationId;
-        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) throw new RuntimeException('Não foi possível preparar o diretório da marca.');
+        if (!is_dir($directory) && !mkdir($directory, 0755, true) && !is_dir($directory)) throw new RuntimeException('Não foi possível preparar o diretório da marca.');
         foreach (glob($directory . DIRECTORY_SEPARATOR . $kind . '.*') ?: [] as $oldFile) if (is_file($oldFile)) @unlink($oldFile);
         $filename = $kind . '.' . $extensions[$mime];
         $destination = $directory . DIRECTORY_SEPARATOR . $filename;
         if (!move_uploaded_file($file->temporaryPath, $destination)) throw new RuntimeException('Não foi possível guardar a imagem.');
-        chmod($destination, 0640);
+        chmod($destination, 0644);
         return '/assets/organizations/' . $organizationId . '/' . $filename . '?v=' . time();
     }
 }
