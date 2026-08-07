@@ -50,9 +50,13 @@ $tests['vincula franquias ao histórico contratual']=static function()use($rootP
     assertTrue(str_contains($list,'Abrir ficha da franquia'));
     assertTrue(str_contains($list,'Login exclusivo'));
     $overview=(string)file_get_contents($rootPath.'/views/admin/organizations/overview.php');
-    assertTrue(str_contains($overview,'Próxima ação'));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($overview,'Checklist operacional'));
     assertTrue(str_contains($overview,'fa-file-signature'));
-    assertTrue(str_contains($overview,'Configurar Asaas e split'));
+    assertTrue(str_contains($overview,'Wallet Asaas e split'));
+    assertTrue(str_contains($overview,'Ativar operação comercial'));
+    assertTrue(str_contains($overview,'Gerar link mensal'));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/finance-inline'"));
 };
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
