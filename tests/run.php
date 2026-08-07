@@ -57,6 +57,10 @@ $tests['vincula franquias ao histórico contratual']=static function()use($rootP
     assertTrue(str_contains($overview,'Ativar operação comercial'));
     assertTrue(str_contains($overview,'Gerar link mensal'));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/finance-inline'"));
+    $contractDetail=(string)file_get_contents($rootPath.'/views/admin/franchise-contracts/show.php');
+    assertTrue(str_contains($contractDetail,'Configurar Wallet e split'));
+    assertTrue(str_contains($contractDetail,'Assinatura e evidências'));
+    assertTrue(str_contains($contractDetail,'Conteúdo completo do contrato'));
 };
 
 $tests['carrega a fundação multiempresa com resolução segura por domínio'] = static function () use ($rootPath): void {
