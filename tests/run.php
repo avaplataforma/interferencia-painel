@@ -842,6 +842,8 @@ $tests['separa Asaas Sandbox da conexão de produção'] = static function () us
     assertTrue(str_contains($repository,"asaas(string \$environment='production')"));
     assertTrue(str_contains($view,'Webhook do Sandbox'));
     assertTrue(str_contains($view,'$aact_hmlg_'));
+    assertTrue(str_contains($view,'Diagnóstico do webhook'));
+    assertTrue(str_contains($routes,"'webhookSummary'=>\$finance->webhookSummary()"));
 };
 
 $failures = 0;
