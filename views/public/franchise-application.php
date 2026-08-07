@@ -12,14 +12,14 @@
   .public-intake-card-heading p{margin:.15rem 0 0}
   .public-intake-form label{margin:0}
   .public-intake-form input,.public-intake-form textarea{width:100%;background:#fff}
-  .span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-8{grid-column:span 8}.span-12{grid-column:1/-1}
+  .span-2{grid-column:span 2}.span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:1/-1}
   .public-intake-contact{grid-column:span 6}
   .public-intake-address{grid-column:1/-1}
   .public-intake-footer{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.25rem;border:1px solid #e0e5e9;border-radius:1rem;background:#fff}
   .public-intake-footer p{margin:0;max-width:46rem}
   .public-intake-footer .button{flex:0 0 auto;min-height:3rem}
-  @media(max-width:950px){.public-intake-contact{grid-column:1/-1}.span-2,.span-3,.span-4,.span-5,.span-6,.span-8{grid-column:span 6}}
-  @media(max-width:650px){.guest-card-wide{width:calc(100% - 1rem);max-width:82rem}.public-intake-header{align-items:flex-start;flex-direction:column}.public-intake-header img{width:4rem;height:4rem}.public-intake-card{padding:1rem}.public-intake-card-grid{grid-template-columns:1fr}.span-2,.span-3,.span-4,.span-5,.span-6,.span-8,.span-12{grid-column:1}.public-intake-footer{align-items:stretch;flex-direction:column}.public-intake-footer .button{width:100%}}
+  @media(max-width:950px){.public-intake-contact{grid-column:1/-1}.span-2,.span-3,.span-4,.span-5,.span-6,.span-7,.span-8{grid-column:span 6}}
+  @media(max-width:650px){.guest-card-wide{width:calc(100% - 1rem);max-width:82rem}.public-intake-header{align-items:flex-start;flex-direction:column}.public-intake-header img{width:4rem;height:4rem}.public-intake-card{padding:1rem}.public-intake-card-grid{grid-template-columns:1fr}.span-2,.span-3,.span-4,.span-5,.span-6,.span-7,.span-8,.span-12{grid-column:1}.public-intake-footer{align-items:stretch;flex-direction:column}.public-intake-footer .button{width:100%}}
 </style>
 <?php $formAction=$formAction??$basePath.'/solicitacao-franquia/'.($token??''); ?>
 <header class="public-intake-header">
