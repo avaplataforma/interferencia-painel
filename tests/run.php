@@ -987,7 +987,8 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_940000_create_document_management.php');
     $manager=(string)file_get_contents($rootPath.'/modules/Storage/DocumentManager.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
-    $view=(string)file_get_contents($rootPath.'/views/admin/documents/index.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/documents.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     assertTrue(str_contains($migration,'managed_documents'));
     assertTrue(str_contains($migration,'document_group'));
     assertTrue(str_contains($migration,'version_number'));
@@ -997,13 +998,13 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     assertTrue(str_contains($manager,'deleted_at=NOW()'));
     assertTrue(str_contains($manager,"'contrato_social'=>'Contrato Social'"));
     assertTrue(str_contains($manager,"'cnh_gestor'=>'CNH do gestor'"));
-    assertTrue(str_contains($routes,"'/admin/documents'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/documents'"));
     assertTrue(str_contains($routes,"'franchiseDocuments'=>\$documents->all('franchise',\$id)"));
     assertTrue(str_contains($routes,"'Cache-Control'=>'private, no-store'"));
-    assertTrue(str_contains($view,'Nova versão'));
-    assertTrue(str_contains($view,'histórico'));
-    assertTrue(is_file($rootPath.'/views/admin/organizations/documents.php'));
+    assertTrue(str_contains($view,'name="replace_id"'));
+    assertTrue(str_contains($view,'Nova versão de:'));
+    assertTrue(!str_contains($view,'Gestão completa'));
+    assertTrue(!str_contains($navigation,'/admin/documents'));
 };
 
 $failures = 0;
