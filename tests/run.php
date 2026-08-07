@@ -755,9 +755,13 @@ $tests['cria captação pública e análise de novas franquias'] = static functi
     assertTrue(str_contains($routes,"'/solicitacao-franquia/{token:[a-f0-9]+}'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications'"));
     assertTrue(str_contains($routes,"'/admin/franchise-applications/{id:\\d+}/approve'"));
+    assertTrue(str_contains($routes,"'/admin/franchise-applications/{id:\\d+}/delete'"));
     assertTrue(str_contains($applications,'Link permanente'));
     assertTrue(str_contains($applications,'Ticket automático'));
+    assertTrue(str_contains($applications,'table-cell-stack'));
+    assertTrue(str_contains($applications,'Excluir solicitação'));
     assertTrue(str_contains($repository,'submitNew'));
+    assertTrue(str_contains($repository,'public function delete'));
     assertTrue(str_contains($repository,'platform_tickets'));
     assertTrue(!str_contains($organizationForm,'Financeiro Asaas'));
     assertTrue(str_contains($navigation,'>Solicitações</a>'));

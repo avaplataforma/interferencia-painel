@@ -3,8 +3,8 @@
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 <div class="table-card contract-template-list"><table><thead><tr><th>Modelo</th><th>Versão</th><th>Situação</th><th>Uso</th><th>Atualizado</th><th>Ações</th></tr></thead><tbody>
 <?php foreach($templates as$item):$usage=(int)($item['usage_count']??0);$versionCount=(int)($item['version_count']??1);$active=(int)$item['is_active']===1;?><tr>
-<td><strong><?= $escape($item['title']) ?></strong><small><?= $active?'Disponível para novos contratos':'Mantido somente para histórico' ?></small></td>
-<td><strong>v<?= $escape($item['version']) ?></strong><small><?= $versionCount ?> vers<?= $versionCount===1?'ão':'ões' ?> no histórico</small></td>
+<td><span class="table-cell-stack"><strong><?= $escape($item['title']) ?></strong><small><?= $active?'Disponível para novos contratos':'Mantido somente para histórico' ?></small></span></td>
+<td><span class="table-cell-stack"><strong>v<?= $escape($item['version']) ?></strong><small><?= $versionCount ?> vers<?= $versionCount===1?'ão':'ões' ?> no histórico</small></span></td>
 <td><span class="status <?= $active?'status-active':'status-muted' ?>"><?= $active?'Ativo':'Arquivado' ?></span></td>
 <td><span class="contract-usage"><i class="fa-solid fa-file-signature"></i> <?= $usage ?> contrato<?= $usage===1?'':'s' ?></span></td>
 <td><?= $escape(date('d/m/Y H:i',strtotime((string)$item['updated_at']))) ?></td>

@@ -319,6 +319,11 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     main { overflow-x: auto; }
     table { width: 100%; min-width: 42rem; margin-top: 1rem; background: #fff; }
     th, td { padding: .8rem .85rem; border-bottom: 1px solid #e3e7ea; vertical-align: middle; text-align: left; }
+    .table-cell-stack { display: grid; gap: .22rem; min-width: 0; }
+    .table-cell-stack strong { line-height: 1.3; }
+    .table-cell-stack small { display: block; color: var(--inter-muted); font-size: .8rem; font-weight: 400; line-height: 1.35; overflow-wrap: anywhere; }
+    .table-actions { display: flex; align-items: center; gap: .4rem; white-space: nowrap; }
+    .table-actions form { margin: 0; }
     .guest-card { width: min(30rem, calc(100% - 2rem)); }
     .guest-card-wide { width: min(82rem, calc(100% - 3rem)); }
     @media (min-width: 576px) { .d-sm-block { display: block; } .col-sm-6 { width: 50%; } }

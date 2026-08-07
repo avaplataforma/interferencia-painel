@@ -22,7 +22,7 @@ final readonly class FranchiseApplicationRepository
 
     public function all(): array
     {
-        return $this->db->query("SELECT a.*,o.display_name organization_name,(SELECT p.id FROM platform_tickets p WHERE p.franchise_application_id=a.id ORDER BY p.id LIMIT 1) ticket_id,(SELECT p.status FROM platform_tickets p WHERE p.franchise_application_id=a.id ORDER BY p.id LIMIT 1) ticket_status FROM franchise_applications a LEFT JOIN organizations o ON o.id=a.organization_id WHERE a.status<>'invited' ORDER BY CASE a.status WHEN 'submitted' THEN 0 WHEN 'reviewing' THEN 1 ELSE 2 END,a.updated_at DESC")->fetchAll();
+        return $this->db->query("SELECT a.*,o.display_name organization_name,(SELECT p.id FROM platform_tickets p WHERE p.franchise_application_id=a.id ORDER BY p.id LIMIT 1) ticket_id,(SELECT p.status FROM platform_tickets p WHERE p.franchise_application_id=a.id ORDER BY p.id LIMIT 1) ticket_status,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.franchise_application_id=a.id) contract_count FROM franchise_applications a LEFT JOIN organizations o ON o.id=a.organization_id WHERE a.status<>'invited' ORDER BY CASE a.status WHEN 'submitted' THEN 0 WHEN 'reviewing' THEN 1 ELSE 2 END,a.updated_at DESC")->fetchAll();
     }
 
     public function find(int $id): ?array
@@ -74,6 +74,22 @@ final readonly class FranchiseApplicationRepository
     {
         $s=$this->db->prepare("UPDATE franchise_applications SET organization_id=:organization,status='approved',reviewed_at=NOW() WHERE id=:id AND organization_id IS NULL");$s->execute(['organization'=>$organizationId,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('Solicitação não encontrada ou já aprovada.');
         $this->db->prepare('UPDATE franchise_contracts SET organization_id=:organization WHERE franchise_application_id=:id')->execute(['organization'=>$organizationId,'id'=>$id]);
+    }
+
+    public function delete(int$id):void
+    {
+        $this->db->beginTransaction();
+        try{
+            $s=$this->db->prepare('SELECT organization_id,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.franchise_application_id=a.id) contract_count FROM franchise_applications a WHERE a.id=:id FOR UPDATE');
+            $s->execute(['id'=>$id]);$application=$s->fetch();
+            if(!is_array($application))throw new RuntimeException('Solicitação não encontrada.');
+            if(!empty($application['organization_id']))throw new RuntimeException('Esta solicitação já originou uma franquia e deve ser preservada no histórico.');
+            if((int)$application['contract_count']>0)throw new RuntimeException('Esta solicitação possui contrato e não pode ser excluída.');
+            $this->db->prepare('DELETE FROM platform_tickets WHERE franchise_application_id=:id')->execute(['id'=>$id]);
+            $d=$this->db->prepare('DELETE FROM franchise_applications WHERE id=:id AND organization_id IS NULL');$d->execute(['id'=>$id]);
+            if($d->rowCount()===0)throw new RuntimeException('Solicitação não encontrada ou já concluída.');
+            $this->db->commit();
+        }catch(Throwable$e){if($this->db->inTransaction())$this->db->rollBack();if($e instanceof RuntimeException)throw$e;throw new RuntimeException('Não foi possível excluir a solicitação.',0,$e);}
     }
 
     private static function digits(string$value):string{return preg_replace('/\D/','',$value)??'';}
