@@ -21,6 +21,7 @@ use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
+use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Crm\ContactManager;
 use Interferencia\Modules\Crm\ContactRepository;
 use Interferencia\Modules\Crm\ExternalContactIntake;
@@ -60,6 +61,8 @@ return static function (
     Csrf $csrf,
     Validator $validator,
     Auth $auth,
+    OrganizationRepository $organizations,
+    int $organizationId,
     UserRepository $users,
     UserManager $userManager,
     UnitRepository $units,
@@ -103,6 +106,14 @@ return static function (
     $browserTitle = $config->string('app.browser_title');
     $requireAuth = new RequireAuth($auth, $basePath);
     $requireGuest = new RequireGuest($auth, $basePath);
+    $platformAdmin=static fn():bool=>$auth->isSuperAdmin()&&(($organizations->findRecord($organizationId)['code']??'')==='interferencia');
+
+    $router->get('/admin/organizations',static function()use($view,$organizations,$platformAdmin,$session,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/index',['title'=>'Organizações — '.$browserTitle,'organizations'=>$organizations->allWithPrimaryDomain(),'message'=>$session->get('organizations.message'),'error'=>$session->get('organizations.error'),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/organizations/create',static function()use($view,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);return$view->render('admin/organizations/form',['title'=>'Nova organização — '.$browserTitle,'organization'=>null,'domains'=>[],'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/organizations/{id:\d+}/edit',static function(Request$request,array$params)use($view,$organizations,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);$organization=$organizations->findRecord((int)$params['id']);if($organization===null)return Response::text("Organização não encontrada.\n",404);return$view->render('admin/organizations/form',['title'=>'Editar organização — '.$browserTitle,'organization'=>$organization,'domains'=>$organizations->domains((int)$params['id']),'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $saveOrganization=static function(Request$request,?int$id=null)use($organizations,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);try{$organizations->save($id,(string)$request->input('code',''),(string)$request->input('legal_name',''),(string)$request->input('display_name',''),(string)$request->input('status','active'),(string)$request->input('primary_host',''),$request->input('domain_active')==='1');$session->flash('organizations.message',$id===null?'Organização cadastrada.':'Organização atualizada.');return Response::redirect($basePath.'/admin/organizations');}catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());return Response::redirect($basePath.($id===null?'/admin/organizations/create':"/admin/organizations/{$id}/edit"));}};
+    $router->post('/admin/organizations',static fn(Request$request):Response=>$saveOrganization($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/organizations/{id:\d+}',static fn(Request$request,array$params):Response=>$saveOrganization($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $router->get('/status', static function () use ($config, $view, $browserTitle): Response {
         return $view->render('status', [
