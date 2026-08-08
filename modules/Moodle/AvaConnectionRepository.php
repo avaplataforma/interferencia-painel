@@ -108,8 +108,8 @@ final readonly class AvaConnectionRepository
         $token=trim($token);if($token===''&&!($current['configured']??false))throw new RuntimeException('Informe o token do Moodle.');
         if($token!==''&&(strlen($token)<20||strlen($token)>255))throw new RuntimeException('Informe um token válido do Moodle.');
         $encrypted=$token!==''?$this->cipher->encrypt($token):($current['token_encrypted']??null);$last4=$token!==''?substr($token,-4):($current['token_last4']??null);
-        $sql="INSERT INTO ava_connections(connection_key,organization_id,connection_type,name,base_url,token_encrypted,token_last4,is_active,created_by,updated_by) VALUES(:key,:organization,:type,:name,:url,:token,:last4,:active,:user,:user) ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id),connection_type=VALUES(connection_type),name=VALUES(name),base_url=VALUES(base_url),token_encrypted=VALUES(token_encrypted),token_last4=VALUES(token_last4),is_active=VALUES(is_active),last_error=NULL,updated_by=VALUES(updated_by)";
-        $this->database->prepare($sql)->execute(['key'=>$key,'organization'=>$organizationId,'type'=>$type,'name'=>$name,'url'=>$baseUrl,'token'=>$encrypted,'last4'=>$last4,'active'=>(int)$active,'user'=>$userId]);
+        $sql="INSERT INTO ava_connections(connection_key,organization_id,connection_type,name,base_url,token_encrypted,token_last4,is_active,created_by,updated_by) VALUES(:key,:organization,:type,:name,:url,:token,:last4,:active,:created_by,:updated_by) ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id),connection_type=VALUES(connection_type),name=VALUES(name),base_url=VALUES(base_url),token_encrypted=VALUES(token_encrypted),token_last4=VALUES(token_last4),is_active=VALUES(is_active),last_error=NULL,updated_by=VALUES(updated_by)";
+        $this->database->prepare($sql)->execute(['key'=>$key,'organization'=>$organizationId,'type'=>$type,'name'=>$name,'url'=>$baseUrl,'token'=>$encrypted,'last4'=>$last4,'active'=>(int)$active,'created_by'=>$userId,'updated_by'=>$userId]);
     }
 
     /** @param array<string,mixed> $row @return array<string,mixed> */
