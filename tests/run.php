@@ -1058,7 +1058,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.3.4',$metadata['release']);
+    assertSame('0.3.5',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1078,7 +1078,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.3.4'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.3.5'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));
@@ -1091,6 +1091,31 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains($resolver,"'httponly'=>true"));
     assertTrue(str_contains($resolver,"'samesite'=>'Lax'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/entrar.php'),'brand_resolver::remember($slug)'));
+};
+
+$tests['mapeia Polo Presencial para franquias com diagnóstico agregado e seguro'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260808_980000_create_ava_polo_mappings.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AvaPoloMappingRepository.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $diagnostic=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/diagnose_poles.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
+    assertTrue(str_contains($migration,'CREATE TABLE ava_polo_mappings'));
+    assertTrue(str_contains($migration,'CREATE TABLE ava_polo_diagnostics'));
+    assertTrue(str_contains($repository,'final readonly class AvaPoloMappingRepository'));
+    assertTrue(str_contains($repository,'recordDiagnostic'));
+    assertTrue(str_contains($catalog,'ava_polo_mappings'));
+    assertTrue(str_contains($client,'poloDiagnostics'));
+    assertTrue(str_contains($services,'local_mundointer_diagnose_poles'));
+    assertTrue(str_contains($diagnostic,"require_capability('local/mundointer:manage'"));
+    assertTrue(!str_contains($diagnostic,'email'));
+    assertTrue(!str_contains($diagnostic,'idnumber'));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter/poles/diagnose'"));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter/poles/{id:\\d+}/delete'"));
+    assertTrue(str_contains($view,'Polo Presencial e franquias'));
+    assertTrue(str_contains($view,'Atualizar diagnóstico'));
 };
 
 $failures = 0;

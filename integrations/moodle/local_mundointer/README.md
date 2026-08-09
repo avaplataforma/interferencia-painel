@@ -17,6 +17,8 @@ O ADM Central envia ao plugin um catálogo de marcas pelo serviço `local_mundoi
 
 A franquia selecionada também é preservada em um cookie próprio, seguro e sem dados pessoais. Assim, ao sair do Moodle, o usuário retorna à tela de entrada com a mesma identidade visual. Em um novo acesso autenticado, o **Polo Presencial** volta a ser a fonte principal e atualiza a marca quando necessário.
 
+O serviço `local_mundointer_diagnose_poles` entrega ao ADM Central somente totais agregados do campo Polo Presencial. Ele permite localizar valores sem franquia e usuários sem polo sem transferir nomes, CPFs, e-mails ou alterar cadastros do Moodle.
+
 No tema Trema, a identidade substitui o logotipo global dentro do cartão de login, o favicon e o título da aba, além de usar o espaço nativo da barra superior. Nenhum arquivo do tema é alterado, preservando atualizações futuras do Trema. Em outros temas, o plugin mantém uma apresentação compatível de reserva.
 
 Nesta primeira versão, o plugin expõe somente um diagnóstico autenticado de disponibilidade e versão. Os dados acadêmicos continuam usando as APIs oficiais do Moodle.

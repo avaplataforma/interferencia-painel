@@ -25,6 +25,9 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_sync_brands',['catalog'=>$json]);
     }
 
+    /** @return array<string,mixed> */
+    public function poloDiagnostics():array{return$this->call('local_mundointer_diagnose_poles');}
+
     /** @return list<array<string,mixed>> */
     public function courses():array
     {

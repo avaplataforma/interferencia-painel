@@ -17,6 +17,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_diagnose_poles' => [
+        'classname' => 'local_mundointer\\external\\diagnose_poles',
+        'description' => 'Retorna somente contagens agregadas do campo Polo Presencial para conferência no ADM Central.',
+        'type' => 'read',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -24,6 +31,7 @@ $services = [
         'functions' => [
             'local_mundointer_ping',
             'local_mundointer_sync_brands',
+            'local_mundointer_diagnose_poles',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_enrol_get_enrolled_users',
