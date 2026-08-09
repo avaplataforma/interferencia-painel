@@ -22,13 +22,14 @@ final class ping extends external_api
         self::validate_context(\context_system::instance());
         require_capability('local/mundointer:manage', \context_system::instance());
         $plugin = get_config('local_mundointer');
+        $plugininfo = \core_plugin_manager::instance()->get_plugin_info('local_mundointer');
         $catalog=json_decode((string)($plugin->brandcatalog ?? ''),true);
         $brandcount=is_array($catalog)&&is_array($catalog['brands']??null)?count($catalog['brands']):0;
         return [
             'status' => !empty($plugin->enabled) ? 'ok' : 'disabled',
             'component' => 'local_mundointer',
             'pluginversion' => (string)($plugin->version ?? '2026080800'),
-            'release' => '0.2.0',
+            'release' => (string)($plugininfo->release ?? ''),
             'siteuuid' => (string)($plugin->site_uuid ?? ''),
             'moodlerelease' => (string)$CFG->release,
             'servertime' => time(),
