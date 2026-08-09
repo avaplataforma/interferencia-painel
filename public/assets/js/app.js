@@ -471,6 +471,21 @@ document.querySelectorAll('.color-field').forEach((group) => {
 })();
 
 (() => {
+  const modes = Array.from(document.querySelectorAll('input[name="account_mode"]'));
+  const settings = document.querySelector('[data-exclusive-asaas-settings]');
+  if (modes.length === 0 || !(settings instanceof HTMLElement)) return;
+
+  const refresh = () => {
+    const exclusive = modes.some((input) => input instanceof HTMLInputElement && input.checked && input.value === 'exclusive');
+    settings.hidden = !exclusive;
+    modes.forEach((input) => input.closest('.integration-mode')?.classList.toggle('selected', input instanceof HTMLInputElement && input.checked));
+  };
+
+  modes.forEach((input) => input.addEventListener('change', refresh));
+  refresh();
+})();
+
+(() => {
   const form = document.querySelector('[data-document-upload-form]');
   if (!(form instanceof HTMLFormElement)) return;
   const replace = form.querySelector('[data-document-replace-id]');
