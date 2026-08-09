@@ -196,7 +196,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
         }
         var favicon = brand.getAttribute("data-favicon");
         if (favicon) {
-            document.querySelectorAll("link[rel~='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']").forEach(function(link) {
+            document.querySelectorAll("link[rel~=\'icon\'], link[rel=\'shortcut icon\'], link[rel=\'apple-touch-icon\']").forEach(function(link) {
                 link.remove();
             });
             var icon = document.createElement("link");
