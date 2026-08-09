@@ -1208,6 +1208,15 @@ $tests['isola a conta Asaas exclusiva de cada franquia com fallback central segu
     assertTrue(str_contains($view,'Webhook exclusivo'));
 };
 
+$tests['organiza polos da franquia em linhas expansíveis'] = static function () use ($rootPath): void {
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/poles.php');
+    assertTrue(str_contains($view,'class="pole-row pole-disclosure"'));
+    assertTrue(str_contains($view,'Cadastrar novo polo'));
+    assertTrue(str_contains($view,'Abrir cadastro'));
+    assertTrue(str_contains($view,'Salvar alterações'));
+    assertTrue(str_contains($view,'pole-list-head'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
