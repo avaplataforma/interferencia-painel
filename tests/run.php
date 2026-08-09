@@ -1046,6 +1046,7 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
 };
 
 $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_990000_add_ava_identity_to_organizations.php');
     $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
     $ava=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
@@ -1057,10 +1058,15 @@ $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function (
     assertTrue(!str_contains($form,'data-organization-tab="acesso"'));
     assertTrue(str_contains($form,'name="panel_slug"'));
     assertTrue(!str_contains($form,'name="login_welcome_text"'));
+    assertTrue(!str_contains($form,'name="login_title"'));
+    assertTrue(str_contains($migration,'ava_polo_name'));
+    assertTrue(str_contains($ava,'name="login_title"'));
+    assertTrue(str_contains($ava,'name="ava_polo_name"'));
     assertTrue(str_contains($ava,'name="login_welcome_text"'));
     assertTrue(str_contains($ava,'name="support_email"'));
     assertTrue(str_contains($ava,'name="support_phone"'));
     assertTrue(str_contains($repository,'updateAvaCommunication'));
+    assertTrue(str_contains($repository,'ava_polo_name=:polo_name'));
     assertTrue(str_contains($routes,'updateAvaCommunication'));
     assertTrue(str_contains($plugin,'mundointer-login-support'));
     assertTrue(str_contains($plugin,'data-support-email'));

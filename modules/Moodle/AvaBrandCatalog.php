@@ -13,7 +13,7 @@ final readonly class AvaBrandCatalog
     /** @return array{schema:int,version:string,generated_at:string,profile_field:string,brands:list<array<string,mixed>>} */
     public function build(): array
     {
-        $rows=$this->database->query("SELECT o.id,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.logo_path,o.favicon_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,u.name unit_name,m.field_value,mf.shortname profile_field,pm.field_value mapped_polo FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN units u ON u.organization_id=o.id AND u.is_active=1 LEFT JOIN moodle_unit_mappings m ON m.unit_id=u.id LEFT JOIN moodle_profile_fields mf ON mf.id=m.field_id LEFT JOIN ava_polo_mappings pm ON pm.organization_id=o.id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,u.name,m.field_value,pm.field_value")->fetchAll()?:[];
+        $rows=$this->database->query("SELECT o.id,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.logo_path,o.favicon_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,o.ava_polo_name,u.name unit_name,m.field_value,mf.shortname profile_field,pm.field_value mapped_polo FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN units u ON u.organization_id=o.id AND u.is_active=1 LEFT JOIN moodle_unit_mappings m ON m.unit_id=u.id LEFT JOIN moodle_profile_fields mf ON mf.id=m.field_id LEFT JOIN ava_polo_mappings pm ON pm.organization_id=o.id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,u.name,m.field_value,pm.field_value")->fetchAll()?:[];
         $brands=[];$profileField='polo_presencial';
         foreach($rows as$row){
             $id=(int)$row['id'];
@@ -32,7 +32,7 @@ final readonly class AvaBrandCatalog
                     'poles'=>[],
                 ];
             }
-            foreach(['mapped_polo','field_value','unit_name']as$key){$value=trim((string)($row[$key]??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;}
+            foreach(['ava_polo_name','mapped_polo','field_value','unit_name']as$key){$value=trim((string)($row[$key]??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;}
             $field=trim((string)($row['profile_field']??''));if($field!=='')$profileField=$field;
         }
         $brandList=array_values($brands);

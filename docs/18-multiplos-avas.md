@@ -168,6 +168,8 @@ O código-fonte do plugin fica em `integrations/moodle/local_mundointer` e deve 
 
 O AVA Cursos atende várias franquias sem duplicar os cursos. O plugin Mundo Inter recebe do ADM Central um catálogo de identidades visuais contendo marca, cores, logo, favicon e os valores de **Polo Presencial** vinculados a cada franquia.
 
+No cadastro de cada franquia, a aba **AVA** concentra o **Título do login**, a comunicação de suporte e o nome canônico do **Polo Presencial**. Esse nome deve coincidir com o valor gravado no campo personalizado do usuário no Moodle e passa a integrar automaticamente o catálogo de identidade enviado ao plugin.
+
 - Antes da autenticação, cada franquia divulga seu endereço exclusivo no AVA Cursos: `/franquia.php?slug={codigo}`. O endereço interno do plugin continua disponível como alternativa.
 - O endereço grava a marca na sessão e encaminha o visitante ao login padrão do Moodle.
 - Depois da autenticação, o campo personalizado **Polo Presencial** prevalece sobre a sessão e confirma a identidade em todas as páginas internas.
