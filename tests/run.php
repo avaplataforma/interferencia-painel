@@ -1141,6 +1141,8 @@ $tests['cadastra múltiplos polos e grava a identidade estável no AVA'] = stati
     assertTrue(str_contains($repository,"POLE_FIELD = 'mundointer_pole'"));
     assertTrue(str_contains($releaser,'identityForEnrollment'));
     assertTrue(str_contains($catalog,"'pole_records'"));
+    assertTrue(str_contains($catalog,'poleKey'));
+    assertTrue(str_contains($catalog,"\$record['legacy_value']=\$value"));
     assertTrue(str_contains($form,'data-organization-tab="polos"'));
     assertTrue(str_contains($poles,'Código permanente'));
     assertTrue(str_contains($upgrade,'local_mundointer_ensure_identity_fields'));

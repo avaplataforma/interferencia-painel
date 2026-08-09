@@ -42,7 +42,21 @@ final readonly class AvaBrandCatalog
             }
         }
         $legacy=$this->database->query("SELECT o.id organization_id,pm.field_value,mf.shortname profile_field FROM organizations o LEFT JOIN ava_polo_mappings pm ON pm.organization_id=o.id LEFT JOIN moodle_profile_fields mf ON mf.id=(SELECT field_id FROM moodle_unit_mappings mum INNER JOIN units uu ON uu.id=mum.unit_id WHERE uu.organization_id=o.id LIMIT 1) WHERE o.status='active'")->fetchAll()?:[];
-        foreach($legacy as$row){$id=(int)$row['organization_id'];if(!isset($brands[$id]))continue;$value=trim((string)($row['field_value']??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;$field=trim((string)($row['profile_field']??''));if($field!=='')$profileField=$field;}
+        foreach($legacy as$row){
+            $id=(int)$row['organization_id'];if(!isset($brands[$id]))continue;
+            $value=trim((string)($row['field_value']??''));
+            if($value!==''){
+                if(!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;
+                $legacyKey=$this->poleKey($value);
+                foreach($brands[$id]['pole_records']as&$record){
+                    if($legacyKey===''||!in_array($legacyKey,[$this->poleKey((string)$record['name']),$this->poleKey((string)$record['legacy_value'])],true))continue;
+                    $record['legacy_value']=$value;
+                    break;
+                }
+                unset($record);
+            }
+            $field=trim((string)($row['profile_field']??''));if($field!=='')$profileField=$field;
+        }
         $brandList=array_values($brands);
         $canonical=json_encode(['profile_field'=>$profileField,'franchise_field'=>'mundointer_franchise','pole_field'=>'mundointer_pole','brands'=>$brandList],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         return['schema'=>1,'version'=>hash('sha256',$canonical),'generated_at'=>gmdate('c'),'profile_field'=>$profileField,'franchise_field'=>'mundointer_franchise','pole_field'=>'mundointer_pole','brands'=>$brandList];
@@ -64,4 +78,12 @@ final readonly class AvaBrandCatalog
     }
 
     private function color(string $value,string $fallback): string{return preg_match('/^#[0-9a-fA-F]{6}$/',trim($value))===1?strtolower(trim($value)):$fallback;}
+
+    private function poleKey(string $value): string
+    {
+        $value=mb_strtolower(trim(preg_replace('/\s+/u',' ',$value)??''));
+        $value=(string)(iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$value)?:$value);
+        $value=preg_replace('/\s*(?:,|\/|-)\s*[a-z]{2}$/i','',$value)??$value;
+        return trim(preg_replace('/[^a-z0-9]+/i',' ',$value)??$value);
+    }
 }
