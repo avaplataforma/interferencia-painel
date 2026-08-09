@@ -18,12 +18,11 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 
   <nav class="organization-tabs" aria-label="Etapas do cadastro" role="tablist">
    <button class="organization-tab" type="button" role="tab" data-organization-tab="dados"><i class="fa-solid fa-building"></i> Dados</button>
-   <button class="organization-tab" type="button" role="tab" data-organization-tab="acesso"><i class="fa-solid fa-globe"></i> Acesso e site</button>
-   <button class="organization-tab" type="button" role="tab" data-organization-tab="contatos"><i class="fa-solid fa-address-book"></i> Responsáveis</button>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="endereco"><i class="fa-solid fa-location-dot"></i> Endereço</button>
+   <button class="organization-tab" type="button" role="tab" data-organization-tab="contatos"><i class="fa-solid fa-address-book"></i> Responsáveis</button>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="documentos"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="marca"><i class="fa-solid fa-palette"></i> Personalização</button>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-graduation-cap"></i> AVA</button><?php endif;?>
-   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="documentos"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif;?>
   </nav>
 
   <form class="organization-editor-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><?= $csrfField ?>
@@ -37,12 +36,7 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
         <?php if(($organization['status']??'suspended')==='active'):?><label class="field-third">Situação<select name="status"><option value="active" selected>Ativa</option><option value="suspended">Suspensa</option></select><small>A suspensão interrompe o acesso da franquia.</small></label><?php else:?><label class="field-third">Situação<input value="Suspensa — aguardando implantação" readonly><input type="hidden" name="status" value="suspended"><small>A ativação é liberada somente pelo fluxo guiado.</small></label><?php endif;?>
         <label>Inscrição estadual<input maxlength="40" name="state_registration" value="<?= $escape($organization['state_registration']??'') ?>"></label>
         <label>Inscrição municipal<input maxlength="40" name="municipal_registration" value="<?= $escape($organization['municipal_registration']??'') ?>"></label>
-      </div>
-    </section>
-
-    <section class="card organization-section" id="acesso" data-organization-panel="acesso" hidden>
-      <header class="organization-section-header"><span class="organization-section-icon"><i class="fa-solid fa-globe"></i></span><div><h2>Acesso e site público</h2><p class="meta">O painel fica no Mundo Inter; o domínio público pode continuar com o e-mail no provedor atual.</p></div></header>
-      <div class="organization-fields">
+        <div class="field-full organization-help"><i class="fa-solid fa-globe"></i><span>Acesso ao painel e site público</span></div>
         <label class="field-full">Login exclusivo da franquia *<div class="input-prefix"><span>mundointer.com.br/</span><input required maxlength="100" name="panel_slug" value="<?= $escape($organization['panel_slug']??'') ?>" placeholder="nome-da-franquia"></div><small>Endereço usado pela equipe da franquia para entrar no painel.</small></label>
         <label class="field-full">Domínio público do site<input maxlength="253" name="site_host" value="<?= $escape($siteDomain['host']??'') ?>" placeholder="www.franquiatal.com.br"><small>Informe somente o domínio, sem caminhos internos.</small></label>
         <label class="checkbox-row field-full"><input type="checkbox" name="domain_active" value="1" <?= ($siteDomain['status']??'pending')==='active'?'checked':'' ?>> Domínio público já validado e ativo</label>
@@ -83,16 +77,13 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
         <label class="field-third">Cor principal *<div class="color-field"><input type="color" name="primary_color" value="<?= $escape($organization['primary_color']??'#ed1c24') ?>"><input aria-label="Cor principal em hexadecimal" maxlength="7" value="<?= $escape($organization['primary_color']??'#ed1c24') ?>" data-color-text readonly></div></label>
         <label class="field-third">Cor secundária<div class="color-field"><input type="color" name="secondary_color" value="<?= $escape($organization['secondary_color']??'#102a56') ?>"><input aria-label="Cor secundária em hexadecimal" maxlength="7" value="<?= $escape($organization['secondary_color']??'#102a56') ?>" data-color-text readonly></div></label>
         <label class="field-third">Título do login<input maxlength="160" name="login_title" value="<?= $escape($organization['login_title']??'') ?>" placeholder="Ex.: Portal da Franquia"></label>
-        <label class="field-full">Mensagem de boas-vindas<input maxlength="500" name="login_welcome_text" value="<?= $escape($organization['login_welcome_text']??'') ?>" placeholder="Use suas credenciais para continuar."></label>
         <label>Logo da franquia<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG ou WebP, até 3 MB.</small><?php if($logo!==''):?><span class="organization-brand-preview"><img src="<?= $escape($basePath.$logo) ?>" alt="Logo atual"><label class="checkbox-row"><input type="checkbox" name="remove_logo" value="1"> Remover logo atual</label></span><?php endif;?></label>
         <label>Favicon<input type="file" name="favicon" accept="image/png,image/jpeg,image/webp"><small>Use uma imagem quadrada.</small><?php if($favicon!==''):?><span class="organization-brand-preview icon"><img src="<?= $escape($basePath.$favicon) ?>" alt="Favicon atual"><label class="checkbox-row"><input type="checkbox" name="remove_favicon" value="1"> Remover favicon atual</label></span><?php endif;?></label>
-        <label>E-mail de suporte<input type="email" maxlength="190" name="support_email" value="<?= $escape($organization['support_email']??'') ?>" placeholder="suporte@franquia.com.br"></label>
-        <label>Telefone de suporte<input maxlength="30" name="support_phone" value="<?= $escape($organization['support_phone']??'') ?>" placeholder="(00) 00000-0000"></label>
       </div>
     </section>
 
     <footer class="organization-savebar" data-organization-savebar><p class="meta"><i class="fa-solid fa-shield-halved"></i> O financeiro e o modelo comercial são concluídos no fluxo de implantação, após a conferência.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar franquia</button></footer>
   </form>
-  <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
+  <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
 </div>

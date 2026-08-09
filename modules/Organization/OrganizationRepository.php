@@ -87,6 +87,15 @@ final readonly class OrganizationRepository
     }
     public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath):void
     {$s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');}
+    public function updateAvaCommunication(int$id,string$welcome,string$email,string$phone):void
+    {
+        $welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);
+        if($this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
+        if($email!==''&&filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail de suporte válido.');
+        if(mb_strlen($welcome)>500||mb_strlen($phone)>30)throw new RuntimeException('Um dos textos de comunicação do AVA excede o tamanho permitido.');
+        $s=$this->database->prepare('UPDATE organizations SET login_welcome_text=:welcome,support_email=:email,support_phone=:phone WHERE id=:id');
+        $s->execute(['welcome'=>$welcome!==''?$welcome:null,'email'=>$email!==''?$email:null,'phone'=>$phone!==''?$phone:null,'id'=>$id]);
+    }
     public function saveFinanceSettings(int$id,array$data):void
     {
         $wallet=trim((string)($data['asaas_wallet_id']??''));$status=(string)($data['asaas_wallet_status']??'not_configured');$split=($data['split_enabled']??false)===true;$notes=trim((string)($data['asaas_finance_notes']??''));

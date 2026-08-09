@@ -1045,6 +1045,28 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($services,'core_user_create_users'));
 };
 
+$tests['organiza cadastro da franquia e comunicacao do AVA'] = static function () use ($rootPath): void {
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $ava=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $plugin=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php');
+    $tabs=['dados','endereco','contatos','documentos','marca','ava'];
+    $last=-1;
+    foreach($tabs as$tab){$position=strpos($form,'data-organization-tab="'.$tab.'"');assertTrue($position!==false&&$position>$last);$last=$position;}
+    assertTrue(!str_contains($form,'data-organization-tab="acesso"'));
+    assertTrue(str_contains($form,'name="panel_slug"'));
+    assertTrue(!str_contains($form,'name="login_welcome_text"'));
+    assertTrue(str_contains($ava,'name="login_welcome_text"'));
+    assertTrue(str_contains($ava,'name="support_email"'));
+    assertTrue(str_contains($ava,'name="support_phone"'));
+    assertTrue(str_contains($repository,'updateAvaCommunication'));
+    assertTrue(str_contains($routes,'updateAvaCommunication'));
+    assertTrue(str_contains($plugin,'mundointer-login-support'));
+    assertTrue(str_contains($plugin,'data-support-email'));
+    assertTrue(str_contains($plugin,'data-support-phone'));
+};
+
 $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260808_970000_create_ava_connection_checks.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php');
@@ -1058,7 +1080,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.3.5',$metadata['release']);
+    assertSame('0.3.6',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1078,7 +1100,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.3.5'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.3.6'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));

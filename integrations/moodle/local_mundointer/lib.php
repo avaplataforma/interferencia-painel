@@ -115,6 +115,27 @@ function local_mundointer_before_standard_html_head(): string
     margin-top: .25rem;
     line-height: 1.35;
 }
+.mundointer-login-support {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .45rem .9rem;
+    flex-wrap: wrap;
+    margin-top: 1.35rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dfe5ea;
+    color: #647482;
+    font-size: .88rem;
+    text-align: center;
+}
+.mundointer-login-support strong {
+    color: var(--mundointer-secondary);
+}
+.mundointer-login-support a {
+    color: var(--mundointer-primary);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
 
 /* Trema: reuse its native navbar-brand link instead of adding another bar. */
 .mundointer-navbar-brand {
@@ -173,10 +194,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $welcome = s((string)$brand['welcome_text']);
     $slug = s((string)$brand['slug']);
     $favicon = s((string)$brand['favicon_url']);
+    $supportemail = s((string)($brand['support_email'] ?? ''));
+    $supportphone = s((string)($brand['support_phone'] ?? ''));
     $pagetitle = s((string)$brand['login_title'].' | AVA');
     $logohtml = $logo !== '' ? '<img src="'.$logo.'" alt="">' : '';
 
-    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'">'
+    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
@@ -213,6 +236,28 @@ function local_mundointer_before_standard_top_of_body_html(): string
                 });
                 brand.classList.add("mundointer-login-brand");
                 loginContainer.insertBefore(brand, loginContainer.firstChild);
+                var supportEmail = brand.getAttribute("data-support-email") || "";
+                var supportPhone = brand.getAttribute("data-support-phone") || "";
+                if ((supportEmail || supportPhone) && !loginContainer.querySelector(".mundointer-login-support")) {
+                    var support = document.createElement("div");
+                    support.className = "mundointer-login-support";
+                    var supportLabel = document.createElement("strong");
+                    supportLabel.textContent = "Suporte";
+                    support.appendChild(supportLabel);
+                    if (supportEmail) {
+                        var emailLink = document.createElement("a");
+                        emailLink.href = "mailto:" + supportEmail;
+                        emailLink.textContent = supportEmail;
+                        support.appendChild(emailLink);
+                    }
+                    if (supportPhone) {
+                        var phoneLink = document.createElement("a");
+                        phoneLink.href = "tel:" + supportPhone.replace(/[^0-9+]/g, "");
+                        phoneLink.textContent = supportPhone;
+                        support.appendChild(phoneLink);
+                    }
+                    loginContainer.appendChild(support);
+                }
                 return;
             }
         }
