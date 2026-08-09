@@ -1150,6 +1150,7 @@ $tests['cadastra múltiplos polos e grava a identidade estável no AVA'] = stati
     assertTrue(str_contains($fields,"'mundointer_pole'=>'Polo Mundo Inter'"));
     assertTrue(str_contains($sync,'local_mundointer_migrate_profile_identities'));
     assertTrue(str_contains($resolver,'byCode'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),"['migrated']"));
 };
 
 $tests['mapeia Polo Presencial para franquias com diagnóstico agregado e seguro'] = static function () use ($rootPath): void {
