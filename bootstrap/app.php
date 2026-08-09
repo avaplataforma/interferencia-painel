@@ -161,7 +161,9 @@ $financeCampaigns = new CampaignRepository($database);
 $tickets = new TicketRepository($database);
 $ticketDepartments = new DepartmentRepository($database);
 $ticketFiles = new MediaStorage($rootPath . '/storage/tickets',$spacesStorage,$storageScope,$organizationId,'Tickets');
-$financeIntegrations = new IntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
+$financeSecretCipher = new SecretCipher((string)$config->get('app.encryption_key'));
+$financeIntegrations = new IntegrationRepository($database,$financeSecretCipher);
+$organizationFinanceIntegrations = new \Interferencia\Modules\Finance\OrganizationIntegrationRepository($database,$financeSecretCipher);
 $moodleIntegrations = new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $avaConnections = new AvaConnectionRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $avaBrands = new AvaBrandCatalog($database,'https://'.($centralHost??$config->string('app.central_host')));
@@ -176,9 +178,11 @@ $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $pedagogicalSynchronizer=new PedagogicalSynchronizer($moodleClient,$moodleRepository);
 $asaasSettings=$financeIntegrations->asaas('production');
 $asaasSandboxSettings=$financeIntegrations->asaas('sandbox');
-$asaasEnvironment=$asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment');
-$asaasApiKey=$asaasSettings['configured']&&$asaasSettings['is_active']?(string)$asaasSettings['api_key']:(string)$config->get('app.asaas_api_key');
-$asaasWebhookToken=$asaasSettings['configured']?(string)$asaasSettings['webhook_token']:(string)$config->get('app.asaas_webhook_token');
+$organizationAsaasSettings=$organizationFinanceIntegrations->asaas($organizationId);
+$usesExclusiveAsaas=!$isCentralContext&&$organizationFinanceIntegrations->usesExclusiveAsaas($organizationId);
+$asaasEnvironment=$usesExclusiveAsaas?(string)$organizationAsaasSettings['environment']:($asaasSettings['configured']?(string)$asaasSettings['environment']:(string)$config->get('app.asaas_environment'));
+$asaasApiKey=$usesExclusiveAsaas?(string)$organizationAsaasSettings['api_key']:($asaasSettings['configured']&&$asaasSettings['is_active']?(string)$asaasSettings['api_key']:(string)$config->get('app.asaas_api_key'));
+$asaasWebhookToken=$usesExclusiveAsaas?(string)$organizationAsaasSettings['webhook_token']:($asaasSettings['configured']?(string)$asaasSettings['webhook_token']:(string)$config->get('app.asaas_webhook_token'));
 $splitLifecycle=static function(string$phase,array$context)use($franchiseContracts,$organizationId):mixed{if($phase==='prepare')return$franchiseContracts->prepareSplit($organizationId,(float)$context['gross'],(string)$context['reference']);$prepared=$context['prepared'];if($phase==='complete'){$franchiseContracts->completeSplit((int)$prepared['attempt_id'],$context['result']);return null;}if($phase==='fail')$franchiseContracts->failSplit((int)$prepared['attempt_id'],(string)$context['error']);return null;};
 $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas_payments_write_enabled'),$splitLifecycle);
 $franchiseContractBilling = new FranchiseContractBillingService($franchiseContracts,$asaas);
@@ -186,7 +190,7 @@ $franchiseSandboxTests = new \Interferencia\Modules\Organization\FranchiseSandbo
 $asaasSandbox = new AsaasClient('sandbox',$asaasSandboxSettings['configured']&&$asaasSandboxSettings['is_active']?(string)$asaasSandboxSettings['api_key']:'',true);
 $franchiseSandboxBilling = new \Interferencia\Modules\Organization\FranchiseSandboxBillingService($franchiseSandboxTests,$asaasSandbox);
 $asaasSynchronizer = new AsaasSynchronizer($asaas,$finance);
-$asaasWebhook = new AsaasWebhookVerifier([$asaasWebhookToken,(string)$asaasSandboxSettings['webhook_token']]);
+$asaasWebhook = new AsaasWebhookVerifier($usesExclusiveAsaas?[$asaasWebhookToken]:[$asaasWebhookToken,(string)$asaasSandboxSettings['webhook_token']]);
 $auth = new Auth($users,new PasswordHasher(),$session,$csrf,$isCentralContext?'platform':'franchise');
 $router = new Router($effectiveBasePath, $csrf);
 $view = new View($rootPath . '/views');
@@ -249,6 +253,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);

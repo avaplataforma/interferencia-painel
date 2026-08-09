@@ -1052,7 +1052,7 @@ $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function (
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $plugin=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php');
-    $tabs=['dados','endereco','contatos','documentos','marca','ava','polos'];
+    $tabs=['dados','endereco','contatos','documentos','marca','ava','polos','integracoes'];
     $last=-1;
     foreach($tabs as$tab){$position=strpos($form,'data-organization-tab="'.$tab.'"');assertTrue($position!==false&&$position>$last);$last=$position;}
     assertTrue(!str_contains($form,'data-organization-tab="acesso"'));
@@ -1176,6 +1176,33 @@ $tests['mapeia Polo Presencial para franquias com diagnóstico agregado e seguro
     assertTrue(str_contains($routes,"'/admin/platform/painel-inter/poles/{id:\\d+}/delete'"));
     assertTrue(str_contains($view,'Polo Presencial e franquias'));
     assertTrue(str_contains($view,'Atualizar diagnóstico'));
+};
+
+$tests['isola a conta Asaas exclusiva de cada franquia com fallback central seguro'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_992000_create_organization_finance_integrations.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Finance/OrganizationIntegrationRepository.php');
+    $finance=(string)file_get_contents($rootPath.'/modules/Finance/FinanceRepository.php');
+    $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/integrations.php');
+    assertTrue(str_contains($migration,'CREATE TABLE organization_finance_integrations'));
+    assertTrue(str_contains($migration,"account_mode IN ('central','exclusive')"));
+    assertTrue(str_contains($migration,'finance_webhook_event_org_unique'));
+    assertTrue(str_contains($migration,'PRIMARY KEY (organization_id, resource)'));
+    assertTrue(str_contains($repository,'SecretCipher'));
+    assertTrue(str_contains($repository,'usesExclusiveAsaas'));
+    assertTrue(str_contains($repository,"last_test_status'] === 'success'"));
+    assertTrue(str_contains($finance,'WHERE organization_id=:organization AND asaas_event_id=:id'));
+    assertTrue(str_contains($finance,'WHERE organization_id=:organization AND resource=:resource'));
+    assertTrue(str_contains($bootstrap,'!$isCentralContext&&$organizationFinanceIntegrations->usesExclusiveAsaas'));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/integrations/asaas'"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/integrations/asaas/test'"));
+    assertTrue(str_contains($form,'data-organization-tab="integracoes"'));
+    assertTrue(str_contains($view,'name="account_mode"'));
+    assertTrue(str_contains($view,'Conta central Mundo Inter'));
+    assertTrue(str_contains($view,'Conta Asaas exclusiva'));
+    assertTrue(str_contains($view,'Webhook exclusivo'));
 };
 
 $failures = 0;

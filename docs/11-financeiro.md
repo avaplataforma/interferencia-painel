@@ -5,6 +5,17 @@ modelo multitenant definitivo permitirá conexões diferentes por organização 
 alterar pedidos, matrículas e histórico financeiro. Consulte
 `20-gateways-de-pagamento.md`.
 
+## Conta Asaas por franquia
+
+O ADM Central escolhe, na aba **Integrações** do cadastro da franquia, entre dois modos:
+
+- **Conta central Mundo Inter:** mantém a operação central, com as regras contratuais de split e repasse.
+- **Conta Asaas exclusiva:** guarda a chave criptografada e usa uma URL e um token de webhook próprios da franquia.
+
+A credencial exclusiva somente assume novas operações depois de estar ativa e passar pelo teste de conexão. Uma chave nova, uma troca de ambiente ou uma falha de teste mantém o fallback para a conta central. O histórico anterior não é transferido entre contas.
+
+Eventos e cursores de sincronização são isolados por franquia para impedir colisões de identificadores entre contas Asaas diferentes.
+
 ## Liberação acadêmica após pagamento
 
 Quando o webhook do Asaas confirmar uma cobrança vinculada a uma matrícula, o Painel tenta liberar automaticamente o aluno no AVA. O processo é idempotente: reutiliza usuários existentes por CPF ou e-mail, evita matrículas duplicadas e registra falhas como pendências sem interromper o recebimento do webhook financeiro.
