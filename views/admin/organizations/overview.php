@@ -30,16 +30,29 @@ $billingStatus=$latest===null?'Aguardando contrato':($billingLabels[$latest['bil
 </div>
 
 <section class="card mb-4" id="implantacao">
- <div class="card-header"><div><p class="eyebrow">Fluxo guiado</p><h2>Implantação da franquia</h2><p class="meta">Conclua os requisitos em sequência. A ativação só é liberada quando a operação estiver pronta.</p></div><span class="badge <?= $implementation['ready_to_activate']?'badge-success':'badge-warning' ?>"><?= (int)$implementation['required_done'] ?>/<?= (int)$implementation['required_total'] ?> obrigatórios</span></div>
+ <div class="card-header"><div><p class="eyebrow">Fluxo guiado</p><h2>Implantação da franquia</h2><p class="meta">Uma visão única do cadastro, contrato, financeiro, acessos, AVA e identidade.</p></div><div class="implementation-score"><strong><?= (int)$implementation['progress'] ?>%</strong><span class="badge <?= $implementation['ready_to_activate']?'badge-success':'badge-warning' ?>"><?= (int)$implementation['required_done'] ?>/<?= (int)$implementation['required_total'] ?> obrigatórios</span></div></div>
  <div class="p-4">
   <div class="implementation-progress mb-4" role="progressbar" aria-valuenow="<?= (int)$implementation['progress'] ?>" aria-valuemin="0" aria-valuemax="100"><span style="width:<?= (int)$implementation['progress'] ?>%"></span></div>
-  <div class="row g-3"><?php foreach($implementation['steps'] as$position=>$step):?><?php
-   $action=(string)$step['action'];$href='';
-   if($action!==''){$href=str_starts_with($action,'#')?$action:(in_array($action,['/edit','/contracts'],true)?$basePath.'/admin/organizations/'.(int)$organization['id'].$action:$basePath.$action);}
-  ?><div class="col-md-6 col-xl-4"><article class="implementation-step <?= $step['done']?'is-done':'is-pending' ?> h-100">
-   <div class="implementation-step-icon"><i class="fa-solid <?= $escape((string)$step['icon']) ?>"></i></div>
-   <div class="implementation-step-content"><div class="d-flex justify-content-between gap-2"><small>Etapa <?= (int)$position+1 ?></small><span class="badge <?= $step['done']?'badge-success':'badge-warning' ?>"><?= $step['done']?'Concluída':'Pendente' ?></span></div><strong><?= $escape((string)$step['label']) ?></strong><p><?= $escape((string)$step['detail']) ?></p><?php if(!$step['done']):?><div class="implementation-step-actions"><?php if($href!==''):?><a href="<?= $escape($href) ?>">Resolver agora <i class="fa-solid fa-arrow-right"></i></a><?php endif;?><?php if($step['kind']==='required'&&$application!==null):?><?php if(in_array($step['id'],$implementationTickets,true)):?><a class="implementation-ticket-open" href="<?= $escape($basePath) ?>/admin/tickets?q=<?= rawurlencode((string)$step['label']) ?>"><i class="fa-solid fa-ticket"></i> Ticket aberto</a><?php else:?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/implementation/<?= $escape((string)$step['id']) ?>/ticket"><?= $csrfField ?><button type="submit"><i class="fa-regular fa-bell"></i> Criar ticket</button></form><?php endif;?><?php endif;?></div><?php endif;?></div>
-  </article></div><?php endforeach;?></div>
+  <?php $implementationSections=[
+   ['title'=>'Essencial para ativar','description'=>'Estes itens protegem a operação e bloqueiam a ativação enquanto estiverem pendentes.','steps'=>$implementation['required_steps'],'recommended'=>false],
+   ['title'=>'Preparação recomendada','description'=>'Complete quando possível. Estes itens melhoram a operação, mas não bloqueiam a ativação.','steps'=>$implementation['recommended_steps'],'recommended'=>true],
+  ]; ?>
+  <?php foreach($implementationSections as$section):?>
+   <div class="implementation-section <?= $section['recommended']?'is-recommended':'' ?>">
+    <div class="implementation-section-heading"><div><h3><?= $escape($section['title']) ?></h3><p class="meta"><?= $escape($section['description']) ?></p></div><?php if($section['recommended']):?><span class="badge"><?= (int)$implementation['recommended_done'] ?>/<?= (int)$implementation['recommended_total'] ?> concluídos</span><?php endif;?></div>
+    <div class="row g-3"><?php foreach($section['steps'] as$step):?><?php
+     $action=(string)$step['action'];$href='';
+     if($action!==''){
+      if(str_starts_with($action,'#')){$href=$action;}
+      elseif(str_starts_with($action,'/edit')||str_starts_with($action,'/contracts')){$href=$basePath.'/admin/organizations/'.(int)$organization['id'].$action;}
+      else{$href=$basePath.$action;}
+     }
+    ?><div class="col-md-6 col-xl-4"><article class="implementation-step <?= $step['done']?'is-done':($section['recommended']?'is-recommended':'is-pending') ?> h-100">
+     <div class="implementation-step-icon"><i class="fa-solid <?= $escape((string)$step['icon']) ?>"></i></div>
+     <div class="implementation-step-content"><div class="d-flex justify-content-between gap-2"><small><?= $escape((string)$step['group']) ?></small><span class="badge <?= $step['done']?'badge-success':($section['recommended']?'':'badge-warning') ?>"><?= $step['done']?'Concluído':($section['recommended']?'Recomendado':'Pendente') ?></span></div><strong><?= $escape((string)$step['label']) ?></strong><p><?= $escape((string)$step['detail']) ?></p><?php if(!$step['done']):?><div class="implementation-step-actions"><?php if($href!==''):?><a href="<?= $escape($href) ?>">Resolver agora <i class="fa-solid fa-arrow-right"></i></a><?php endif;?><?php if(!$section['recommended']&&$application!==null):?><?php if(in_array($step['id'],$implementationTickets,true)):?><a class="implementation-ticket-open" href="<?= $escape($basePath) ?>/admin/tickets?q=<?= rawurlencode((string)$step['label']) ?>"><i class="fa-solid fa-ticket"></i> Ticket aberto</a><?php else:?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/implementation/<?= $escape((string)$step['id']) ?>/ticket"><?= $csrfField ?><button type="submit"><i class="fa-regular fa-bell"></i> Criar ticket</button></form><?php endif;?><?php endif;?></div><?php endif;?></div>
+    </article></div><?php endforeach;?></div>
+   </div>
+  <?php endforeach;?>
   <div class="implementation-activation mt-4"><div><strong><?= $organizationActive?'Franquia ativa':'Ativação final' ?></strong><p class="meta mb-0"><?= $organizationActive?'O login exclusivo e a operação da franquia estão liberados.':($implementation['ready_to_activate']?'Todos os requisitos obrigatórios foram concluídos.':'Ainda faltam '.count($implementation['missing']).' requisito(s) obrigatório(s).') ?></p></div><?php if($organizationActive):?><span class="badge badge-success"><i class="fa-solid fa-circle-check"></i> Ativa</span><?php else:?><form method="post" action="<?= $escape($basePath) ?>/admin/organizations/<?= (int)$organization['id'] ?>/activate"><?= $csrfField ?><button class="button button-primary" type="submit" <?= !$implementation['ready_to_activate']?'disabled':'' ?>><i class="fa-solid fa-power-off"></i> Ativar franquia</button></form><?php endif;?></div>
   <?php if(!$organizationActive&&!$implementation['ready_to_activate']):?><div class="alert alert-warning mt-3 mb-0"><strong>Ativação protegida.</strong> Conclua: <?= $escape(implode(', ',$implementation['missing'])) ?>.</div><?php endif;?>
  </div>

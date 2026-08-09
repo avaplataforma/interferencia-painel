@@ -331,10 +331,18 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .table-actions form { margin: 0; }
     .implementation-progress { height: .65rem; overflow: hidden; border-radius: 999px; background: #edf1f4; }
     .implementation-progress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--inter-accent),#ff6268); transition: width .25s ease; }
+    .implementation-score { display: flex; align-items: center; gap: .75rem; }
+    .implementation-score > strong { font-size: 1.45rem; line-height: 1; }
+    .implementation-section + .implementation-section { margin-top: 1.75rem; padding-top: 1.5rem; border-top: 1px solid #e2e7eb; }
+    .implementation-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
+    .implementation-section-heading h3 { margin: 0 0 .2rem; font-size: 1rem; }
+    .implementation-section-heading p { margin: 0; }
     .implementation-step { display: grid; grid-template-columns: 2.8rem minmax(0,1fr); gap: .8rem; padding: 1rem; border: 1px solid #dce3e8; border-radius: .85rem; background: #fff; }
     .implementation-step.is-done { border-color: #b9dfca; background: #fbfffc; }
+    .implementation-step.is-recommended { border-style: dashed; background: #fbfcfd; }
     .implementation-step-icon { display: grid; place-items: center; align-self: start; width: 2.8rem; height: 2.8rem; border-radius: .7rem; color: #9a6000; background: #fff0c7; }
     .implementation-step.is-done .implementation-step-icon { color: #087443; background: #def5e8; }
+    .implementation-step.is-recommended .implementation-step-icon { color: #496171; background: #eaf0f4; }
     .implementation-step-content { display: grid; align-content: start; gap: .35rem; min-width: 0; }
     .implementation-step-content small { color: var(--inter-muted); }
     .implementation-step-content strong { line-height: 1.3; }
@@ -346,6 +354,9 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .implementation-step-actions .implementation-ticket-open { color: #8a5a00; }
     .implementation-activation { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; border: 1px solid #dce3e8; border-radius: .85rem; background: #f8fafb; }
     .implementation-activation form { margin: 0; }
+    @media (max-width: 700px) {
+      .implementation-score, .implementation-section-heading { align-items: flex-start; flex-direction: column; }
+    }
     .guest-card { width: min(30rem, calc(100% - 2rem)); }
     .guest-card-wide { width: min(82rem, calc(100% - 3rem)); }
     @media (min-width: 576px) { .d-sm-block { display: block; } .col-sm-6 { width: 50%; } }

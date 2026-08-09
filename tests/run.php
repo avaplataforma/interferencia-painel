@@ -935,7 +935,9 @@ $tests['protege a ativação pelo fluxo de implantação da franquia'] = static 
     $view=(string)file_get_contents($rootPath.'/views/admin/organizations/overview.php');
     assertTrue(str_contains($service,'ready_to_activate'));
     assertTrue(str_contains($service,'Cadastro conferido'));
-    assertTrue(str_contains($service,'AVA e integrações vinculados'));
+    assertTrue(str_contains($service,'AVA conectado e testado'));
+    assertTrue(str_contains($service,'Polo operacional definido'));
+    assertTrue(str_contains($service,'Preparação recomendada')||str_contains($view,'Preparação recomendada'));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/activate'"));
     assertTrue(str_contains($routes,"'status'=>'suspended'"));
     assertTrue(str_contains($repository,'implementationFacts'));
@@ -950,10 +952,11 @@ $tests['avalia os requisitos obrigatórios da implantação'] = static function 
     $organization=['legal_name'=>'Inter Treinamento','display_name'=>'Inter','cnpj'=>'05095152000139','manager_name'=>'Gestor','manager_email'=>'gestor@example.com','manager_phone'=>'48999999999','panel_slug'=>'inter','logo_path'=>'/logo.png','favicon_path'=>'/favicon.png','asaas_wallet_status'=>'validated','asaas_wallet_id'=>'wallet','split_enabled'=>1,'status'=>'suspended'];
     $domains=[['purpose'=>'site','status'=>'active','is_primary'=>1]];
     $contract=['status'=>'signed','commercial_model'=>'split_only','sales_fee_percentage'=>20,'monthly_fixed_amount'=>0];
-    $implementation=\Interferencia\Modules\Organization\FranchiseImplementation::evaluate($organization,$domains,$contract,['active_admins'=>1,'active_ava_integrations'=>1]);
-    assertSame(8,$implementation['required_done']);
+    $implementation=\Interferencia\Modules\Organization\FranchiseImplementation::evaluate($organization,$domains,$contract,['active_admins'=>1,'active_ava_integrations'=>1,'active_poles'=>1,'primary_poles'=>1,'finance_account_ready'=>1,'finance_account_mode'=>'central','franchise_documents'=>1]);
+    assertSame(9,$implementation['required_done']);
     assertTrue($implementation['ready_to_activate']);
     assertSame(100,$implementation['progress']);
+    assertSame(1,$implementation['recommended_done']);
 };
 
 $tests['integra DigitalOcean Spaces com isolamento por franquia'] = static function () use ($rootPath): void {

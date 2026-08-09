@@ -34,14 +34,31 @@ final readonly class OrganizationRepository
     public function allWithPrimaryDomain():array{return$this->database->query("SELECT o.*,d.host primary_host,d.status domain_status,(SELECT COUNT(*) FROM units u WHERE u.organization_id=o.id) unit_count,(SELECT COUNT(*) FROM organization_users m WHERE m.organization_id=o.id AND m.status='active') user_count,(SELECT a.id FROM franchise_applications a WHERE a.organization_id=o.id ORDER BY a.id DESC LIMIT 1) franchise_application_id,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.organization_id=o.id) contract_count FROM organizations o LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.is_primary=1 AND d.purpose='site' ORDER BY o.display_name")->fetchAll();}
     public function findRecord(int$id):?array{$s=$this->database->prepare('SELECT * FROM organizations WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function domains(int$id):array{$s=$this->database->prepare('SELECT * FROM organization_domains WHERE organization_id=:id ORDER BY is_primary DESC,purpose,host');$s->execute(['id'=>$id]);return$s->fetchAll();}
-    /** @return array{active_admins:int,active_ava_integrations:int} */
+    /** @return array<string,int|string> */
     public function implementationFacts(int$id):array
     {
         $admins=$this->database->prepare("SELECT COUNT(DISTINCT membership.user_id) FROM organization_users membership INNER JOIN users u ON u.id=membership.user_id WHERE membership.organization_id=:organization AND membership.status='active' AND u.is_active=1 AND (membership.is_owner=1 OR EXISTS(SELECT 1 FROM user_roles ur INNER JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=membership.user_id AND r.code='super_admin'))");
         $admins->execute(['organization'=>$id]);
-        $ava=$this->database->prepare("SELECT COUNT(*) FROM moodle_integrations WHERE organization_id=:organization AND is_active=1 AND base_url IS NOT NULL AND base_url<>'' AND token_encrypted IS NOT NULL AND token_encrypted<>''");
+        $ava=$this->database->prepare("SELECT COUNT(*) FROM organization_ava_settings settings LEFT JOIN ava_connections shared ON shared.id=settings.shared_connection_id LEFT JOIN ava_connections own ON own.id=settings.own_connection_id WHERE settings.organization_id=:organization AND ((settings.access_mode='shared' AND shared.is_active=1 AND NULLIF(shared.base_url,'') IS NOT NULL AND NULLIF(shared.token_encrypted,'') IS NOT NULL AND shared.last_tested_at IS NOT NULL AND shared.last_error IS NULL) OR (settings.access_mode='own' AND own.is_active=1 AND NULLIF(own.base_url,'') IS NOT NULL AND NULLIF(own.token_encrypted,'') IS NOT NULL AND own.last_tested_at IS NOT NULL AND own.last_error IS NULL) OR (settings.access_mode='both' AND shared.is_active=1 AND NULLIF(shared.base_url,'') IS NOT NULL AND NULLIF(shared.token_encrypted,'') IS NOT NULL AND shared.last_tested_at IS NOT NULL AND shared.last_error IS NULL AND own.is_active=1 AND NULLIF(own.base_url,'') IS NOT NULL AND NULLIF(own.token_encrypted,'') IS NOT NULL AND own.last_tested_at IS NOT NULL AND own.last_error IS NULL))");
         $ava->execute(['organization'=>$id]);
-        return['active_admins'=>(int)$admins->fetchColumn(),'active_ava_integrations'=>(int)$ava->fetchColumn()];
+        $poles=$this->database->prepare('SELECT COUNT(*) active_poles,COALESCE(SUM(is_primary=1),0) primary_poles FROM organization_poles WHERE organization_id=:organization AND is_active=1');
+        $poles->execute(['organization'=>$id]);$poleFacts=$poles->fetch()?:[];
+        $documents=$this->database->prepare("SELECT COUNT(*) FROM managed_documents WHERE organization_id=:organization AND scope='franchise' AND deleted_at IS NULL");
+        $documents->execute(['organization'=>$id]);
+        $finance=$this->database->prepare("SELECT account_mode,is_active,last_test_status,NULLIF(api_key_encrypted,'') IS NOT NULL configured FROM organization_finance_integrations WHERE organization_id=:organization AND provider='asaas' LIMIT 1");
+        $finance->execute(['organization'=>$id]);$financeSettings=$finance->fetch()?:[];
+        $financeMode=(string)($financeSettings['account_mode']??'central');
+        if($financeMode==='exclusive'){$financeReady=(int)($financeSettings['is_active']??0)===1&&(int)($financeSettings['configured']??0)===1&&($financeSettings['last_test_status']??'')==='success';}
+        else{$central=$this->database->query("SELECT COUNT(*) FROM finance_integrations WHERE provider='asaas' AND environment='production' AND is_active=1 AND NULLIF(api_key_encrypted,'') IS NOT NULL");$financeReady=(int)$central->fetchColumn()>0;}
+        return[
+            'active_admins'=>(int)$admins->fetchColumn(),
+            'active_ava_integrations'=>(int)$ava->fetchColumn(),
+            'active_poles'=>(int)($poleFacts['active_poles']??0),
+            'primary_poles'=>(int)($poleFacts['primary_poles']??0),
+            'franchise_documents'=>(int)$documents->fetchColumn(),
+            'finance_account_ready'=>(int)$financeReady,
+            'finance_account_mode'=>$financeMode,
+        ];
     }
     public function setStatus(int$id,string$status):void
     {
