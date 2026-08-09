@@ -286,7 +286,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
                         phoneLink.appendChild(document.createTextNode(supportPhone));
                         support.appendChild(phoneLink);
                     }
-                    (loginContainer.querySelector("main") || loginContainer).appendChild(support);
+                    (loginContainer.querySelector("[role=\"main\"]") || loginContainer.querySelector("main") || loginContainer).appendChild(support);
                 }
                 return;
             }
