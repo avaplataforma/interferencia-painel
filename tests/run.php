@@ -1058,7 +1058,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.2.0',$metadata['release']);
+    assertSame('0.3.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1077,7 +1077,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.2.0'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.3.0'"));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($routes,"'/admin/platform/painel-inter/brands/sync'"));
     assertTrue(str_contains($view,'Identidades do AVA compartilhado'));
