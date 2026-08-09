@@ -95,6 +95,35 @@ final readonly class AvaConnectionRepository
         $this->database->prepare('UPDATE ava_connections SET plugin_last_error=:error WHERE id=:id')->execute(['error'=>$error,'id'=>$connectionId]);
     }
 
+    /** @param array<string,mixed>|null $pluginInfo */
+    public function recordHealthCheck(int $connectionId,bool $moodleConnected,?array $pluginInfo,?string $error,string $expectedVersion): void
+    {
+        $pluginStatus='unknown';$installedVersion=null;
+        if($moodleConnected&&$pluginInfo!==null){
+            $installedVersion=(string)($pluginInfo['pluginversion']??'');
+            $pluginStatus=($pluginInfo['status']??'ok')==='disabled'?'disabled':($installedVersion!==''&&version_compare($installedVersion,$expectedVersion,'<')?'outdated':'current');
+        }elseif($moodleConnected){$pluginStatus='missing';}
+        $this->database->beginTransaction();
+        try{
+            if(!$moodleConnected){
+                $this->database->prepare('UPDATE ava_connections SET last_tested_at=NOW(),last_error=:error WHERE id=:id')->execute(['error'=>$error,'id'=>$connectionId]);
+            }elseif($pluginInfo===null){
+                $this->database->prepare('UPDATE ava_connections SET last_tested_at=NOW(),last_error=NULL,plugin_last_error=:error WHERE id=:id')->execute(['error'=>$error,'id'=>$connectionId]);
+            }else{
+                $this->database->prepare('UPDATE ava_connections SET last_tested_at=NOW(),last_error=NULL,plugin_version=:version,plugin_release=:release,plugin_status=:status,plugin_last_error=NULL,last_seen_at=NOW() WHERE id=:id')->execute(['version'=>$installedVersion,'release'=>(string)($pluginInfo['release']??''),'status'=>(string)($pluginInfo['status']??'ok'),'id'=>$connectionId]);
+            }
+            $this->database->prepare('INSERT INTO ava_connection_checks(connection_id,moodle_status,plugin_status,installed_version,expected_version,message) VALUES(:connection,:moodle,:plugin,:installed,:expected,:message)')->execute(['connection'=>$connectionId,'moodle'=>$moodleConnected?'connected':'error','plugin'=>$pluginStatus,'installed'=>$installedVersion,'expected'=>$expectedVersion,'message'=>$error]);
+            $this->database->commit();
+        }catch(Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function recentChecks(int $limit=20): array
+    {
+        $limit=max(1,min(100,$limit));
+        try{return$this->database->query("SELECT h.*,c.name connection_name,c.connection_type,o.display_name organization_name FROM ava_connection_checks h JOIN ava_connections c ON c.id=h.connection_id LEFT JOIN organizations o ON o.id=c.organization_id ORDER BY h.checked_at DESC,h.id DESC LIMIT {$limit}")->fetchAll()?:[];}catch(Throwable){return[];}
+    }
+
     /** @return array<string,mixed>|null */
     private function connectionByKey(string $key): ?array
     {

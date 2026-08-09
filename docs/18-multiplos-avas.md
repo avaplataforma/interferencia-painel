@@ -157,7 +157,7 @@ da pessoa antes de bloquear a conta.
 - `organization_ava_settings` define se cada franquia usa o AVA compartilhado, o próprio ou ambos.
 - A aba **AVA** do cadastro da franquia concentra essa escolha e os testes de conexão.
 - **ADM → Integrações → AVA Cursos** administra a credencial global de `avacursos.com.br`.
-- **ADM → Painel Inter** monitora disponibilidade, versão do conector e erros por Moodle.
+- **ADM → Integrações → Painel Inter** distribui o ZIP oficial do plugin, compara a versão instalada, monitora a disponibilidade de cada Moodle e preserva o histórico das verificações.
 - A integração Moodle antiga é copiada para o registro compartilhado durante a migração, preservando o fluxo que já está em produção.
 
 ## Conector Moodle Mundo Inter

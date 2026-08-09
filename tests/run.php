@@ -1045,6 +1045,28 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($services,'core_user_create_users'));
 };
 
+$tests['distribui e monitora versoes do plugin Mundo Inter'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260808_970000_create_ava_connection_checks.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
+    assertTrue(str_contains($migration,'CREATE TABLE ava_connection_checks'));
+    assertTrue(str_contains($repository,'recordHealthCheck'));
+    assertTrue(str_contains($repository,'recentChecks'));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter/plugin/download'"));
+    assertTrue(str_contains($view,'Baixar ZIP oficial'));
+    assertTrue(str_contains($view,'Histórico de verificações'));
+    $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
+    $metadata=$manager->metadata();
+    assertSame('0.1.0',$metadata['release']);
+    $package=$manager->package();
+    assertTrue(str_starts_with($package['body'],'PK'));
+    assertTrue($package['size']>0);
+    assertSame(64,strlen($package['sha256']));
+    $outdated=$manager->deploymentStatus(['configured'=>true,'is_active'=>true,'last_error'=>null,'last_tested_at'=>date('Y-m-d H:i:s'),'plugin_last_error'=>null,'plugin_status'=>'ok','plugin_version'=>'2026080600','plugin_release'=>'0.0.9']);
+    assertSame('outdated',$outdated['code']);
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
