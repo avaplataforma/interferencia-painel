@@ -10,12 +10,20 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_sync_brands' => [
+        'classname' => 'local_mundointer\\external\\sync_brands',
+        'description' => 'Recebe do ADM Central as identidades visuais e os polos autorizados.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
     'Mundo Inter Connector' => [
         'functions' => [
             'local_mundointer_ping',
+            'local_mundointer_sync_brands',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_enrol_get_enrolled_users',

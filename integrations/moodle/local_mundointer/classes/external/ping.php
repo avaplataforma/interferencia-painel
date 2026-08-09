@@ -22,14 +22,19 @@ final class ping extends external_api
         self::validate_context(\context_system::instance());
         require_capability('local/mundointer:manage', \context_system::instance());
         $plugin = get_config('local_mundointer');
+        $catalog=json_decode((string)($plugin->brandcatalog ?? ''),true);
+        $brandcount=is_array($catalog)&&is_array($catalog['brands']??null)?count($catalog['brands']):0;
         return [
             'status' => !empty($plugin->enabled) ? 'ok' : 'disabled',
             'component' => 'local_mundointer',
-            'pluginversion' => (string)($plugin->version ?? '2026080700'),
-            'release' => '0.1.0',
+            'pluginversion' => (string)($plugin->version ?? '2026080800'),
+            'release' => '0.2.0',
             'siteuuid' => (string)($plugin->site_uuid ?? ''),
             'moodlerelease' => (string)$CFG->release,
             'servertime' => time(),
+            'brandcount' => $brandcount,
+            'brandversion' => (string)($plugin->brand_catalog_version ?? ''),
+            'brandsyncedat' => (int)($plugin->brand_synced_at ?? 0),
         ];
     }
 
@@ -43,6 +48,9 @@ final class ping extends external_api
             'siteuuid' => new external_value(PARAM_ALPHANUM, 'Identificador anônimo da instalação.'),
             'moodlerelease' => new external_value(PARAM_TEXT, 'Versão do Moodle.'),
             'servertime' => new external_value(PARAM_INT, 'Horário do servidor.'),
+            'brandcount' => new external_value(PARAM_INT, 'Quantidade de identidades disponíveis.'),
+            'brandversion' => new external_value(PARAM_ALPHANUM, 'Versão do catálogo de identidades.'),
+            'brandsyncedat' => new external_value(PARAM_INT, 'Última sincronização das identidades.'),
         ]);
     }
 }

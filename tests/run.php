@@ -1058,13 +1058,29 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.1.0',$metadata['release']);
+    assertSame('0.2.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
     assertSame(64,strlen($package['sha256']));
     $outdated=$manager->deploymentStatus(['configured'=>true,'is_active'=>true,'last_error'=>null,'last_tested_at'=>date('Y-m-d H:i:s'),'plugin_last_error'=>null,'plugin_status'=>'ok','plugin_version'=>'2026080600','plugin_release'=>'0.0.9']);
     assertSame('outdated',$outdated['code']);
+};
+
+$tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] = static function () use ($rootPath): void {
+    assertTrue(is_file($rootPath.'/modules/Moodle/AvaBrandCatalog.php'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_brands.php'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/local/brand_resolver.php'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/entrar.php'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/lib.php'));
+    $version=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
+    $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
+    assertTrue(str_contains($version,"\$plugin->release = '0.2.0'"));
+    assertTrue(str_contains($services,'local_mundointer_sync_brands'));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter/brands/sync'"));
+    assertTrue(str_contains($view,'Identidades do AVA compartilhado'));
 };
 
 $failures = 0;

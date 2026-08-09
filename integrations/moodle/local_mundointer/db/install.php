@@ -6,5 +6,6 @@ function xmldb_local_mundointer_install(): bool
 {
     set_config('site_uuid', bin2hex(random_bytes(16)), 'local_mundointer');
     set_config('enabled', 1, 'local_mundointer');
+    set_config('profilefield','polo_presencial','local_mundointer');
     return true;
 }

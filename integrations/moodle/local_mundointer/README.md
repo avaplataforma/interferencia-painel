@@ -11,4 +11,8 @@ Conector oficial entre uma instalação Moodle e o ADM Central Mundo Inter.
 
 Em uma instalação que já possua um serviço do Painel, é possível adicionar a função `local_mundointer_ping` ao serviço existente ou substituir o token pelo serviço predefinido completo.
 
+## Identidade por franquia
+
+O ADM Central envia ao plugin um catálogo de marcas pelo serviço `local_mundointer_sync_brands`. O endereço `/local/mundointer/entrar.php?franquia=slug` aplica a marca antes do login. Depois da autenticação, o valor do campo personalizado **Polo Presencial** confirma a franquia e mantém a identidade visual em todas as páginas do AVA.
+
 Nesta primeira versão, o plugin expõe somente um diagnóstico autenticado de disponibilidade e versão. Os dados acadêmicos continuam usando as APIs oficiais do Moodle.

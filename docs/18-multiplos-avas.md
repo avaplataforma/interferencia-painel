@@ -164,6 +164,18 @@ da pessoa antes de bloquear a conta.
 
 O código-fonte do plugin fica em `integrations/moodle/local_mundointer` e deve ser instalado em cada Moodle como `local/mundointer`. Apenas criar uma pasta `/painel` na raiz não registra capacidades, serviços web nem atualizações no Moodle.
 
+## Identidade visual no AVA compartilhado
+
+O AVA Cursos atende várias franquias sem duplicar os cursos. O plugin Mundo Inter recebe do ADM Central um catálogo de identidades visuais contendo marca, cores, logo, favicon e os valores de **Polo Presencial** vinculados a cada franquia.
+
+- Antes da autenticação, cada franquia divulga seu endereço exclusivo: `/local/mundointer/entrar.php?franquia={codigo}`.
+- O endereço grava a marca na sessão e encaminha o visitante ao login padrão do Moodle.
+- Depois da autenticação, o campo personalizado **Polo Presencial** prevalece sobre a sessão e confirma a identidade em todas as páginas internas.
+- O mesmo curso e as mesmas atividades continuam compartilhados; somente a apresentação e o contexto da franquia mudam.
+- O endereço genérico do Moodle continua disponível com a identidade padrão quando nenhuma franquia tiver sido identificada.
+
+A sincronização é iniciada no ADM Central em **Integrações → Painel Inter → Identidades do AVA compartilhado**. Alterações de marca ou novos mapeamentos de polo devem ser sincronizados novamente.
+
 A primeira versão fornece:
 
 - serviço web autenticado para diagnóstico e versão;

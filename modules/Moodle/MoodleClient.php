@@ -18,6 +18,13 @@ final readonly class MoodleClient
     /** @return array<string,mixed> */
     public function connectorInfo():array{return$this->call('local_mundointer_ping');}
 
+    /** @param array<string,mixed> $catalog @return array<string,mixed> */
+    public function syncBrands(array$catalog):array
+    {
+        $json=json_encode($catalog,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        return$this->call('local_mundointer_sync_brands',['catalog'=>$json]);
+    }
+
     /** @return list<array<string,mixed>> */
     public function courses():array
     {
