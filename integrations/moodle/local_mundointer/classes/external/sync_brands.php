@@ -34,7 +34,13 @@ final class sync_brands extends external_api
             $secondary=self::color((string)($brand['secondary_color']??''),'#082d72');
             $poles=[];
             foreach((array)($brand['poles']??[])as$polo){$polo=clean_param((string)$polo,PARAM_TEXT);if($polo!==''&&!in_array($polo,$poles,true))$poles[]=$polo;}
+            $polerecords=[];
+            foreach((array)($brand['pole_records']??[])as$record){
+                if(!is_array($record))continue;$code=clean_param((string)($record['code']??''),PARAM_ALPHANUMEXT);$polename=clean_param((string)($record['name']??''),PARAM_TEXT);if($code===''||$polename==='')continue;
+                $polerecords[]=['code'=>$code,'name'=>$polename,'unit_code'=>clean_param((string)($record['unit_code']??''),PARAM_ALPHANUMEXT),'legacy_value'=>clean_param((string)($record['legacy_value']??''),PARAM_TEXT)];
+            }
             $brands[]=[
+                'code'=>clean_param((string)($brand['code']??$slug),PARAM_ALPHANUMEXT),
                 'slug'=>$slug,'name'=>$name,'primary_color'=>$primary,'secondary_color'=>$secondary,
                 'logo_url'=>clean_param((string)($brand['logo_url']??''),PARAM_URL),
                 'favicon_url'=>clean_param((string)($brand['favicon_url']??''),PARAM_URL),
@@ -42,15 +48,19 @@ final class sync_brands extends external_api
                 'welcome_text'=>clean_param((string)($brand['welcome_text']??''),PARAM_TEXT),
                 'support_email'=>clean_param((string)($brand['support_email']??''),PARAM_EMAIL),
                 'support_phone'=>clean_param((string)($brand['support_phone']??''),PARAM_TEXT),
-                'poles'=>$poles,
+                'poles'=>$poles,'pole_records'=>$polerecords,
             ];
         }
         $profilefield=clean_param((string)($data['profile_field']??'polo_presencial'),PARAM_ALPHANUMEXT)?:'polo_presencial';
-        $stored=['schema'=>1,'version'=>clean_param((string)($data['version']??''),PARAM_ALPHANUM),'generated_at'=>clean_param((string)($data['generated_at']??''),PARAM_TEXT),'profile_field'=>$profilefield,'brands'=>$brands];
+        $franchisefield=clean_param((string)($data['franchise_field']??'mundointer_franchise'),PARAM_ALPHANUMEXT)?:'mundointer_franchise';
+        $polefield=clean_param((string)($data['pole_field']??'mundointer_pole'),PARAM_ALPHANUMEXT)?:'mundointer_pole';
+        $stored=['schema'=>1,'version'=>clean_param((string)($data['version']??''),PARAM_ALPHANUM),'generated_at'=>clean_param((string)($data['generated_at']??''),PARAM_TEXT),'profile_field'=>$profilefield,'franchise_field'=>$franchisefield,'pole_field'=>$polefield,'brands'=>$brands];
         set_config('brandcatalog',json_encode($stored,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),'local_mundointer');
         set_config('brand_catalog_version',(string)$stored['version'],'local_mundointer');
         set_config('brand_synced_at',time(),'local_mundointer');
-        return['status'=>'ok','count'=>count($brands),'version'=>(string)$stored['version'],'syncedat'=>time()];
+        require_once(__DIR__.'/../../db/field_helpers.php');
+        $migrated=local_mundointer_migrate_profile_identities($stored);
+        return['status'=>'ok','count'=>count($brands),'migrated'=>$migrated,'version'=>(string)$stored['version'],'syncedat'=>time()];
     }
 
     public static function execute_returns(): external_single_structure
@@ -58,6 +68,7 @@ final class sync_brands extends external_api
         return new external_single_structure([
             'status'=>new external_value(PARAM_ALPHA,'Estado da sincronização.'),
             'count'=>new external_value(PARAM_INT,'Quantidade de identidades recebidas.'),
+            'migrated'=>new external_value(PARAM_INT,'Usuários migrados do campo antigo.'),
             'version'=>new external_value(PARAM_ALPHANUM,'Versão do catálogo.'),
             'syncedat'=>new external_value(PARAM_INT,'Horário da sincronização.'),
         ]);

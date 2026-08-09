@@ -34,8 +34,9 @@ final readonly class EnrollmentRepository
         $courseId=(int)$product['moodle_course_id'];$base=(float)$product['value'];$discount=0.0;
         if($campaignId!==null){$s=$this->database->prepare('SELECT discount_percent FROM finance_campaigns WHERE id=:id AND is_active=1 AND valid_until>=CURRENT_DATE');$s->execute(['id'=>$campaignId]);$found=$s->fetchColumn();if($found===false)throw new RuntimeException('Campanha inválida ou expirada.');$discount=(float)$found;}
         $final=round($base*(1-$discount/100),2);if($final<5)throw new RuntimeException('O desconto deixa a cobrança abaixo do valor mínimo de R$ 5,00.');
+        $poleId=$this->poleIdForUnit($unitId);
         $this->database->beginTransaction();
-        try{$s=$this->database->prepare('INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,finance_product_id,campaign_id,base_value,discount_percent,final_value,unit_id,attendant_user_id,created_by) VALUES(:customer,:course,:product,:campaign,:base,:discount,:final,:unit,:attendant,:creator)');$s->execute(['customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'campaign'=>$campaignId,'base'=>$base,'discount'=>$discount,'final'=>$final,'unit'=>$unitId,'attendant'=>$attendantId,'creator'=>$creatorId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$creatorId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        try{$s=$this->database->prepare('INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,finance_product_id,campaign_id,base_value,discount_percent,final_value,unit_id,organization_pole_id,attendant_user_id,created_by) VALUES(:customer,:course,:product,:campaign,:base,:discount,:final,:unit,:pole,:attendant,:creator)');$s->execute(['customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'campaign'=>$campaignId,'base'=>$base,'discount'=>$discount,'final'=>$final,'unit'=>$unitId,'pole'=>$poleId,'attendant'=>$attendantId,'creator'=>$creatorId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$creatorId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
     public function createWaived(int$customerId,int$courseId,int$unitId,string$reason,int$userId,array$allowedUnits):int
@@ -44,7 +45,8 @@ final readonly class EnrollmentRepository
         $s=$this->database->prepare("SELECT COUNT(*) FROM finance_customers WHERE id=:customer AND unit_id=:unit AND student_status='active' AND is_deleted=0");$s->execute(['customer'=>$customerId,'unit'=>$unitId]);if((int)$s->fetchColumn()!==1)throw new RuntimeException('Aluno não encontrado na unidade selecionada.');
         $s=$this->database->prepare('SELECT COUNT(*) FROM moodle_courses WHERE id=:course AND visible=1');$s->execute(['course'=>$courseId]);if((int)$s->fetchColumn()!==1)throw new RuntimeException('Curso indisponível no AVA.');
         $s=$this->database->prepare("SELECT COUNT(*) FROM student_enrollments WHERE finance_customer_id=:customer AND moodle_course_id=:course AND status IN ('payment_waived','payment_confirmed') AND moodle_enrolment_status IN ('not_released','released')");$s->execute(['customer'=>$customerId,'course'=>$courseId]);if((int)$s->fetchColumn()>0)throw new RuntimeException('Este aluno já possui uma matrícula ativa ou preparada nesse curso.');
-        $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,unit_id,attendant_user_id,status,payment_waiver_reason,payment_waived_at,payment_waived_by,created_by) VALUES(:customer,:course,:unit,:attendant,'payment_waived',:reason,NOW(),:waived_by,:creator)");$s->execute(['customer'=>$customerId,'course'=>$courseId,'unit'=>$unitId,'attendant'=>$userId,'reason'=>$reason,'waived_by'=>$userId,'creator'=>$userId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$userId);$this->recordEvent($id,'payment-waived:'.$id,'payment_waived','Pagamento dispensado por bolsa ou cortesia. Motivo: '.$reason,$userId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        $poleId=$this->poleIdForUnit($unitId);
+        $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,unit_id,organization_pole_id,attendant_user_id,status,payment_waiver_reason,payment_waived_at,payment_waived_by,created_by) VALUES(:customer,:course,:unit,:pole,:attendant,'payment_waived',:reason,NOW(),:waived_by,:creator)");$s->execute(['customer'=>$customerId,'course'=>$courseId,'unit'=>$unitId,'pole'=>$poleId,'attendant'=>$userId,'reason'=>$reason,'waived_by'=>$userId,'creator'=>$userId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$userId);$this->recordEvent($id,'payment-waived:'.$id,'payment_waived','Pagamento dispensado por bolsa ou cortesia. Motivo: '.$reason,$userId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
     public function deleteDraft(int $id,array $allowedUnits): void
@@ -79,7 +81,7 @@ final readonly class EnrollmentRepository
 
     public function releaseContextForAutomation(int$id):?array
     {
-        $sql="SELECT e.id,e.finance_customer_id,e.unit_id,e.status,e.moodle_enrolment_status,e.created_at,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.unit_id,e.organization_pole_id,e.status,e.moodle_enrolment_status,e.created_at,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
@@ -134,6 +136,12 @@ final readonly class EnrollmentRepository
     {
         if(!in_array($channel,['whatsapp','email'],true)||!in_array($status,['opened','failed'],true))throw new RuntimeException('Comunicação de acesso inválida.');$destination=trim($destination);$error=$error===null?null:mb_substr(trim($error),0,500);
         $this->database->beginTransaction();try{$s=$this->database->prepare('INSERT INTO ava_access_communications(enrollment_id,channel,destination,status,error_message,created_by) VALUES(:enrollment,:channel,:destination,:status,:error,NULL)');$s->execute(['enrollment'=>$id,'channel'=>$channel,'destination'=>$destination,'status'=>$status,'error'=>$error]);$communicationId=(int)$this->database->lastInsertId();$this->recordEvent($id,'access-auto:'.$communicationId,$status==='opened'?'access_sent':'access_send_failed',$status==='opened'?'Instruções de acesso enviadas automaticamente por e-mail.':'Falha no envio automático das instruções: '.($error?:'erro não informado').'.');$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+    }
+
+    private function poleIdForUnit(int $unitId): int
+    {
+        $statement=$this->database->prepare('SELECT COALESCE((SELECT id FROM organization_poles WHERE unit_id=:unit_direct AND is_active=1 LIMIT 1),(SELECT p.id FROM units u INNER JOIN organization_poles p ON p.organization_id=u.organization_id AND p.is_primary=1 AND p.is_active=1 WHERE u.id=:unit_primary LIMIT 1))');
+        $statement->execute(['unit_direct'=>$unitId,'unit_primary'=>$unitId]);$id=(int)$statement->fetchColumn();if($id<1)throw new RuntimeException('Cadastre um polo ativo para esta unidade antes de criar a matrícula.');return$id;
     }
 
     private function recordEvent(int $enrollmentId,string $key,string $type,string $description,?int $userId=null): void

@@ -6,7 +6,6 @@
    <div class="ava-organization-title"><span><i class="fa-solid fa-id-card"></i></span><div><h3>Identidade e suporte no AVA</h3><p class="meta">Defina como esta franquia será identificada no Moodle e quais informações aparecerão na experiência personalizada do aluno.</p></div></div>
    <div class="organization-fields">
     <label>Título do login<input maxlength="160" name="login_title" value="<?= $escape($organization['login_title']??'') ?>" placeholder="Ex.: Portal da Franquia"></label>
-    <label>Polo Presencial<input maxlength="255" name="ava_polo_name" value="<?= $escape($organization['ava_polo_name']??'') ?>" placeholder="Ex.: Interferência Tijucas"><small>Use exatamente o mesmo nome informado no campo Polo Presencial dos usuários no Moodle.</small></label>
     <label class="field-full">Mensagem de boas-vindas<input maxlength="500" name="login_welcome_text" value="<?= $escape($organization['login_welcome_text']??'') ?>" placeholder="Use suas credenciais para continuar."></label>
     <label>E-mail de suporte<input type="email" maxlength="190" name="support_email" value="<?= $escape($organization['support_email']??'') ?>" placeholder="suporte@franquia.com.br"></label>
     <label>Telefone de suporte<input maxlength="30" name="support_phone" inputmode="tel" data-mask="phone" value="<?= $escape($organization['support_phone']??'') ?>" placeholder="(00) 00000-0000"></label>

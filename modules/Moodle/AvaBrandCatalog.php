@@ -10,15 +10,16 @@ final readonly class AvaBrandCatalog
 {
     public function __construct(private PDO $database, private string $publicBaseUrl) {}
 
-    /** @return array{schema:int,version:string,generated_at:string,profile_field:string,brands:list<array<string,mixed>>} */
+    /** @return array{schema:int,version:string,generated_at:string,profile_field:string,franchise_field:string,pole_field:string,brands:list<array<string,mixed>>} */
     public function build(): array
     {
-        $rows=$this->database->query("SELECT o.id,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.logo_path,o.favicon_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,o.ava_polo_name,u.name unit_name,m.field_value,mf.shortname profile_field,pm.field_value mapped_polo FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN units u ON u.organization_id=o.id AND u.is_active=1 LEFT JOIN moodle_unit_mappings m ON m.unit_id=u.id LEFT JOIN moodle_profile_fields mf ON mf.id=m.field_id LEFT JOIN ava_polo_mappings pm ON pm.organization_id=o.id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,u.name,m.field_value,pm.field_value")->fetchAll()?:[];
+        $rows=$this->database->query("SELECT o.id,o.code,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.logo_path,o.favicon_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,o.ava_polo_name,p.code pole_code,p.name pole_name,p.legacy_value,u.code unit_code,u.name unit_name FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN organization_poles p ON p.organization_id=o.id AND p.is_active=1 LEFT JOIN units u ON u.id=p.unit_id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,p.is_primary DESC,p.name")->fetchAll()?:[];
         $brands=[];$profileField='polo_presencial';
         foreach($rows as$row){
             $id=(int)$row['id'];
             if(!isset($brands[$id])){
                 $brands[$id]=[
+                    'code'=>(string)$row['code'],
                     'slug'=>(string)$row['panel_slug'],
                     'name'=>(string)$row['display_name'],
                     'primary_color'=>$this->color((string)$row['primary_color'],'#ed1c24'),
@@ -30,14 +31,21 @@ final readonly class AvaBrandCatalog
                     'support_email'=>(string)($row['support_email']??''),
                     'support_phone'=>(string)($row['support_phone']??''),
                     'poles'=>[],
+                    'pole_records'=>[],
                 ];
             }
-            foreach(['ava_polo_name','mapped_polo','field_value','unit_name']as$key){$value=trim((string)($row[$key]??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;}
-            $field=trim((string)($row['profile_field']??''));if($field!=='')$profileField=$field;
+            $poleCode=trim((string)($row['pole_code']??''));
+            if($poleCode!==''){
+                $record=['code'=>$poleCode,'name'=>(string)$row['pole_name'],'unit_code'=>(string)($row['unit_code']??''),'legacy_value'=>(string)($row['legacy_value']??'')];
+                $brands[$id]['pole_records'][]=$record;
+                foreach(['pole_name','legacy_value','unit_name','ava_polo_name']as$key){$value=trim((string)($row[$key]??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;}
+            }
         }
+        $legacy=$this->database->query("SELECT o.id organization_id,pm.field_value,mf.shortname profile_field FROM organizations o LEFT JOIN ava_polo_mappings pm ON pm.organization_id=o.id LEFT JOIN moodle_profile_fields mf ON mf.id=(SELECT field_id FROM moodle_unit_mappings mum INNER JOIN units uu ON uu.id=mum.unit_id WHERE uu.organization_id=o.id LIMIT 1) WHERE o.status='active'")->fetchAll()?:[];
+        foreach($legacy as$row){$id=(int)$row['organization_id'];if(!isset($brands[$id]))continue;$value=trim((string)($row['field_value']??''));if($value!==''&&!in_array($value,$brands[$id]['poles'],true))$brands[$id]['poles'][]=$value;$field=trim((string)($row['profile_field']??''));if($field!=='')$profileField=$field;}
         $brandList=array_values($brands);
-        $canonical=json_encode(['profile_field'=>$profileField,'brands'=>$brandList],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
-        return['schema'=>1,'version'=>hash('sha256',$canonical),'generated_at'=>gmdate('c'),'profile_field'=>$profileField,'brands'=>$brandList];
+        $canonical=json_encode(['profile_field'=>$profileField,'franchise_field'=>'mundointer_franchise','pole_field'=>'mundointer_pole','brands'=>$brandList],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        return['schema'=>1,'version'=>hash('sha256',$canonical),'generated_at'=>gmdate('c'),'profile_field'=>$profileField,'franchise_field'=>'mundointer_franchise','pole_field'=>'mundointer_pole','brands'=>$brandList];
     }
 
     /** @return list<array{slug:string,name:string,url:string,poles:list<string>}> */

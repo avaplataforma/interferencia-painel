@@ -6,6 +6,7 @@ namespace Interferencia\Modules\Moodle;
 
 use RuntimeException;
 use Throwable;
+use Interferencia\Modules\Organization\OrganizationPoleRepository;
 
 final readonly class AvaEnrollmentReleaser
 {
@@ -14,6 +15,7 @@ final readonly class AvaEnrollmentReleaser
         private IntegrationRepository $integrations,
         private MoodleRepository $moodle,
         private EnrollmentRepository $enrollments,
+        private OrganizationPoleRepository $poles,
         private string $automaticFrom,
     ) {}
 
@@ -37,10 +39,14 @@ final readonly class AvaEnrollmentReleaser
                 return ['status' => 'already_released'];
             }
 
-            $unitField = $this->moodle->unitCustomFieldForUnit((int) $context['unit_id']);
-            if ($unitField === null) {
-                throw new RuntimeException('A Unidade desta matrícula ainda não está vinculada ao campo Polo Presencial do AVA. Configure em ADM → AVA.');
-            }
+            $identity=$this->poles->identityForEnrollment((int)$context['unit_id'],isset($context['organization_pole_id'])?(int)$context['organization_pole_id']:null);
+            if($identity===null)throw new RuntimeException('A Unidade desta matrícula ainda não possui um polo Mundo Inter ativo. Configure a aba Polos da franquia.');
+            $customFields=[
+                ['type'=>OrganizationPoleRepository::FRANCHISE_FIELD,'value'=>$identity['franchise_code']],
+                ['type'=>OrganizationPoleRepository::POLE_FIELD,'value'=>$identity['pole_code']],
+            ];
+            $unitField=$this->moodle->unitCustomFieldForUnit((int)$context['unit_id']);
+            if($unitField!==null)$customFields[]=$unitField;
 
             $email = strtolower(trim((string) $context['email']));
             $document = preg_replace('/\D/', '', (string) $context['cpf_cnpj']) ?? '';
@@ -76,7 +82,7 @@ final readonly class AvaEnrollmentReleaser
                     'idnumber' => $document,
                     'auth' => 'manual',
                     'lang' => 'pt_br',
-                    'customfields' => [$unitField],
+                    'customfields' => $customFields,
                 ];
                 if ($this->integrations->settings()['initial_password_mode'] === 'cpf5') {
                     $payload['password'] = substr($document, 0, 5);
@@ -98,13 +104,13 @@ final readonly class AvaEnrollmentReleaser
 
             $avaUserId = (int) $avaUser['id'];
             $courseId = (int) $context['moodle_course_id'];
-            $this->client->updateUserCustomFields($avaUserId, [$unitField]);
+            $this->client->updateUserCustomFields($avaUserId, $customFields);
             $this->client->enrolStudent($avaUserId, $courseId);
-            $avaUser['customfields'] = [[
-                'shortname' => $unitField['type'],
-                'name' => 'Polo Presencial',
-                'value' => $unitField['value'],
-            ]];
+            $avaUser['customfields']=[
+                ['shortname'=>OrganizationPoleRepository::FRANCHISE_FIELD,'name'=>'Franquia Mundo Inter','value'=>$identity['franchise_code']],
+                ['shortname'=>OrganizationPoleRepository::POLE_FIELD,'name'=>'Polo Mundo Inter','value'=>$identity['pole_code']],
+            ];
+            if($unitField!==null)$avaUser['customfields'][]=['shortname'=>$unitField['type'],'name'=>'Polo Presencial (legado)','value'=>$unitField['value']];
             $this->moodle->upsertUser($avaUser);
             $this->enrollments->markReleased($enrollmentId, $avaUserId, $courseId, (int) $context['finance_customer_id'], $operatorId, $avaUser);
 

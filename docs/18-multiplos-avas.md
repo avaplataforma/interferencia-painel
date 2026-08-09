@@ -166,17 +166,19 @@ O código-fonte do plugin fica em `integrations/moodle/local_mundointer` e deve 
 
 ## Identidade visual no AVA compartilhado
 
-O AVA Cursos atende várias franquias sem duplicar os cursos. O plugin Mundo Inter recebe do ADM Central um catálogo de identidades visuais contendo marca, cores, logo, favicon e os valores de **Polo Presencial** vinculados a cada franquia.
+O AVA Cursos atende várias franquias sem duplicar os cursos. O plugin Mundo Inter recebe do ADM Central um catálogo de identidades visuais contendo marca, cores, logo, favicon, código estável da franquia e seus polos.
 
-No cadastro de cada franquia, a aba **AVA** concentra o **Título do login**, a comunicação de suporte e o nome canônico do **Polo Presencial**. Esse nome deve coincidir com o valor gravado no campo personalizado do usuário no Moodle e passa a integrar automaticamente o catálogo de identidade enviado ao plugin.
+No cadastro de cada franquia, a aba **AVA** concentra o **Título do login** e a comunicação de suporte. A aba **Polos** mantém um ou vários polos, cada um com código permanente e vínculo opcional com uma Unidade. A matrícula grava automaticamente os campos personalizados **Franquia Mundo Inter** e **Polo Mundo Inter** no usuário do Moodle.
 
 - Antes da autenticação, cada franquia divulga seu endereço exclusivo no AVA Cursos: `/franquia.php?slug={codigo}`. O endereço interno do plugin continua disponível como alternativa.
 - O endereço grava a marca na sessão e encaminha o visitante ao login padrão do Moodle.
-- Depois da autenticação, o campo personalizado **Polo Presencial** prevalece sobre a sessão e confirma a identidade em todas as páginas internas.
+- Depois da autenticação, o campo **Franquia Mundo Inter** prevalece sobre a sessão e confirma a identidade em todas as páginas internas.
 - O mesmo curso e as mesmas atividades continuam compartilhados; somente a apresentação e o contexto da franquia mudam.
 - O endereço genérico do Moodle continua disponível com a identidade padrão quando nenhuma franquia tiver sido identificada.
 
 A sincronização é iniciada no ADM Central em **Integrações → Painel Inter → Identidades do AVA compartilhado**. Alterações de marca ou novos mapeamentos de polo devem ser sincronizados novamente.
+
+O campo antigo **Polo Presencial** é mantido somente durante a transição. Ao receber o novo catálogo, o plugin 0.4.0 cria os dois campos técnicos e migra automaticamente os usuários cujo valor antigo corresponda com segurança a um polo cadastrado. Valores ambíguos permanecem intactos para revisão manual.
 
 A primeira versão fornece:
 

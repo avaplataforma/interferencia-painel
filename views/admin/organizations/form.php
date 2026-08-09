@@ -23,6 +23,7 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="documentos"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="marca"><i class="fa-solid fa-palette"></i> Personalização</button>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-graduation-cap"></i> AVA</button><?php endif;?>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="polos"><i class="fa-solid fa-location-crosshairs"></i> Polos</button><?php endif;?>
   </nav>
 
   <form class="organization-editor-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/organizations<?= $editing?'/'.(int)$organization['id']:'' ?>"><?= $csrfField ?>
@@ -85,4 +86,5 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
   </form>
   <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
+  <?php if($editing):?><?php require __DIR__.'/poles.php'; ?><?php endif;?>
 </div>

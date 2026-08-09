@@ -25,6 +25,7 @@ use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
+use Interferencia\Modules\Organization\OrganizationPoleRepository;
 use Interferencia\Modules\Organization\FranchiseApplicationRepository;
 use Interferencia\Modules\Organization\FranchiseContractRepository;
 use Interferencia\Modules\Organization\FranchiseContractBillingService;
@@ -115,6 +116,7 @@ $csrf = new Csrf($session);
 $database = (new Connection($config))->pdo();
 $request = Request::fromGlobals();
 $organizations = new OrganizationRepository($database);
+$organizationPoles = new OrganizationPoleRepository($database);
 $franchiseApplications = new FranchiseApplicationRepository($database);
 $franchiseContracts = new FranchiseContractRepository($database);
 $platformSettingsRepository = new PlatformSettingsRepository($database);
@@ -168,7 +170,7 @@ $moodleSettings=$moodleIntegrations->settings();
 $moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$moodleSettings['token'],$moodleSettings['is_active']);
 $moodleRepository=new MoodleRepository($database);
 $studentEnrollments=new EnrollmentRepository($database,$organizationId);
-$avaEnrollmentReleaser=new AvaEnrollmentReleaser($moodleClient,$moodleIntegrations,$moodleRepository,$studentEnrollments,(string)$config->get('app.ava_auto_release_from'));
+$avaEnrollmentReleaser=new AvaEnrollmentReleaser($moodleClient,$moodleIntegrations,$moodleRepository,$studentEnrollments,$organizationPoles,(string)$config->get('app.ava_auto_release_from'));
 $avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations);
 $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $pedagogicalSynchronizer=new PedagogicalSynchronizer($moodleClient,$moodleRepository);
@@ -247,6 +249,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
 
 return new Application($router, $request);

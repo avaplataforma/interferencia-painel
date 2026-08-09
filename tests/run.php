@@ -1052,7 +1052,7 @@ $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function (
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $plugin=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php');
-    $tabs=['dados','endereco','contatos','documentos','marca','ava'];
+    $tabs=['dados','endereco','contatos','documentos','marca','ava','polos'];
     $last=-1;
     foreach($tabs as$tab){$position=strpos($form,'data-organization-tab="'.$tab.'"');assertTrue($position!==false&&$position>$last);$last=$position;}
     assertTrue(!str_contains($form,'data-organization-tab="acesso"'));
@@ -1061,7 +1061,7 @@ $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function (
     assertTrue(!str_contains($form,'name="login_title"'));
     assertTrue(str_contains($migration,'ava_polo_name'));
     assertTrue(str_contains($ava,'name="login_title"'));
-    assertTrue(str_contains($ava,'name="ava_polo_name"'));
+    assertTrue(!str_contains($ava,'name="ava_polo_name"'));
     assertTrue(str_contains($ava,'name="login_welcome_text"'));
     assertTrue(str_contains($ava,'name="support_email"'));
     assertTrue(str_contains($ava,'name="support_phone"'));
@@ -1086,7 +1086,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.3.8',$metadata['release']);
+    assertSame('0.4.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1106,7 +1106,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.3.8'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.4.0'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));
@@ -1122,6 +1122,32 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains($resolver,"'httponly'=>true"));
     assertTrue(str_contains($resolver,"'samesite'=>'Lax'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/entrar.php'),'brand_resolver::remember($slug)'));
+};
+
+$tests['cadastra múltiplos polos e grava a identidade estável no AVA'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_991000_create_organization_poles.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationPoleRepository.php');
+    $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $poles=(string)file_get_contents($rootPath.'/views/admin/organizations/poles.php');
+    $upgrade=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/upgrade.php');
+    $fields=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/field_helpers.php');
+    $sync=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_brands.php');
+    $resolver=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/local/brand_resolver.php');
+    assertTrue(str_contains($migration,'CREATE TABLE organization_poles'));
+    assertTrue(str_contains($migration,'organization_pole_id'));
+    assertTrue(str_contains($repository,"FRANCHISE_FIELD = 'mundointer_franchise'"));
+    assertTrue(str_contains($repository,"POLE_FIELD = 'mundointer_pole'"));
+    assertTrue(str_contains($releaser,'identityForEnrollment'));
+    assertTrue(str_contains($catalog,"'pole_records'"));
+    assertTrue(str_contains($form,'data-organization-tab="polos"'));
+    assertTrue(str_contains($poles,'Código permanente'));
+    assertTrue(str_contains($upgrade,'local_mundointer_ensure_identity_fields'));
+    assertTrue(str_contains($fields,"'mundointer_franchise'=>'Franquia Mundo Inter'"));
+    assertTrue(str_contains($fields,"'mundointer_pole'=>'Polo Mundo Inter'"));
+    assertTrue(str_contains($sync,'local_mundointer_migrate_profile_identities'));
+    assertTrue(str_contains($resolver,'byCode'));
 };
 
 $tests['mapeia Polo Presencial para franquias com diagnóstico agregado e seguro'] = static function () use ($rootPath): void {
