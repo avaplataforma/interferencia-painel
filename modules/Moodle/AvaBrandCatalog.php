@@ -44,7 +44,7 @@ final readonly class AvaBrandCatalog
     public function entryLinks(string $moodleBaseUrl): array
     {
         $base=rtrim($moodleBaseUrl,'/');$result=[];
-        foreach($this->build()['brands']as$brand)$result[]=['slug'=>(string)$brand['slug'],'name'=>(string)$brand['name'],'url'=>$base.'/local/mundointer/entrar.php?franquia='.rawurlencode((string)$brand['slug']),'poles'=>$brand['poles']];
+        foreach($this->build()['brands']as$brand)$result[]=['slug'=>(string)$brand['slug'],'name'=>(string)$brand['name'],'url'=>$base.'/franquia.php?slug='.rawurlencode((string)$brand['slug']),'poles'=>$brand['poles']];
         return$result;
     }
 

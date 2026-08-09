@@ -85,6 +85,10 @@ function local_mundointer_before_standard_html_head(): string
     position: relative;
     z-index: 1;
 }
+.pagelayout-login.mundointer-brand-active #loginlogo,
+.pagelayout-login.mundointer-brand-active .login-logo {
+    display: none !important;
+}
 .mundointer-login-brand {
     display: flex;
     align-items: center;
@@ -168,9 +172,11 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $name = s((string)$brand['login_title']);
     $welcome = s((string)$brand['welcome_text']);
     $slug = s((string)$brand['slug']);
+    $favicon = s((string)$brand['favicon_url']);
+    $pagetitle = s((string)$brand['login_title'].' | AVA');
     $logohtml = $logo !== '' ? '<img src="'.$logo.'" alt="">' : '';
 
-    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'">'
+    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
@@ -184,10 +190,27 @@ function local_mundointer_before_standard_top_of_body_html(): string
         }
 
         document.body.classList.add("mundointer-brand-active");
+        var pageTitle = brand.getAttribute("data-page-title");
+        if (pageTitle) {
+            document.title = pageTitle;
+        }
+        var favicon = brand.getAttribute("data-favicon");
+        if (favicon) {
+            document.querySelectorAll("link[rel~='icon'], link[rel='shortcut icon'], link[rel='apple-touch-icon']").forEach(function(link) {
+                link.remove();
+            });
+            var icon = document.createElement("link");
+            icon.rel = "icon";
+            icon.href = favicon;
+            document.head.appendChild(icon);
+        }
         var login = document.body.classList.contains("pagelayout-login") || document.body.id.indexOf("page-login-") === 0;
         if (login) {
             var loginContainer = document.querySelector(".login-container");
             if (loginContainer) {
+                loginContainer.querySelectorAll("#loginlogo, .login-logo").forEach(function(nativeLogo) {
+                    nativeLogo.remove();
+                });
                 brand.classList.add("mundointer-login-brand");
                 loginContainer.insertBefore(brand, loginContainer.firstChild);
                 return;
