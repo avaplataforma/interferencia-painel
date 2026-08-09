@@ -58,7 +58,7 @@ final readonly class MoodleRepository
     /** @param list<int> $unitIds @return array<string,mixed>|null */
     public function avaStatusContext(int$enrollmentId,array$unitIds):?array
     {
-        if($unitIds===[])return null;$marks=implode(',',array_fill(0,count($unitIds),'?'));$s=$this->database->prepare("SELECT e.id,e.ava_user_id,e.moodle_enrolment_status,f.name student_name,mu.suspended FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1");$s->execute([$enrollmentId,...$unitIds]);$row=$s->fetch();return is_array($row)?$row:null;
+        if($unitIds===[])return null;$marks=implode(',',array_fill(0,count($unitIds),'?'));$s=$this->database->prepare("SELECT e.id,e.ava_user_id,e.ava_connection_id,e.moodle_enrolment_status,f.name student_name,CASE WHEN ac.connection_type='shared' THEN mu.suspended ELSE 0 END suspended,ac.name ava_connection_name,ac.connection_type FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN ava_connections ac ON ac.id=e.ava_connection_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id AND ac.connection_type='shared' WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1");$s->execute([$enrollmentId,...$unitIds]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function setLocalUserSuspended(int$userId,bool$suspended):void{$s=$this->database->prepare('UPDATE moodle_users SET suspended=:status,synced_at=NOW() WHERE moodle_user_id=:id');$s->execute(['status'=>$suspended?1:0,'id'=>$userId]);}

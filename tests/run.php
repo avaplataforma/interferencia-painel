@@ -1048,6 +1048,27 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($services,'core_user_create_users'));
 };
 
+$tests['direciona cada matricula ao AVA e curso corretos da franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_993000_route_enrollments_to_ava_connections.php');
+    $connections=(string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
+    $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
+    assertTrue(str_contains($migration,'CREATE TABLE ava_course_mappings'));
+    assertTrue(str_contains($migration,'ADD ava_connection_id'));
+    assertTrue(str_contains($migration,'ADD ava_course_id'));
+    assertTrue(str_contains($connections,'destinationsForCourse'));
+    assertTrue(str_contains($connections,'synchronizeCourses'));
+    assertTrue(str_contains($enrollments,"connection_type='shared' OR organization_id=:organization"));
+    assertTrue(str_contains($enrollments,'student_enrollments(organization_id,finance_customer_id'));
+    assertTrue(str_contains($releaser,"new MoodleClient((string)\$connection['base_url']"));
+    assertTrue(str_contains($notifier,"\$context['ava_base_url']"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/ava/sync-courses'"));
+    assertTrue(str_contains($form,'data-enrollment-ava'));
+};
+
 $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_990000_add_ava_identity_to_organizations.php');
     $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');

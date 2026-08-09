@@ -11,7 +11,7 @@ use Interferencia\Modules\Organization\OrganizationPoleRepository;
 final readonly class AvaEnrollmentReleaser
 {
     public function __construct(
-        private MoodleClient $client,
+        private AvaConnectionRepository $connections,
         private IntegrationRepository $integrations,
         private MoodleRepository $moodle,
         private EnrollmentRepository $enrollments,
@@ -19,7 +19,7 @@ final readonly class AvaEnrollmentReleaser
         private string $automaticFrom,
     ) {}
 
-    /** @return array{status:string,ava_user_id?:int,course_id?:int} */
+    /** @return array{status:string,ava_user_id?:int,course_id?:int,connection?:string} */
     public function release(int $enrollmentId, ?int $operatorId = null): array
     {
         try {
@@ -29,7 +29,7 @@ final readonly class AvaEnrollmentReleaser
             }
             $automaticFrom = strtotime($this->automaticFrom);
             $enrollmentCreatedAt = strtotime((string) $context['created_at']);
-            if ($automaticFrom === false || $enrollmentCreatedAt === false || $enrollmentCreatedAt < $automaticFrom) {
+            if ($operatorId === null && ($automaticFrom === false || $enrollmentCreatedAt === false || $enrollmentCreatedAt < $automaticFrom)) {
                 return ['status' => 'manual_flow'];
             }
             if (!in_array($context['status'], ['payment_confirmed', 'payment_waived'], true)) {
@@ -39,13 +39,28 @@ final readonly class AvaEnrollmentReleaser
                 return ['status' => 'already_released'];
             }
 
+            $connection=$this->connections->find((int)($context['ava_connection_id']??0));
+            if($connection===null||!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)){
+                throw new RuntimeException('O AVA escolhido para esta matrícula não está configurado ou ativo.');
+            }
+            if((string)$connection['connection_type']==='franchise'&&(int)($connection['organization_id']??0)!==(int)$context['organization_id']){
+                throw new RuntimeException('O AVA escolhido não pertence a esta franquia.');
+            }
+            $courseId=(int)($context['ava_course_id']??0);
+            if($courseId<1){
+                $destination=$this->connections->resolveDestination((int)$context['organization_id'],(int)$context['moodle_course_id'],(int)$connection['id']);
+                $courseId=(int)$destination['remote_course_id'];
+            }
+            $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
+            if(!$client->ready())throw new RuntimeException('A conexão com o AVA escolhido não está pronta.');
+
             $identity=$this->poles->identityForEnrollment((int)$context['unit_id'],isset($context['organization_pole_id'])?(int)$context['organization_pole_id']:null);
             if($identity===null)throw new RuntimeException('A Unidade desta matrícula ainda não possui um polo Mundo Inter ativo. Configure a aba Polos da franquia.');
             $customFields=[
                 ['type'=>OrganizationPoleRepository::FRANCHISE_FIELD,'value'=>$identity['franchise_code']],
                 ['type'=>OrganizationPoleRepository::POLE_FIELD,'value'=>$identity['pole_code']],
             ];
-            $unitField=$this->moodle->unitCustomFieldForUnit((int)$context['unit_id']);
+            $unitField=(string)$connection['connection_type']==='shared'?$this->moodle->unitCustomFieldForUnit((int)$context['unit_id']):null;
             if($unitField!==null)$customFields[]=$unitField;
 
             $email = strtolower(trim((string) $context['email']));
@@ -54,8 +69,8 @@ final readonly class AvaEnrollmentReleaser
                 throw new RuntimeException('O aluno precisa ter um e-mail válido antes da liberação.');
             }
 
-            $byDocument = $document === '' ? [] : $this->client->usersByField('idnumber', $document);
-            $byEmail = $this->client->usersByField('email', $email);
+            $byDocument = $document === '' ? [] : $client->usersByField('idnumber', $document);
+            $byEmail = $client->usersByField('email', $email);
             $documentId = isset($byDocument[0]['id']) ? (int) $byDocument[0]['id'] : null;
             $emailId = isset($byEmail[0]['id']) ? (int) $byEmail[0]['id'] : null;
             if ($documentId !== null && $emailId !== null && $documentId !== $emailId) {
@@ -71,7 +86,7 @@ final readonly class AvaEnrollmentReleaser
                 $first = array_shift($parts) ?: 'Aluno';
                 $last = trim(implode(' ', $parts)) ?: 'Interferência';
                 $username = $document;
-                if ($this->client->usersByField('username', $username) !== []) {
+                if ($client->usersByField('username', $username) !== []) {
                     throw new RuntimeException('Já existe outro usuário com este CPF como login no AVA. Revise o cadastro antes de continuar.');
                 }
                 $payload = [
@@ -89,7 +104,7 @@ final readonly class AvaEnrollmentReleaser
                 } else {
                     $payload['createpassword'] = 1;
                 }
-                $created = $this->client->createUser($payload);
+                $created = $client->createUser($payload);
                 $avaUser = [
                     'id' => (int) $created['id'],
                     'username' => (string) ($created['username'] ?? $username),
@@ -103,18 +118,17 @@ final readonly class AvaEnrollmentReleaser
             }
 
             $avaUserId = (int) $avaUser['id'];
-            $courseId = (int) $context['moodle_course_id'];
-            $this->client->updateUserCustomFields($avaUserId, $customFields);
-            $this->client->enrolStudent($avaUserId, $courseId);
+            $client->updateUserCustomFields($avaUserId, $customFields);
+            $client->enrolStudent($avaUserId, $courseId);
             $avaUser['customfields']=[
                 ['shortname'=>OrganizationPoleRepository::FRANCHISE_FIELD,'name'=>'Franquia Mundo Inter','value'=>$identity['franchise_code']],
                 ['shortname'=>OrganizationPoleRepository::POLE_FIELD,'name'=>'Polo Mundo Inter','value'=>$identity['pole_code']],
             ];
             if($unitField!==null)$avaUser['customfields'][]=['shortname'=>$unitField['type'],'name'=>'Polo Presencial (legado)','value'=>$unitField['value']];
-            $this->moodle->upsertUser($avaUser);
-            $this->enrollments->markReleased($enrollmentId, $avaUserId, $courseId, (int) $context['finance_customer_id'], $operatorId, $avaUser);
+            if((string)$connection['connection_type']==='shared')$this->moodle->upsertUser($avaUser);
+            $this->enrollments->markReleased($enrollmentId,$avaUserId,$courseId,(int)$context['finance_customer_id'],$operatorId,$avaUser,(int)$connection['id'],(string)$connection['name'],(string)$connection['connection_type']);
 
-            return ['status' => 'released', 'ava_user_id' => $avaUserId, 'course_id' => $courseId];
+            return ['status'=>'released','ava_user_id'=>$avaUserId,'course_id'=>$courseId,'connection'=>(string)$connection['name']];
         } catch (Throwable $exception) {
             $this->enrollments->recordReleaseFailure($enrollmentId, $exception->getMessage(), $operatorId);
             throw $exception;

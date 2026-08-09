@@ -30,6 +30,8 @@ final readonly class AvaConnectionRepository
         } catch (Throwable) { $row=[]; }
         $shared=$this->shared();
         $own=$this->connectionByKey('franchise:'.$organizationId.':own') ?? $this->emptyConnection('franchise:'.$organizationId.':own','AVA próprio','franchise',$organizationId);
+        $shared['mapped_courses']=$this->mappedCourseCount((int)($shared['id']??0));
+        $own['mapped_courses']=$this->mappedCourseCount((int)($own['id']??0));
         return [
             'organization_id'=>$organizationId,
             'access_mode'=>in_array(($row['access_mode']??'shared'),['shared','own','both'],true)?(string)$row['access_mode']:'shared',
@@ -78,6 +80,69 @@ final readonly class AvaConnectionRepository
     {
         $settings=$this->organizationSettings($organizationId);
         return $type==='own'?$settings['own']:($type==='shared'?$settings['shared']:null);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function destinationsForCourse(int $organizationId,int $moodleCourseId): array
+    {
+        $settings=$this->organizationSettings($organizationId);$allowed=[];
+        if(in_array($settings['access_mode'],['shared','both'],true))$allowed['shared']=$settings['shared'];
+        if(in_array($settings['access_mode'],['own','both'],true))$allowed['own']=$settings['own'];
+        $destinations=[];
+        foreach($allowed as$type=>$connection){
+            if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)continue;
+            $statement=$this->database->prepare('SELECT remote_course_id,remote_shortname,remote_fullname FROM ava_course_mappings WHERE connection_id=:connection AND moodle_course_id=:course LIMIT 1');
+            $statement->execute(['connection'=>(int)$connection['id'],'course'=>$moodleCourseId]);$mapping=$statement->fetch();
+            if(!is_array($mapping)&&$type==='shared'){
+                $statement=$this->database->prepare('SELECT moodle_course_id remote_course_id,shortname remote_shortname,fullname remote_fullname FROM moodle_courses WHERE id=:course AND visible=1 LIMIT 1');$statement->execute(['course'=>$moodleCourseId]);$mapping=$statement->fetch();
+            }
+            if(!is_array($mapping))continue;
+            $destinations[]=['connection_id'=>(int)$connection['id'],'type'=>$type,'name'=>(string)$connection['name'],'remote_course_id'=>(int)$mapping['remote_course_id'],'remote_course_name'=>(string)$mapping['remote_fullname'],'primary'=>$settings['primary_ava']===$type];
+        }
+        usort($destinations,static fn(array$a,array$b):int=>(int)$b['primary']<=>(int)$a['primary']);
+        return$destinations;
+    }
+
+    /** @return array<string,mixed> */
+    public function resolveDestination(int $organizationId,int $moodleCourseId,int $connectionId): array
+    {
+        foreach($this->destinationsForCourse($organizationId,$moodleCourseId)as$destination)if((int)$destination['connection_id']===$connectionId)return$destination;
+        throw new RuntimeException('O curso selecionado ainda não está disponível no AVA escolhido. Sincronize os cursos na configuração da franquia.');
+    }
+
+    /** @return array<string,mixed> */
+    public function resolveEnrollmentDestination(int $organizationId,int $productId,int $connectionId): array
+    {
+        $statement=$this->database->prepare('SELECT moodle_course_id FROM finance_products WHERE id=:product AND is_active=1 LIMIT 1');
+        $statement->execute(['product'=>$productId]);
+        $moodleCourseId=(int)$statement->fetchColumn();
+        if($moodleCourseId<1)throw new RuntimeException('O curso contratado não está vinculado ao catálogo do AVA.');
+        return$this->resolveDestination($organizationId,$moodleCourseId,$connectionId);
+    }
+
+    /** @return array{mapped:int,unmatched:int,total:int} */
+    public function synchronizeCourses(int $connectionId,array $remoteCourses): array
+    {
+        $connection=$this->find($connectionId);if($connection===null)throw new RuntimeException('Conexão AVA não encontrada.');
+        $locals=$this->database->query('SELECT id,shortname,idnumber,fullname FROM moodle_courses WHERE visible=1')->fetchAll()?:[];$mapped=0;$unmatched=0;
+        $this->database->beginTransaction();
+        try{
+            foreach($remoteCourses as$remote){
+                if(!is_array($remote)||(int)($remote['id']??0)<1)continue;$match=null;$remoteNumber=trim((string)($remote['idnumber']??''));$remoteShort=trim((string)($remote['shortname']??''));
+                foreach($locals as$local){$localNumber=trim((string)($local['idnumber']??''));if($remoteNumber!==''&&$localNumber!==''&&strcasecmp($remoteNumber,$localNumber)===0){$match=$local;break;}}
+                if($match===null)foreach($locals as$local)if($remoteShort!==''&&strcasecmp($remoteShort,(string)$local['shortname'])===0){$match=$local;break;}
+                if($match===null){$unmatched++;continue;}
+                $sql="INSERT INTO ava_course_mappings(connection_id,moodle_course_id,remote_course_id,remote_shortname,remote_fullname,match_method) VALUES(:connection,:course,:remote,:short,:full,'automatic') ON DUPLICATE KEY UPDATE remote_course_id=VALUES(remote_course_id),remote_shortname=VALUES(remote_shortname),remote_fullname=VALUES(remote_fullname),match_method='automatic',synced_at=NOW()";
+                $this->database->prepare($sql)->execute(['connection'=>$connectionId,'course'=>(int)$match['id'],'remote'=>(int)$remote['id'],'short'=>$remoteShort,'full'=>(string)($remote['fullname']??$remoteShort)]);$mapped++;
+            }
+            $this->database->commit();
+        }catch(Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+        return['mapped'=>$mapped,'unmatched'=>$unmatched,'total'=>count($remoteCourses)];
+    }
+
+    public function mappedCourseCount(int $connectionId): int
+    {
+        try{$statement=$this->database->prepare('SELECT COUNT(*) FROM ava_course_mappings WHERE connection_id=:connection');$statement->execute(['connection'=>$connectionId]);return(int)$statement->fetchColumn();}catch(Throwable){return 0;}
     }
 
     public function recordTest(int $connectionId,?string $error): void

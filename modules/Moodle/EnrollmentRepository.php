@@ -13,7 +13,7 @@ final readonly class EnrollmentRepository
     {
         if($unitIds===[])return[];
         $marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT e.*,f.name student_name,f.cpf_cnpj,m.fullname course_name,m.shortname,p.name product_name,COALESCE(e.final_value,p.value) value,p.max_installments,c.name campaign_name,u.name unit_name,a.name attendant_name,fp.status payment_status FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses m ON m.id=e.moodle_course_id LEFT JOIN finance_products p ON p.id=e.finance_product_id LEFT JOIN finance_campaigns c ON c.id=e.campaign_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN users a ON a.id=e.attendant_user_id LEFT JOIN finance_payments fp ON fp.id=e.finance_payment_id WHERE e.unit_id IN ($marks) ORDER BY e.created_at DESC,e.id DESC LIMIT 500";
+        $sql="SELECT e.*,f.name student_name,f.cpf_cnpj,m.fullname course_name,m.shortname,p.name product_name,COALESCE(e.final_value,p.value) value,p.max_installments,c.name campaign_name,u.name unit_name,a.name attendant_name,fp.status payment_status,ac.name ava_connection_name,ac.connection_type ava_connection_type FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses m ON m.id=e.moodle_course_id LEFT JOIN finance_products p ON p.id=e.finance_product_id LEFT JOIN finance_campaigns c ON c.id=e.campaign_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN users a ON a.id=e.attendant_user_id LEFT JOIN finance_payments fp ON fp.id=e.finance_payment_id LEFT JOIN ava_connections ac ON ac.id=e.ava_connection_id WHERE e.unit_id IN ($marks) ORDER BY e.created_at DESC,e.id DESC LIMIT 500";
         $s=$this->database->prepare($sql);$s->execute($unitIds);return$s->fetchAll();
     }
 
@@ -25,7 +25,7 @@ final readonly class EnrollmentRepository
         $s->execute($enrollmentIds);$grouped=[];foreach($s->fetchAll()as$event)$grouped[(int)$event['enrollment_id']][]=$event;return$grouped;
     }
 
-    public function create(int $customerId,int $productId,?int $campaignId,int $unitId,int $creatorId,int $attendantId,array $allowedUnits): int
+    public function create(int $customerId,int $productId,?int $campaignId,int $unitId,int $creatorId,int $attendantId,array $allowedUnits,?int $avaConnectionId=null,?int $avaCourseId=null): int
     {
         if(!in_array($unitId,$allowedUnits,true))throw new RuntimeException('Selecione uma unidade permitida.');
         if($productId<1)throw new RuntimeException('Selecione o curso contratado.');
@@ -35,18 +35,20 @@ final readonly class EnrollmentRepository
         if($campaignId!==null){$s=$this->database->prepare('SELECT discount_percent FROM finance_campaigns WHERE id=:id AND is_active=1 AND valid_until>=CURRENT_DATE');$s->execute(['id'=>$campaignId]);$found=$s->fetchColumn();if($found===false)throw new RuntimeException('Campanha inválida ou expirada.');$discount=(float)$found;}
         $final=round($base*(1-$discount/100),2);if($final<5)throw new RuntimeException('O desconto deixa a cobrança abaixo do valor mínimo de R$ 5,00.');
         $poleId=$this->poleIdForUnit($unitId);
+        [$avaConnectionId,$avaCourseId]=$this->validatedDestination($courseId,$avaConnectionId,$avaCourseId);
         $this->database->beginTransaction();
-        try{$s=$this->database->prepare('INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,finance_product_id,campaign_id,base_value,discount_percent,final_value,unit_id,organization_pole_id,attendant_user_id,created_by) VALUES(:customer,:course,:product,:campaign,:base,:discount,:final,:unit,:pole,:attendant,:creator)');$s->execute(['customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'campaign'=>$campaignId,'base'=>$base,'discount'=>$discount,'final'=>$final,'unit'=>$unitId,'pole'=>$poleId,'attendant'=>$attendantId,'creator'=>$creatorId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$creatorId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        try{$s=$this->database->prepare('INSERT INTO student_enrollments(organization_id,finance_customer_id,moodle_course_id,finance_product_id,campaign_id,base_value,discount_percent,final_value,unit_id,organization_pole_id,ava_connection_id,ava_course_id,attendant_user_id,created_by) VALUES(:organization,:customer,:course,:product,:campaign,:base,:discount,:final,:unit,:pole,:ava_connection,:ava_course,:attendant,:creator)');$s->execute(['organization'=>$this->organizationId,'customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'campaign'=>$campaignId,'base'=>$base,'discount'=>$discount,'final'=>$final,'unit'=>$unitId,'pole'=>$poleId,'ava_connection'=>$avaConnectionId,'ava_course'=>$avaCourseId,'attendant'=>$attendantId,'creator'=>$creatorId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel e direcionada ao AVA selecionado.',$creatorId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
-    public function createWaived(int$customerId,int$courseId,int$unitId,string$reason,int$userId,array$allowedUnits):int
+    public function createWaived(int$customerId,int$courseId,int$unitId,string$reason,int$userId,array$allowedUnits,?int$avaConnectionId=null,?int$avaCourseId=null):int
     {
         $reason=trim($reason);if(!in_array($unitId,$allowedUnits,true))throw new RuntimeException('Selecione uma unidade permitida.');if(mb_strlen($reason)<10||mb_strlen($reason)>500)throw new RuntimeException('Informe o motivo da bolsa ou cortesia, entre 10 e 500 caracteres.');
         $s=$this->database->prepare("SELECT COUNT(*) FROM finance_customers WHERE id=:customer AND unit_id=:unit AND student_status='active' AND is_deleted=0");$s->execute(['customer'=>$customerId,'unit'=>$unitId]);if((int)$s->fetchColumn()!==1)throw new RuntimeException('Aluno não encontrado na unidade selecionada.');
         $s=$this->database->prepare('SELECT COUNT(*) FROM moodle_courses WHERE id=:course AND visible=1');$s->execute(['course'=>$courseId]);if((int)$s->fetchColumn()!==1)throw new RuntimeException('Curso indisponível no AVA.');
         $s=$this->database->prepare("SELECT COUNT(*) FROM student_enrollments WHERE finance_customer_id=:customer AND moodle_course_id=:course AND status IN ('payment_waived','payment_confirmed') AND moodle_enrolment_status IN ('not_released','released')");$s->execute(['customer'=>$customerId,'course'=>$courseId]);if((int)$s->fetchColumn()>0)throw new RuntimeException('Este aluno já possui uma matrícula ativa ou preparada nesse curso.');
         $poleId=$this->poleIdForUnit($unitId);
-        $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO student_enrollments(finance_customer_id,moodle_course_id,unit_id,organization_pole_id,attendant_user_id,status,payment_waiver_reason,payment_waived_at,payment_waived_by,created_by) VALUES(:customer,:course,:unit,:pole,:attendant,'payment_waived',:reason,NOW(),:waived_by,:creator)");$s->execute(['customer'=>$customerId,'course'=>$courseId,'unit'=>$unitId,'pole'=>$poleId,'attendant'=>$userId,'reason'=>$reason,'waived_by'=>$userId,'creator'=>$userId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel.',$userId);$this->recordEvent($id,'payment-waived:'.$id,'payment_waived','Pagamento dispensado por bolsa ou cortesia. Motivo: '.$reason,$userId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        [$avaConnectionId,$avaCourseId]=$this->validatedDestination($courseId,$avaConnectionId,$avaCourseId);
+        $this->database->beginTransaction();try{$s=$this->database->prepare("INSERT INTO student_enrollments(organization_id,finance_customer_id,moodle_course_id,unit_id,organization_pole_id,ava_connection_id,ava_course_id,attendant_user_id,status,payment_waiver_reason,payment_waived_at,payment_waived_by,created_by) VALUES(:organization,:customer,:course,:unit,:pole,:ava_connection,:ava_course,:attendant,'payment_waived',:reason,NOW(),:waived_by,:creator)");$s->execute(['organization'=>$this->organizationId,'customer'=>$customerId,'course'=>$courseId,'unit'=>$unitId,'pole'=>$poleId,'ava_connection'=>$avaConnectionId,'ava_course'=>$avaCourseId,'attendant'=>$userId,'reason'=>$reason,'waived_by'=>$userId,'creator'=>$userId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel e direcionada ao AVA selecionado.',$userId);$this->recordEvent($id,'payment-waived:'.$id,'payment_waived','Pagamento dispensado por bolsa ou cortesia. Motivo: '.$reason,$userId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
     public function deleteDraft(int $id,array $allowedUnits): void
@@ -75,23 +77,25 @@ final readonly class EnrollmentRepository
     public function releaseContext(int$id,array$allowedUnits):?array
     {
         if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
-        $sql="SELECT e.id,e.finance_customer_id,e.unit_id,e.status,e.moodle_enrolment_status,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.status,e.moodle_enrolment_status,e.created_at,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function releaseContextForAutomation(int$id):?array
     {
-        $sql="SELECT e.id,e.finance_customer_id,e.unit_id,e.organization_pole_id,e.status,e.moodle_enrolment_status,e.created_at,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.status,e.moodle_enrolment_status,e.created_at,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
-    public function markReleased(int$id,int$avaUserId,int$courseId,int$customerId,?int$userId,array$avaUser):void
+    public function markReleased(int$id,int$avaUserId,int$courseId,int$customerId,?int$userId,array$avaUser,int$connectionId,string$connectionName,string$connectionType):void
     {
         $this->database->beginTransaction();
-        try{$this->database->prepare("UPDATE student_enrollments SET moodle_enrolment_status='released',ava_user_id=:ava_user,ava_released_at=NOW(),ava_released_by=:released_by,ava_last_error=NULL WHERE id=:id AND status IN ('payment_confirmed','payment_waived') AND moodle_enrolment_status<>'released'")->execute(['ava_user'=>$avaUserId,'released_by'=>$userId,'id'=>$id]);
-            $this->database->prepare("UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status='linked',match_method='assisted_release',reviewed_by=:user,matched_at=NOW() WHERE moodle_user_id=:ava_user")->execute(['customer'=>$customerId,'user'=>$userId,'ava_user'=>$avaUserId]);
-            $this->database->prepare('INSERT INTO moodle_enrolments(moodle_course_id,moodle_user_id,time_start,is_active) VALUES(:course,:ava_user,NOW(),1) ON DUPLICATE KEY UPDATE is_active=1,time_start=COALESCE(time_start,NOW()),synced_at=NOW()')->execute(['course'=>$courseId,'ava_user'=>$avaUserId]);
-            $this->recordEvent($id,'ava-released:'.$id.':'.$avaUserId.':'.$courseId,'ava_released','Acesso ao curso liberado no AVA.',$userId);$this->database->commit();
+        try{$this->database->prepare("UPDATE student_enrollments SET moodle_enrolment_status='released',ava_connection_id=:connection,ava_course_id=:course,ava_user_id=:ava_user,ava_username=:username,ava_released_at=NOW(),ava_released_by=:released_by,ava_last_error=NULL WHERE id=:id AND status IN ('payment_confirmed','payment_waived') AND moodle_enrolment_status<>'released'")->execute(['connection'=>$connectionId,'course'=>$courseId,'ava_user'=>$avaUserId,'username'=>(string)($avaUser['username']??''),'released_by'=>$userId,'id'=>$id]);
+            if($connectionType==='shared'){
+                $this->database->prepare("UPDATE moodle_users SET finance_customer_id=:customer,reconciliation_status='linked',match_method='assisted_release',reviewed_by=:user,matched_at=NOW() WHERE moodle_user_id=:ava_user")->execute(['customer'=>$customerId,'user'=>$userId,'ava_user'=>$avaUserId]);
+                $this->database->prepare('INSERT INTO moodle_enrolments(moodle_course_id,moodle_user_id,time_start,is_active) VALUES(:course,:ava_user,NOW(),1) ON DUPLICATE KEY UPDATE is_active=1,time_start=COALESCE(time_start,NOW()),synced_at=NOW()')->execute(['course'=>$courseId,'ava_user'=>$avaUserId]);
+            }
+            $this->recordEvent($id,'ava-released:'.$id.':'.$connectionId.':'.$avaUserId.':'.$courseId,'ava_released','Acesso ao curso liberado em '.$connectionName.'.',$userId);$this->database->commit();
         }catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
@@ -111,13 +115,13 @@ final readonly class EnrollmentRepository
     public function accessCommunicationContext(int$id,array$allowedUnits):?array
     {
         if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
-        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,mu.username FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=? AND e.unit_id IN ($marks) AND e.moodle_enrolment_status='released' LIMIT 1";
+        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,COALESCE(e.ava_username,mu.username) username,ac.name ava_connection_name,ac.base_url ava_base_url FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id LEFT JOIN ava_connections ac ON ac.id=e.ava_connection_id WHERE e.id=? AND e.unit_id IN ($marks) AND e.moodle_enrolment_status='released' LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function accessCommunicationContextForAutomation(int$id):?array
     {
-        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,mu.username FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id WHERE e.id=:id AND e.moodle_enrolment_status='released' LIMIT 1";
+        $sql="SELECT e.id,e.unit_id,e.moodle_enrolment_status,e.ava_user_id,f.name,f.email,f.mobile_phone,f.phone,f.cpf_cnpj,c.fullname course_name,u.name unit_name,COALESCE(e.ava_username,mu.username) username,ac.name ava_connection_name,ac.base_url ava_base_url FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id INNER JOIN moodle_courses c ON c.id=e.moodle_course_id INNER JOIN units u ON u.id=e.unit_id LEFT JOIN moodle_users mu ON mu.moodle_user_id=e.ava_user_id LEFT JOIN ava_connections ac ON ac.id=e.ava_connection_id WHERE e.id=:id AND e.moodle_enrolment_status='released' LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
@@ -142,6 +146,19 @@ final readonly class EnrollmentRepository
     {
         $statement=$this->database->prepare('SELECT COALESCE((SELECT id FROM organization_poles WHERE unit_id=:unit_direct AND is_active=1 LIMIT 1),(SELECT p.id FROM units u INNER JOIN organization_poles p ON p.organization_id=u.organization_id AND p.is_primary=1 AND p.is_active=1 WHERE u.id=:unit_primary LIMIT 1))');
         $statement->execute(['unit_direct'=>$unitId,'unit_primary'=>$unitId]);$id=(int)$statement->fetchColumn();if($id<1)throw new RuntimeException('Cadastre um polo ativo para esta unidade antes de criar a matrícula.');return$id;
+    }
+
+    /** @return array{0:int,1:int} */
+    private function validatedDestination(int $moodleCourseId,?int $connectionId,?int $remoteCourseId): array
+    {
+        if(($connectionId??0)<1){$statement=$this->database->query("SELECT id FROM ava_connections WHERE connection_key='shared:ava-cursos' AND is_active=1 LIMIT 1");$connectionId=(int)$statement->fetchColumn();}
+        if(($connectionId??0)<1)throw new RuntimeException('Nenhum AVA ativo foi definido para esta matrícula.');
+        $statement=$this->database->prepare("SELECT COUNT(*) FROM ava_connections WHERE id=:connection AND is_active=1 AND (connection_type='shared' OR organization_id=:organization)");
+        $statement->execute(['connection'=>$connectionId,'organization'=>$this->organizationId]);
+        if((int)$statement->fetchColumn()!==1)throw new RuntimeException('O AVA escolhido não pertence a esta franquia ou está inativo.');
+        if(($remoteCourseId??0)<1){$statement=$this->database->prepare('SELECT remote_course_id FROM ava_course_mappings WHERE connection_id=:connection AND moodle_course_id=:course LIMIT 1');$statement->execute(['connection'=>$connectionId,'course'=>$moodleCourseId]);$remoteCourseId=(int)$statement->fetchColumn();}
+        if(($remoteCourseId??0)<1)throw new RuntimeException('O curso ainda não está mapeado no AVA escolhido.');
+        return[(int)$connectionId,(int)$remoteCourseId];
     }
 
     private function recordEvent(int $enrollmentId,string $key,string $type,string $description,?int $userId=null): void

@@ -514,3 +514,30 @@ document.querySelectorAll('.color-field').forEach((group) => {
   });
   cancel.addEventListener('click', reset);
 })();
+
+(() => {
+  const product = document.querySelector('[data-enrollment-product]');
+  const ava = document.querySelector('[data-enrollment-ava]');
+  const source = document.querySelector('[data-enrollment-ava-options]');
+  if (!(product instanceof HTMLSelectElement) || !(ava instanceof HTMLSelectElement) || !(source instanceof HTMLScriptElement)) return;
+  let destinations = {};
+  try { destinations = JSON.parse(source.textContent || '{}'); } catch (_) { destinations = {}; }
+  const refresh = () => {
+    const options = Array.isArray(destinations[product.value]) ? destinations[product.value] : [];
+    ava.replaceChildren();
+    if (options.length === 0) {
+      ava.append(new Option(product.value ? 'Curso sem AVA sincronizado' : 'Escolha primeiro o curso contratado', ''));
+      ava.disabled = true;
+      return;
+    }
+    ava.append(new Option('Selecione o AVA', ''));
+    options.forEach((destination) => {
+      const option = new Option(`${destination.name} · ${destination.remote_course_name}`, String(destination.connection_id));
+      option.selected = destination.primary === true;
+      ava.append(option);
+    });
+    ava.disabled = false;
+  };
+  product.addEventListener('change', refresh);
+  refresh();
+})();

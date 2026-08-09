@@ -31,7 +31,7 @@ final readonly class AvaAccessNotifier
             'Olá, ' . $context['name'] . '!',
             '',
             'Seu acesso ao curso ' . $context['course_name'] . ' foi liberado no AVA.',
-            'Endereço: ' . rtrim((string) $settings['base_url'], '/') . '/',
+            'Endereço: ' . rtrim((string) ($context['ava_base_url'] ?: $settings['base_url']), '/') . '/',
             'Login: ' . $login,
             $settings['initial_password_mode'] === 'cpf5'
                 ? 'Senha inicial: os 5 primeiros dígitos do seu CPF.'
