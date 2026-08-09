@@ -1036,7 +1036,8 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($form,'data-organization-tab="ava"'));
     assertTrue(str_contains($ava,'Somente nosso AVA (AVA Cursos)'));
     assertTrue(str_contains($ava,'AVA Cursos + AVA próprio'));
-    assertTrue(str_contains($navigation,'/admin/platform/painel-inter'));
+    assertFalse(str_contains($navigation,'/admin/platform/painel-inter'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/platform/integrations.php'),'/admin/platform/painel-inter'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/version.php'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php'));
     $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
