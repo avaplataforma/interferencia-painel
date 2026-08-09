@@ -1058,7 +1058,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.3.3',$metadata['release']);
+    assertSame('0.3.4',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1078,7 +1078,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.3.3'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.3.4'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));
@@ -1086,6 +1086,11 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains($view,'Identidades do AVA compartilhado'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'loginContainer.querySelectorAll("#loginlogo, .login-logo")'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'document.title = pageTitle'));
+    $resolver=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/local/brand_resolver.php');
+    assertTrue(str_contains($resolver,"private const COOKIE_NAME = 'MundoInterBrand'"));
+    assertTrue(str_contains($resolver,"'httponly'=>true"));
+    assertTrue(str_contains($resolver,"'samesite'=>'Lax'"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/entrar.php'),'brand_resolver::remember($slug)'));
 };
 
 $failures = 0;
