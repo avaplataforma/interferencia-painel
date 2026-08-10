@@ -1587,9 +1587,11 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
     assertTrue(str_contains($view,'data-catalog-tab'));
     assertTrue(str_contains($view,"preg_replace('/^Catálogo\\s+/u'"));
+    assertTrue(str_contains($view,'.catalog-subtab{margin:0'));
     assertTrue(!str_contains($view,'<script>'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-catalog-tab]')"));
     assertTrue(str_contains($javascript,'showCatalog'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'.btn-primary { border-color: var(--inter-accent);'));
     assertTrue(str_contains($view,'Conexão e API'));
     assertTrue(str_contains($view,'Cursos e curadoria'));
 };

@@ -40,7 +40,12 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .fw-semibold { font-weight: 600; } .small { font-size: .875rem; } .h5 { font-size: 1.25rem; } .display-6 { font-size: 2.25rem; }
     .bg-white { background: #fff; } .border { border: 1px solid #dee2e6; } .border-0 { border: 0; }
     .rounded-4 { border-radius: 1rem; } .shadow-sm { box-shadow: 0 .4rem 1.2rem rgb(23 33 43 / 8%); }
-    .btn { display: inline-block; padding: .45rem .7rem; border: 1px solid transparent; border-radius: .45rem; background: transparent; font: inherit; cursor: pointer; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 2.75rem; margin: 0; padding: .55rem .8rem; border: 1px solid transparent; border-radius: .55rem; background: transparent; font: inherit; font-weight: 700; line-height: 1.2; text-decoration: none; cursor: pointer; }
+    .btn-primary { border-color: var(--inter-accent); color: #fff !important; background: var(--inter-accent); }
+    .btn-primary:hover { border-color: var(--inter-accent-dark); color: #fff !important; background: var(--inter-accent-dark); }
+    .btn-secondary { border-color: #bcc6ce; color: var(--inter-ink) !important; background: #fff; }
+    .btn-secondary:hover { border-color: #9aa7b2; color: var(--inter-accent-dark) !important; background: #f8fafb; }
+    .btn:disabled, .btn.disabled { border-color: #cbd3d9; color: #65727e !important; background: #edf1f4; opacity: 1; cursor: not-allowed; }
     .btn-sm { padding: .3rem .55rem; font-size: .875rem; } .btn-outline-secondary { color: #536170; border-color: #aeb8c1; background: #fff; }
     .btn-success { color: #fff; background: #ed1c24; } .m-0 { margin: 0; }
     .form-select { min-width: 10rem; padding: .45rem 2rem .45rem .65rem; border: 1px solid #b8c2ca; border-radius: .45rem; background: #fff; font: inherit; }
