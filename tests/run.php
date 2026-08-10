@@ -1584,8 +1584,9 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains($client,"'cursos/listar'"));
     assertTrue(!str_contains($client,'financeiro/parcelas'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
-    assertTrue(str_contains($view,'Financeiro independente'));
-    assertTrue(str_contains($view,'nunca publica, vende ou matricula automaticamente'));
+    assertTrue(str_contains($view,'data-catalog-tab'));
+    assertTrue(str_contains($view,'Conexão e API'));
+    assertTrue(str_contains($view,'Cursos e curadoria'));
 };
 
 $tests['publica Catalogo PRO por franquia com venda assistida'] = static function () use ($rootPath): void {
@@ -1603,7 +1604,10 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($siteRepository,'external_products'));
     assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}/interesse'"));
-    assertTrue(str_contains($admin,'Liberação por franquia'));
+    assertTrue(str_contains($admin,'data-catalog-tab'));
+    assertTrue(str_contains($admin,'Conexão e API'));
+    assertTrue(!str_contains($admin,'Liberação por franquia'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos e preços da franquia'));
     assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
     assertTrue(str_contains($public,'Curso ministrado no AVA do parceiro'));
 };
@@ -1631,6 +1635,8 @@ $tests['registra todos os catalogos e fornecedores academicos'] = static functio
     foreach(['Escola Avançada','SIE','IESDE','EJA CEFE','EJA Conclusão','Aprova Concursos','Trânsito'] as$provider) assertTrue(str_contains($migration,$provider));
     assertTrue(str_contains($repository,'providerCatalogRegistry'));
     assertTrue(str_contains($repository,'integration_active'));
+    assertTrue(str_contains($repository,'settingsForProvider'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),'catalogCourseOffersForOrganization'));
 };
 
 $failures = 0;

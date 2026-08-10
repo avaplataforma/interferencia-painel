@@ -22,29 +22,68 @@ final readonly class CourseProviderRepository
     /** @return array<string,mixed> */
     public function settings(): array
     {
+        return $this->settingsForProvider(self::PROVIDER, true);
+    }
+
+    /** @return array<string,mixed> */
+    public function settingsForProvider(string $providerCode, bool $includeSecret = false): array
+    {
         $statement = $this->database->prepare("SELECT p.*,c.name catalog_name,c.code catalog_code FROM course_provider_integrations p LEFT JOIN course_catalogs c ON c.id=p.catalog_id WHERE p.provider_code=:code LIMIT 1");
-        $statement->execute(['code' => self::PROVIDER]);
-        $row = $statement->fetch() ?: [];
-        $token = $this->cipher->decrypt(isset($row['token_encrypted']) ? (string)$row['token_encrypted'] : null);
+        $statement->execute(['code' => $providerCode]);
+        $row = $statement->fetch();
+        if (!is_array($row)) throw new RuntimeException('Fornecedor de cursos não encontrado.');
+        $token = $includeSecret ? $this->cipher->decrypt(isset($row['token_encrypted']) ? (string)$row['token_encrypted'] : null) : '';
 
         return [
-            'id' => (int)($row['id'] ?? 0),
-            'name' => (string)($row['name'] ?? 'Escola Avançada'),
+            'id' => (int)$row['id'],
+            'provider_code' => (string)$row['provider_code'],
+            'name' => (string)$row['name'],
             'base_url' => (string)($row['base_url'] ?? ''),
             'token' => $token,
             'token_last4' => (string)($row['token_last4'] ?? ''),
-            'catalog_name' => (string)($row['catalog_name'] ?? 'Catálogo PRO'),
-            'catalog_code' => (string)($row['catalog_code'] ?? 'catalogo-pro'),
+            'catalog_id' => (int)($row['catalog_id'] ?? 0),
+            'catalog_name' => (string)($row['catalog_name'] ?? ''),
+            'catalog_code' => (string)($row['catalog_code'] ?? ''),
             'delivery_mode' => (string)($row['delivery_mode'] ?? 'external_link'),
             'launch_url_template' => (string)($row['launch_url_template'] ?? ''),
             'is_active' => (int)($row['is_active'] ?? 0) === 1,
-            'configured' => $token !== '' && trim((string)($row['base_url'] ?? '')) !== '',
+            'configured' => trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '',
+            'adapter_ready' => (string)$row['provider_code'] === self::PROVIDER,
             'last_test_status' => (string)($row['last_test_status'] ?? 'not_tested'),
             'last_tested_at' => $row['last_tested_at'] ?? null,
             'last_sync_status' => (string)($row['last_sync_status'] ?? 'never'),
             'last_synced_at' => $row['last_synced_at'] ?? null,
             'last_error' => (string)($row['last_error'] ?? ''),
         ];
+    }
+
+    public function saveProvider(string $providerCode, array $input, ?int $userId): void
+    {
+        if ($providerCode === self::PROVIDER) {
+            $this->save($input, $userId);
+            return;
+        }
+
+        $current = $this->settingsForProvider($providerCode);
+        $baseUrl = trim((string)($input['base_url'] ?? ''));
+        $token = trim((string)($input['token'] ?? ''));
+        $delivery = trim((string)($input['delivery_mode'] ?? 'external_link'));
+        $launch = trim((string)($input['launch_url_template'] ?? ''));
+        if ($baseUrl === '' || filter_var($baseUrl, FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($baseUrl, PHP_URL_SCHEME)) !== 'https') throw new RuntimeException('Informe a URL HTTPS oficial da API do fornecedor.');
+        if (!in_array($delivery, self::DELIVERY_MODES, true)) throw new RuntimeException('Forma de acesso ao curso inválida.');
+        if ($launch !== '' && (filter_var(str_replace(['{curso}', '{id}'], ['1', '1'], $launch), FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($launch, PHP_URL_SCHEME)) !== 'https')) throw new RuntimeException('O endereço do AVA deve usar HTTPS.');
+        if ($token === '' && !$current['configured']) throw new RuntimeException('Informe a chave ou token da API.');
+        if ($token !== '' && !$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
+
+        $sql = 'UPDATE course_provider_integrations SET base_url=:base,delivery_mode=:delivery,launch_url_template=:launch,is_active=0,updated_by=:user';
+        $params = ['base' => rtrim($baseUrl, '/'), 'delivery' => $delivery, 'launch' => $launch !== '' ? $launch : null, 'user' => $userId, 'code' => $providerCode];
+        if ($token !== '') {
+            $sql .= ',token_encrypted=:token,token_last4=:last4';
+            $params['token'] = $this->cipher->encrypt($token);
+            $params['last4'] = substr($token, -4);
+        }
+        $sql .= ' WHERE provider_code=:code';
+        $this->database->prepare($sql)->execute($params);
     }
 
     public function save(array $input, ?int $userId): void
@@ -181,16 +220,38 @@ final readonly class CourseProviderRepository
     {
         $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
+            COALESCE(provider.provider_code,'ava_cursos') provider_code,
+            COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
+            COALESCE(provider.delivery_mode,'external_link') delivery_mode,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 WHEN provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
+            CASE WHEN provider.provider_code='escola_avancada' THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_test_status,'not_tested') END integration_status,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_sync_status,'never') END sync_status,
+            provider.last_tested_at,provider.last_synced_at,COALESCE(provider.last_error,'') last_error,
             (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1) course_count,
+            (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.is_available=1) approved_count,
             (SELECT COUNT(*) FROM organization_course_catalog_access access WHERE access.course_catalog_id=catalog.id AND access.is_enabled=1) organization_count
             FROM course_catalogs catalog
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             WHERE catalog.is_active=1
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function allCourses(): array
+    {
+        $statement = $this->database->query("SELECT pc.*,c.name catalog_name,c.code catalog_code,p.provider_code,p.name provider_name FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function catalogCourseOffersForOrganization(int $organizationId): array
+    {
+        $statement = $this->database->prepare("SELECT pc.id course_id,pc.catalog_id,pc.name source_name,pc.commercial_name approved_name,pc.commercial_description approved_description,pc.category,pc.workload,pc.cover_url,pc.review_status,pc.is_available,c.code catalog_code,c.name catalog_name,p.name provider_name,o.id offer_id,o.commercial_name offer_name,o.commercial_description offer_description,o.price,o.max_installments,o.is_visible,o.is_active FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN organization_provider_course_offers o ON o.provider_course_id=pc.id AND o.organization_id=:organization WHERE pc.review_status='approved' AND pc.is_available=1 ORDER BY c.name,COALESCE(NULLIF(pc.commercial_name,''),pc.name)");
+        $statement->execute(['organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }
 
@@ -313,6 +374,13 @@ final readonly class CourseProviderRepository
         $statement = $this->database->prepare('DELETE FROM organization_provider_course_offers WHERE id=:id');
         $statement->execute(['id' => $offerId]);
         if ($statement->rowCount() !== 1) throw new RuntimeException('Liberação de catálogo não encontrada.');
+    }
+
+    public function deleteOrganizationOffer(int $offerId, int $organizationId): void
+    {
+        $statement = $this->database->prepare('DELETE FROM organization_provider_course_offers WHERE id=:id AND organization_id=:organization');
+        $statement->execute(['id' => $offerId, 'organization' => $organizationId]);
+        if ($statement->rowCount() !== 1) throw new RuntimeException('Oferta da franquia não encontrada.');
     }
 
     /** @return array{total:int,available:int,categories:int,approved:int,offers:int} */
