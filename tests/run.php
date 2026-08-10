@@ -1355,7 +1355,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicSite,'Acessos e suporte'));
     assertTrue(str_contains($publicSite,'classroomUrl'));
     assertTrue(str_contains($publicJavascript,'data-site-search-item'));
-    assertTrue(str_contains($publicJavascript,'data-scholarship-popup'));
+    assertTrue(str_contains($publicJavascript,'scholarshipPopup'));
     assertTrue(str_contains($course,'Quero receber atendimento'));
     assertTrue(str_contains($course,'Ir para o pagamento'));
     assertTrue(str_contains($checkout,'Continuar para pagamento'));
