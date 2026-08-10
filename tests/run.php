@@ -1364,6 +1364,7 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     $enrollmentIndex=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
     $asaas=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
     $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
     assertTrue(str_contains($migration,'checkout_fulfillment_mode'));
     assertTrue(str_contains($migration,'student_enrollment_id'));
@@ -1380,6 +1381,7 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     assertTrue(str_contains($routes,'$siteOrderFulfillment->processPayment'));
     assertTrue(str_contains($governance,'Após confirmar o pagamento'));
     assertTrue(str_contains($siteAdmin,'site-section-nav'));
+    assertTrue(str_contains($javascript,"querySelectorAll('[data-site-tab]')"));
     assertTrue(str_contains($ordersPanel,'Liberar no AVA'));
     assertTrue(str_contains($dashboard,'orders-panel.php'));
     assertTrue(str_contains($enrollmentIndex,'orders-panel.php'));

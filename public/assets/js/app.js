@@ -434,6 +434,32 @@ document.querySelectorAll('.color-field').forEach((group) => {
 });
 
 (() => {
+  const tabs = Array.from(document.querySelectorAll('[data-site-tab]'));
+  const panels = Array.from(document.querySelectorAll('[data-site-panel]'));
+  const savebar = document.querySelector('[data-site-savebar]');
+  const activeInput = document.querySelector('[data-site-active-tab]');
+  if (tabs.length === 0) return;
+
+  const validTabs = tabs.map((tab) => tab.dataset.siteTab || '');
+  const show = (requestedName, updateHash = true) => {
+    const name = validTabs.includes(requestedName) ? requestedName : 'publicacao';
+    tabs.forEach((tab) => {
+      const active = tab.dataset.siteTab === name;
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.sitePanel !== name; });
+    if (savebar instanceof HTMLElement) savebar.hidden = ['banners', 'paginas'].includes(name);
+    if (activeInput instanceof HTMLInputElement) activeInput.value = name;
+    if (updateHash && history.replaceState) history.replaceState(null, '', `#${name}`);
+  };
+
+  tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.siteTab || 'publicacao')));
+  window.addEventListener('hashchange', () => show(location.hash.replace('#', ''), false));
+  show(location.hash.replace('#', '') || 'publicacao', false);
+})();
+
+(() => {
   const tabs = Array.from(document.querySelectorAll('[data-organization-tab]'));
   const panels = Array.from(document.querySelectorAll('[data-organization-panel]'));
   const form = document.querySelector('.organization-editor-form');
