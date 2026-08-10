@@ -54,7 +54,7 @@ final readonly class AsaasClient
         $checkout=$this->request('POST','/checkouts',$payload);$id=(string)($checkout['id']??'');
         if($id===''||preg_match('/^[A-Za-z0-9-]{20,80}$/',$id)!==1)throw new RuntimeException('O Asaas não retornou um identificador válido para o checkout.');
         $link=trim((string)($checkout['link']??''));
-        if($link==='')$link=($this->environment==='sandbox'?'https://sandbox.asaas.com':'https://asaas.com').'/checkoutSession/show/'.rawurlencode($id);
+        if($link==='')$link=($this->environment==='sandbox'?'https://sandbox.asaas.com':'https://asaas.com').'/checkoutSession/show?id='.rawurlencode($id);
         $host=strtolower((string)parse_url($link,PHP_URL_HOST));
         if(!str_ends_with($host,'.asaas.com')&&$host!=='asaas.com')throw new RuntimeException('O Asaas retornou um link de checkout inválido.');
         $checkout['link']=$link;

@@ -1294,25 +1294,43 @@ $tests['centraliza plano e histórico na aba Contrato da franquia'] = static fun
 
 $tests['carrega o Site Institucional com governança central por franquia'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_995000_create_institutional_sites.php');
+    $expansion=(string)file_get_contents($rootPath.'/database/migrations/20260809_996000_expand_institutional_sites.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
     $organizationForm=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
     $tenantAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
     $publicSite=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $checkout=(string)file_get_contents($rootPath.'/views/site/checkout.php');
+    $page=(string)file_get_contents($rootPath.'/views/site/page.php');
 
     assertTrue(str_contains($migration,'organization_sites'));
     assertTrue(str_contains($migration,'organization_site_products'));
+    assertTrue(str_contains($expansion,'organization_site_banners'));
+    assertTrue(str_contains($expansion,'organization_site_pages'));
+    assertTrue(str_contains($expansion,'organization_site_orders'));
     assertTrue(str_contains($repository,'saveGovernance'));
     assertTrue(str_contains($repository,'saveContent'));
+    assertTrue(str_contains($repository,'saveBanner'));
+    assertTrue(str_contains($repository,'savePage'));
+    assertTrue(str_contains($repository,'createOrderDraft'));
+    assertTrue(str_contains($repository,'updateOrderFromWebhook'));
     assertTrue(str_contains($repository,"publication_status']??'')!=='published'"));
     assertTrue(str_contains($routes,"'/admin/site'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/site-governance'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/site-preview'"));
     assertTrue(str_contains($routes,"'/site'"));
+    assertTrue(str_contains($routes,"'/site/banner/{id:\\d+}'"));
+    assertTrue(str_contains($routes,"'/site/p/{slug:[a-z0-9-]+}'"));
+    assertTrue(str_contains($routes,"'/site/checkout/{product:\\d+}'"));
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
+    assertTrue(str_contains($tenantAdmin,'Pedidos recentes'));
+    assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
+    assertTrue(str_contains($publicSite,'Comprar agora'));
+    assertTrue(str_contains($checkout,'Continuar para pagamento'));
+    assertTrue(str_contains($page,'Voltar ao site'));
     assertTrue(str_contains($publicSite,'Modo de pré-visualização'));
 };
 
