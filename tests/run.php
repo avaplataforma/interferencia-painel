@@ -577,6 +577,7 @@ $tests['carrega integração Moodle com liberação assistida'] = static functio
     $bootstrap=(string)file_get_contents($rootPath.'/bootstrap/app.php');
     $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php').file_get_contents($rootPath.'/views/layouts/navigation.php');
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $avaEnrollmentReleaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
     assertTrue(is_file($rootPath.'/database/migrations/20260805_570000_create_moodle_integration.php'));
     assertTrue(is_file($rootPath.'/views/moodle/settings.php'));
     assertTrue(str_contains($routes,"'/admin/integrations/moodle'"));
@@ -608,7 +609,7 @@ $tests['carrega integração Moodle com liberação assistida'] = static functio
     assertTrue(str_contains($routes,"'/admin/ava/unit-mappings'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_700000_add_ava_password_policy.php'));
     assertTrue(str_contains($routes,"'/admin/ava/password-policy'"));
-    assertTrue(str_contains($routes,'substr($document,0,5)'));
+    assertTrue(str_contains($avaEnrollmentReleaser,'substr($document, 0, 5)'));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_710000_create_ava_access_communications.php'));
     assertTrue(is_file($rootPath.'/views/moodle/enrollments/access.php'));
     assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/access'"));
