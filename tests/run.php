@@ -1304,6 +1304,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     $tenantAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
     $publicSite=(string)file_get_contents($rootPath.'/views/site/public.php');
     $publicJavascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+    $fontAwesomeBrands=(string)file_get_contents($rootPath.'/public/assets/vendor/fontawesome/css/brands.min.css');
     $course=(string)file_get_contents($rootPath.'/views/site/course.php');
     $checkout=(string)file_get_contents($rootPath.'/views/site/checkout.php');
     $page=(string)file_get_contents($rootPath.'/views/site/page.php');
@@ -1349,8 +1350,15 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
     assertTrue(str_contains($publicSite,'Ver curso e comprar'));
     assertTrue(str_contains($publicSite,'scholarship-dialog'));
+    assertTrue(str_contains($publicSite,'scholarship-rail'));
     assertTrue(str_contains($publicSite,'GANHE BOLSAS DE ESTUDOS'));
     assertTrue(str_contains($publicSite,'floating-action whatsapp'));
+    assertTrue(str_contains($publicSite,'fa-brands fa-whatsapp'));
+    assertTrue(str_contains($publicSite,'name="full_name"'));
+    assertTrue(str_contains($publicSite,'name="desired_course"'));
+    assertTrue(str_contains($routes,"input('desired_course'"));
+    assertTrue(str_contains($fontAwesomeBrands,'fa-whatsapp'));
+    assertTrue(is_file($rootPath.'/public/assets/vendor/fontawesome/webfonts/fa-brands-400.woff2'));
     assertTrue(str_contains($publicSite,'Busca universal'));
     assertTrue(str_contains($publicSite,'Acessos e suporte'));
     assertTrue(str_contains($publicSite,'classroomUrl'));
