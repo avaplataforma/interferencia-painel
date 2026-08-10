@@ -81,14 +81,14 @@ $application=$application??null;$contracts=$contracts??[];
       </div>
     </section>
 
-    <section class="card organization-section" id="site" data-organization-panel="site" hidden>
+    <?php if(!$editing):?><section class="card organization-section" id="site" data-organization-panel="site" hidden>
       <header class="organization-section-header"><span class="organization-section-icon"><i class="fa-solid fa-store"></i></span><div><h2>Site institucional</h2><p class="meta">Acompanhe a base do site público, catálogo ou loja virtual desta franquia.</p></div></header>
       <div class="organization-site-grid">
         <article class="organization-site-card"><i class="fa-solid fa-globe"></i><div><strong><?= $escape((string)($siteDomain['host']??'Domínio ainda não informado')) ?></strong><small><?= ($siteDomain['status']??'pending')==='active'?'Domínio validado e ativo':'Configuração de domínio pendente' ?></small></div></article>
         <article class="organization-site-card"><i class="fa-solid fa-bag-shopping"></i><div><strong>Catálogo e loja virtual</strong><small>A estrutura de conteúdo e vendas será administrada nesta área.</small></div></article>
       </div>
       <div class="alert alert-info mt-4"><i class="fa-solid fa-circle-info"></i> O domínio e a identidade visual são salvos na aba <strong>Painel</strong>. Os recursos editoriais do site serão adicionados aqui sem aumentar o cadastro principal.</div>
-    </section>
+    </section><?php endif;?>
 
     <footer class="organization-savebar" data-organization-savebar><p class="meta"><i class="fa-solid fa-shield-halved"></i> O financeiro e o modelo comercial são concluídos no fluxo de implantação, após a conferência.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar franquia</button></footer>
   </form>
@@ -96,5 +96,6 @@ $application=$application??null;$contracts=$contracts??[];
   <?php if($editing):?><?php require __DIR__.'/poles.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/contract.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
+  <?php if($editing):?><?php require __DIR__.'/site.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/integrations.php'; ?><?php endif;?>
 </div>

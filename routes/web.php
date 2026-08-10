@@ -68,6 +68,7 @@ use Interferencia\Modules\Moodle\EnrollmentRepository;
 use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
 use Interferencia\Modules\Moodle\AvaAccessNotifier;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
+use Interferencia\Modules\Site\SiteRepository;
 
 return static function (
     Router $router,
@@ -122,6 +123,7 @@ return static function (
     AvaConnectionRepository $avaConnections,
     AvaBrandCatalog $avaBrands,
     AvaPoloMappingRepository $avaPoloMappings,
+    SiteRepository $sites,
     MoodleIntegrationRepository $moodleIntegrations,
     MoodleClient $moodleClient,
     MoodleRepository $moodleRepository,
@@ -157,6 +159,30 @@ return static function (
     $router->get('/cadastro-franquia',static function()use($view,$session,$csrf,$browserTitle,$basePath):Response{return$view->render('public/franchise-application',['currentUser'=>null,'wideGuest'=>true,'title'=>'Cadastro de franquia — '.$browserTitle,'application'=>[],'formAction'=>$basePath.'/cadastro-franquia','error'=>$session->get('franchise_public.error'),'csrfField'=>$csrf->field()]);});
     $router->post('/cadastro-franquia',static function(Request$request)use($franchiseApplications,$session,$basePath):Response{try{$franchiseApplications->submitNew(['display_name'=>$request->input('display_name',''),'legal_name'=>$request->input('legal_name',''),'cnpj'=>$request->input('cnpj',''),'state_registration'=>$request->input('state_registration',''),'municipal_registration'=>$request->input('municipal_registration',''),'postal_code'=>$request->input('postal_code',''),'address'=>$request->input('address',''),'address_number'=>$request->input('address_number',''),'address_complement'=>$request->input('address_complement',''),'neighborhood'=>$request->input('neighborhood',''),'city'=>$request->input('city',''),'state'=>$request->input('state',''),'manager_name'=>$request->input('manager_name',''),'manager_document'=>$request->input('manager_document',''),'manager_email'=>$request->input('manager_email',''),'manager_phone'=>$request->input('manager_phone',''),'general_manager_name'=>$request->input('general_manager_name',''),'general_manager_email'=>$request->input('general_manager_email',''),'general_manager_phone'=>$request->input('general_manager_phone',''),'site_host'=>$request->input('site_host',''),'negotiation_notes'=>$request->input('negotiation_notes','')]);return Response::redirect($basePath.'/cadastro-franquia/enviado');}catch(Throwable$e){$session->flash('franchise_public.error',$e->getMessage());return Response::redirect($basePath.'/cadastro-franquia');}});
     $router->get('/cadastro-franquia/enviado',static fn()=>$view->render('public/franchise-application-success',['currentUser'=>null,'title'=>'Solicitação recebida — '.$browserTitle]));
+
+    $router->get('/site',static function(Request$request)use($view,$config,$auth,$sites,$organizationId,$basePath):Response{
+        $host=OrganizationRepository::normalizeHost((string)$request->header('host',''));
+        $isCentralRoot=$host===OrganizationRepository::normalizeHost($config->string('app.central_host'))&&$basePath===$config->path('app.base_path');
+        if($isCentralRoot||$organizationId<1)return$view->renderStandalone('site/unavailable',[],404);
+        $preview=$request->queryValue('preview')==='1'&&$auth->check()&&$auth->can('users.manage');
+        $site=$sites->publicSite($organizationId,$preview);
+        if($site===null)return$view->renderStandalone('site/unavailable',[],503);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview]);
+    });
+
+    $router->get('/admin/site',static function()use($view,$sites,$organizationId,$session,$basePath,$browserTitle):Response{
+        if($organizationId<1)return Response::text("Franquia não encontrada.\n",404);
+        return$view->render('site/admin',['title'=>'Site Institucional — '.$browserTitle,'settings'=>$sites->settings($organizationId),'products'=>$sites->availableProducts($organizationId),'selectedProductIds'=>$sites->selectedProductIds($organizationId),'message'=>$session->get('site.message'),'error'=>$session->get('site.error'),'basePath'=>$basePath]);
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/site',static function(Request$request)use($sites,$organizationId,$session,$basePath):Response{
+        try{
+            $rawProducts=$request->input('product_ids',[]);
+            $productIds=is_array($rawProducts)?array_values($rawProducts):[];
+            $sites->saveContent($organizationId,['selected_mode'=>$request->input('selected_mode','catalog'),'publication_status'=>$request->input('publication_status','draft'),'site_title'=>$request->input('site_title',''),'hero_title'=>$request->input('hero_title',''),'hero_text'=>$request->input('hero_text',''),'about_title'=>$request->input('about_title',''),'about_text'=>$request->input('about_text',''),'contact_email'=>$request->input('contact_email',''),'contact_phone'=>$request->input('contact_phone',''),'whatsapp'=>$request->input('whatsapp',''),'instagram_url'=>$request->input('instagram_url',''),'facebook_url'=>$request->input('facebook_url',''),'seo_title'=>$request->input('seo_title',''),'seo_description'=>$request->input('seo_description','')],$productIds);
+            $session->flash('site.message','Site Institucional atualizado.');
+        }catch(Throwable$e){$session->flash('site.error',$e->getMessage());}
+        return Response::redirect($basePath.'/admin/site');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $router->get('/solicitacao-franquia/{token:[a-f0-9]+}',static function(Request$request,array$params)use($view,$franchiseApplications,$session,$csrf,$browserTitle):Response{$application=$franchiseApplications->findPublic((string)$params['token']);if($application===null)return Response::text("Convite não encontrado, expirado ou já concluído.\n",404);return$view->render('public/franchise-application',['currentUser'=>null,'wideGuest'=>true,'title'=>'Solicitação de franquia — '.$browserTitle,'application'=>$application,'token'=>$params['token'],'error'=>$session->get('franchise_public.error'),'csrfField'=>$csrf->field()]);});
     $router->post('/solicitacao-franquia/{token:[a-f0-9]+}',static function(Request$request,array$params)use($franchiseApplications,$session,$basePath):Response{try{$franchiseApplications->submit((string)$params['token'],['display_name'=>$request->input('display_name',''),'legal_name'=>$request->input('legal_name',''),'cnpj'=>$request->input('cnpj',''),'state_registration'=>$request->input('state_registration',''),'municipal_registration'=>$request->input('municipal_registration',''),'postal_code'=>$request->input('postal_code',''),'address'=>$request->input('address',''),'address_number'=>$request->input('address_number',''),'address_complement'=>$request->input('address_complement',''),'neighborhood'=>$request->input('neighborhood',''),'city'=>$request->input('city',''),'state'=>$request->input('state',''),'manager_name'=>$request->input('manager_name',''),'manager_document'=>$request->input('manager_document',''),'manager_email'=>$request->input('manager_email',''),'manager_phone'=>$request->input('manager_phone',''),'general_manager_name'=>$request->input('general_manager_name',''),'general_manager_email'=>$request->input('general_manager_email',''),'general_manager_phone'=>$request->input('general_manager_phone',''),'site_host'=>$request->input('site_host',''),'negotiation_notes'=>$request->input('negotiation_notes',''),'billing_required'=>$request->input('billing_required')==='1']);return Response::redirect($basePath.'/solicitacao-franquia/enviada');}catch(Throwable$e){$session->flash('franchise_public.error',$e->getMessage());return Response::redirect($basePath.'/solicitacao-franquia/'.$params['token']);}});
@@ -201,7 +227,7 @@ return static function (
     $router->post('/admin/organizations/{id:\d+}/finance-inline',static function(Request$request,array$params)use($organizations,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);try{$organizations->saveFinanceSettings((int)$params['id'],['asaas_wallet_id'=>$request->input('asaas_wallet_id',''),'asaas_wallet_status'=>$request->input('asaas_wallet_status','not_configured'),'split_enabled'=>$request->input('split_enabled')==='1','asaas_finance_notes'=>$request->input('asaas_finance_notes','')]);$session->flash('organizations.message','Configuração financeira da franquia salva.');}catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$params['id'].'#operacao-comercial');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
     $router->post('/admin/organizations/{organizationId:\d+}/contracts/{contractId:\d+}/activate',static function(Request$request,array$params)use($franchiseContracts,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$contract=$franchiseContracts->find((int)$params['contractId']);if($contract===null||(int)($contract['organization_id']??0)!==(int)$params['organizationId'])return Response::text("Contrato não encontrado.\n",404);try{$franchiseContracts->activateCommercialFlow((int)$params['contractId'],$auth->user()?->id);$session->flash('franchise_contracts.message','Operação comercial ativada para as novas vendas.');}catch(Throwable$e){$session->flash('franchise_contracts.error',$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$params['organizationId'].'#operacao-comercial');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
     $router->post('/admin/organizations/{organizationId:\d+}/contracts/{contractId:\d+}/recurring-link',static function(Request$request,array$params)use($franchiseContracts,$franchiseContractBilling,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$contract=$franchiseContracts->find((int)$params['contractId']);if($contract===null||(int)($contract['organization_id']??0)!==(int)$params['organizationId'])return Response::text("Contrato não encontrado.\n",404);try{$franchiseContractBilling->issueRecurringLink((int)$params['contractId']);$session->flash('franchise_contracts.message','Link da assinatura mensal gerado. Copie e envie manualmente à franquia.');}catch(Throwable$e){$session->flash('franchise_contracts.error',$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$params['organizationId'].'#operacao-comercial');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
-    $router->get('/admin/organizations/{id:\d+}/edit',static function(Request$request,array$params)use($view,$config,$organizations,$organizationPoles,$documents,$documentTypes,$avaConnections,$organizationFinanceIntegrations,$franchiseApplications,$franchiseContracts,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{
+    $router->get('/admin/organizations/{id:\d+}/edit',static function(Request$request,array$params)use($view,$config,$organizations,$organizationPoles,$documents,$documentTypes,$avaConnections,$organizationFinanceIntegrations,$franchiseApplications,$franchiseContracts,$sites,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{
         if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);
         $id=(int)$params['id'];
         $organization=$organizations->findRecord($id);
@@ -222,6 +248,7 @@ return static function (
             'franchiseDocuments'=>$documents->all('franchise',$id),
             'documentCategories'=>$documents->categories('franchise'),
             'documentTypes'=>$documentTypes->all(true),
+            'siteSettings'=>$sites->settings($id),
             'franchiseAsaasSettings'=>$organizationFinanceIntegrations->asaas($id),
             'franchiseAsaasWebhookUrl'=>$franchiseWebhookUrl,
             'franchiseAsaasEncryptionReady'=>$organizationFinanceIntegrations->encryptionReady(),
@@ -230,6 +257,24 @@ return static function (
             'csrfField'=>$csrf->field(),
             'basePath'=>$basePath,
         ]);
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/organizations/{id:\d+}/site-governance',static function(Request$request,array$params)use($organizations,$sites,$platformAdmin,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
+        $id=(int)$params['id'];
+        try{
+            if($organizations->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
+            $sites->saveGovernance($id,['is_enabled'=>$request->input('is_enabled')==='1','template_key'=>$request->input('template_key','modern'),'allow_catalog'=>$request->input('allow_catalog')==='1','allow_store'=>$request->input('allow_store')==='1','allow_custom_pages'=>$request->input('allow_custom_pages')==='1','max_banners'=>$request->input('max_banners','3'),'max_pages'=>$request->input('max_pages','5'),'max_featured_courses'=>$request->input('max_featured_courses','6')]);
+            $session->flash('organizations.message','Governança do Site Institucional atualizada.');
+        }catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());}
+        return Response::redirect($basePath.'/admin/organizations/'.$id.'/edit#site');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/organizations/{id:\d+}/site-preview',static function(Request$request,array$params)use($view,$organizations,$sites,$platformAdmin):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
+        $id=(int)$params['id'];
+        if($organizations->findRecord($id)===null)return Response::text("Franquia não encontrada.\n",404);
+        $site=$sites->publicSite($id,true);
+        if($site===null)return$view->renderStandalone('site/unavailable',[],503);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>true]);
     },[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/organizations/{id:\d+}/integrations/asaas',static function(Request$request,array$params)use($organizations,$organizationFinanceIntegrations,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$id=(int)$params['id'];try{if($organizations->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');$organizationFinanceIntegrations->saveAsaas($id,(string)$request->input('account_mode','central'),(string)$request->input('environment','production'),(string)$request->input('api_key',''),$request->input('is_active')==='1',$auth->user()?->id);$session->flash('organization_integrations.message','Configuração financeira da franquia salva.');}catch(Throwable$e){$session->flash('organization_integrations.error',$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$id.'/edit#integracoes');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
     $router->post('/admin/organizations/{id:\d+}/integrations/asaas/test',static function(Request$request,array$params)use($organizations,$organizationFinanceIntegrations,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$id=(int)$params['id'];try{if($organizations->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');$settings=$organizationFinanceIntegrations->asaas($id);if($settings['account_mode']!=='exclusive'||!$settings['configured'])throw new RuntimeException('Salve primeiro a conta Asaas exclusiva.');$client=new AsaasClient((string)$settings['environment'],(string)$settings['api_key'],false);$client->listCustomers(0,1);$organizationFinanceIntegrations->recordTest($id,null);$session->flash('organization_integrations.message','Conexão exclusiva testada. Ela já pode ser ativada para novas operações da franquia.');}catch(Throwable$e){$organizationFinanceIntegrations->recordTest($id,$e->getMessage());$session->flash('organization_integrations.error','Não foi possível validar a conta exclusiva: '.$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$id.'/edit#integracoes');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
