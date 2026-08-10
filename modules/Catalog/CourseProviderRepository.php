@@ -176,6 +176,51 @@ final readonly class CourseProviderRepository
         return $statement->fetchAll() ?: [];
     }
 
+    /** @return list<array<string,mixed>> */
+    public function catalogsForOrganization(int $organizationId): array
+    {
+        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
+            COALESCE(access.is_enabled,CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END) is_enabled,
+            CASE WHEN catalog.code='ava-cursos' THEN 'Mundo Inter' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
+            CASE WHEN catalog.code='ava-cursos'
+                THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.is_available=1)
+            END course_count,
+            (SELECT COUNT(*) FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id WHERE offer.organization_id=:offer_organization AND course.catalog_id=catalog.id AND offer.is_active=1) offer_count
+            FROM course_catalogs catalog
+            LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization
+            LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id AND provider.is_active=1
+            WHERE catalog.is_active=1
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,access.is_enabled,provider.name
+            ORDER BY CASE WHEN catalog.code='ava-cursos' THEN 0 ELSE 1 END,catalog.name");
+        $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @param list<int|string> $enabledCatalogIds */
+    public function saveCatalogAccess(int $organizationId, array $enabledCatalogIds, ?int $userId): void
+    {
+        $organization = $this->database->prepare('SELECT 1 FROM organizations WHERE id=:id');
+        $organization->execute(['id' => $organizationId]);
+        if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia não encontrada.');
+
+        $enabled = array_values(array_unique(array_filter(array_map('intval', $enabledCatalogIds), static fn(int $id): bool => $id > 0)));
+        $catalogs = $this->database->query('SELECT id FROM course_catalogs WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,updated_by) VALUES(:organization,:catalog,:enabled,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),updated_by=VALUES(updated_by)');
+
+        $this->database->beginTransaction();
+        try {
+            foreach ($catalogs as $catalogId) {
+                $id = (int)$catalogId;
+                $statement->execute(['organization' => $organizationId, 'catalog' => $id, 'enabled' => (int)in_array($id, $enabled, true), 'user' => $userId]);
+            }
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+    }
+
     public function review(int $courseId, string $status, string $commercialName, string $commercialDescription, string $notes, ?int $userId): void
     {
         if (!in_array($status, ['pending', 'approved', 'rejected'], true)) throw new RuntimeException('Situação da curadoria inválida.');

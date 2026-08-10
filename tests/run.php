@@ -1608,6 +1608,22 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($public,'Curso ministrado no AVA do parceiro'));
 };
 
+$tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999900_create_organization_catalog_access.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $site=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $financeCatalog=(string)file_get_contents($rootPath.'/modules/Finance/CatalogRepository.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+    assertTrue(str_contains($migration,'organization_course_catalog_access'));
+    assertTrue(str_contains($migration,"'ava-cursos'"));
+    assertTrue(str_contains($repository,'catalogsForOrganization'));
+    assertTrue(str_contains($repository,'saveCatalogAccess'));
+    assertTrue(str_contains($site,'access.is_enabled=1'));
+    assertTrue(str_contains($financeCatalog,'catalog_enabled'));
+    assertTrue(str_contains($view,'Catálogos liberados para venda'));
+    assertTrue(str_contains($view,'catalog_ids[]'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
