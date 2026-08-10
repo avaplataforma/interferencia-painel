@@ -872,6 +872,9 @@ $tests['separa regra comercial do processamento financeiro da franquia'] = stati
     assertTrue(str_contains($implementation,"\$financialProcessing === 'franchise_asaas'"));
     assertTrue(str_contains($form,'Regra comercial'));
     assertTrue(str_contains($form,'Processamento financeiro'));
+    assertTrue(str_contains($form,'contract-business-grid'));
+    assertTrue(str_contains($form,'contract-action-bar'));
+    assertTrue(str_contains($form,'Histórico preservado'));
     assertTrue(str_contains($show,'Divisão por venda'));
     assertTrue(str_contains($routes,"'commercial_rule'=>"));
     assertTrue(str_contains($routes,"'financial_processing'=>"));
