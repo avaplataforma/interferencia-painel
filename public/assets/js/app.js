@@ -442,7 +442,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
   const validTabs = tabs.map((tab) => tab.dataset.siteTab || '');
   const show = (requestedName, updateHash = true) => {
-    const legacyGroups = { publicacao: 'geral', 'pagina-inicial': 'geral', buscadores: 'geral', contato: 'comunicacao', links: 'comunicacao', whatsapp: 'comunicacao', banners: 'conteudo', paginas: 'conteudo' };
+    const legacyGroups = { publicacao: 'geral', 'pagina-inicial': 'geral', buscadores: 'geral', contato: 'comunicacao', links: 'comunicacao', whatsapp: 'comunicacao', blocos: 'conteudo', banners: 'conteudo', paginas: 'conteudo' };
     const normalizedName = legacyGroups[requestedName] || requestedName;
     const name = validTabs.includes(normalizedName) ? normalizedName : 'geral';
     const activeTab = tabs.find((tab) => tab.dataset.siteTab === name);

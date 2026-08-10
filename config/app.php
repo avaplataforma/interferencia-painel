@@ -9,6 +9,7 @@ return [
     'debug' => filter_var(getenv('APP_DEBUG') ?: false, FILTER_VALIDATE_BOOL),
     'url' => getenv('APP_URL') ?: 'https://interferencia.com.br/painel',
     'central_host' => getenv('APP_CENTRAL_HOST') ?: 'mundointer.com.br',
+    'public_ipv4' => getenv('APP_PUBLIC_IPV4') ?: '15.204.121.10',
     'base_path' => getenv('APP_BASE_PATH') ?: '/painel',
     'timezone' => getenv('APP_TIMEZONE') ?: 'America/Sao_Paulo',
     'log_level' => getenv('LOG_LEVEL') ?: 'warning',

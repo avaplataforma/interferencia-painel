@@ -1494,6 +1494,33 @@ $tests['separa catálogo do AVA e cursos manuais por franquia'] = static functio
     assertTrue(str_contains($view,'cursos do AVA não podem ser excluídos'));
 };
 
+$tests['amplia vitrine da franquia com catálogo páginas completas e domínio próprio'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999400_expand_site_catalog_experience.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $organization=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $admin=(string)file_get_contents($rootPath.'/views/site/admin-extensions.php');
+    $public=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $course=(string)file_get_contents($rootPath.'/views/site/course.php');
+    $central=(string)file_get_contents($rootPath.'/views/admin/organizations/site.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+
+    assertTrue(str_contains($migration,'organization_site_product_details'));
+    assertTrue(str_contains($migration,'organization_site_blocks'));
+    assertTrue(str_contains($repository,'saveProductDetails'));
+    assertTrue(str_contains($repository,'saveBlock'));
+    assertTrue(str_contains($organization,'saveSiteDomain'));
+    assertTrue(str_contains($routes,"'/site/sitemap.xml'"));
+    assertTrue(str_contains($routes,"'/site/robots.txt'"));
+    assertTrue(str_contains($admin,'Conteúdo programático'));
+    assertTrue(str_contains($admin,'Editor visual'));
+    assertTrue(str_contains($public,'data-catalog-search'));
+    assertTrue(str_contains($course,'application/ld+json'));
+    assertTrue(str_contains($course,'Perguntas frequentes'));
+    assertTrue(str_contains($central,'Passo a passo no provedor de DNS'));
+    assertTrue(str_contains($javascript,'site-course-favorites'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

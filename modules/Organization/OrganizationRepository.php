@@ -34,6 +34,19 @@ final readonly class OrganizationRepository
     public function allWithPrimaryDomain():array{return$this->database->query("SELECT o.*,d.host primary_host,d.status domain_status,(SELECT COUNT(*) FROM units u WHERE u.organization_id=o.id) unit_count,(SELECT COUNT(*) FROM organization_users m WHERE m.organization_id=o.id AND m.status='active') user_count,(SELECT a.id FROM franchise_applications a WHERE a.organization_id=o.id ORDER BY a.id DESC LIMIT 1) franchise_application_id,(SELECT COUNT(*) FROM franchise_contracts c WHERE c.organization_id=o.id) contract_count FROM organizations o LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.is_primary=1 AND d.purpose='site' ORDER BY o.display_name")->fetchAll();}
     public function findRecord(int$id):?array{$s=$this->database->prepare('SELECT * FROM organizations WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function domains(int$id):array{$s=$this->database->prepare('SELECT * FROM organization_domains WHERE organization_id=:id ORDER BY is_primary DESC,purpose,host');$s->execute(['id'=>$id]);return$s->fetchAll();}
+    public function saveSiteDomain(int$id,string$siteHost,bool$active=false):void
+    {
+        if($this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
+        $host=self::normalizeHost($siteHost);
+        if(trim($siteHost)!==''&&$host===null)throw new RuntimeException('Informe um domínio público válido, sem protocolo ou caminho.');
+        if($host!==null){$owner=$this->database->prepare('SELECT organization_id FROM organization_domains WHERE host=:host LIMIT 1');$owner->execute(['host'=>$host]);$ownerId=$owner->fetchColumn();if($ownerId!==false&&(int)$ownerId!==$id)throw new RuntimeException('Este domínio já está vinculado a outra franquia.');}
+        $this->database->beginTransaction();
+        try{
+            $this->database->prepare("UPDATE organization_domains SET is_primary=0 WHERE organization_id=:id AND purpose='site'")->execute(['id'=>$id]);
+            if($host!==null){$statement=$this->database->prepare("INSERT INTO organization_domains(organization_id,host,purpose,is_primary,status,verified_at) VALUES(:id,:host,'site',1,:status,:verified) ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id),purpose='site',is_primary=1,status=VALUES(status),verified_at=VALUES(verified_at)");$statement->execute(['id'=>$id,'host'=>$host,'status'=>$active?'active':'pending','verified'=>$active?date('Y-m-d H:i:s'):null]);}
+            $this->database->commit();
+        }catch(Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+    }
     /** @return array<string,int|string> */
     public function implementationFacts(int$id):array
     {

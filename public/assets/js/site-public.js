@@ -66,6 +66,41 @@
   document.querySelectorAll('form[action$="/bolsas"]').forEach((form) => form.addEventListener('submit', () => track('scholarship_submit')));
   document.querySelectorAll('a[href*="/site/checkout/"]').forEach((link) => link.addEventListener('click', () => track('checkout_start', { entityType: 'course' })));
 
+  const catalogSearch = document.querySelector('[data-catalog-search]');
+  const catalogCategory = document.querySelector('[data-catalog-category]');
+  const catalogSort = document.querySelector('[data-catalog-sort]');
+  const catalogGrid = document.querySelector('[data-course-grid]');
+  const catalogCards = Array.from(document.querySelectorAll('[data-course-card]'));
+  const catalogEmpty = document.querySelector('[data-catalog-empty]');
+  const favoritesKey = `site-course-favorites-${organization}`;
+  const normalizeCatalog = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const readFavorites = () => { try { return new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]').map(String)); } catch { return new Set(); } };
+  let favorites = readFavorites();
+  const syncFavoriteButtons = () => catalogCards.forEach((card) => { const button = card.querySelector('[data-course-favorite]'); const active = favorites.has(String(card.dataset.courseId || '')); if (button) { button.setAttribute('aria-pressed', active ? 'true' : 'false'); button.title = active ? 'Remover dos favoritos' : 'Adicionar aos favoritos'; const icon = button.querySelector('i'); if (icon) icon.className = active ? 'fa-solid fa-heart' : 'fa-regular fa-heart'; } });
+  const filterCatalog = () => {
+    if (!(catalogGrid instanceof HTMLElement)) return;
+    const term = normalizeCatalog(catalogSearch?.value || '');
+    const category = normalizeCatalog(catalogCategory?.value || '');
+    const sort = catalogSort?.value || 'featured';
+    const matching = catalogCards.filter((card) => {
+      const searchable = normalizeCatalog(card.textContent || '');
+      const visible = (!term || searchable.includes(term)) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
+      card.hidden = !visible;
+      return visible;
+    });
+    const sorted = [...matching].sort((a, b) => {
+      if (sort === 'name') return String(a.dataset.courseName).localeCompare(String(b.dataset.courseName), 'pt-BR');
+      if (sort === 'price-asc' || sort === 'price-desc') return (Number(a.dataset.coursePrice) - Number(b.dataset.coursePrice)) * (sort === 'price-desc' ? -1 : 1);
+      return 0;
+    });
+    sorted.forEach((card) => catalogGrid.append(card));
+    if (catalogEmpty instanceof HTMLElement) catalogEmpty.hidden = matching.length !== 0;
+  };
+  catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
+  [catalogSearch, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
+  syncFavoriteButtons();
+  filterCatalog();
+
   const searchDialog = document.querySelector('#site-search-dialog');
   const searchInput = searchDialog?.querySelector('[data-site-search-input]');
   const items = Array.from(searchDialog?.querySelectorAll('[data-site-search-item]') || []);
