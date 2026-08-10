@@ -27,7 +27,7 @@ $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '
 $siteOrdersTitle='Pedidos recentes';
 $siteOrdersDescription='Compras iniciadas pelo site da franquia e encaminhadas para matrícula.';
 $siteOrdersShowActions=false;
-$siteOrdersViewAllUrl=$basePath.'/students/enrollments#site-orders';
+$siteOrdersViewAllUrl=$basePath.'/students/site-orders';
 require __DIR__.'/site/orders-panel.php';
 ?>
 <?php endif;?>

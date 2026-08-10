@@ -242,6 +242,38 @@ final readonly class SiteRepository
         $limit=max(1,min(100,$limit));$statement=$this->database->prepare("SELECT o.*,c.name contact_name,c.email contact_email,p.name product_name,p.value,u.name unit_name FROM organization_site_orders o LEFT JOIN crm_contacts c ON c.id=o.crm_contact_id INNER JOIN finance_products p ON p.id=o.finance_product_id INNER JOIN units u ON u.id=o.unit_id WHERE o.organization_id=:organization ORDER BY o.created_at DESC,o.id DESC LIMIT {$limit}");$statement->execute(['organization'=>$organizationId]);return$statement->fetchAll();
     }
 
+    /** @param list<int> $unitIds @return array{summary:array{total:int,awaiting_payment:int,attention:int,released:int},items:list<array<string,mixed>>} */
+    public function orderDashboard(int$organizationId,array$unitIds,string$bucket='',string$search='',int$limit=100):array
+    {
+        $unitIds=array_values(array_unique(array_filter(array_map('intval',$unitIds),static fn(int$id):bool=>$id>0)));
+        if($organizationId<1||$unitIds===[])return['summary'=>['total'=>0,'awaiting_payment'=>0,'attention'=>0,'released'=>0],'items'=>[]];
+        $marks=implode(',',array_fill(0,count($unitIds),'?'));
+        $summarySql="SELECT COUNT(*) total,SUM(o.fulfillment_status='awaiting_payment') awaiting_payment,SUM(o.fulfillment_status IN ('manual_review','failed','payment_confirmed','releasing')) attention,SUM(o.fulfillment_status='released') released FROM organization_site_orders o WHERE o.organization_id=? AND o.unit_id IN ($marks)";
+        $summaryStatement=$this->database->prepare($summarySql);$summaryStatement->execute([$organizationId,...$unitIds]);$summaryRow=$summaryStatement->fetch()?:[];
+        $summary=['total'=>(int)($summaryRow['total']??0),'awaiting_payment'=>(int)($summaryRow['awaiting_payment']??0),'attention'=>(int)($summaryRow['attention']??0),'released'=>(int)($summaryRow['released']??0)];
+
+        $conditions=['o.organization_id=?',"o.unit_id IN ($marks)"];$parameters=[$organizationId,...$unitIds];
+        if($bucket==='awaiting_payment')$conditions[]="o.fulfillment_status='awaiting_payment'";
+        elseif($bucket==='attention')$conditions[]="o.fulfillment_status IN ('manual_review','failed','payment_confirmed','releasing')";
+        elseif($bucket==='released')$conditions[]="o.fulfillment_status='released'";
+        elseif($bucket==='failed')$conditions[]="o.fulfillment_status='failed'";
+        $search=trim($search);
+        if($search!==''){$like='%'.$search.'%';$conditions[]='(c.name LIKE ? OR c.email LIKE ? OR p.name LIKE ? OR u.name LIKE ? OR o.external_reference LIKE ?)';array_push($parameters,$like,$like,$like,$like,$like);}
+        $limit=max(1,min(200,$limit));
+        $sql="SELECT o.*,c.name contact_name,c.email contact_email,c.phone contact_phone,p.name product_name,p.value,u.name unit_name,fc.name finance_customer_name,e.status enrollment_status,e.moodle_enrolment_status,ac.name ava_connection_name FROM organization_site_orders o LEFT JOIN crm_contacts c ON c.id=o.crm_contact_id INNER JOIN finance_products p ON p.id=o.finance_product_id INNER JOIN units u ON u.id=o.unit_id LEFT JOIN finance_customers fc ON fc.id=o.finance_customer_id LEFT JOIN student_enrollments e ON e.id=o.student_enrollment_id LEFT JOIN ava_connections ac ON ac.id=e.ava_connection_id WHERE ".implode(' AND ',$conditions)." ORDER BY o.created_at DESC,o.id DESC LIMIT {$limit}";
+        $statement=$this->database->prepare($sql);$statement->execute($parameters);
+        return['summary'=>$summary,'items'=>$statement->fetchAll()];
+    }
+
+    /** @param list<int> $unitIds @return array<string,mixed>|null */
+    public function orderForRetry(int$organizationId,int$orderId,array$unitIds):?array
+    {
+        $unitIds=array_values(array_unique(array_filter(array_map('intval',$unitIds),static fn(int$id):bool=>$id>0)));
+        if($unitIds===[])return null;$marks=implode(',',array_fill(0,count($unitIds),'?'));
+        $statement=$this->database->prepare("SELECT o.* FROM organization_site_orders o WHERE o.id=? AND o.organization_id=? AND o.unit_id IN ($marks) AND o.fulfillment_status IN ('manual_review','failed') LIMIT 1");
+        $statement->execute([$orderId,$organizationId,...$unitIds]);$row=$statement->fetch();return is_array($row)?$row:null;
+    }
+
     /** @return array<string,mixed>|null */
     public function publicSite(int $organizationId,bool $preview=false):?array
     {

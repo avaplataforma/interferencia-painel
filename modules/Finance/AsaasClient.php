@@ -61,6 +61,15 @@ final readonly class AsaasClient
         return$checkout;
     }
 
+    /** @return list<array<string,mixed>> */
+    public function paymentsForCheckout(string $checkoutId,string $externalReference=''):array
+    {
+        if(preg_match('/^[A-Za-z0-9-]{20,80}$/',$checkoutId)!==1)throw new RuntimeException('Identificador do checkout inválido.');
+        $filters=['checkoutSession'=>$checkoutId];
+        if(trim($externalReference)!=='')$filters['externalReference']=trim($externalReference);
+        return$this->get('/payments',0,100,$filters)['data'];
+    }
+
     /** @param array{customer:string,billingType:string,value?:float,totalValue?:float,installmentCount?:int,dueDate:string,description:string,externalReference:string} $payload @return array<string,mixed> */
     public function createPayment(array $payload): array
     {

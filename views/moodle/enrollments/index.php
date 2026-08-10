@@ -9,6 +9,7 @@ $eventIcons=['enrollment_created'=>'fa-user-graduate','charge_created'=>'fa-wall
 $siteOrdersTitle='Pedidos do Site Institucional';
 $siteOrdersDescription='Confira pagamentos, matrículas geradas e liberações no AVA.';
 $siteOrdersShowActions=true;
+$siteOrdersViewAllUrl=$basePath.'/students/site-orders';
 require dirname(__DIR__,2).'/site/orders-panel.php';
 ?>
 <style>

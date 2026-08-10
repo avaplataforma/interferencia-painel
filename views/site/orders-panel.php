@@ -14,7 +14,7 @@ $fulfillmentLabels=[
     'released'=>'Liberado no AVA',
     'failed'=>'Falha na liberação',
 ];
-$paidStatuses=['ACTIVE','PAID','COMPLETED','RECEIVED','CONFIRMED'];
+$paidStatuses=['PAID','COMPLETED','RECEIVED','CONFIRMED','RECEIVED_IN_CASH'];
 ?>
 <style>
 .site-orders-panel{margin-top:1.25rem;overflow:hidden}.site-orders-head{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.15rem 1.3rem;border-bottom:1px solid #e3e8ec}.site-orders-head h2,.site-orders-head p{margin:0}.site-orders-head h2{font-size:1.35rem}.site-orders-count{display:grid;place-items:center;min-width:2.25rem;height:2.25rem;border-radius:999px;background:#f1f4f6;font-weight:800}.site-order-name{display:grid;gap:.15rem}.site-order-name small{color:var(--inter-muted)}.site-order-status{display:grid;gap:.35rem;justify-items:start}.site-order-status small{max-width:22rem;color:#b4232e}.site-orders-empty{display:grid;place-items:center;gap:.45rem;min-height:9rem;padding:1.5rem;color:var(--inter-muted);text-align:center}.site-orders-empty i{font-size:1.65rem}.site-orders-footer{display:flex;justify-content:flex-end;padding:.9rem 1.3rem;border-top:1px solid #e3e8ec}@media(max-width:780px){.site-orders-head{align-items:flex-start}.site-orders-panel table{min-width:55rem}}

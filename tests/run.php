@@ -1349,8 +1349,11 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     $governance=(string)file_get_contents($rootPath.'/views/admin/organizations/site.php');
     $siteAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
     $ordersPanel=(string)file_get_contents($rootPath.'/views/site/orders-panel.php');
+    $ordersDashboard=(string)file_get_contents($rootPath.'/views/site/orders.php');
     $dashboard=(string)file_get_contents($rootPath.'/views/dashboard.php');
     $enrollmentIndex=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
+    $asaas=(string)file_get_contents($rootPath.'/modules/Finance/AsaasClient.php');
+    $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
 
     assertTrue(str_contains($migration,'checkout_fulfillment_mode'));
     assertTrue(str_contains($migration,'student_enrollment_id'));
@@ -1362,12 +1365,20 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     assertTrue(str_contains($finance,"mundo-inter:franchise-"));
     assertTrue(str_contains($enrollments,'createPaidFromSiteOrder'));
     assertTrue(str_contains($routes,"'/admin/site/orders/{id:\\d+}/release'"));
+    assertTrue(str_contains($routes,"'/students/site-orders'"));
+    assertTrue(str_contains($routes,"'/students/site-orders/{id:\\d+}/retry'"));
     assertTrue(str_contains($routes,'$siteOrderFulfillment->processPayment'));
     assertTrue(str_contains($governance,'Após confirmar o pagamento'));
     assertTrue(str_contains($siteAdmin,'Pedidos agora aparecem na'));
     assertTrue(str_contains($ordersPanel,'Liberar no AVA'));
     assertTrue(str_contains($dashboard,'orders-panel.php'));
     assertTrue(str_contains($enrollmentIndex,'orders-panel.php'));
+    assertTrue(str_contains($ordersDashboard,'Reprocessamento seguro'));
+    assertTrue(str_contains($service,'retryOrder'));
+    assertTrue(str_contains($siteRepository,'orderDashboard'));
+    assertTrue(str_contains($siteRepository,'orderForRetry'));
+    assertTrue(str_contains($asaas,'paymentsForCheckout'));
+    assertTrue(str_contains($asaas,"'checkoutSession'=>"));
 };
 
 $tests['separa catálogo do AVA e cursos manuais por franquia'] = static function () use ($rootPath): void {

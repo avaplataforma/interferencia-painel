@@ -171,6 +171,20 @@ final readonly class SiteOrderFulfillmentService
         $this->release((int) $order['id'], (int) $order['student_enrollment_id'], $operatorId);
     }
 
+    /** @param list<int> $unitIds */
+    public function retryOrder(int$organizationId,int$orderId,array$unitIds,?int$operatorId):void
+    {
+        $order=$this->sites->orderForRetry($organizationId,$orderId,$unitIds);
+        if($order===null)throw new RuntimeException('Pedido não encontrado, sem falha pendente ou fora das unidades permitidas.');
+        if((int)($order['student_enrollment_id']??0)>0){$this->release((int)$order['id'],(int)$order['student_enrollment_id'],$operatorId);return;}
+        $checkoutId=trim((string)($order['asaas_checkout_id']??''));
+        if($checkoutId==='')throw new RuntimeException('Este pedido não possui checkout para consultar no Asaas.');
+        $payments=$this->asaas->paymentsForCheckout($checkoutId,(string)($order['external_reference']??''));
+        $payment=null;foreach($payments as$item)if(in_array(strtoupper((string)($item['status']??'')),['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true)){$payment=$item;break;}
+        if($payment===null)throw new RuntimeException('O Asaas ainda não confirma uma cobrança paga para este checkout. Aguarde o webhook ou confira o pagamento no Asaas.');
+        $this->processPayment('PAYMENT_RECEIVED',$payment);
+    }
+
     private function release(int $orderId, int $enrollmentId, ?int $operatorId = null): void
     {
         try {
