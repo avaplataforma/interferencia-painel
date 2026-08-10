@@ -1326,7 +1326,8 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
-    assertTrue(str_contains($tenantAdmin,'Pedidos recentes'));
+    assertTrue(str_contains($tenantAdmin,'site-section-nav'));
+    assertTrue(str_contains($tenantAdmin,'Pedidos agora aparecem na'));
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
     assertTrue(str_contains($publicSite,'Comprar agora'));
     assertTrue(str_contains($checkout,'Continuar para pagamento'));
@@ -1342,6 +1343,9 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $governance=(string)file_get_contents($rootPath.'/views/admin/organizations/site.php');
     $siteAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
+    $ordersPanel=(string)file_get_contents($rootPath.'/views/site/orders-panel.php');
+    $dashboard=(string)file_get_contents($rootPath.'/views/dashboard.php');
+    $enrollmentIndex=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
 
     assertTrue(str_contains($migration,'checkout_fulfillment_mode'));
     assertTrue(str_contains($migration,'student_enrollment_id'));
@@ -1355,8 +1359,29 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     assertTrue(str_contains($routes,"'/admin/site/orders/{id:\\d+}/release'"));
     assertTrue(str_contains($routes,'$siteOrderFulfillment->processPayment'));
     assertTrue(str_contains($governance,'Após confirmar o pagamento'));
-    assertTrue(str_contains($siteAdmin,'Revisão necessária'));
-    assertTrue(str_contains($siteAdmin,'Liberar no AVA'));
+    assertTrue(str_contains($siteAdmin,'Pedidos agora aparecem na'));
+    assertTrue(str_contains($ordersPanel,'Liberar no AVA'));
+    assertTrue(str_contains($dashboard,'orders-panel.php'));
+    assertTrue(str_contains($enrollmentIndex,'orders-panel.php'));
+};
+
+$tests['separa catálogo do AVA e cursos manuais por franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_998000_scope_finance_products_by_franchise.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Finance/CatalogRepository.php');
+    $site=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/finance/products/index.php');
+
+    assertTrue(str_contains($migration,'organization_finance_products'));
+    assertTrue(str_contains($migration,"source IN ('ava','manual')"));
+    assertTrue(str_contains($catalog,'setVisible'));
+    assertTrue(str_contains($catalog,'deleteManual'));
+    assertTrue(str_contains($catalog,"scope.source = 'manual'"));
+    assertTrue(str_contains($site,'organization_finance_products'));
+    assertTrue(str_contains($site,'scope.is_visible = 1'));
+    assertTrue(str_contains($routes,"'/admin/finance/products/{id:\\d+}/visibility'"));
+    assertTrue(str_contains($routes,"'/admin/finance/products/{id:\\d+}/delete'"));
+    assertTrue(str_contains($view,'Curso protegido do AVA'));
 };
 
 $failures = 0;

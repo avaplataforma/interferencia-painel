@@ -83,8 +83,8 @@ final readonly class SiteRepository
     /** @return list<array<string,mixed>> */
     public function availableProducts(int $organizationId):array
     {
-        $statement=$this->database->prepare('SELECT DISTINCT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id WHERE p.is_active=1 AND p.value>=5 AND (p.unit_id IS NULL OR u.organization_id=:organization) ORDER BY p.name,p.id');
-        $statement->execute(['organization'=>$organizationId]);return$statement->fetchAll();
+        $statement=$this->database->prepare('SELECT DISTINCT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM organization_finance_products scope INNER JOIN finance_products p ON p.id=scope.finance_product_id LEFT JOIN units u ON u.id=p.unit_id WHERE scope.organization_id=:organization AND scope.is_visible=1 AND p.is_active=1 AND p.value>=5 AND (p.unit_id IS NULL OR u.organization_id=:unit_organization) ORDER BY p.name,p.id');
+        $statement->execute(['organization'=>$organizationId,'unit_organization'=>$organizationId]);return$statement->fetchAll();
     }
 
     /** @return list<int> */
@@ -170,7 +170,7 @@ final readonly class SiteRepository
     /** @return array<string,mixed>|null */
     public function publicProduct(int $organizationId,int $productId):?array
     {
-        $statement=$this->database->prepare("SELECT p.* FROM organization_site_products sp INNER JOIN finance_products p ON p.id=sp.finance_product_id INNER JOIN organization_sites s ON s.organization_id=sp.organization_id LEFT JOIN units u ON u.id=p.unit_id WHERE sp.organization_id=:organization AND p.id=:product AND p.is_active=1 AND p.value>=5 AND s.is_enabled=1 AND s.publication_status='published' AND s.selected_mode='store' AND s.allow_store=1 AND (p.unit_id IS NULL OR u.organization_id=:organization_unit) LIMIT 1");
+        $statement=$this->database->prepare("SELECT p.* FROM organization_site_products sp INNER JOIN organization_finance_products scope ON scope.organization_id=sp.organization_id AND scope.finance_product_id=sp.finance_product_id AND scope.is_visible=1 INNER JOIN finance_products p ON p.id=sp.finance_product_id INNER JOIN organization_sites s ON s.organization_id=sp.organization_id LEFT JOIN units u ON u.id=p.unit_id WHERE sp.organization_id=:organization AND p.id=:product AND p.is_active=1 AND p.value>=5 AND s.is_enabled=1 AND s.publication_status='published' AND s.selected_mode='store' AND s.allow_store=1 AND (p.unit_id IS NULL OR u.organization_id=:organization_unit) LIMIT 1");
         $statement->execute(['organization'=>$organizationId,'product'=>$productId,'organization_unit'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
     }
 
@@ -243,7 +243,7 @@ final readonly class SiteRepository
         if(!is_array($site)||(int)$site['is_enabled']!==1||($site['organization_status']??'')!=='active')return null;
         if(!$preview&&($site['publication_status']??'')!=='published')return null;
         $ids=$this->selectedProductIds($organizationId);$products=[];
-        if($ids!==[]){$marks=implode(',',array_fill(0,count($ids),'?'));$query=$this->database->prepare("SELECT id,unit_id,name,description,value,max_installments,billing_types,minutes_to_expire FROM finance_products WHERE id IN ($marks) AND is_active=1");$query->execute($ids);$byId=[];foreach($query->fetchAll()as$row)$byId[(int)$row['id']]=$row;foreach($ids as$id)if(isset($byId[$id]))$products[]=$byId[$id];}
+        if($ids!==[]){$marks=implode(',',array_fill(0,count($ids),'?'));$query=$this->database->prepare("SELECT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM finance_products p INNER JOIN organization_finance_products scope ON scope.finance_product_id=p.id AND scope.organization_id=? AND scope.is_visible=1 WHERE p.id IN ($marks) AND p.is_active=1");$query->execute([$organizationId,...$ids]);$byId=[];foreach($query->fetchAll()as$row)$byId[(int)$row['id']]=$row;foreach($ids as$id)if(isset($byId[$id]))$products[]=$byId[$id];}
         $site['products']=$products;$site['banners']=$this->banners($organizationId,!$preview);$site['pages']=$this->pages($organizationId,!$preview);return$site;
     }
 

@@ -22,6 +22,16 @@ $allSourceUrl = $basePath . '/?' . ($selectedTag > 0 ? 'tag=' . $selectedTag : '
   </div>
 </header>
 
+<?php if((int)($siteSettings['is_enabled']??0)===1||($siteOrders??[])!==[]):?>
+<?php
+$siteOrdersTitle='Pedidos recentes';
+$siteOrdersDescription='Compras iniciadas pelo site da franquia e encaminhadas para matrícula.';
+$siteOrdersShowActions=false;
+$siteOrdersViewAllUrl=$basePath.'/students/enrollments#site-orders';
+require __DIR__.'/site/orders-panel.php';
+?>
+<?php endif;?>
+
 <?php if ($followUpSummary !== null || $newContacts !== null): ?>
 <section class="dashboard-section dashboard-operation">
   <div class="dashboard-section-heading">

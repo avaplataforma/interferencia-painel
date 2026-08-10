@@ -5,6 +5,12 @@ $eventIcons=['enrollment_created'=>'fa-user-graduate','charge_created'=>'fa-wall
 <div class="page-heading"><div><p class="eyebrow">Alunos</p><h1>Matrículas</h1><p class="meta">Acompanhe curso, cobrança, pagamento e liberação no AVA em um único fluxo.</p></div><a class="button-primary" href="<?= $escape($basePath) ?>/students/enrollments/create"><i class="fa-solid fa-plus"></i> Nova matrícula</a></div>
 <?php if($message):?><p class="alert alert-success"><?= $escape($message) ?></p><?php endif;?>
 <?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
+<?php
+$siteOrdersTitle='Pedidos do Site Institucional';
+$siteOrdersDescription='Confira pagamentos, matrículas geradas e liberações no AVA.';
+$siteOrdersShowActions=true;
+require dirname(__DIR__,2).'/site/orders-panel.php';
+?>
 <style>
 .special-release{margin-bottom:1rem;overflow:hidden}.special-release>summary{display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.15rem 1.4rem;cursor:pointer;list-style:none}.special-release>summary::-webkit-details-marker{display:none}.special-release>summary span{display:flex;align-items:center;gap:.8rem}.special-release>summary i{color:var(--inter-accent)}.special-release-body{padding:0 1.4rem 1.4rem;border-top:1px solid #e2e8ee}.special-release-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}.special-release-form .form-field{margin:0}.special-release-form .form-field-full{grid-column:1/-1}.special-release-actions{display:flex;justify-content:space-between;gap:1rem;align-items:center;grid-column:1/-1}.special-release-actions .alert{margin:0;flex:1}@media(max-width:760px){.special-release-form{grid-template-columns:1fr}.special-release-actions{align-items:stretch;flex-direction:column}.special-release-actions .button-primary{width:100%}}
 </style>

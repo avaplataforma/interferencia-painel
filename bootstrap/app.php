@@ -158,7 +158,7 @@ $whatsappCloudApi = new CloudApiClient(
     $config->bool('app.whatsapp_send_enabled'),
 );
 $finance = new FinanceRepository($database,$organizationId);
-$financeCatalog = new CatalogRepository($database);
+$financeCatalog = new CatalogRepository($database,$organizationId);
 $financeCampaigns = new CampaignRepository($database);
 $tickets = new TicketRepository($database);
 $ticketDepartments = new DepartmentRepository($database);
