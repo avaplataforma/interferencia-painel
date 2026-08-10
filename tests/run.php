@@ -1376,12 +1376,12 @@ $tests['separa catálogo do AVA e cursos manuais por franquia'] = static functio
     assertTrue(str_contains($migration,"source IN ('ava','manual')"));
     assertTrue(str_contains($catalog,'setVisible'));
     assertTrue(str_contains($catalog,'deleteManual'));
-    assertTrue(str_contains($catalog,"scope.source = 'manual'"));
+    assertTrue(str_contains($catalog,"scope.source='manual'"));
     assertTrue(str_contains($site,'organization_finance_products'));
     assertTrue(str_contains($site,'scope.is_visible = 1'));
     assertTrue(str_contains($routes,"'/admin/finance/products/{id:\\d+}/visibility'"));
     assertTrue(str_contains($routes,"'/admin/finance/products/{id:\\d+}/delete'"));
-    assertTrue(str_contains($view,'Curso protegido do AVA'));
+    assertTrue(str_contains($view,'cursos do AVA não podem ser excluídos'));
 };
 
 $failures = 0;
