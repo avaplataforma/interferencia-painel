@@ -87,6 +87,6 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
   <?php endif; ?>
  </aside>
 </main>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=4" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=5" defer></script>
 </body>
 </html>

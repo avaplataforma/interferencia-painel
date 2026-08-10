@@ -26,6 +26,6 @@ $seoDescription = trim((string) ($page['seo_description'] ?? '')) ?: trim((strin
 <section class="hero"><div class="shell"><h1><?= $escape($page['title']) ?></h1><?php if (!empty($page['summary'])): ?><p><?= $escape($page['summary']) ?></p><?php endif; ?></div></section>
 <main class="shell content"><p><?= nl2br($escape($page['content'])) ?></p></main>
 <?php if (!empty($preview)): ?><span class="preview">Modo de pré-visualização</span><?php endif; ?>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=3" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=5" defer></script>
 </body>
 </html>

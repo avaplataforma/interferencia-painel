@@ -118,6 +118,6 @@ sort($categories, SORT_NATURAL | SORT_FLAG_CASE);
 <?php if ($privacyPolicy !== ''): ?><dialog class="legal-dialog" id="privacy-dialog"><header class="search-head"><div><small>LGPD</small><h2>Política de privacidade</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($privacyPolicy)) ?></div></dialog><?php endif; ?>
 <?php if ($termsText !== ''): ?><dialog class="legal-dialog" id="terms-dialog"><header class="search-head"><div><small>Regras do site</small><h2>Termos de uso</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($termsText)) ?></div></dialog><?php endif; ?>
 <?php if ($cookieBannerEnabled): ?><aside class="cookie-consent" data-cookie-banner hidden><div class="cookie-row"><div class="cookie-copy"><strong>Privacidade e cookies</strong><p><?= $escape($cookieNotice !== '' ? $cookieNotice : 'Usamos cookies essenciais para o funcionamento do site e, com sua autorização, métricas para melhorar sua experiência.') ?></p></div><div class="cookie-actions"><button type="button" data-cookie-essential>Somente essenciais</button><button class="accept" type="button" data-cookie-accept>Aceitar métricas</button></div></div></aside><?php endif; ?>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=3" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=5" defer></script>
 </body>
 </html>
