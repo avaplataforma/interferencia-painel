@@ -56,16 +56,24 @@ final readonly class EscolaAvancadaClient
 
         $body = curl_exec($curl);
         $status = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $contentType = strtolower(trim((string)curl_getinfo($curl, CURLINFO_CONTENT_TYPE)));
         $error = curl_error($curl);
         curl_close($curl);
 
         if (!is_string($body)) throw new RuntimeException('Falha de comunicação com a Escola Avançada' . ($error !== '' ? ': ' . $error : '') . '.');
 
         $data = json_decode($body, true);
-        if ($status < 200 || $status >= 300 || !is_array($data)) throw new RuntimeException('A Escola Avançada retornou uma resposta inválida.');
+        if (!is_array($data)) {
+            if ($status === 404 || str_contains($contentType, 'text/html')) {
+                throw new RuntimeException('A URL informada não é a URL especial da API da Escola Avançada (HTTP ' . ($status > 0 ? $status : 'sem resposta') . '). Solicite ao fornecedor a URL da API V2; o endereço público do AVA deve ficar somente no campo “Endereço do AVA”.');
+            }
+
+            throw new RuntimeException('A API da Escola Avançada respondeu em um formato diferente de JSON' . ($status > 0 ? ' (HTTP ' . $status . ')' : '') . '. Confirme a URL especial da API com o fornecedor.');
+        }
 
         $providerError = trim((string)($data['erro'] ?? ''));
         if ($providerError !== '') throw new RuntimeException($providerError);
+        if ($status < 200 || $status >= 300) throw new RuntimeException('A API da Escola Avançada respondeu com HTTP ' . $status . '.');
 
         return $data;
     }

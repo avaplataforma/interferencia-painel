@@ -1583,6 +1583,8 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains($repository,'remote_reference_price'));
     assertTrue(str_contains($repository,'last_sync_status'));
     assertTrue(str_contains($client,"'cursos/listar'"));
+    assertTrue(str_contains($client,'URL especial da API da Escola Avançada'));
+    assertTrue(str_contains($client,'CURLINFO_CONTENT_TYPE'));
     assertTrue(!str_contains($client,'financeiro/parcelas'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
     assertTrue(str_contains($view,'data-catalog-tab'));
@@ -1594,6 +1596,7 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'.btn-primary { border-color: var(--inter-accent);'));
     assertTrue(str_contains($view,'Conexão e API'));
     assertTrue(str_contains($view,'Cursos e curadoria'));
+    assertTrue(str_contains($view,'Não use aqui o endereço público do AVA'));
 };
 
 $tests['publica Catalogo PRO por franquia com venda assistida'] = static function () use ($rootPath): void {
