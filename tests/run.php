@@ -1301,6 +1301,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     $organizationForm=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
     $tenantAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
     $publicSite=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $course=(string)file_get_contents($rootPath.'/views/site/course.php');
     $checkout=(string)file_get_contents($rootPath.'/views/site/checkout.php');
     $page=(string)file_get_contents($rootPath.'/views/site/page.php');
 
@@ -1322,6 +1323,8 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($routes,"'/site'"));
     assertTrue(str_contains($routes,"'/site/banner/{id:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/p/{slug:[a-z0-9-]+}'"));
+    assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}'"));
+    assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}/interesse'"));
     assertTrue(str_contains($routes,"'/site/checkout/{product:\\d+}'"));
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
@@ -1329,7 +1332,9 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,'Pedidos agora aparecem na'));
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
-    assertTrue(str_contains($publicSite,'Comprar agora'));
+    assertTrue(str_contains($publicSite,'Ver curso e comprar'));
+    assertTrue(str_contains($course,'Quero receber atendimento'));
+    assertTrue(str_contains($course,'Ir para o pagamento'));
     assertTrue(str_contains($checkout,'Continuar para pagamento'));
     assertTrue(str_contains($page,'Voltar ao site'));
     assertTrue(str_contains($publicSite,'Modo de pré-visualização'));

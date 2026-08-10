@@ -197,6 +197,31 @@ return static function (
         if($site===null||$page===null)return$view->renderStandalone('site/unavailable',[],404);return$view->renderStandalone('site/page',['site'=>$site,'page'=>$page,'preview'=>$preview,'basePath'=>$basePath]);
     });
 
+    $router->get('/site/curso/{product:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath):Response{
+        $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicCatalogProduct($organizationId,(int)$params['product']);
+        if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
+        $unitId=$product['unit_id']===null?null:(int)$product['unit_id'];
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+    });
+
+    $router->post('/site/curso/{product:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$organizationId,$session,$basePath):Response{
+        $productId=(int)$params['product'];
+        try{
+            $product=$sites->publicCatalogProduct($organizationId,$productId);if($product===null)throw new RuntimeException('Este curso não está disponível.');
+            if(($product['selected_mode']??'catalog')==='store')return Response::redirect($basePath.'/site/checkout/'.$productId);
+            $fingerprint=hash('sha256',$organizationId.'|interest|'.(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown')));if(!$contacts->allowExternalRequest($fingerprint,12))throw new RuntimeException('Muitas tentativas foram realizadas. Aguarde um minuto e tente novamente.');
+            $name=trim((string)$request->input('name',''));$email=strtolower(trim((string)$request->input('email','')));$phone=preg_replace('/\D/','',(string)$request->input('phone',''))??'';$document=preg_replace('/\D/','',(string)$request->input('document',''))??'';$unitId=(int)$request->input('unit_id','0');
+            if(mb_strlen($name)<2||mb_strlen($name)>160)throw new RuntimeException('Informe o nome completo.');if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido.');if(strlen($phone)<10||strlen($phone)>11)throw new RuntimeException('Informe um celular válido.');if($document!==''&&!in_array(strlen($document),[11,14],true))throw new RuntimeException('Informe um CPF ou CNPJ válido.');if((string)$request->input('privacy_consent','')!=='1')throw new RuntimeException('Confirme o uso dos dados para atendimento.');
+            $units=$sites->publicUnits($organizationId,$product['unit_id']===null?null:(int)$product['unit_id']);$unit=null;foreach($units as$item)if((int)$item['id']===$unitId)$unit=$item;if($unit===null)throw new RuntimeException('Selecione um polo disponível.');
+            $existing=$document!==''?$contacts->findByDocument($document):null;if($existing!==null&&(int)$existing['unit_id']!==$unitId)throw new RuntimeException('Este CPF já está vinculado a outro polo. Fale com nossa equipe para continuar.');
+            $contactId=$existing===null?$contacts->externalDuplicate('site-interest-'.bin2hex(random_bytes(12)),$unitId,$phone,$email):(int)$existing['id'];
+            if($contactId===null)$contactId=$contacts->createExternal(['unit_id'=>$unitId,'name'=>$name,'phone'=>$phone,'email'=>$email,'document'=>$document!==''?$document:null,'course'=>(string)$product['name'],'interest_score'=>null,'origin_city'=>(string)$unit['name'],'external_submission_id'=>'site-interest-'.bin2hex(random_bytes(16)),'consent_at'=>date('Y-m-d H:i:s'),'privacy_notice_version'=>'site-catalog-v1','registered_at'=>date('Y-m-d H:i:s'),'notes'=>'Interesse recebido pela página pública do curso.']);
+            else $contacts->recordEvent($contactId,null,'site_interest','Novo interesse recebido pelo site no curso '.(string)$product['name'].'.');
+            $session->flash('site_interest.message','Recebemos seu interesse. Nossa equipe entrará em contato.');
+        }catch(Throwable$e){$session->flash('site_interest.error',$e->getMessage());}
+        return Response::redirect($basePath.'/site/curso/'.$productId);
+    });
+
     $router->get('/site/checkout/{product:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicProduct($organizationId,(int)$params['product']);if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
         $unitId=$product['unit_id']===null?null:(int)$product['unit_id'];return$view->renderStandalone('site/checkout',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'error'=>$session->get('site_checkout.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);

@@ -174,6 +174,13 @@ final readonly class SiteRepository
         $statement->execute(['organization'=>$organizationId,'product'=>$productId,'organization_unit'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
     }
 
+    /** @return array<string,mixed>|null */
+    public function publicCatalogProduct(int $organizationId,int $productId):?array
+    {
+        $statement=$this->database->prepare("SELECT p.*,s.selected_mode FROM organization_site_products sp INNER JOIN organization_finance_products scope ON scope.organization_id=sp.organization_id AND scope.finance_product_id=sp.finance_product_id AND scope.is_visible=1 INNER JOIN finance_products p ON p.id=sp.finance_product_id INNER JOIN organization_sites s ON s.organization_id=sp.organization_id LEFT JOIN units u ON u.id=p.unit_id WHERE sp.organization_id=:organization AND p.id=:product AND p.is_active=1 AND s.is_enabled=1 AND s.publication_status='published' AND ((s.selected_mode='store' AND s.allow_store=1 AND p.value>=5) OR (s.selected_mode='catalog' AND s.allow_catalog=1)) AND (p.unit_id IS NULL OR u.organization_id=:organization_unit) LIMIT 1");
+        $statement->execute(['organization'=>$organizationId,'product'=>$productId,'organization_unit'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
+    }
+
     /** @return list<array<string,mixed>> */
     public function publicUnits(int $organizationId,?int $productUnitId):array
     {
