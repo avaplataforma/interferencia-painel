@@ -847,9 +847,33 @@ $tests['mantém histórico contratual e modelos comerciais das franquias'] = sta
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     assertTrue(str_contains($migration,'parent_contract_id'));
     assertTrue(str_contains($migration,'commercial_model'));
-    assertTrue(str_contains($repository,"'fixed_plus_percentage','split_only'"));
+    assertTrue(str_contains($repository,"'fixed_monthly','hybrid'"));
     assertTrue(str_contains($asaas,"'/paymentLinks'"));
     assertTrue(str_contains($routes,"'/admin/franchise-contracts/{id:\\d+}/recurring-link'"));
+};
+
+$tests['separa regra comercial do processamento financeiro da franquia'] = static function () use ($rootPath): void {
+    $migrationPath=$rootPath.'/database/migrations/20260809_994000_separate_franchise_commercial_processing.php';
+    assertTrue(is_file($migrationPath));
+    $migration=(string)file_get_contents($migrationPath);
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    $implementation=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseImplementation.php');
+    $form=(string)file_get_contents($rootPath.'/views/admin/franchise-contracts/form.php');
+    $show=(string)file_get_contents($rootPath.'/views/admin/franchise-contracts/show.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($migration,'commercial_rule'));
+    assertTrue(str_contains($migration,'financial_processing'));
+    assertTrue(str_contains($migration,'franchise_fee_percentage'));
+    assertTrue(str_contains($migration,'fixed_fee_per_enrollment'));
+    assertTrue(str_contains($repository,'central_monthly_settlement'));
+    assertTrue(str_contains($repository,'central_automatic_split'));
+    assertTrue(str_contains($repository,'franchise_asaas'));
+    assertTrue(str_contains($implementation,"\$financialProcessing === 'franchise_asaas'"));
+    assertTrue(str_contains($form,'Regra comercial'));
+    assertTrue(str_contains($form,'Processamento financeiro'));
+    assertTrue(str_contains($show,'Divisão por venda'));
+    assertTrue(str_contains($routes,"'commercial_rule'=>"));
+    assertTrue(str_contains($routes,"'financial_processing'=>"));
 };
 
 $tests['separa perfis centrais e perfis das franquias com matriz própria'] = static function () use ($rootPath): void {

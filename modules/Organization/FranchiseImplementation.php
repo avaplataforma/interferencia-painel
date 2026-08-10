@@ -21,20 +21,36 @@ final class FranchiseImplementation
         $addressComplete = self::filled($organization, ['postal_code', 'address', 'address_number', 'city', 'state']);
         $managerComplete = self::filled($organization, ['general_manager_name', 'general_manager_email', 'general_manager_phone']);
         $contractSigned = $contract !== null && ($contract['status'] ?? '') === 'signed';
-        $commercialModel = $contract === null ? '' : (string) ($contract['commercial_model'] ?? '');
-        $commercialDefined = $contractSigned && in_array($commercialModel, ['fixed_plus_percentage', 'split_only'], true);
-        $percentage = $contract === null ? 0.0 : (float) ($contract['sales_fee_percentage'] ?? 0);
+        $commercialRule = $contract === null ? '' : (string) ($contract['commercial_rule'] ?? '');
+        if ($commercialRule === '' && $contract !== null) {
+            $commercialRule = ($contract['commercial_model'] ?? '') === 'fixed_plus_percentage'
+                ? ((float) ($contract['sales_fee_percentage'] ?? 0) > 0 ? 'hybrid' : 'fixed_monthly')
+                : 'percentage_commission';
+        }
+        $financialProcessing = $contract === null ? '' : (string) ($contract['financial_processing'] ?? '');
+        if ($financialProcessing === '' && $contract !== null) {
+            $financialProcessing = (float) ($contract['sales_fee_percentage'] ?? 0) > 0
+                ? 'central_automatic_split'
+                : 'central_monthly_settlement';
+        }
+        $commercialDefined = $contractSigned
+            && in_array($commercialRule, ['percentage_commission', 'fixed_monthly', 'hybrid', 'per_enrollment'], true)
+            && in_array($financialProcessing, ['central_monthly_settlement', 'central_automatic_split', 'franchise_asaas'], true);
         $monthly = $contract === null ? 0.0 : (float) ($contract['monthly_fixed_amount'] ?? 0);
-        $needsSplit = $percentage > 0;
-        $needsMonthly = $commercialModel === 'fixed_plus_percentage' && $monthly > 0;
+        $needsSplit = $financialProcessing === 'central_automatic_split';
+        $needsMonthly = $monthly > 0;
         $splitReady = !$needsSplit || (
             ($organization['asaas_wallet_status'] ?? '') === 'validated'
             && trim((string) ($organization['asaas_wallet_id'] ?? '')) !== ''
             && (int) ($organization['split_enabled'] ?? 0) === 1
         );
         $monthlyReady = !$needsMonthly || trim((string) ($contract['asaas_payment_link_url'] ?? '')) !== '';
+        $accountMode = (string) ($facts['finance_account_mode'] ?? 'central');
         $paymentProviderReady = (int) ($facts['finance_account_ready'] ?? 0) === 1;
-        $financeReady = $commercialDefined && $splitReady && $monthlyReady && $paymentProviderReady;
+        $processingAccountReady = $financialProcessing === 'franchise_asaas'
+            ? $paymentProviderReady && $accountMode === 'exclusive'
+            : $paymentProviderReady;
+        $financeReady = $commercialDefined && $splitReady && $monthlyReady && $processingAccountReady;
         $brandingReady = trim((string) ($organization['logo_path'] ?? '')) !== ''
             && trim((string) ($organization['favicon_path'] ?? '')) !== '';
         $domainReady = false;
@@ -54,8 +70,8 @@ final class FranchiseImplementation
         $steps = [
             self::step('cadastro', 'Cadastro conferido', 'Dados jurídicos, gestor e acesso exclusivo preenchidos.', $registrationComplete, 'required', 'Cadastro', 'fa-building', '/edit#dados'),
             self::step('contrato', 'Contrato assinado', 'O contrato vigente precisa estar assinado.', $contractSigned, 'required', 'Legal', 'fa-file-signature', '/contracts'),
-            self::step('comercial', 'Modelo comercial definido', 'Mensalidade e/ou percentual definidos no contrato.', $commercialDefined, 'required', 'Comercial', 'fa-scale-balanced', '/contracts'),
-            self::step('financeiro', 'Operação financeira pronta', self::financeDetail($needsMonthly, $needsSplit, $monthlyReady, $splitReady, $paymentProviderReady, (string) ($facts['finance_account_mode'] ?? 'central')), $financeReady, 'required', 'Financeiro', 'fa-wallet', $paymentProviderReady ? '#operacao-comercial' : '/edit#integracoes'),
+            self::step('comercial', 'Regra comercial definida', 'Regra de remuneração e processamento financeiro definidos no contrato.', $commercialDefined, 'required', 'Comercial', 'fa-scale-balanced', '/contracts'),
+            self::step('financeiro', 'Operação financeira pronta', self::financeDetail($needsMonthly, $needsSplit, $monthlyReady, $splitReady, $processingAccountReady, $accountMode, $financialProcessing), $financeReady, 'required', 'Financeiro', 'fa-wallet', $processingAccountReady ? '#operacao-comercial' : '/edit#integracoes'),
             self::step('administrador', 'Administrador da franquia criado', 'Ao menos um administrador ativo deve acessar o painel exclusivo.', $adminReady, 'required', 'Acesso', 'fa-user-shield', '/' . $slug . '/users'),
             self::step('ava', 'AVA conectado e testado', 'A modalidade escolhida precisa ter todas as conexões ativas e testadas.', $avaReady, 'required', 'Acadêmico', 'fa-graduation-cap', '/edit#ava'),
             self::step('polos', 'Polo operacional definido', 'Cadastre ao menos um polo ativo e marque o polo principal.', $polesReady, 'required', 'Acadêmico', 'fa-location-dot', '/edit#polos'),
@@ -118,11 +134,13 @@ final class FranchiseImplementation
         return count(array_filter($steps, static fn(array $step): bool => $step['done']));
     }
 
-    private static function financeDetail(bool $needsMonthly, bool $needsSplit, bool $monthlyReady, bool $splitReady, bool $providerReady, string $mode): string
+    private static function financeDetail(bool $needsMonthly, bool $needsSplit, bool $monthlyReady, bool $splitReady, bool $providerReady, string $mode, string $processing): string
     {
         $pending = [];
         if (!$providerReady) {
-            $pending[] = $mode === 'exclusive' ? 'testar e ativar o Asaas exclusivo' : 'ativar a integração Asaas central';
+            $pending[] = $processing === 'franchise_asaas' || $mode === 'exclusive'
+                ? 'testar e ativar o Asaas exclusivo'
+                : 'ativar a integração Asaas central';
         }
         if ($needsMonthly && !$monthlyReady) {
             $pending[] = 'gerar o link mensal';
