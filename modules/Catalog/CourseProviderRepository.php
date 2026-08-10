@@ -1,0 +1,219 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Interferencia\Modules\Catalog;
+
+use Interferencia\Kernel\Security\SecretCipher;
+use JsonException;
+use PDO;
+use RuntimeException;
+use Throwable;
+
+final readonly class CourseProviderRepository
+{
+    private const PROVIDER = 'escola_avancada';
+    private const DELIVERY_MODES = ['external_link', 'iframe', 'sso'];
+
+    public function __construct(private PDO $database, private SecretCipher $cipher) {}
+
+    public function encryptionReady(): bool { return $this->cipher->ready(); }
+
+    /** @return array<string,mixed> */
+    public function settings(): array
+    {
+        $statement = $this->database->prepare("SELECT p.*,c.name catalog_name,c.code catalog_code FROM course_provider_integrations p LEFT JOIN course_catalogs c ON c.id=p.catalog_id WHERE p.provider_code=:code LIMIT 1");
+        $statement->execute(['code' => self::PROVIDER]);
+        $row = $statement->fetch() ?: [];
+        $token = $this->cipher->decrypt(isset($row['token_encrypted']) ? (string)$row['token_encrypted'] : null);
+
+        return [
+            'id' => (int)($row['id'] ?? 0),
+            'name' => (string)($row['name'] ?? 'Escola Avançada'),
+            'base_url' => (string)($row['base_url'] ?? ''),
+            'token' => $token,
+            'token_last4' => (string)($row['token_last4'] ?? ''),
+            'catalog_name' => (string)($row['catalog_name'] ?? 'Catálogo PRO'),
+            'catalog_code' => (string)($row['catalog_code'] ?? 'catalogo-pro'),
+            'delivery_mode' => (string)($row['delivery_mode'] ?? 'external_link'),
+            'launch_url_template' => (string)($row['launch_url_template'] ?? ''),
+            'is_active' => (int)($row['is_active'] ?? 0) === 1,
+            'configured' => $token !== '' && trim((string)($row['base_url'] ?? '')) !== '',
+            'last_test_status' => (string)($row['last_test_status'] ?? 'not_tested'),
+            'last_tested_at' => $row['last_tested_at'] ?? null,
+            'last_sync_status' => (string)($row['last_sync_status'] ?? 'never'),
+            'last_synced_at' => $row['last_synced_at'] ?? null,
+            'last_error' => (string)($row['last_error'] ?? ''),
+        ];
+    }
+
+    public function save(array $input, ?int $userId): void
+    {
+        $baseUrl = trim((string)($input['base_url'] ?? ''));
+        $token = trim((string)($input['token'] ?? ''));
+        $catalogName = trim((string)($input['catalog_name'] ?? ''));
+        $delivery = trim((string)($input['delivery_mode'] ?? 'external_link'));
+        $launch = trim((string)($input['launch_url_template'] ?? ''));
+        $active = (bool)($input['is_active'] ?? false);
+
+        if ($baseUrl === '' || filter_var($baseUrl, FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($baseUrl, PHP_URL_SCHEME)) !== 'https') throw new RuntimeException('Informe a URL HTTPS especial fornecida pela Escola Avançada.');
+        if ($catalogName === '') throw new RuntimeException('Informe o nome do catálogo.');
+        if (!in_array($delivery, self::DELIVERY_MODES, true)) throw new RuntimeException('Forma de acesso ao curso inválida.');
+        if ($launch !== '' && (filter_var(str_replace(['{curso}', '{id}'], ['1', '1'], $launch), FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($launch, PHP_URL_SCHEME)) !== 'https')) throw new RuntimeException('O modelo do link de acesso deve usar HTTPS.');
+
+        $current = $this->settings();
+        if ($token === '' && !$current['configured']) throw new RuntimeException('Informe o token da Escola Avançada.');
+        if ($token !== '' && !$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
+
+        $this->database->beginTransaction();
+        try {
+            $catalog = $this->database->prepare("INSERT INTO course_catalogs(code,name,description,is_active) VALUES('catalogo-pro',:name,'Cursos de fornecedores externos, com comercialização controlada pelo Mundo Inter.',1) ON DUPLICATE KEY UPDATE name=VALUES(name),is_active=1");
+            $catalog->execute(['name' => $catalogName]);
+            $catalogId = (int)$this->database->query("SELECT id FROM course_catalogs WHERE code='catalogo-pro'")->fetchColumn();
+
+            $encrypted = $token !== '' ? $this->cipher->encrypt($token) : null;
+            $last4 = $token !== '' ? substr($token, -4) : null;
+            $sql = "UPDATE course_provider_integrations SET name='Escola Avançada',base_url=:base,catalog_id=:catalog,delivery_mode=:delivery,launch_url_template=:launch,is_active=:active,updated_by=:user";
+            $params = ['base' => rtrim($baseUrl, '/'), 'catalog' => $catalogId, 'delivery' => $delivery, 'launch' => $launch !== '' ? $launch : null, 'active' => (int)$active, 'user' => $userId, 'code' => self::PROVIDER];
+            if ($token !== '') { $sql .= ',token_encrypted=:token,token_last4=:last4'; $params['token'] = $encrypted; $params['last4'] = $last4; }
+            $sql .= ' WHERE provider_code=:code';
+            $this->database->prepare($sql)->execute($params);
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+    }
+
+    public function recordTest(?string $error): void
+    {
+        $this->database->prepare("UPDATE course_provider_integrations SET last_test_status=:status,last_tested_at=NOW(),last_error=:error WHERE provider_code=:code")->execute([
+            'status' => $error === null ? 'success' : 'failed',
+            'error' => $error,
+            'code' => self::PROVIDER,
+        ]);
+    }
+
+    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int} */
+    public function synchronize(array $courses): array
+    {
+        $settings = $this->settings();
+        if ((int)$settings['id'] < 1) throw new RuntimeException('Integração da Escola Avançada não encontrada.');
+        $catalogId = (int)$this->database->query("SELECT id FROM course_catalogs WHERE code='catalogo-pro'")->fetchColumn();
+        if ($catalogId < 1) throw new RuntimeException('Catálogo PRO não encontrado.');
+
+        $providerId = (int)$settings['id'];
+        $now = date('Y-m-d H:i:s');
+        $seen = [];
+        $created = 0;
+        $updated = 0;
+
+        $this->database->beginTransaction();
+        try {
+            foreach ($courses as $course) {
+                $normalized = $this->normalizeCourse($course);
+                if ($normalized['name'] === '') continue;
+                $externalKey = $this->externalKey($course, $normalized);
+                $seen[] = $externalKey;
+
+                $exists = $this->database->prepare('SELECT id FROM provider_courses WHERE provider_id=:provider AND external_key=:external LIMIT 1');
+                $exists->execute(['provider' => $providerId, 'external' => $externalKey]);
+                $id = (int)($exists->fetchColumn() ?: 0);
+
+                $payload = [
+                    'provider' => $providerId, 'catalog' => $catalogId, 'external' => $externalKey,
+                    'remote_id' => $normalized['remote_id'] ?: null, 'name' => $normalized['name'],
+                    'description' => $normalized['description'] ?: null, 'category' => $normalized['category'] ?: null,
+                    'workload' => $normalized['workload'] ?: null, 'lessons' => $normalized['lesson_count'],
+                    'cover' => $normalized['cover_url'] ?: null, 'price' => $normalized['price'],
+                    'promotional' => $normalized['promotional_price'], 'installments' => $normalized['installments'],
+                    'remote_status' => $normalized['status'] ?: null,
+                    'raw' => json_encode($course, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+                    'seen' => $now,
+                ];
+
+                if ($id > 0) {
+                    $updatePayload = $payload;
+                    unset($updatePayload['provider'], $updatePayload['external']);
+                    $updatePayload['id'] = $id;
+                    $this->database->prepare('UPDATE provider_courses SET catalog_id=:catalog,remote_id=:remote_id,name=:name,description=:description,category=:category,workload=:workload,lesson_count=:lessons,cover_url=:cover,remote_reference_price=:price,remote_promotional_price=:promotional,remote_installments=:installments,remote_status=:remote_status,is_available=1,raw_payload=:raw,last_seen_at=:seen WHERE id=:id')->execute($updatePayload);
+                    $updated++;
+                } else {
+                    $this->database->prepare('INSERT INTO provider_courses(provider_id,catalog_id,external_key,remote_id,name,description,category,workload,lesson_count,cover_url,remote_reference_price,remote_promotional_price,remote_installments,remote_status,is_available,raw_payload,first_seen_at,last_seen_at) VALUES(:provider,:catalog,:external,:remote_id,:name,:description,:category,:workload,:lessons,:cover,:price,:promotional,:installments,:remote_status,1,:raw,:seen,:seen)')->execute($payload);
+                    $created++;
+                }
+            }
+
+            $unavailable = 0;
+            if ($seen !== []) {
+                $placeholders = implode(',', array_fill(0, count($seen), '?'));
+                $statement = $this->database->prepare("UPDATE provider_courses SET is_available=0 WHERE provider_id=? AND external_key NOT IN ($placeholders) AND is_available=1");
+                $statement->execute(array_merge([$providerId], $seen));
+                $unavailable = $statement->rowCount();
+            }
+
+            $this->database->prepare("UPDATE course_provider_integrations SET last_sync_status='success',last_synced_at=NOW(),last_error=NULL WHERE id=:id")->execute(['id' => $providerId]);
+            $this->database->commit();
+            return ['received' => count($courses), 'created' => $created, 'updated' => $updated, 'unavailable' => $unavailable];
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            $this->recordSyncFailure($exception->getMessage());
+            throw $exception;
+        }
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function courses(): array
+    {
+        $statement = $this->database->query("SELECT pc.*,c.name catalog_name FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id WHERE p.provider_code='escola_avancada' ORDER BY pc.is_available DESC,pc.category,pc.name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return array{total:int,available:int,categories:int} */
+    public function summary(): array
+    {
+        $row = $this->database->query("SELECT COUNT(*) total,SUM(is_available=1) available,COUNT(DISTINCT NULLIF(category,'')) categories FROM provider_courses pc INNER JOIN course_provider_integrations p ON p.id=pc.provider_id WHERE p.provider_code='escola_avancada'")->fetch() ?: [];
+        return ['total' => (int)($row['total'] ?? 0), 'available' => (int)($row['available'] ?? 0), 'categories' => (int)($row['categories'] ?? 0)];
+    }
+
+    private function recordSyncFailure(string $error): void
+    {
+        $this->database->prepare("UPDATE course_provider_integrations SET last_sync_status='failed',last_synced_at=NOW(),last_error=:error WHERE provider_code=:code")->execute(['error' => mb_substr($error, 0, 2000), 'code' => self::PROVIDER]);
+    }
+
+    /** @param array<string,mixed> $course @return array<string,mixed> */
+    private function normalizeCourse(array $course): array
+    {
+        return [
+            'remote_id' => trim((string)($course['id'] ?? $course['curso_id'] ?? $course['codigo'] ?? '')),
+            'name' => trim((string)($course['nome'] ?? $course['titulo'] ?? '')),
+            'description' => trim((string)($course['obs'] ?? $course['descricao'] ?? '')),
+            'category' => trim((string)($course['categoria_loja'] ?? $course['categoria_interna'] ?? $course['categoria'] ?? '')),
+            'workload' => trim((string)($course['carga_horaria'] ?? '')),
+            'lesson_count' => max(0, (int)($course['aulas'] ?? 0)),
+            'cover_url' => trim((string)($course['capa_image'] ?? $course['capa'] ?? '')),
+            'price' => $this->money($course['preco'] ?? null),
+            'promotional_price' => $this->money($course['preco_promocional'] ?? null),
+            'installments' => isset($course['parcelas']) && is_numeric($course['parcelas']) ? max(0, (int)$course['parcelas']) : null,
+            'status' => trim((string)($course['status'] ?? '')),
+        ];
+    }
+
+    /** @param array<string,mixed> $course @param array<string,mixed> $normalized */
+    private function externalKey(array $course, array $normalized): string
+    {
+        $remote = (string)$normalized['remote_id'];
+        if ($remote !== '') return hash('sha256', 'id:' . $remote);
+        return hash('sha256', mb_strtolower((string)$normalized['name']) . '|' . (string)$normalized['cover_url']);
+    }
+
+    private function money(mixed $value): ?float
+    {
+        if ($value === null || $value === '') return null;
+        if (is_int($value) || is_float($value)) return round((float)$value, 2);
+        $text = preg_replace('/[^0-9,.-]/', '', (string)$value) ?? '';
+        if (str_contains($text, ',') && str_contains($text, '.')) $text = str_replace('.', '', $text);
+        $text = str_replace(',', '.', $text);
+        return is_numeric($text) ? round((float)$text, 2) : null;
+    }
+}

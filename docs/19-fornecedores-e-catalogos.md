@@ -168,3 +168,33 @@ Os nomes são conceituais e serão confirmados durante a implementação.
 5. Publicar vitrines diferentes usando a mesma base de código.
 6. Testar preço, campanha, matrícula, cobrança e entrega acadêmica.
 7. Somente depois conectar o primeiro fornecedor real.
+
+## Escola Avançada e Catálogo PRO
+
+A Escola Avançada é o primeiro fornecedor real preparado nessa arquitetura. A
+documentação pública da API V2 disponibiliza, neste momento, a listagem de
+cursos e aulas. Ela também possui recursos financeiros, mas eles **não são
+utilizados pelo Mundo Inter**.
+
+Na primeira etapa:
+
+- o token é armazenado criptografado no ADM Central;
+- `cursos/listar` alimenta um espelho técnico chamado **Catálogo PRO**;
+- categoria, capa, carga horária, aulas e valores remotos são preservados para
+  revisão;
+- valores remotos são somente referência e nunca geram preço ou cobrança;
+- sincronizar não publica cursos, não vende e não cria matrículas;
+- a indisponibilidade na origem não apaga o histórico importado;
+- a loja separará as futuras ofertas pelo catálogo de origem.
+
+A documentação consultada não apresenta uma operação oficial de matrícula,
+SSO, deep link assinado, LTI, SCORM ou incorporação de conteúdo. Por isso, a
+entrega padrão permanece como abertura segura no AVA do fornecedor. Iframe é
+uma opção experimental, pois pode ser bloqueado por `X-Frame-Options`, CSP,
+cookies de terceiros ou políticas do navegador.
+
+Antes de liberar vendas reais do Catálogo PRO, será necessário homologar com o
+fornecedor um identificador estável de curso e a forma oficial de criar o acesso
+do aluno. A solução preferencial é SSO ou deep link assinado; LTI é a segunda
+opção. Iframe simples não deve transportar credenciais nem substituir uma
+integração acadêmica oficial.

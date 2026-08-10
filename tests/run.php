@@ -1569,6 +1569,25 @@ $tests['automatiza recuperação comercial de checkouts abandonados'] = static f
     assertTrue(str_contains($console,'site:recoveries:sync'));
 };
 
+$tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999700_create_course_provider_catalogs.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/EscolaAvancadaClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+
+    assertTrue(str_contains($migration,'course_provider_integrations'));
+    assertTrue(str_contains($migration,'provider_courses_external_unique'));
+    assertTrue(str_contains($migration,"'catalogo-pro','Catálogo PRO'"));
+    assertTrue(str_contains($repository,'remote_reference_price'));
+    assertTrue(str_contains($repository,'last_sync_status'));
+    assertTrue(str_contains($client,"'cursos/listar'"));
+    assertTrue(!str_contains($client,'financeiro/parcelas'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
+    assertTrue(str_contains($view,'Financeiro independente'));
+    assertTrue(str_contains($view,'nunca publica, vende ou matricula automaticamente'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
