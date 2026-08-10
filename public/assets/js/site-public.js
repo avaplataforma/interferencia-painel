@@ -4,6 +4,7 @@
   const eventUrl = body.dataset.siteEventUrl || '';
   const consentKey = `site-metrics-consent-${organization}`;
   const attributionKey = `site-attribution-${organization}`;
+  const sessionKey = `site-commercial-session-${organization}`;
   const query = new URLSearchParams(location.search);
   const savedAttribution = (() => {
     try { return JSON.parse(sessionStorage.getItem(attributionKey) || '{}'); } catch { return {}; }
@@ -17,9 +18,19 @@
     utm_term: query.get('utm_term') || savedAttribution.utm_term || '',
   };
   try { sessionStorage.setItem(attributionKey, JSON.stringify(attribution)); } catch {}
+  const siteSessionId = (() => {
+    try {
+      let value = sessionStorage.getItem(sessionKey) || '';
+      if (!value) {
+        value = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        sessionStorage.setItem(sessionKey, value);
+      }
+      return value;
+    } catch { return ''; }
+  })();
 
   document.querySelectorAll('form[action*="/site/"]').forEach((form) => {
-    Object.entries(attribution).forEach(([name, value]) => {
+    Object.entries({ ...attribution, site_session_id: siteSessionId }).forEach(([name, value]) => {
       if (!value || form.querySelector(`[name="${name}"]`)) return;
       const field = document.createElement('input');
       field.type = 'hidden';
@@ -40,6 +51,10 @@
     data.set('utm_source', attribution.utm_source);
     data.set('utm_medium', attribution.utm_medium);
     data.set('utm_campaign', attribution.utm_campaign);
+    data.set('utm_content', attribution.utm_content);
+    data.set('utm_term', attribution.utm_term);
+    data.set('landing_page', attribution.landing_page);
+    data.set('site_session_id', siteSessionId);
     navigator.sendBeacon?.(eventUrl, data) || fetch(eventUrl, { method: 'POST', body: data, credentials: 'same-origin', keepalive: true }).catch(() => {});
   };
 

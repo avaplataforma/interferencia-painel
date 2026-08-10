@@ -1521,6 +1521,28 @@ $tests['amplia vitrine da franquia com catálogo páginas completas e domínio p
     assertTrue(str_contains($javascript,'site-course-favorites'));
 };
 
+$tests['acompanha o funil comercial completo do site por franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999500_create_site_commercial_funnel.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/site/funnel.php');
+    $admin=(string)file_get_contents($rootPath.'/views/site/admin.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+
+    assertTrue(str_contains($migration,'organization_site_orders_attribution_index'));
+    assertTrue(str_contains($migration,'contact_id'));
+    assertTrue(str_contains($repository,'commercialFunnel'));
+    assertTrue(str_contains($repository,'lead_scholarship'));
+    assertTrue(str_contains($repository,'checkout_created'));
+    assertTrue(str_contains($routes,"'/admin/site/funnel'"));
+    assertTrue(str_contains($routes,'$trackSiteConversion'));
+    assertTrue(str_contains($view,'Funil comercial do site'));
+    assertTrue(str_contains($view,'Recuperação de oportunidades'));
+    assertTrue(str_contains($admin,'Funil comercial'));
+    assertTrue(str_contains($javascript,'site-commercial-session'));
+    assertTrue(str_contains($javascript,'utm_content'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

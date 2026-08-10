@@ -26,7 +26,7 @@ $blocks=is_array($blocks??null)?$blocks:[];
 </style>
 <script>document.addEventListener('DOMContentLoaded',()=>document.querySelectorAll('.site-color-field').forEach(group=>{const picker=group.querySelector('input[type="color"]');const text=group.querySelector('[data-color-text]');if(!picker||!text)return;text.readOnly=true;picker.addEventListener('input',()=>{text.value=picker.value.toUpperCase()})}))</script>
 <div class="site-admin">
- <header class="page-header"><div><p class="eyebrow">ADM · Site Institucional</p><h1>Site da franquia</h1><p>Personalize a vitrine pública por etapas, sem alterar a estrutura protegida.</p></div><div class="page-actions"><a class="button button-secondary" href="<?= $escape($publicUrl) ?>?preview=1" target="_blank"><i class="fa-solid fa-eye"></i> Pré-visualizar</a></div></header>
+ <header class="page-header"><div><p class="eyebrow">ADM · Site Institucional</p><h1>Site da franquia</h1><p>Personalize a vitrine pública por etapas, sem alterar a estrutura protegida.</p></div><div class="page-actions"><a class="button button-secondary" href="<?= $escape($basePath) ?>/admin/site/funnel"><i class="fa-solid fa-chart-line"></i> Funil comercial</a><a class="button button-secondary" href="<?= $escape($publicUrl) ?>?preview=1" target="_blank"><i class="fa-solid fa-eye"></i> Pré-visualizar</a></div></header>
  <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
  <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
  <?php if(!$enabled):?><div class="alert alert-warning"><strong>Site ainda não liberado.</strong> O ADM Central precisa ativar este recurso antes da publicação.</div><?php endif;?>

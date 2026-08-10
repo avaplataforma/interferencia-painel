@@ -206,10 +206,10 @@ final readonly class SiteRepository
     }
 
     /** @return array{id:int,external_reference:string} */
-    public function createOrderDraft(int $organizationId,int $unitId,int $contactId,int $productId):array
+    public function createOrderDraft(int $organizationId,int $unitId,int $contactId,int $productId,array $attribution=[]):array
     {
-        $statement=$this->database->prepare('INSERT INTO organization_site_orders(organization_id,unit_id,crm_contact_id,finance_product_id,external_reference) SELECT :organization,:unit,:contact,:product,:temporary FROM units u INNER JOIN finance_products p ON p.id=:product_check WHERE u.id=:unit_check AND u.organization_id=:organization_check AND u.is_active=1 AND p.id=:product_scope');
-        $temporary='pending-'.bin2hex(random_bytes(12));$statement->execute(['organization'=>$organizationId,'unit'=>$unitId,'contact'=>$contactId,'product'=>$productId,'temporary'=>$temporary,'product_check'=>$productId,'unit_check'=>$unitId,'organization_check'=>$organizationId,'product_scope'=>$productId]);
+        $statement=$this->database->prepare('INSERT INTO organization_site_orders(organization_id,unit_id,crm_contact_id,finance_product_id,external_reference,session_hash,landing_page,utm_source,utm_medium,utm_campaign,utm_content,utm_term) SELECT :organization,:unit,:contact,:product,:temporary,:session,:landing,:source,:medium,:campaign,:content,:term FROM units u INNER JOIN finance_products p ON p.id=:product_check WHERE u.id=:unit_check AND u.organization_id=:organization_check AND u.is_active=1 AND p.id=:product_scope');
+        $temporary='pending-'.bin2hex(random_bytes(12));$statement->execute(['organization'=>$organizationId,'unit'=>$unitId,'contact'=>$contactId,'product'=>$productId,'temporary'=>$temporary,'session'=>$this->nullable($attribution['session_hash']??null,64),'landing'=>$this->nullable($attribution['landing_page']??null,500),'source'=>$this->nullable($attribution['utm_source']??null,190),'medium'=>$this->nullable($attribution['utm_medium']??null,190),'campaign'=>$this->nullable($attribution['utm_campaign']??null,190),'content'=>$this->nullable($attribution['utm_content']??null,190),'term'=>$this->nullable($attribution['utm_term']??null,190),'product_check'=>$productId,'unit_check'=>$unitId,'organization_check'=>$organizationId,'product_scope'=>$productId]);
         $id=(int)$this->database->lastInsertId();if($id<1)throw new RuntimeException('Não foi possível iniciar a solicitação de compra.');
         $external=sprintf('mundo-inter:site-order:%d:%d:unit:%d',$organizationId,$id,$unitId);$this->database->prepare('UPDATE organization_site_orders SET external_reference=:external WHERE id=:id')->execute(['external'=>$external,'id'=>$id]);return['id'=>$id,'external_reference'=>$external];
     }
@@ -343,15 +343,61 @@ final readonly class SiteRepository
     /** @param array<string,mixed> $data */
     public function recordEvent(int $organizationId,array $data):void
     {
-        $type=(string)($data['event_type']??'');if(!in_array($type,['page_view','course_view','course_click','whatsapp_click','contact_submit','scholarship_submit','checkout_start'],true))throw new RuntimeException('Evento inválido.');
-        $statement=$this->database->prepare('INSERT INTO organization_site_events(organization_id,session_hash,event_type,page_path,entity_type,entity_id,utm_source,utm_medium,utm_campaign,metadata_json) VALUES(:organization,:session,:event,:page,:entity_type,:entity_id,:utm_source,:utm_medium,:utm_campaign,:metadata)');
-        $statement->execute(['organization'=>$organizationId,'session'=>$this->nullable($data['session_hash']??null,64),'event'=>$type,'page'=>$this->nullable($data['page_path']??null,500),'entity_type'=>$this->nullable($data['entity_type']??null,40),'entity_id'=>isset($data['entity_id'])&&is_numeric($data['entity_id'])?(int)$data['entity_id']:null,'utm_source'=>$this->nullable($data['utm_source']??null,190),'utm_medium'=>$this->nullable($data['utm_medium']??null,190),'utm_campaign'=>$this->nullable($data['utm_campaign']??null,190),'metadata'=>isset($data['metadata'])?$this->encode($data['metadata']):null]);
+        $type=(string)($data['event_type']??'');if(!in_array($type,['page_view','course_view','course_click','whatsapp_click','contact_submit','scholarship_submit','checkout_start','lead_scholarship','lead_contact','lead_course','checkout_created'],true))throw new RuntimeException('Evento inválido.');
+        $statement=$this->database->prepare('INSERT INTO organization_site_events(organization_id,session_hash,event_type,page_path,entity_type,entity_id,contact_id,order_id,unit_id,landing_page,utm_source,utm_medium,utm_campaign,utm_content,utm_term,metadata_json) VALUES(:organization,:session,:event,:page,:entity_type,:entity_id,:contact,:site_order,:unit,:landing,:utm_source,:utm_medium,:utm_campaign,:utm_content,:utm_term,:metadata)');
+        $statement->execute(['organization'=>$organizationId,'session'=>$this->nullable($data['session_hash']??null,64),'event'=>$type,'page'=>$this->nullable($data['page_path']??null,500),'entity_type'=>$this->nullable($data['entity_type']??null,40),'entity_id'=>isset($data['entity_id'])&&is_numeric($data['entity_id'])?(int)$data['entity_id']:null,'contact'=>isset($data['contact_id'])&&is_numeric($data['contact_id'])?(int)$data['contact_id']:null,'site_order'=>isset($data['order_id'])&&is_numeric($data['order_id'])?(int)$data['order_id']:null,'unit'=>isset($data['unit_id'])&&is_numeric($data['unit_id'])?(int)$data['unit_id']:null,'landing'=>$this->nullable($data['landing_page']??null,500),'utm_source'=>$this->nullable($data['utm_source']??null,190),'utm_medium'=>$this->nullable($data['utm_medium']??null,190),'utm_campaign'=>$this->nullable($data['utm_campaign']??null,190),'utm_content'=>$this->nullable($data['utm_content']??null,190),'utm_term'=>$this->nullable($data['utm_term']??null,190),'metadata'=>isset($data['metadata'])?$this->encode($data['metadata']):null]);
     }
 
     /** @return array<string,int> */
     public function analyticsSummary(int $organizationId,int $days=30):array
     {
         $days=max(1,min(365,$days));$statement=$this->database->prepare("SELECT event_type,COUNT(*) total FROM organization_site_events WHERE organization_id=:organization AND occurred_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY) GROUP BY event_type");$statement->execute(['organization'=>$organizationId]);$summary=['page_view'=>0,'course_view'=>0,'course_click'=>0,'whatsapp_click'=>0,'contact_submit'=>0,'scholarship_submit'=>0,'checkout_start'=>0];foreach($statement->fetchAll()as$row)$summary[(string)$row['event_type']]=(int)$row['total'];return$summary;
+    }
+
+    /** @param array<string,mixed> $filters @return array<string,mixed> */
+    public function commercialFunnel(int $organizationId,array $filters=[]):array
+    {
+        $days=in_array((int)($filters['days']??30),[7,30,90,365],true)?(int)$filters['days']:30;
+        $unitId=max(0,(int)($filters['unit_id']??0));$productId=max(0,(int)($filters['product_id']??0));
+        $source=mb_substr(trim((string)($filters['utm_source']??'')),0,190);$campaign=mb_substr(trim((string)($filters['utm_campaign']??'')),0,190);
+        $scalar=function(string$sql,array$params=[]):int{$statement=$this->database->prepare($sql);$statement->execute($params);return(int)$statement->fetchColumn();};
+
+        $eventWhere=['organization_id=?',"occurred_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY)"];$eventParams=[$organizationId];
+        if($source!==''){$eventWhere[]="COALESCE(utm_source,'')=?";$eventParams[]=$source;}if($campaign!==''){$eventWhere[]="COALESCE(utm_campaign,'')=?";$eventParams[]=$campaign;}
+        $events=' WHERE '.implode(' AND ',$eventWhere);
+
+        $contactWhere=['u.organization_id=?',"c.registration_source='external_form'","c.privacy_notice_version LIKE 'site-%'", "c.registered_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY)"];$contactParams=[$organizationId];
+        if($unitId>0){$contactWhere[]='c.unit_id=?';$contactParams[]=$unitId;}if($productId>0){$contactWhere[]='c.course=(SELECT name FROM finance_products WHERE id=? LIMIT 1)';$contactParams[]=$productId;}if($source!==''){$contactWhere[]="COALESCE(c.utm_source,'')=?";$contactParams[]=$source;}if($campaign!==''){$contactWhere[]="COALESCE(c.utm_campaign,'')=?";$contactParams[]=$campaign;}
+        $contacts=' WHERE '.implode(' AND ',$contactWhere);
+
+        $orderWhere=['o.organization_id=?',"o.created_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY)"];$orderParams=[$organizationId];
+        if($unitId>0){$orderWhere[]='o.unit_id=?';$orderParams[]=$unitId;}if($productId>0){$orderWhere[]='o.finance_product_id=?';$orderParams[]=$productId;}if($source!==''){$orderWhere[]="COALESCE(o.utm_source,'')=?";$orderParams[]=$source;}if($campaign!==''){$orderWhere[]="COALESCE(o.utm_campaign,'')=?";$orderParams[]=$campaign;}
+        $orders=' WHERE '.implode(' AND ',$orderWhere);
+
+        $summary=[
+            'sessions'=>$scalar('SELECT COUNT(DISTINCT session_hash) FROM organization_site_events'.$events.' AND session_hash IS NOT NULL',$eventParams),
+            'page_views'=>$scalar("SELECT COUNT(*) FROM organization_site_events{$events} AND event_type='page_view'",$eventParams),
+            'leads'=>$scalar('SELECT COUNT(DISTINCT c.id) FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id'.$contacts,$contactParams),
+            'checkout_starts'=>$scalar("SELECT COUNT(DISTINCT session_hash) FROM organization_site_events{$events} AND event_type IN ('checkout_start','checkout_created')",$eventParams),
+            'orders'=>$scalar('SELECT COUNT(*) FROM organization_site_orders o'.$orders,$orderParams),
+            'paid'=>$scalar('SELECT COUNT(*) FROM organization_site_orders o'.$orders.' AND o.paid_at IS NOT NULL',$orderParams),
+            'enrolled'=>$scalar('SELECT COUNT(*) FROM organization_site_orders o'.$orders.' AND o.student_enrollment_id IS NOT NULL',$orderParams),
+            'released'=>$scalar("SELECT COUNT(*) FROM organization_site_orders o{$orders} AND o.fulfillment_status='released'",$orderParams),
+            'recovery'=>$scalar("SELECT COUNT(*) FROM organization_site_orders o{$orders} AND o.fulfillment_status='awaiting_payment' AND o.created_at<=DATE_SUB(NOW(),INTERVAL 30 MINUTE)",$orderParams),
+        ];
+        $rate=static fn(int$to,int$from):float=>$from>0?round(($to/$from)*100,1):0.0;
+        $rates=['lead'=>$rate($summary['leads'],$summary['sessions']),'order'=>$rate($summary['orders'],$summary['leads']),'paid'=>$rate($summary['paid'],$summary['orders']),'enrolled'=>$rate($summary['enrolled'],$summary['paid']),'released'=>$rate($summary['released'],$summary['enrolled'])];
+
+        $channelStatement=$this->database->prepare("SELECT COALESCE(NULLIF(c.utm_source,''),'Direto') label,COUNT(DISTINCT c.id) leads FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id{$contacts} GROUP BY label ORDER BY leads DESC LIMIT 12");$channelStatement->execute($contactParams);$channels=[];foreach($channelStatement->fetchAll()as$row)$channels[(string)$row['label']]=['label'=>(string)$row['label'],'leads'=>(int)$row['leads'],'orders'=>0,'paid'=>0];
+        $channelOrders=$this->database->prepare("SELECT COALESCE(NULLIF(o.utm_source,''),'Direto') label,COUNT(*) orders,SUM(o.paid_at IS NOT NULL) paid FROM organization_site_orders o{$orders} GROUP BY label ORDER BY orders DESC LIMIT 12");$channelOrders->execute($orderParams);foreach($channelOrders->fetchAll()as$row){$key=(string)$row['label'];$channels[$key]??=['label'=>$key,'leads'=>0,'orders'=>0,'paid'=>0];$channels[$key]['orders']=(int)$row['orders'];$channels[$key]['paid']=(int)$row['paid'];}usort($channels,static fn(array$a,array$b):int=>$b['leads']<=>$a['leads']);
+
+        $courseStatement=$this->database->prepare("SELECT p.name label,COUNT(*) orders,SUM(o.paid_at IS NOT NULL) paid,SUM(o.fulfillment_status='released') released,COALESCE(SUM(CASE WHEN o.paid_at IS NOT NULL THEN p.value ELSE 0 END),0) revenue FROM organization_site_orders o INNER JOIN finance_products p ON p.id=o.finance_product_id{$orders} GROUP BY p.id,p.name ORDER BY orders DESC,p.name LIMIT 12");$courseStatement->execute($orderParams);$courses=$courseStatement->fetchAll();
+        $unitStatement=$this->database->prepare("SELECT u.name label,COUNT(*) orders,SUM(o.paid_at IS NOT NULL) paid,SUM(o.fulfillment_status='released') released FROM organization_site_orders o INNER JOIN units u ON u.id=o.unit_id{$orders} GROUP BY u.id,u.name ORDER BY orders DESC,u.name LIMIT 20");$unitStatement->execute($orderParams);$units=$unitStatement->fetchAll();
+
+        $recoveryStatement=$this->database->prepare("SELECT o.id,o.link,o.created_at,c.id contact_id,c.name contact_name,c.phone contact_phone,c.email contact_email,p.name product_name,u.name unit_name,TIMESTAMPDIFF(HOUR,o.created_at,NOW()) age_hours FROM organization_site_orders o LEFT JOIN crm_contacts c ON c.id=o.crm_contact_id INNER JOIN finance_products p ON p.id=o.finance_product_id INNER JOIN units u ON u.id=o.unit_id{$orders} AND o.fulfillment_status='awaiting_payment' AND o.created_at<=DATE_SUB(NOW(),INTERVAL 30 MINUTE) ORDER BY o.created_at ASC LIMIT 30");$recoveryStatement->execute($orderParams);$recovery=$recoveryStatement->fetchAll();
+
+        $optionStatement=$this->database->prepare("SELECT DISTINCT COALESCE(utm_source,'') source,COALESCE(utm_campaign,'') campaign FROM crm_contacts c INNER JOIN units u ON u.id=c.unit_id WHERE u.organization_id=? AND c.registration_source='external_form' AND c.privacy_notice_version LIKE 'site-%' ORDER BY source,campaign LIMIT 100");$optionStatement->execute([$organizationId]);$sources=[];$campaigns=[];foreach($optionStatement->fetchAll()as$row){if((string)$row['source']!=='')$sources[(string)$row['source']]=true;if((string)$row['campaign']!=='')$campaigns[(string)$row['campaign']]=true;}
+        return['summary'=>$summary,'rates'=>$rates,'channels'=>array_values($channels),'courses'=>$courses,'units'=>$units,'recovery'=>$recovery,'options'=>['units'=>$this->publicUnits($organizationId,null),'products'=>$this->availableProducts($organizationId),'sources'=>array_keys($sources),'campaigns'=>array_keys($campaigns)],'filters'=>['days'=>$days,'unit_id'=>$unitId,'product_id'=>$productId,'utm_source'=>$source,'utm_campaign'=>$campaign]];
     }
 
     /** @return array<string,mixed> */
