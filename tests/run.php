@@ -1336,6 +1336,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/site-preview'"));
     assertTrue(str_contains($routes,"'/site'"));
     assertTrue(str_contains($routes,"'/site/bolsas'"));
+    assertTrue(str_contains($routes,"'/site/contato'"));
     assertTrue(str_contains($routes,"'/site/banner/{id:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/p/{slug:[a-z0-9-]+}'"));
     assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}'"));
@@ -1344,6 +1345,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
+    assertTrue(str_contains($tenantAdmin,'Título do site'));
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));
     assertTrue(str_contains($tenantAdmin,'data-site-targets'));
@@ -1362,6 +1364,11 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicSite,'fa-brands fa-whatsapp'));
     assertTrue(str_contains($publicSite,'name="full_name"'));
     assertTrue(str_contains($publicSite,'name="desired_course"'));
+    assertTrue(str_contains($publicSite,'class="contact-form"'));
+    assertTrue(str_contains($publicSite,'name="message"'));
+    assertTrue(str_contains($publicSite,"date('Y')"));
+    assertTrue(str_contains($publicSite,'.links .classroom{gap:.5rem}'));
+    assertTrue(!str_contains($publicSite,'Encontre cursos e informações'));
     assertTrue(str_contains($routes,"input('desired_course'"));
     assertTrue(str_contains($fontAwesomeBrands,'fa-whatsapp'));
     assertTrue(is_file($rootPath.'/public/assets/vendor/fontawesome/webfonts/fa-brands-400.woff2'));

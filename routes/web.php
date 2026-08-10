@@ -184,7 +184,7 @@ return static function (
         $preview=$request->queryValue('preview')==='1'&&$auth->check()&&$auth->can('users.manage');
         $site=$sites->publicSite($organizationId,$preview);
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
     });
 
     $router->post('/site/bolsas',static function(Request$request)use($sites,$contacts,$organizationId,$session,$basePath):Response{
@@ -200,6 +200,21 @@ return static function (
             $session->flash('site_scholarship.message','Cadastro recebido! Nossa equipe entrará em contato sobre as bolsas disponíveis.');
         }catch(Throwable$e){$session->flash('site_scholarship.error',$e->getMessage());}
         return Response::redirect($basePath.'/site?bolsas=resultado#bolsas');
+    });
+
+    $router->post('/site/contato',static function(Request$request)use($sites,$contacts,$organizationId,$session,$basePath):Response{
+        try{
+            $site=$sites->publicSite($organizationId);if($site===null)throw new RuntimeException('O formulário de contato não está disponível.');
+            $fingerprint=hash('sha256',$organizationId.'|contact|'.(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown')));if(!$contacts->allowExternalRequest($fingerprint,8))throw new RuntimeException('Muitas tentativas foram realizadas. Aguarde um minuto e tente novamente.');
+            $name=trim((string)$request->input('full_name',''));$email=strtolower(trim((string)$request->input('email','')));$phone=preg_replace('/\D/','',(string)$request->input('phone',''))??'';$desiredCourse=trim((string)$request->input('desired_course',''));$unitId=(int)$request->input('unit_id','0');$interest=(int)$request->input('interest_score','-1');$message=trim((string)$request->input('message',''));
+            if(mb_strlen($name)<2||mb_strlen($name)>160)throw new RuntimeException('Informe seu nome completo.');if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido.');if(strlen($phone)<10||strlen($phone)>11)throw new RuntimeException('Informe um WhatsApp válido.');if(mb_strlen($desiredCourse)<2||mb_strlen($desiredCourse)>190)throw new RuntimeException('Informe o curso desejado.');if($interest<0||$interest>10)throw new RuntimeException('Informe seu interesse de 0 a 10.');if(mb_strlen($message)<5||mb_strlen($message)>2000)throw new RuntimeException('Escreva uma mensagem entre 5 e 2.000 caracteres.');if((string)$request->input('privacy_consent','')!=='1')throw new RuntimeException('Confirme o uso dos dados para atendimento.');
+            $units=$sites->publicUnits($organizationId,null);$unit=null;foreach($units as$item)if((int)$item['id']===$unitId)$unit=$item;if($unit===null)throw new RuntimeException('Selecione uma cidade ou polo disponível.');
+            $submission='site-contact-'.bin2hex(random_bytes(16));$contactId=$contacts->externalDuplicate($submission,$unitId,$phone,$email);$event='Contato recebido pelo Site Institucional para o curso '.$desiredCourse.'. Interesse: '.$interest.'/10. Mensagem: '.$message;
+            if($contactId===null)$contacts->createExternal(['unit_id'=>$unitId,'name'=>$name,'phone'=>$phone,'email'=>$email,'document'=>null,'course'=>$desiredCourse,'interest_score'=>$interest,'origin_city'=>(string)$unit['name'],'external_submission_id'=>$submission,'consent_at'=>date('Y-m-d H:i:s'),'privacy_notice_version'=>'site-contact-v1','registered_at'=>date('Y-m-d H:i:s'),'notes'=>$event]);
+            else $contacts->recordEvent($contactId,null,'site_contact',$event);
+            $session->flash('site_contact.message','Mensagem recebida! Nossa equipe entrará em contato em breve.');
+        }catch(Throwable$e){$session->flash('site_contact.error',$e->getMessage());}
+        return Response::redirect($basePath.'/site?contato=resultado#contato');
     });
 
     $router->get('/site/banner/{id:\d+}',static function(Request$request,array$params)use($sites,$spacesStorage,$organizationId):Response{
