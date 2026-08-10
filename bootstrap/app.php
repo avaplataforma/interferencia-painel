@@ -67,6 +67,7 @@ use Interferencia\Modules\Moodle\AvaAccessNotifier;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
 use Interferencia\Modules\Site\SiteRepository;
 use Interferencia\Modules\Site\SiteOrderFulfillmentService;
+use Interferencia\Modules\Site\SiteRecoveryService;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -171,6 +172,7 @@ $avaConnections = new AvaConnectionRepository($database,new SecretCipher((string
 $avaBrands = new AvaBrandCatalog($database,'https://'.($centralHost??$config->string('app.central_host')));
 $avaPoloMappings = new AvaPoloMappingRepository($database);
 $sites = new SiteRepository($database);
+$siteRecoveries = new SiteRecoveryService($database,$followUps);
 $moodleSettings=$moodleIntegrations->settings();
 $moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$moodleSettings['token'],$moodleSettings['is_active']);
 $moodleRepository=new MoodleRepository($database);
@@ -188,7 +190,7 @@ $asaasApiKey=$usesExclusiveAsaas?(string)$organizationAsaasSettings['api_key']:(
 $asaasWebhookToken=$usesExclusiveAsaas?(string)$organizationAsaasSettings['webhook_token']:($asaasSettings['configured']?(string)$asaasSettings['webhook_token']:(string)$config->get('app.asaas_webhook_token'));
 $splitLifecycle=static function(string$phase,array$context)use($franchiseContracts,$organizationId):mixed{if($phase==='prepare')return$franchiseContracts->prepareSplit($organizationId,(float)$context['gross'],(string)$context['reference']);$prepared=$context['prepared'];if($phase==='complete'){$franchiseContracts->completeSplit((int)$prepared['attempt_id'],$context['result']);return null;}if($phase==='fail')$franchiseContracts->failSplit((int)$prepared['attempt_id'],(string)$context['error']);return null;};
 $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas_payments_write_enabled'),$splitLifecycle);
-$siteOrderFulfillment = new SiteOrderFulfillmentService($database,$sites,$asaas,$avaEnrollmentReleaser,$avaAccessNotifier);
+$siteOrderFulfillment = new SiteOrderFulfillmentService($database,$sites,$asaas,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries);
 $franchiseContractBilling = new FranchiseContractBillingService($franchiseContracts,$asaas);
 $franchiseSandboxTests = new \Interferencia\Modules\Organization\FranchiseSandboxBillingRepository($database);
 $asaasSandbox = new AsaasClient('sandbox',$asaasSandboxSettings['configured']&&$asaasSandboxSettings['is_active']?(string)$asaasSandboxSettings['api_key']:'',true);
@@ -202,6 +204,8 @@ $unitContext = new UnitContext($auth, $units, $session);
 $currentUser = $auth->user();
 $alertUnitIds=[];
 if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext->current();$alertUnitIds=$alertUnit===null?[]:($alertUnit['id']===null?array_map(static fn(array $item):int=>(int)$item['id'],$unitContext->available()):[(int)$alertUnit['id']]);}
+$siteRecoveryAlerts=['total'=>0,'initial'=>0,'day'=>0,'critical'=>0];
+if(!$isCentralContext&&$currentUser!==null&&$auth->can('crm.contacts.view')){try{$siteRecoveries->sync($organizationId,100);$siteRecoveryAlerts=$siteRecoveries->notificationSummary($organizationId,$alertUnitIds,$currentUser->id);}catch(Throwable$exception){$logger->error('Falha ao atualizar recuperação comercial do site.',['exception'=>$exception]);}}
 $whatsappAlertLineIds=$currentUser!==null&&$auth->can('whatsapp.inbox.view')?array_map(static fn(array $line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($currentUser->id)):[];
 $avaAlerts=$currentUser!==null&&$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary(array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available())):['ready'=>0,'failed'=>0];
 $centralBillingAlerts=$isCentralContext&&$currentUser!==null&&$auth->can('billing.manage')?$franchiseContracts->billingAlerts():['overdue'=>0,'billing_failures'=>0,'pending_activation'=>0,'split_pending'=>0,'split_failures'=>0];
@@ -251,6 +255,7 @@ $view->share([
     'availableUnits' => $currentUser === null ? [] : $unitContext->available(),
     'currentUnit' => $currentUser === null ? null : $unitContext->current(),
     'followUpAlerts' => $currentUser === null || !$auth->can('crm.contacts.view') ? null : $followUps->summary($alertUnitIds,$currentUser->id),
+    'siteRecoveryAlerts' => $siteRecoveryAlerts,
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
     'avaAlerts' => $avaAlerts,
@@ -259,6 +264,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteOrderFulfillment,$database);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
 
 return new Application($router, $request);

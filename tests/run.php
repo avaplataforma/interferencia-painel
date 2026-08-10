@@ -1543,6 +1543,32 @@ $tests['acompanha o funil comercial completo do site por franquia'] = static fun
     assertTrue(str_contains($javascript,'utm_content'));
 };
 
+$tests['automatiza recuperação comercial de checkouts abandonados'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999600_create_site_recovery_automation.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Site/SiteRecoveryService.php');
+    $followUps=(string)file_get_contents($rootPath.'/modules/Crm/FollowUpRepository.php');
+    $fulfillment=(string)file_get_contents($rootPath.'/modules/Site/SiteOrderFulfillmentService.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $layout=(string)file_get_contents($rootPath.'/views/layouts/app.php');
+    $view=(string)file_get_contents($rootPath.'/views/site/funnel.php');
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+
+    assertTrue(str_contains($migration,'organization_site_recoveries'));
+    assertTrue(str_contains($migration,'crm_follow_ups_source_unique'));
+    assertTrue(str_contains($service,"modify('+30 minutes')"));
+    assertTrue(str_contains($service,"modify('+24 hours')"));
+    assertTrue(str_contains($service,"modify('+3 days')"));
+    assertTrue(str_contains($service,'markRecovered'));
+    assertTrue(str_contains($followUps,'createAutomatedRecovery'));
+    assertTrue(str_contains($followUps,'completeAutomated'));
+    assertTrue(str_contains($fulfillment,'$this->recoveries->markRecovered'));
+    assertTrue(str_contains($repository,"r.status='recovered'"));
+    assertTrue(str_contains($layout,'siteRecoveryAlerts'));
+    assertTrue(str_contains($view,'Enviar mensagem pronta no WhatsApp'));
+    assertTrue(str_contains($view,'recuperada(s)'));
+    assertTrue(str_contains($console,'site:recoveries:sync'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

@@ -21,6 +21,8 @@ use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleClient;
 use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
+use Interferencia\Modules\Crm\FollowUpRepository;
+use Interferencia\Modules\Site\SiteRecoveryService;
 use Interferencia\Kernel\Security\SecretCipher;
 
 $rootPath = dirname(__DIR__);
@@ -51,6 +53,7 @@ Comandos disponíveis:
   moodle:profiles:rebuild  Organiza campos complementares já sincronizados
 
   moodle:pedagogical:sync  Atualiza progresso e último acesso dos alunos
+  site:recoveries:sync  Atualiza alertas e follow-ups de checkouts abandonados
 
 TEXT);
         exit(0);
@@ -141,6 +144,13 @@ TEXT);
         if($lock===false||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('A sincronização pedagógica já está em execução.');
         try{$database=$connection->pdo();$settings=(new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key'))))->settings();$client=new MoodleClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']);$repository=new MoodleRepository($database);$unitIds=array_map('intval',$database->query('SELECT id FROM units WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN));$result=(new PedagogicalSynchronizer($client,$repository))->sync($unitIds,300);fwrite(STDOUT,sprintf("Acompanhamento atualizado: %d matrícula(s); falhas: %d.\n",$result['updated'],$result['failed']));if($result['last_error']!==null)fwrite(STDERR,"Última falha: ".$result['last_error']."\n");exit($result['updated']===0&&$result['failed']>0?1:0);}
         finally{flock($lock,LOCK_UN);fclose($lock);}
+    }
+
+    if ($command === 'site:recoveries:sync') {
+        $database=$connection->pdo();
+        $result=(new SiteRecoveryService($database,new FollowUpRepository($database)))->sync(null,1000);
+        fwrite(STDOUT,sprintf("Recuperação comercial: %d criada(s), %d alerta(s) avançado(s), %d follow-up(s) e %d cancelada(s).\n",$result['created'],$result['advanced'],$result['follow_ups'],$result['cancelled']));
+        exit(0);
     }
 
     $migrator = new Migrator(

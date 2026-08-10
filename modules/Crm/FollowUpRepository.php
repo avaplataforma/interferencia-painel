@@ -28,7 +28,7 @@ final readonly class FollowUpRepository
     {
         if($unitIds===[])return['overdue'=>0,'today'=>0,'future'=>0];
         $marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT SUM(f.status='pending' AND f.scheduled_at<CURDATE()) overdue,SUM(f.status='pending' AND f.scheduled_at>=CURDATE() AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY) today,SUM(f.status='pending' AND f.scheduled_at>=CURDATE()+INTERVAL 1 DAY) future FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id WHERE c.unit_id IN ($marks)";
+        $sql="SELECT SUM(f.status='pending' AND f.scheduled_at<CURDATE()) overdue,SUM(f.status='pending' AND f.scheduled_at>=CURDATE() AND f.scheduled_at<CURDATE()+INTERVAL 1 DAY) today,SUM(f.status='pending' AND f.scheduled_at>=CURDATE()+INTERVAL 1 DAY) future FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id WHERE c.unit_id IN ($marks) AND COALESCE(f.source_type,'')<>'site_recovery'";
         $params=$unitIds;if($responsibleId>0){$sql.=' AND f.responsible_user_id=?';$params[]=$responsibleId;}
         $s=$this->db->prepare($sql);$s->execute($params);$row=$s->fetch()?:[];return['overdue'=>(int)($row['overdue']??0),'today'=>(int)($row['today']??0),'future'=>(int)($row['future']??0)];
     }
@@ -43,5 +43,16 @@ final readonly class FollowUpRepository
     public function nextPendingForContact(int $contactId,int $unitId):?array{$s=$this->db->prepare("SELECT f.*,u.name responsible_name FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id INNER JOIN users u ON u.id=f.responsible_user_id WHERE f.contact_id=:contact AND c.unit_id=:unit AND f.status='pending' ORDER BY f.scheduled_at ASC,f.id ASC LIMIT 1");$s->execute(['contact'=>$contactId,'unit'=>$unitId]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function findInUnit(int $id,int $unitId):?array{$s=$this->db->prepare('SELECT f.*,c.unit_id FROM crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id WHERE f.id=:id AND c.unit_id=:unit');$s->execute(['id'=>$id,'unit'=>$unitId]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function create(int $contactId,int $responsibleId,string $action,string $scheduledAt,string $notes,int $creatorId):int{$s=$this->db->prepare("INSERT INTO crm_follow_ups(contact_id,responsible_user_id,action,scheduled_at,status,notes,created_by) VALUES(:contact,:responsible,:action,:scheduled,'pending',:notes,:creator)");$s->execute(['contact'=>$contactId,'responsible'=>$responsibleId,'action'=>trim($action),'scheduled'=>$scheduledAt,'notes'=>trim($notes),'creator'=>$creatorId]);return(int)$this->db->lastInsertId();}
+    public function createAutomatedRecovery(int $recoveryId,int $contactId,int $responsibleId,string $scheduledAt,string $notes):int
+    {
+        $statement=$this->db->prepare("INSERT INTO crm_follow_ups(contact_id,responsible_user_id,action,scheduled_at,status,notes,created_by,source_type,source_id) VALUES(:contact,:responsible,'Recuperar checkout do site',:scheduled,'pending',:notes,:creator,'site_recovery',:source) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)");
+        $statement->execute(['contact'=>$contactId,'responsible'=>$responsibleId,'scheduled'=>$scheduledAt,'notes'=>trim($notes),'creator'=>$responsibleId,'source'=>$recoveryId]);
+        return(int)$this->db->lastInsertId();
+    }
+    public function completeAutomated(int$id):void
+    {
+        $statement=$this->db->prepare("UPDATE crm_follow_ups SET status='completed',completed_at=COALESCE(completed_at,NOW()) WHERE id=:id AND source_type='site_recovery' AND status='pending'");
+        $statement->execute(['id'=>$id]);
+    }
     public function setStatus(int $id,int $unitId,string $status):bool{$completed=$status==='completed'?date('Y-m-d H:i:s'):null;$s=$this->db->prepare('UPDATE crm_follow_ups f INNER JOIN crm_contacts c ON c.id=f.contact_id SET f.status=:status,f.completed_at=:completed WHERE f.id=:id AND c.unit_id=:unit');$s->execute(['status'=>$status,'completed'=>$completed,'id'=>$id,'unit'=>$unitId]);return$s->rowCount()>0;}
 }

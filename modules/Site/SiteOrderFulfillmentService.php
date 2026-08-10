@@ -22,6 +22,7 @@ final readonly class SiteOrderFulfillmentService
         private AsaasClient $asaas,
         private AvaEnrollmentReleaser $releaser,
         private AvaAccessNotifier $notifier,
+        private SiteRecoveryService $recoveries,
     ) {}
 
     /** @param array<string, mixed> $payload */
@@ -90,9 +91,11 @@ final readonly class SiteOrderFulfillmentService
         }
         $paid = $eventType === 'CHECKOUT_PAID'
             || in_array(strtoupper((string) ($checkout['status'] ?? '')), ['PAID', 'COMPLETED'], true);
-        if (!$paid || in_array((string) ($order['fulfillment_status'] ?? ''), ['released', 'releasing', 'manual_review'], true)) {
+        if (!$paid) {
             return;
         }
+        $this->recoveries->markRecovered((int)$order['id']);
+        if (in_array((string) ($order['fulfillment_status'] ?? ''), ['released', 'releasing', 'manual_review'], true)) return;
 
         $this->fulfillOrder($order, $checkout);
     }
@@ -104,9 +107,11 @@ final readonly class SiteOrderFulfillmentService
             return;
         }
         $order = $this->sites->orderForWebhook($payment);
-        if ($order === null || in_array((string) ($order['fulfillment_status'] ?? ''), ['released', 'releasing', 'manual_review'], true)) {
+        if ($order === null) {
             return;
         }
+        $this->recoveries->markRecovered((int)$order['id']);
+        if (in_array((string) ($order['fulfillment_status'] ?? ''), ['released', 'releasing', 'manual_review'], true)) return;
 
         $this->fulfillOrder($order, $payment);
     }

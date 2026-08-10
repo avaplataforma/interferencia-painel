@@ -138,6 +138,9 @@ const refreshNotifications = async () => {
     const today = Number(data?.followups?.today || 0);
     const ticketUnread = Number(data?.tickets?.unread || 0);
     const ticketOverdue = Number(data?.tickets?.overdue || 0);
+    const recoveryInitial = Number(data?.recovery?.initial || 0);
+    const recoveryDay = Number(data?.recovery?.day || 0);
+    const recoveryCritical = Number(data?.recovery?.critical || 0);
     const total = Number(data?.total || 0);
     if (unread > 0 && !document.querySelector('[data-whatsapp-count]')) document.querySelectorAll('.nav-link[href$="/whatsapp"]').forEach((link) => { const badge = document.createElement('span'); badge.className = 'nav-count'; badge.dataset.whatsappCount = ''; link.append(badge); });
     document.querySelectorAll('[data-whatsapp-count]').forEach((badge) => { badge.textContent = String(unread); badge.hidden = unread < 1; });
@@ -157,6 +160,9 @@ const refreshNotifications = async () => {
       const userId = document.body.dataset.currentUserId || '';
       if (overdue > 0) addItem(`${basePath}/crm/follow-ups?status=pending&period=overdue&responsible=${userId}`, 'fa-triangle-exclamation', `${overdue} retorno(s) atrasado(s)`, 'Exigem atenção');
       if (today > 0) addItem(`${basePath}/crm/follow-ups?status=pending&period=today&responsible=${userId}`, 'fa-calendar-day', `${today} retorno(s) para hoje`, 'Abrir agenda');
+      if (recoveryCritical > 0) addItem(`${basePath}/admin/site/funnel#recuperacao`, 'fa-fire', `${recoveryCritical} checkout(s) parado(s) há 3 dias`, 'Prioridade máxima de recuperação');
+      if (recoveryDay > 0) addItem(`${basePath}/admin/site/funnel#recuperacao`, 'fa-clock-rotate-left', `${recoveryDay} checkout(s) parado(s) há 24h`, 'Retomar contato comercial');
+      if (recoveryInitial > 0) addItem(`${basePath}/admin/site/funnel#recuperacao`, 'fa-cart-arrow-down', `${recoveryInitial} checkout(s) parado(s) há 30 min`, 'Nova oportunidade para recuperar');
       if (total < 1) { const empty = document.createElement('p'); empty.className = 'notification-empty'; empty.textContent = 'Nenhuma pendência no momento.'; panel.append(empty); }
     }
   } catch (_) {
