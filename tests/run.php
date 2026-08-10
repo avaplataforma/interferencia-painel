@@ -1357,7 +1357,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=23'));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
     assertTrue(str_contains($tenantAdmin,'Contato e canais'));
-    assertTrue(str_contains($tenantAdmin,'Banners e páginas'));
+    assertTrue(str_contains($tenantAdmin,'Conteúdo visual'));
     assertTrue(str_contains($tenantAdmin,'.site-preview-card{grid-column:span 6'));
     assertTrue(str_contains($tenantAdmin,'classroom_url'));
     assertTrue(str_contains($tenantAdmin,'youtube_url'));
