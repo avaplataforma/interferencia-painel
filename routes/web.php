@@ -177,14 +177,29 @@ return static function (
         return['path'=>$path,'mime'=>$mime,'name'=>$safe];
     };
 
-    $router->get('/site',static function(Request$request)use($view,$config,$auth,$sites,$organizationId,$basePath):Response{
+    $router->get('/site',static function(Request$request)use($view,$config,$auth,$sites,$organizationId,$session,$csrf,$basePath):Response{
         $host=OrganizationRepository::normalizeHost((string)$request->header('host',''));
         $isCentralRoot=$host===OrganizationRepository::normalizeHost($config->string('app.central_host'))&&$basePath===$config->path('app.base_path');
         if($isCentralRoot||$organizationId<1)return$view->renderStandalone('site/unavailable',[],404);
         $preview=$request->queryValue('preview')==='1'&&$auth->check()&&$auth->can('users.manage');
         $site=$sites->publicSite($organizationId,$preview);
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'basePath'=>$basePath]);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+    });
+
+    $router->post('/site/bolsas',static function(Request$request)use($sites,$contacts,$organizationId,$session,$basePath):Response{
+        try{
+            $site=$sites->publicSite($organizationId);if($site===null||(int)($site['scholarship_form_enabled']??0)!==1)throw new RuntimeException('O formulário de bolsas não está disponível.');
+            $fingerprint=hash('sha256',$organizationId.'|scholarship|'.(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown')));if(!$contacts->allowExternalRequest($fingerprint,8))throw new RuntimeException('Muitas tentativas foram realizadas. Aguarde um minuto e tente novamente.');
+            $firstName=trim((string)$request->input('first_name',''));$lastName=trim((string)$request->input('last_name',''));$name=trim($firstName.' '.$lastName);$email=strtolower(trim((string)$request->input('email','')));$phone=preg_replace('/\D/','',(string)$request->input('phone',''))??'';$productId=(int)$request->input('product_id','0');$unitId=(int)$request->input('unit_id','0');$interest=(int)$request->input('interest_score','-1');
+            if(mb_strlen($firstName)<2||mb_strlen($name)>160)throw new RuntimeException('Informe seu nome.');if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido.');if(strlen($phone)<10||strlen($phone)>11)throw new RuntimeException('Informe um WhatsApp válido.');if($interest<0||$interest>10)throw new RuntimeException('Informe seu interesse de 0 a 10.');if((string)$request->input('privacy_consent','')!=='1')throw new RuntimeException('Confirme o uso dos dados para atendimento.');
+            $product=$sites->publicCatalogProduct($organizationId,$productId);if($product===null)throw new RuntimeException('Selecione um curso disponível.');$units=$sites->publicUnits($organizationId,$product['unit_id']===null?null:(int)$product['unit_id']);$unit=null;foreach($units as$item)if((int)$item['id']===$unitId)$unit=$item;if($unit===null)throw new RuntimeException('Selecione uma cidade ou polo disponível.');
+            $submission='site-scholarship-'.bin2hex(random_bytes(16));$contactId=$contacts->externalDuplicate($submission,$unitId,$phone,$email);
+            if($contactId===null)$contactId=$contacts->createExternal(['unit_id'=>$unitId,'name'=>$name,'phone'=>$phone,'email'=>$email,'document'=>null,'course'=>(string)$product['name'],'interest_score'=>$interest,'origin_city'=>(string)$unit['name'],'external_submission_id'=>$submission,'consent_at'=>date('Y-m-d H:i:s'),'privacy_notice_version'=>'site-scholarship-v1','registered_at'=>date('Y-m-d H:i:s'),'notes'=>'Solicitação de bolsa recebida pelo Site Institucional.']);
+            else $contacts->recordEvent($contactId,null,'scholarship_interest','Novo pedido de bolsa recebido pelo site para o curso '.(string)$product['name'].'. Interesse: '.$interest.'/10.');
+            $session->flash('site_scholarship.message','Cadastro recebido! Nossa equipe entrará em contato sobre as bolsas disponíveis.');
+        }catch(Throwable$e){$session->flash('site_scholarship.error',$e->getMessage());}
+        return Response::redirect($basePath.'/site?bolsas=resultado#bolsas');
     });
 
     $router->get('/site/banner/{id:\d+}',static function(Request$request,array$params)use($sites,$spacesStorage,$organizationId):Response{
@@ -273,10 +288,10 @@ return static function (
         try{
             $rawProducts=$request->input('product_ids',[]);
             $productIds=is_array($rawProducts)?array_values($rawProducts):[];
-            $sites->saveContent($organizationId,['selected_mode'=>$request->input('selected_mode','catalog'),'publication_status'=>$request->input('publication_status','draft'),'site_title'=>$request->input('site_title',''),'hero_title'=>$request->input('hero_title',''),'hero_text'=>$request->input('hero_text',''),'about_title'=>$request->input('about_title',''),'about_text'=>$request->input('about_text',''),'contact_email'=>$request->input('contact_email',''),'contact_phone'=>$request->input('contact_phone',''),'whatsapp'=>$request->input('whatsapp',''),'instagram_url'=>$request->input('instagram_url',''),'facebook_url'=>$request->input('facebook_url',''),'seo_title'=>$request->input('seo_title',''),'seo_description'=>$request->input('seo_description','')],$productIds);
+            $sites->saveContent($organizationId,['selected_mode'=>$request->input('selected_mode','catalog'),'publication_status'=>$request->input('publication_status','draft'),'site_title'=>$request->input('site_title',''),'hero_title'=>$request->input('hero_title',''),'hero_text'=>$request->input('hero_text',''),'about_title'=>$request->input('about_title',''),'about_text'=>$request->input('about_text',''),'contact_email'=>$request->input('contact_email',''),'contact_phone'=>$request->input('contact_phone',''),'whatsapp'=>$request->input('whatsapp',''),'instagram_url'=>$request->input('instagram_url',''),'facebook_url'=>$request->input('facebook_url',''),'footer_text'=>$request->input('footer_text',''),'whatsapp_button_enabled'=>$request->input('whatsapp_button_enabled')==='1','whatsapp_button_label'=>$request->input('whatsapp_button_label',''),'whatsapp_button_message'=>$request->input('whatsapp_button_message',''),'scholarship_form_enabled'=>$request->input('scholarship_form_enabled')==='1','scholarship_display_mode'=>$request->input('scholarship_display_mode','floating'),'scholarship_popup_delay_seconds'=>$request->input('scholarship_popup_delay_seconds','15'),'scholarship_popup_repeat_hours'=>$request->input('scholarship_popup_repeat_hours','24'),'scholarship_title'=>$request->input('scholarship_title','GANHE BOLSAS DE ESTUDOS'),'scholarship_subtitle'=>$request->input('scholarship_subtitle','Preencha e participe!'),'scholarship_button_label'=>$request->input('scholarship_button_label','Ganhe uma bolsa'),'seo_title'=>$request->input('seo_title',''),'seo_description'=>$request->input('seo_description','')],$productIds);
             $session->flash('site.message','Site Institucional atualizado.');
         }catch(Throwable$e){$session->flash('site.error',$e->getMessage());}
-        return Response::redirect($basePath.'/admin/site');
+        return Response::redirect($basePath.'/admin/site'.($request->input('active_tab','')!==''?'#'.rawurlencode((string)$request->input('active_tab','')):''));
     },[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $router->get('/solicitacao-franquia/{token:[a-f0-9]+}',static function(Request$request,array$params)use($view,$franchiseApplications,$session,$csrf,$browserTitle):Response{$application=$franchiseApplications->findPublic((string)$params['token']);if($application===null)return Response::text("Convite não encontrado, expirado ou já concluído.\n",404);return$view->render('public/franchise-application',['currentUser'=>null,'wideGuest'=>true,'title'=>'Solicitação de franquia — '.$browserTitle,'application'=>$application,'token'=>$params['token'],'error'=>$session->get('franchise_public.error'),'csrfField'=>$csrf->field()]);});

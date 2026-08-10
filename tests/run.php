@@ -1295,6 +1295,7 @@ $tests['centraliza plano e histórico na aba Contrato da franquia'] = static fun
 $tests['carrega o Site Institucional com governança central por franquia'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_995000_create_institutional_sites.php');
     $expansion=(string)file_get_contents($rootPath.'/database/migrations/20260809_996000_expand_institutional_sites.php');
+    $marketing=(string)file_get_contents($rootPath.'/database/migrations/20260810_999000_add_site_marketing_tools.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
@@ -1310,6 +1311,9 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($expansion,'organization_site_banners'));
     assertTrue(str_contains($expansion,'organization_site_pages'));
     assertTrue(str_contains($expansion,'organization_site_orders'));
+    assertTrue(str_contains($marketing,'scholarship_form_enabled'));
+    assertTrue(str_contains($marketing,'whatsapp_button_enabled'));
+    assertTrue(str_contains($marketing,'footer_text'));
     assertTrue(str_contains($repository,'saveGovernance'));
     assertTrue(str_contains($repository,'saveContent'));
     assertTrue(str_contains($repository,'saveBanner'));
@@ -1321,6 +1325,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/site-governance'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/site-preview'"));
     assertTrue(str_contains($routes,"'/site'"));
+    assertTrue(str_contains($routes,"'/site/bolsas'"));
     assertTrue(str_contains($routes,"'/site/banner/{id:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/p/{slug:[a-z0-9-]+}'"));
     assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}'"));
@@ -1330,9 +1335,14 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
-    assertTrue(str_contains($tenantAdmin,'Pedidos agora aparecem na'));
+    assertTrue(str_contains($tenantAdmin,'data-site-tab="bolsas"'));
+    assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
+    assertTrue(str_contains($tenantAdmin,'Contato e rodapé'));
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
     assertTrue(str_contains($publicSite,'Ver curso e comprar'));
+    assertTrue(str_contains($publicSite,'scholarship-dialog'));
+    assertTrue(str_contains($publicSite,'GANHE BOLSAS DE ESTUDOS'));
+    assertTrue(str_contains($publicSite,'floating-action whatsapp'));
     assertTrue(str_contains($course,'Quero receber atendimento'));
     assertTrue(str_contains($course,'Ir para o pagamento'));
     assertTrue(str_contains($checkout,'Continuar para pagamento'));
@@ -1369,7 +1379,7 @@ $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] =
     assertTrue(str_contains($routes,"'/students/site-orders/{id:\\d+}/retry'"));
     assertTrue(str_contains($routes,'$siteOrderFulfillment->processPayment'));
     assertTrue(str_contains($governance,'Após confirmar o pagamento'));
-    assertTrue(str_contains($siteAdmin,'Pedidos agora aparecem na'));
+    assertTrue(str_contains($siteAdmin,'site-section-nav'));
     assertTrue(str_contains($ordersPanel,'Liberar no AVA'));
     assertTrue(str_contains($dashboard,'orders-panel.php'));
     assertTrue(str_contains($enrollmentIndex,'orders-panel.php'));
