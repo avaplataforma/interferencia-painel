@@ -2,6 +2,7 @@
 $editing=is_array($organization);$siteDomain=null;
 foreach($domains as$domain){if(($domain['purpose']??'')==='site'&&($domain['is_primary']??0)){$siteDomain=$domain;break;}}
 $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['favicon_path']??'');
+$application=$application??null;$contracts=$contracts??[];
 ?>
 <style>
 .organization-editor{width:100%;max-width:82rem;margin:0 auto}.organization-editor-form{display:grid;gap:1rem}.organization-section{padding:1.5rem}.organization-section-header{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;padding-bottom:1rem;border-bottom:1px solid #e3e8ec}.organization-section-icon{display:grid;place-items:center;flex:0 0 2.6rem;height:2.6rem;border-radius:.75rem;background:#fff0f1;color:var(--inter-accent)}.organization-section-header h2,.organization-section-header p{margin:0}.organization-fields{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}.organization-fields>label{grid-column:span 6;margin:0}.organization-fields>.field-third{grid-column:span 4}.organization-fields>.field-quarter{grid-column:span 3}.organization-fields>.field-full{grid-column:1/-1}.organization-fields input,.organization-fields select{width:100%}.organization-savebar{position:sticky;z-index:8;bottom:1rem;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem 1.25rem;border:1px solid #dce3e8;border-radius:1rem;background:rgba(255,255,255,.96);box-shadow:0 .65rem 1.8rem rgba(14,35,55,.12);backdrop-filter:blur(8px)}.organization-savebar p{margin:0}.organization-savebar .button{min-width:13rem}.organization-brand-preview{display:flex;align-items:center;gap:1rem;margin-top:.75rem;padding:.75rem;border:1px solid #e0e6ea;border-radius:.75rem}.organization-brand-preview img{width:5rem;height:3.5rem;object-fit:contain}.organization-brand-preview.icon img{width:3.5rem}.organization-brand-preview .checkbox-row{margin:0}.organization-help{display:flex;align-items:center;gap:.5rem;padding:.8rem 1rem;border-radius:.75rem;background:#f6f8fa;color:#506274}.organization-help i{color:var(--inter-accent)}@media(max-width:800px){.organization-fields>label,.organization-fields>.field-third,.organization-fields>.field-quarter{grid-column:1/-1}.organization-savebar{align-items:stretch;flex-direction:column}.organization-savebar .button{width:100%}}
@@ -18,6 +19,7 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 
   <nav class="organization-tabs" aria-label="Etapas do cadastro" role="tablist">
    <button class="organization-tab" type="button" role="tab" data-organization-tab="dados"><i class="fa-solid fa-building"></i> Dados</button>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="contrato"><i class="fa-solid fa-file-signature"></i> Contrato</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="endereco"><i class="fa-solid fa-location-dot"></i> Endereço</button>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="contatos"><i class="fa-solid fa-address-book"></i> Responsáveis</button>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="documentos"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif;?>
@@ -85,6 +87,7 @@ $logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['
 
     <footer class="organization-savebar" data-organization-savebar><p class="meta"><i class="fa-solid fa-shield-halved"></i> O financeiro e o modelo comercial são concluídos no fluxo de implantação, após a conferência.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar franquia</button></footer>
   </form>
+  <?php if($editing):?><?php require __DIR__.'/contract.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/documents.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/ava.php'; ?><?php endif;?>
   <?php if($editing):?><?php require __DIR__.'/poles.php'; ?><?php endif;?>

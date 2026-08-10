@@ -1267,6 +1267,23 @@ $tests['organiza polos da franquia em linhas expansíveis'] = static function ()
     assertTrue(str_contains($view,'pole-list-head'));
 };
 
+$tests['centraliza plano e histórico na aba Contrato da franquia'] = static function () use ($rootPath): void {
+    $form=(string)file_get_contents($rootPath.'/views/admin/organizations/form.php');
+    $contract=(string)file_get_contents($rootPath.'/views/admin/organizations/contract.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+    $repository=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseContractRepository.php');
+    assertTrue(str_contains($form,'data-organization-tab="contrato"'));
+    assertTrue(str_contains($form,"require __DIR__.'/contract.php'"));
+    assertTrue(str_contains($contract,'Contrato e plano'));
+    assertTrue(str_contains($contract,'Alterar plano'));
+    assertTrue(str_contains($contract,'Histórico de contratos'));
+    assertTrue(str_contains($contract,'renew_from='));
+    assertTrue(str_contains($routes,"'contracts'=>\$contracts"));
+    assertTrue(str_contains($javascript,"['contrato', 'documentos'"));
+    assertTrue(str_contains($repository,"SET commercial_flow_status='inactive' WHERE organization_id=:organization"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

@@ -448,7 +448,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
       tab.tabIndex = active ? 0 : -1;
     });
     panels.forEach((panel) => { panel.hidden = panel.dataset.organizationPanel !== name; });
-    if (savebar instanceof HTMLElement) savebar.hidden = ['documentos', 'ava', 'polos', 'integracoes'].includes(name);
+    if (savebar instanceof HTMLElement) savebar.hidden = ['contrato', 'documentos', 'ava', 'polos', 'integracoes'].includes(name);
     if (updateHash && history.replaceState) history.replaceState(null, '', `#${name}`);
   };
 

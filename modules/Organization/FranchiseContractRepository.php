@@ -203,9 +203,23 @@ final readonly class FranchiseContractRepository
         $processing=self::processing($contract);$wallet=self::nullable($contract['asaas_wallet_id']??null);
         if($processing==='central_automatic_split'&&($wallet===null||($contract['asaas_wallet_status']??'')!=='validated'||(int)($contract['split_enabled']??0)!==1))throw new RuntimeException('Valide a carteira Asaas da franquia e habilite o split antes de ativar a regra comercial.');
         if($processing==='franchise_asaas'&&(($contract['finance_account_mode']??'')!=='exclusive'||(int)($contract['finance_integration_active']??0)!==1||($contract['finance_integration_test_status']??'')!=='success'))throw new RuntimeException('Teste e ative a integração Asaas exclusiva da franquia antes de ativar a regra comercial.');
-        $s=$this->db->prepare("UPDATE franchise_contracts SET commercial_flow_status='active',commercial_flow_activated_at=NOW(),split_wallet_snapshot=:wallet WHERE id=:id AND commercial_flow_status<>'active'");
-        $s->execute(['wallet'=>$processing==='central_automatic_split'?$wallet:null,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('A regra comercial deste contrato já está ativa.');
-        $this->recordBillingEvent($id,'commercial_flow_activated','Regra comercial ativada com processamento '.self::processingLabel($processing).'.',$userId);
+        $this->db->beginTransaction();
+        try{
+            if((int)($contract['organization_id']??0)>0){
+                $previous=$this->db->prepare("UPDATE franchise_contracts SET commercial_flow_status='inactive' WHERE organization_id=:organization AND id<>:id AND commercial_flow_status='active'");
+                $previous->execute(['organization'=>(int)$contract['organization_id'],'id'=>$id]);
+            }else{
+                $previous=$this->db->prepare("UPDATE franchise_contracts SET commercial_flow_status='inactive' WHERE franchise_application_id=:application AND id<>:id AND commercial_flow_status='active'");
+                $previous->execute(['application'=>(int)$contract['franchise_application_id'],'id'=>$id]);
+            }
+            $s=$this->db->prepare("UPDATE franchise_contracts SET commercial_flow_status='active',commercial_flow_activated_at=NOW(),split_wallet_snapshot=:wallet WHERE id=:id AND commercial_flow_status<>'active'");
+            $s->execute(['wallet'=>$processing==='central_automatic_split'?$wallet:null,'id'=>$id]);if($s->rowCount()===0)throw new RuntimeException('A regra comercial deste contrato já está ativa.');
+            $this->recordBillingEvent($id,'commercial_flow_activated','Regra comercial ativada com processamento '.self::processingLabel($processing).'. Contratos anteriores foram mantidos somente no histórico.',$userId);
+            $this->db->commit();
+        }catch(\Throwable$e){
+            if($this->db->inTransaction())$this->db->rollBack();
+            throw$e;
+        }
     }
 
     public function billingDashboard(array$filters=[]): array
