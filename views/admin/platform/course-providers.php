@@ -9,6 +9,10 @@ if(!in_array($activeProvider,$knownProviders,true))$activeProvider=(string)($kno
 $coursesByCatalog=[];
 foreach($courseRows as$course)$coursesByCatalog[(string)$course['catalog_code']][]=$course;
 $formatDate=static fn(mixed$value):string=>is_string($value)&&$value!==''?date('d/m/Y H:i',strtotime($value)):'Ainda não executado';
+$tabLabel=static function(string $name):string{
+ $label=preg_replace('/^Catálogo\s+/u','',$name);
+ return trim(is_string($label)&&$label!==''?$label:$name);
+};
 ?>
 <div class="page-header">
  <div><p class="eyebrow">ADM Central · Integrações</p><h1>Catálogos de cursos</h1><p>Configure cada fornecedor separadamente. Credenciais, testes, sincronização e curadoria permanecem no catálogo correspondente.</p></div>
@@ -25,7 +29,7 @@ $formatDate=static fn(mixed$value):string=>is_string($value)&&$value!==''?date('
 <div class="catalog-shell">
  <nav class="catalog-tabs" aria-label="Catálogos" role="tablist">
   <?php foreach($catalogRows as$catalog):$provider=(string)$catalog['provider_code'];?>
-   <button type="button" class="catalog-tab <?= $provider===$activeProvider?'is-active':'' ?>" data-catalog-tab="<?= $escape($provider) ?>"><i class="fa-solid fa-book-open-reader"></i><?= $escape((string)$catalog['name']) ?><small><?= (int)$catalog['course_count'] ?></small></button>
+   <button type="button" class="catalog-tab <?= $provider===$activeProvider?'is-active':'' ?>" data-catalog-tab="<?= $escape($provider) ?>" role="tab" aria-selected="<?= $provider===$activeProvider?'true':'false' ?>"><i class="fa-solid fa-book-open-reader"></i><?= $escape($tabLabel((string)$catalog['name'])) ?><small><?= (int)$catalog['course_count'] ?></small></button>
   <?php endforeach;?>
  </nav>
 
@@ -66,7 +70,3 @@ $formatDate=static fn(mixed$value):string=>is_string($value)&&$value!==''?date('
  </section>
  <?php endforeach;?>
 </div>
-
-<script>
-(()=>{const tabs=[...document.querySelectorAll('[data-catalog-tab]')],panels=[...document.querySelectorAll('[data-catalog-panel]')];const openSection=(provider,section)=>{document.querySelectorAll(`[data-catalog-subtab][data-provider="${provider}"]`).forEach(item=>item.classList.toggle('is-active',item.dataset.catalogSubtab===section));document.querySelectorAll(`[data-catalog-subpanel^="${provider}:"]`).forEach(panel=>panel.hidden=panel.dataset.catalogSubpanel!==`${provider}:${section}`)};const show=name=>{tabs.forEach(tab=>tab.classList.toggle('is-active',tab.dataset.catalogTab===name));panels.forEach(panel=>panel.hidden=panel.dataset.catalogPanel!==name);const url=new URL(location.href);url.searchParams.set('catalog',name);history.replaceState(null,'',url)};tabs.forEach(tab=>tab.addEventListener('click',()=>show(tab.dataset.catalogTab)));document.querySelectorAll('[data-catalog-subtab]').forEach(button=>button.addEventListener('click',()=>openSection(button.dataset.provider,button.dataset.catalogSubtab)));const initial=new URL(location.href).searchParams.get('section');if(initial==='courses')openSection(<?= json_encode($activeProvider,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES) ?>,'courses')})();
-</script>

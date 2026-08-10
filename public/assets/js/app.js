@@ -440,6 +440,57 @@ document.querySelectorAll('.color-field').forEach((group) => {
 });
 
 (() => {
+  const tabs = Array.from(document.querySelectorAll('[data-catalog-tab]'));
+  const panels = Array.from(document.querySelectorAll('[data-catalog-panel]'));
+  const subtabs = Array.from(document.querySelectorAll('[data-catalog-subtab]'));
+  const subpanels = Array.from(document.querySelectorAll('[data-catalog-subpanel]'));
+  if (tabs.length === 0) return;
+
+  const openSection = (provider, requestedSection) => {
+    const providerTabs = subtabs.filter((item) => item.dataset.provider === provider);
+    if (providerTabs.length === 0) return;
+    const section = providerTabs.some((item) => item.dataset.catalogSubtab === requestedSection) ? requestedSection : 'connection';
+    providerTabs.forEach((item) => {
+      const active = item.dataset.catalogSubtab === section;
+      item.classList.toggle('is-active', active);
+      item.setAttribute('aria-selected', active ? 'true' : 'false');
+      item.tabIndex = active ? 0 : -1;
+    });
+    subpanels
+      .filter((panel) => (panel.dataset.catalogSubpanel || '').startsWith(`${provider}:`))
+      .forEach((panel) => { panel.hidden = panel.dataset.catalogSubpanel !== `${provider}:${section}`; });
+  };
+
+  const showCatalog = (requestedName, updateUrl = true) => {
+    const name = tabs.some((tab) => tab.dataset.catalogTab === requestedName)
+      ? requestedName
+      : (tabs[0]?.dataset.catalogTab || '');
+    tabs.forEach((tab) => {
+      const active = tab.dataset.catalogTab === name;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+      tab.tabIndex = active ? 0 : -1;
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.catalogPanel !== name; });
+    if (updateUrl && history.replaceState) {
+      const url = new URL(location.href);
+      url.searchParams.set('catalog', name);
+      history.replaceState(null, '', url);
+    }
+    return name;
+  };
+
+  tabs.forEach((tab) => tab.addEventListener('click', () => showCatalog(tab.dataset.catalogTab || '')));
+  subtabs.forEach((button) => button.addEventListener('click', () => {
+    openSection(button.dataset.provider || '', button.dataset.catalogSubtab || 'connection');
+  }));
+
+  const params = new URL(location.href).searchParams;
+  const activeProvider = showCatalog(params.get('catalog') || tabs[0]?.dataset.catalogTab || '', false);
+  if (params.get('section') === 'courses') openSection(activeProvider, 'courses');
+})();
+
+(() => {
   const tabs = Array.from(document.querySelectorAll('[data-site-tab]'));
   const panels = Array.from(document.querySelectorAll('[data-site-panel]'));
   const savebar = document.querySelector('[data-site-savebar]');

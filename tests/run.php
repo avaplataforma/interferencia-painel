@@ -1354,7 +1354,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));
     assertTrue(str_contains($tenantAdmin,'data-site-targets'));
-    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=23'));
+    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=24'));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
     assertTrue(str_contains($tenantAdmin,'Contato e canais'));
     assertTrue(str_contains($tenantAdmin,'Conteúdo visual'));
@@ -1575,6 +1575,7 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     $client=(string)file_get_contents($rootPath.'/modules/Catalog/EscolaAvancadaClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
     assertTrue(str_contains($migration,'course_provider_integrations'));
     assertTrue(str_contains($migration,'provider_courses_external_unique'));
@@ -1585,6 +1586,10 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(!str_contains($client,'financeiro/parcelas'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
     assertTrue(str_contains($view,'data-catalog-tab'));
+    assertTrue(str_contains($view,"preg_replace('/^Catálogo\\s+/u'"));
+    assertTrue(!str_contains($view,'<script>'));
+    assertTrue(str_contains($javascript,"document.querySelectorAll('[data-catalog-tab]')"));
+    assertTrue(str_contains($javascript,'showCatalog'));
     assertTrue(str_contains($view,'Conexão e API'));
     assertTrue(str_contains($view,'Cursos e curadoria'));
 };
