@@ -217,7 +217,8 @@ $view->share([
     'currentOrganization' => $currentOrganization,
     'navigation' => [
         'users' => $auth->can('users.manage'),
-        'units' => $auth->can('units.manage'),
+        // Polos are provisioned by the ADM Central and are read-only in the franchise.
+        'units' => false,
         'roles' => $auth->can('roles.manage'),
         'tags' => $auth->can('crm.tags.manage'),
         'statuses' => $auth->can('crm.statuses.manage'),

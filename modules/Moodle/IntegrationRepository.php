@@ -37,7 +37,7 @@ final readonly class IntegrationRepository
         $this->database->prepare('UPDATE moodle_integrations SET last_tested_at=NOW(),last_error=:error WHERE id=1')->execute(['error'=>$error]);
     }
 
-    public function saveInitialPasswordMode(string$mode,int$userId):void
+    public function saveInitialPasswordMode(string$mode,?int$userId):void
     {
         if(!in_array($mode,['automatic','cpf5'],true))throw new RuntimeException('Selecione uma política de senha válida.');
         $this->database->prepare('UPDATE moodle_integrations SET initial_password_mode=:mode,updated_by=:user WHERE id=1')->execute(['mode'=>$mode,'user'=>$userId]);

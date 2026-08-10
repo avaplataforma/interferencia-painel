@@ -187,3 +187,10 @@ A primeira versão fornece:
 - identificador anônimo da instalação;
 - configuração do endereço do ADM Central;
 - base segura para futuras personalizações do painel, notas e experiência do aluno.
+
+## Responsabilidades entre o ADM Central e a franquia
+
+- Polos e destinos de AVA são cadastrados exclusivamente no ADM Central. A franquia apenas utiliza os polos autorizados nos seus fluxos operacionais.
+- A política de login e senha dos novos alunos fica em **ADM Central → Integrações → AVA Cursos → Acesso do aluno**.
+- A franquia não recebe credenciais nem telas de configuração do Moodle. Em **ADM → Integrações**, permanecem somente integrações próprias autorizadas, como uma conta Asaas exclusiva.
+- Bolsas, cortesias e demais dispensas de pagamento são registradas em **ALUNOS → Matrículas → Liberação especial**, preservando motivo, usuário responsável e histórico da matrícula.
