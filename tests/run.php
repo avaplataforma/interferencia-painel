@@ -1419,7 +1419,7 @@ $tests['publica o site da franquia com versões mídia métricas SEO e LGPD'] = 
     assertTrue(str_contains($routes,"'/site/events'"));
     assertTrue(str_contains($admin,'publication_action'));
     assertTrue(str_contains($admin,'cookie_banner_enabled'));
-    assertTrue(str_contains($commandCenter,'Prévia mobile'));
+    assertTrue(str_contains($commandCenter,'Ver no celular'));
     assertTrue(str_contains($commandCenter,'Histórico de versões'));
     assertTrue(str_contains($extensions,'Biblioteca de mídia'));
     assertTrue(str_contains($public,'site-cookie-banner'));
