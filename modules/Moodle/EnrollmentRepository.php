@@ -40,6 +40,30 @@ final readonly class EnrollmentRepository
         try{$s=$this->database->prepare('INSERT INTO student_enrollments(organization_id,finance_customer_id,moodle_course_id,finance_product_id,campaign_id,base_value,discount_percent,final_value,unit_id,organization_pole_id,ava_connection_id,ava_course_id,attendant_user_id,created_by) VALUES(:organization,:customer,:course,:product,:campaign,:base,:discount,:final,:unit,:pole,:ava_connection,:ava_course,:attendant,:creator)');$s->execute(['organization'=>$this->organizationId,'customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'campaign'=>$campaignId,'base'=>$base,'discount'=>$discount,'final'=>$final,'unit'=>$unitId,'pole'=>$poleId,'ava_connection'=>$avaConnectionId,'ava_course'=>$avaCourseId,'attendant'=>$attendantId,'creator'=>$creatorId]);$id=(int)$this->database->lastInsertId();$this->recordEvent($id,'enrollment-created:'.$id,'enrollment_created','Matrícula cadastrada no Painel e direcionada ao AVA selecionado.',$creatorId);$this->database->commit();return$id;}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
+    public function createPaidFromSiteOrder(int$customerId,int$productId,int$unitId,int$contactId):int
+    {
+        $customer=$this->database->prepare('SELECT COUNT(*) FROM finance_customers WHERE id=:id AND organization_id=:organization AND unit_id=:unit AND is_deleted=0');
+        $customer->execute(['id'=>$customerId,'organization'=>$this->organizationId,'unit'=>$unitId]);
+        if((int)$customer->fetchColumn()!==1)throw new RuntimeException('O aluno pago não foi conciliado com a franquia e o polo corretos.');
+        $product=$this->database->prepare('SELECT p.value,p.moodle_course_id FROM finance_products p LEFT JOIN units u ON u.id=p.unit_id WHERE p.id=:id AND p.is_active=1 AND p.value>=5 AND p.moodle_course_id IS NOT NULL AND (p.unit_id IS NULL OR (p.unit_id=:unit AND u.organization_id=:organization)) LIMIT 1');
+        $product->execute(['id'=>$productId,'unit'=>$unitId,'organization'=>$this->organizationId]);$row=$product->fetch();
+        if(!is_array($row))throw new RuntimeException('O curso pago ainda não possui uma configuração acadêmica válida.');
+        $courseId=(int)$row['moodle_course_id'];
+        $existing=$this->database->prepare("SELECT id FROM student_enrollments WHERE organization_id=:organization AND finance_customer_id=:customer AND moodle_course_id=:course AND status IN ('payment_confirmed','payment_waived') AND moodle_enrolment_status IN ('not_released','released') ORDER BY id DESC LIMIT 1");
+        $existing->execute(['organization'=>$this->organizationId,'customer'=>$customerId,'course'=>$courseId]);$existingId=$existing->fetchColumn();if($existingId!==false)return(int)$existingId;
+        $operator=$this->database->prepare("SELECT COALESCE((SELECT c.responsible_user_id FROM crm_contacts c INNER JOIN users ru ON ru.id=c.responsible_user_id AND ru.is_active=1 INNER JOIN organization_users rou ON rou.user_id=ru.id AND rou.organization_id=:organization_responsible AND rou.status='active' WHERE c.id=:contact AND c.organization_id=:organization_contact LIMIT 1),(SELECT ou.user_id FROM organization_users ou INNER JOIN users u ON u.id=ou.user_id AND u.is_active=1 WHERE ou.organization_id=:organization_user AND ou.status='active' AND (ou.is_owner=1 OR EXISTS(SELECT 1 FROM user_unit_scopes scope WHERE scope.user_id=ou.user_id AND scope.unit_id=:unit)) ORDER BY ou.is_owner DESC,ou.user_id LIMIT 1))");
+        $operator->execute(['organization_responsible'=>$this->organizationId,'contact'=>$contactId,'organization_contact'=>$this->organizationId,'organization_user'=>$this->organizationId,'unit'=>$unitId]);$operatorId=(int)$operator->fetchColumn();
+        if($operatorId<1)throw new RuntimeException('Defina ao menos um usuário ativo para acompanhar matrículas neste polo.');
+        $poleId=$this->poleIdForUnit($unitId);[$connectionId,$avaCourseId]=$this->validatedDestination($courseId,null,null);$value=round((float)$row['value'],2);
+        $this->database->beginTransaction();
+        try{
+            $insert=$this->database->prepare("INSERT INTO student_enrollments(organization_id,finance_customer_id,moodle_course_id,finance_product_id,base_value,discount_percent,final_value,unit_id,organization_pole_id,ava_connection_id,ava_course_id,attendant_user_id,status,created_by) VALUES(:organization,:customer,:course,:product,:base,0,:final,:unit,:pole,:connection,:ava_course,:attendant,'payment_confirmed',:creator)");
+            $insert->execute(['organization'=>$this->organizationId,'customer'=>$customerId,'course'=>$courseId,'product'=>$productId,'base'=>$value,'final'=>$value,'unit'=>$unitId,'pole'=>$poleId,'connection'=>$connectionId,'ava_course'=>$avaCourseId,'attendant'=>$operatorId,'creator'=>$operatorId]);$id=(int)$this->database->lastInsertId();
+            $this->recordEvent($id,'site-payment-confirmed:'.$id,'payment_confirmed','Pagamento confirmado no Site Institucional. Matrícula preparada para liberação no AVA.',$operatorId);
+            $this->database->commit();return$id;
+        }catch(\Throwable$e){if($this->database->inTransaction())$this->database->rollBack();throw$e;}
+    }
+
     public function createWaived(int$customerId,int$courseId,int$unitId,string$reason,int$userId,array$allowedUnits,?int$avaConnectionId=null,?int$avaCourseId=null):int
     {
         $reason=trim($reason);if(!in_array($unitId,$allowedUnits,true))throw new RuntimeException('Selecione uma unidade permitida.');if(mb_strlen($reason)<10||mb_strlen($reason)>500)throw new RuntimeException('Informe o motivo da bolsa ou cortesia, entre 10 e 500 caracteres.');
@@ -68,7 +92,7 @@ final readonly class EnrollmentRepository
 
     public function handlePaymentUpdate(string $asaasPaymentId,string $status): ?int
     {
-        $s=$this->database->prepare('SELECT e.id,e.status FROM student_enrollments e INNER JOIN finance_payments p ON p.id=e.finance_payment_id WHERE p.asaas_payment_id=:payment LIMIT 1');$s->execute(['payment'=>$asaasPaymentId]);$enrollment=$s->fetch();if(!is_array($enrollment))return null;
+        $s=$this->database->prepare('SELECT e.id,e.status FROM student_enrollments e INNER JOIN finance_payments p ON p.id=e.finance_payment_id WHERE e.organization_id=:organization AND p.organization_id=:organization_payment AND p.asaas_payment_id=:payment LIMIT 1');$s->execute(['organization'=>$this->organizationId,'organization_payment'=>$this->organizationId,'payment'=>$asaasPaymentId]);$enrollment=$s->fetch();if(!is_array($enrollment))return null;
         $id=(int)$enrollment['id'];
         if(in_array($status,['RECEIVED','CONFIRMED','RECEIVED_IN_CASH'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_confirmed' WHERE id=:id AND status<>'payment_confirmed'")->execute(['id'=>$id]);$this->recordEvent($id,'payment-confirmed:'.$asaasPaymentId,'payment_confirmed','Pagamento confirmado pelo Asaas. Liberação automática no AVA iniciada.');return$id;}
         if(in_array($status,['CANCELED','REFUNDED'],true)){$this->database->prepare("UPDATE student_enrollments SET status='payment_interrupted' WHERE id=:id")->execute(['id'=>$id]);$this->recordEvent($id,'payment-interrupted:'.$asaasPaymentId.':'.$status,'payment_interrupted',$status==='REFUNDED'?'Pagamento estornado no Asaas.':'Cobrança cancelada no Asaas.');}return null;

@@ -66,6 +66,7 @@ use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
 use Interferencia\Modules\Moodle\AvaAccessNotifier;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
 use Interferencia\Modules\Site\SiteRepository;
+use Interferencia\Modules\Site\SiteOrderFulfillmentService;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -187,6 +188,7 @@ $asaasApiKey=$usesExclusiveAsaas?(string)$organizationAsaasSettings['api_key']:(
 $asaasWebhookToken=$usesExclusiveAsaas?(string)$organizationAsaasSettings['webhook_token']:($asaasSettings['configured']?(string)$asaasSettings['webhook_token']:(string)$config->get('app.asaas_webhook_token'));
 $splitLifecycle=static function(string$phase,array$context)use($franchiseContracts,$organizationId):mixed{if($phase==='prepare')return$franchiseContracts->prepareSplit($organizationId,(float)$context['gross'],(string)$context['reference']);$prepared=$context['prepared'];if($phase==='complete'){$franchiseContracts->completeSplit((int)$prepared['attempt_id'],$context['result']);return null;}if($phase==='fail')$franchiseContracts->failSplit((int)$prepared['attempt_id'],(string)$context['error']);return null;};
 $asaas = new AsaasClient($asaasEnvironment,$asaasApiKey,$config->bool('app.asaas_payments_write_enabled'),$splitLifecycle);
+$siteOrderFulfillment = new SiteOrderFulfillmentService($database,$sites,$asaas,$avaEnrollmentReleaser,$avaAccessNotifier);
 $franchiseContractBilling = new FranchiseContractBillingService($franchiseContracts,$asaas);
 $franchiseSandboxTests = new \Interferencia\Modules\Organization\FranchiseSandboxBillingRepository($database);
 $asaasSandbox = new AsaasClient('sandbox',$asaasSandboxSettings['configured']&&$asaasSandboxSettings['is_active']?(string)$asaasSandboxSettings['api_key']:'',true);
@@ -257,6 +259,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteOrderFulfillment,$database);
 
 return new Application($router, $request);

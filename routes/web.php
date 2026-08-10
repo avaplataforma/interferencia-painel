@@ -69,6 +69,7 @@ use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
 use Interferencia\Modules\Moodle\AvaAccessNotifier;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
 use Interferencia\Modules\Site\SiteRepository;
+use Interferencia\Modules\Site\SiteOrderFulfillmentService;
 
 return static function (
     Router $router,
@@ -132,6 +133,8 @@ return static function (
     EnrollmentRepository $studentEnrollments,
     AvaEnrollmentReleaser $avaEnrollmentReleaser,
     AvaAccessNotifier $avaAccessNotifier,
+    SiteOrderFulfillmentService $siteOrderFulfillment,
+    PDO $database,
 ): void {
     $browserTitle = $config->string('app.browser_title');
     $requireAuth = new RequireAuth($auth, $basePath);
@@ -232,6 +235,15 @@ return static function (
     $router->post('/admin/site/pages',static fn(Request$request):Response=>$saveSitePage($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/site/pages/{id:\d+}',static fn(Request$request,array$params):Response=>$saveSitePage($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/site/pages/{id:\d+}/delete',static function(Request$request,array$params)use($sites,$organizationId,$session,$basePath):Response{try{$sites->deletePage($organizationId,(int)$params['id']);$session->flash('site.message','Página excluída.');}catch(Throwable$e){$session->flash('site.error',$e->getMessage());}return Response::redirect($basePath.'/admin/site#paginas');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/site/orders/{id:\d+}/release',static function(Request$request,array$params)use($siteOrderFulfillment,$organizationId,$auth,$session,$basePath):Response{
+        try{
+            $siteOrderFulfillment->releaseOrder($organizationId,(int)$params['id'],$auth->user()?->id);
+            $session->flash('site.message','Matrícula liberada no AVA.');
+        }catch(Throwable$e){
+            $session->flash('site.error',$e->getMessage());
+        }
+        return Response::redirect($basePath.'/admin/site#pedidos');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/site',static function(Request$request)use($sites,$organizationId,$session,$basePath):Response{
         try{
             $rawProducts=$request->input('product_ids',[]);
@@ -321,7 +333,7 @@ return static function (
         $id=(int)$params['id'];
         try{
             if($organizations->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
-            $sites->saveGovernance($id,['is_enabled'=>$request->input('is_enabled')==='1','template_key'=>$request->input('template_key','modern'),'allow_catalog'=>$request->input('allow_catalog')==='1','allow_store'=>$request->input('allow_store')==='1','allow_custom_pages'=>$request->input('allow_custom_pages')==='1','max_banners'=>$request->input('max_banners','3'),'max_pages'=>$request->input('max_pages','5'),'max_featured_courses'=>$request->input('max_featured_courses','6')]);
+            $sites->saveGovernance($id,['is_enabled'=>$request->input('is_enabled')==='1','template_key'=>$request->input('template_key','modern'),'checkout_fulfillment_mode'=>$request->input('checkout_fulfillment_mode','manual_review'),'allow_catalog'=>$request->input('allow_catalog')==='1','allow_store'=>$request->input('allow_store')==='1','allow_custom_pages'=>$request->input('allow_custom_pages')==='1','max_banners'=>$request->input('max_banners','3'),'max_pages'=>$request->input('max_pages','5'),'max_featured_courses'=>$request->input('max_featured_courses','6')]);
             $session->flash('organizations.message','Governança do Site Institucional atualizada.');
         }catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());}
         return Response::redirect($basePath.'/admin/organizations/'.$id.'/edit#site');
@@ -425,13 +437,16 @@ return static function (
         $whatsappMessages->receive($payload,$whatsappCloudApi,$whatsappMedia);
         return Response::text("EVENT_RECEIVED\n");
     });
-    $router->postWithoutCsrf('/api/asaas/webhook',static function(Request$request)use($asaasWebhook,$finance,$financeCatalog,$sites,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier):Response{
+    $router->postWithoutCsrf('/api/asaas/webhook',static function(Request$request)use($asaasWebhook,$finance,$financeCatalog,$siteOrderFulfillment,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$franchiseContracts,$franchiseSandboxTests,$organizationId,$database):Response{
         if(!$asaasWebhook->valid($request->header('asaas-access-token')))return Response::text("Acesso recusado.\n",401);
         $payload=json_decode($request->body(),true);if(!is_array($payload))return Response::text("JSON inválido.\n",400);
         $eventId=trim((string)($payload['id']??''));$eventType=trim((string)($payload['event']??''));$payment=is_array($payload['payment']??null)?$payload['payment']:null;$subscription=is_array($payload['subscription']??null)?$payload['subscription']:null;$checkout=is_array($payload['checkout']??null)?$payload['checkout']:null;
         if($eventId===''||$eventType==='')return Response::text("Evento inválido.\n",400);
-        $resource=$payment??$subscription??$checkout;if(!$finance->registerWebhook($eventId,$eventType,is_array($resource)?(string)($resource['id']??''):null))return Response::text("EVENT_RECEIVED\n");
-        try{if($payment!==null){$reference=(string)($payment['externalReference']??'');if(str_starts_with($reference,'mundo-inter:sandbox:franchise-test:')){$finance->updateFranchiseSandboxTest($payment);}else{$finance->upsertPayment($payment);$confirmedEnrollment=$studentEnrollments->handlePaymentUpdate((string)($payment['id']??''),(string)($payment['status']??''));if($confirmedEnrollment!==null){try{$release=$avaEnrollmentReleaser->release($confirmedEnrollment);if(($release['status']??'')==='released')$avaAccessNotifier->notify($confirmedEnrollment);}catch(Throwable){}}}}if($subscription!==null)$finance->upsertSubscription($subscription);if($checkout!==null){$financeCatalog->updateFromWebhook($checkout);$sites->updateOrderFromWebhook($checkout);}$finance->finishWebhook($eventId);}catch(Throwable$e){$finance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
+        $targetOrganizationId=$siteOrderFulfillment->organizationForPayload($payload,$organizationId);
+        $eventFinance=$targetOrganizationId===$organizationId?$finance:new FinanceRepository($database,$targetOrganizationId);
+        $eventEnrollments=$targetOrganizationId===$organizationId?$studentEnrollments:new EnrollmentRepository($database,$targetOrganizationId);
+        $resource=$payment??$subscription??$checkout;if(!$eventFinance->registerWebhook($eventId,$eventType,is_array($resource)?(string)($resource['id']??''):null))return Response::text("EVENT_RECEIVED\n");
+        try{if($payment!==null){$reference=(string)($payment['externalReference']??'');if(preg_match('/^mundo-inter:sandbox:franchise-test:(\d+)$/',$reference)===1){$franchiseSandboxTests->updateFromPayment($payment);}elseif(preg_match('/^mundo-inter:franchise-contract:(\d+)$/',$reference,$contractMatch)===1){$franchiseContracts->syncBilling((int)$contractMatch[1],$payment);}else{$eventFinance->upsertPayment($payment);$siteOrderFulfillment->processPayment($eventType,$payment);$confirmedEnrollment=$eventEnrollments->handlePaymentUpdate((string)($payment['id']??''),(string)($payment['status']??''));if($confirmedEnrollment!==null){try{$release=$avaEnrollmentReleaser->release($confirmedEnrollment);if(($release['status']??'')==='released')$avaAccessNotifier->notify($confirmedEnrollment);}catch(Throwable){}}}}if($subscription!==null)$eventFinance->upsertSubscription($subscription);if($checkout!==null){$financeCatalog->updateFromWebhook($checkout);$siteOrderFulfillment->processCheckout($eventType,$checkout);}$eventFinance->finishWebhook($eventId);}catch(Throwable$e){$eventFinance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
         return Response::text("EVENT_RECEIVED\n");
     });
     $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages,$tickets,$studentEnrollments):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$availableUnitIds=array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available());$follow=['overdue'=>0,'today'=>0,'future'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?$availableUnitIds:[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}$ticketAlerts=$auth->can('tickets.view')?$tickets->notificationSummary($user->id,$availableUnitIds):['open'=>0,'unread'=>0,'overdue'=>0];$ava=$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary($availableUnitIds):['ready'=>0,'failed'=>0];return Response::json(['followups'=>$follow,'whatsapp'=>$whatsapp,'tickets'=>$ticketAlerts,'ava'=>$ava,'total'=>$follow['overdue']+$follow['today']+$whatsapp['unread']+$ticketAlerts['unread']+$ticketAlerts['overdue']+$ava['ready']+$ava['failed']]);},[$requireAuth]);

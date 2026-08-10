@@ -1334,6 +1334,31 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicSite,'Modo de pré-visualização'));
 };
 
+$tests['automatiza pedido pago do site sem misturar cobranças das franquias'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_997000_automate_site_order_fulfillment.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Site/SiteOrderFulfillmentService.php');
+    $finance=(string)file_get_contents($rootPath.'/modules/Finance/FinanceRepository.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $governance=(string)file_get_contents($rootPath.'/views/admin/organizations/site.php');
+    $siteAdmin=(string)file_get_contents($rootPath.'/views/site/admin.php');
+
+    assertTrue(str_contains($migration,'checkout_fulfillment_mode'));
+    assertTrue(str_contains($migration,'student_enrollment_id'));
+    assertTrue(str_contains($service,'processPayment'));
+    assertTrue(str_contains($service,'organizationForPayload'));
+    assertTrue(str_contains($service,'manual_review'));
+    assertTrue(str_contains($finance,'isCentralFranchiseReference'));
+    assertTrue(str_contains($finance,'isCentralFranchiseCustomer'));
+    assertTrue(str_contains($finance,"mundo-inter:franchise-"));
+    assertTrue(str_contains($enrollments,'createPaidFromSiteOrder'));
+    assertTrue(str_contains($routes,"'/admin/site/orders/{id:\\d+}/release'"));
+    assertTrue(str_contains($routes,'$siteOrderFulfillment->processPayment'));
+    assertTrue(str_contains($governance,'Após confirmar o pagamento'));
+    assertTrue(str_contains($siteAdmin,'Revisão necessária'));
+    assertTrue(str_contains($siteAdmin,'Liberar no AVA'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

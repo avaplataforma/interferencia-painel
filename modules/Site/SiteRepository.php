@@ -28,10 +28,13 @@ final readonly class SiteRepository
         $template=(string)($data['template_key']??'modern');
         if(!in_array($template,['modern','classic','minimal'],true))throw new RuntimeException('Selecione um modelo-base válido.');
         $this->ensure($organizationId);
-        $statement=$this->database->prepare('UPDATE organization_sites SET is_enabled=:enabled,template_key=:template,allow_catalog=:catalog,allow_store=:store,allow_custom_pages=:pages,max_banners=:banners,max_pages=:max_pages,max_featured_courses=:courses WHERE organization_id=:organization');
+        $fulfillment=(string)($data['checkout_fulfillment_mode']??'manual_review');
+        if(!in_array($fulfillment,['manual_review','automatic'],true))throw new RuntimeException('Selecione uma regra válida para a liberação das compras.');
+        $statement=$this->database->prepare('UPDATE organization_sites SET is_enabled=:enabled,template_key=:template,allow_catalog=:catalog,allow_store=:store,checkout_fulfillment_mode=:fulfillment,allow_custom_pages=:pages,max_banners=:banners,max_pages=:max_pages,max_featured_courses=:courses WHERE organization_id=:organization');
         $statement->execute([
             'enabled'=>(int)(($data['is_enabled']??false)===true),'template'=>$template,
             'catalog'=>(int)(($data['allow_catalog']??false)===true),'store'=>(int)(($data['allow_store']??false)===true),
+            'fulfillment'=>$fulfillment,
             'pages'=>(int)(($data['allow_custom_pages']??false)===true),
             'banners'=>$this->limit($data['max_banners']??3,1,10,'banners'),
             'max_pages'=>$this->limit($data['max_pages']??5,1,30,'páginas'),
@@ -184,7 +187,7 @@ final readonly class SiteRepository
         $statement=$this->database->prepare('INSERT INTO organization_site_orders(organization_id,unit_id,crm_contact_id,finance_product_id,external_reference) SELECT :organization,:unit,:contact,:product,:temporary FROM units u INNER JOIN finance_products p ON p.id=:product_check WHERE u.id=:unit_check AND u.organization_id=:organization_check AND u.is_active=1 AND p.id=:product_scope');
         $temporary='pending-'.bin2hex(random_bytes(12));$statement->execute(['organization'=>$organizationId,'unit'=>$unitId,'contact'=>$contactId,'product'=>$productId,'temporary'=>$temporary,'product_check'=>$productId,'unit_check'=>$unitId,'organization_check'=>$organizationId,'product_scope'=>$productId]);
         $id=(int)$this->database->lastInsertId();if($id<1)throw new RuntimeException('Não foi possível iniciar a solicitação de compra.');
-        $external=sprintf('painel:site-order:%d:unit:%d',$id,$unitId);$this->database->prepare('UPDATE organization_site_orders SET external_reference=:external WHERE id=:id')->execute(['external'=>$external,'id'=>$id]);return['id'=>$id,'external_reference'=>$external];
+        $external=sprintf('mundo-inter:site-order:%d:%d:unit:%d',$organizationId,$id,$unitId);$this->database->prepare('UPDATE organization_site_orders SET external_reference=:external WHERE id=:id')->execute(['external'=>$external,'id'=>$id]);return['id'=>$id,'external_reference'=>$external];
     }
 
     /** @param array<string,mixed> $checkout */
@@ -195,6 +198,34 @@ final readonly class SiteRepository
     }
 
     public function failOrder(int $id,string $error):void{$this->database->prepare("UPDATE organization_site_orders SET status='FAILED',error_message=:error WHERE id=:id")->execute(['error'=>mb_substr($error,0,500),'id'=>$id]);}
+    /** @return array<string,mixed>|null */
+    public function orderForWebhook(array$checkout):?array
+    {
+        $asaasId=trim((string)($checkout['id']??''));$reference=trim((string)($checkout['externalReference']??''));
+        if($asaasId===''&&$reference==='')return null;
+        $statement=$this->database->prepare('SELECT o.*,s.checkout_fulfillment_mode,p.name product_name,p.value FROM organization_site_orders o INNER JOIN organization_sites s ON s.organization_id=o.organization_id INNER JOIN finance_products p ON p.id=o.finance_product_id WHERE o.asaas_checkout_id=:asaas OR o.external_reference=:reference LIMIT 1');
+        $statement->execute(['asaas'=>$asaasId,'reference'=>$reference]);$row=$statement->fetch();return is_array($row)?$row:null;
+    }
+
+    public function recordPaidOrder(int$orderId,int$organizationId,int$customerId,int$enrollmentId,string$status,?string$link):void
+    {
+        $fulfillment=$status==='automatic'?'releasing':'manual_review';
+        $statement=$this->database->prepare('UPDATE organization_site_orders SET status=:status,fulfillment_status=:fulfillment,finance_customer_id=:customer,student_enrollment_id=:enrollment,link=COALESCE(:link,link),paid_at=COALESCE(paid_at,NOW()),fulfillment_error=NULL WHERE id=:id AND organization_id=:organization');
+        $statement->execute(['status'=>'PAID','fulfillment'=>$fulfillment,'customer'=>$customerId,'enrollment'=>$enrollmentId,'link'=>$link,'id'=>$orderId,'organization'=>$organizationId]);
+    }
+
+    public function claimPaidOrder(int$orderId,int$organizationId):bool
+    {
+        $statement=$this->database->prepare("UPDATE organization_site_orders SET fulfillment_status='releasing',fulfillment_error=NULL WHERE id=:id AND organization_id=:organization AND fulfillment_status IN ('awaiting_payment','payment_confirmed','failed')");
+        $statement->execute(['id'=>$orderId,'organization'=>$organizationId]);return$statement->rowCount()===1;
+    }
+
+    public function markOrderReleased(int$orderId):void{$this->database->prepare("UPDATE organization_site_orders SET fulfillment_status='released',fulfillment_error=NULL WHERE id=:id")->execute(['id'=>$orderId]);}
+    public function markOrderFulfillmentFailed(int$orderId,string$error):void{$this->database->prepare("UPDATE organization_site_orders SET fulfillment_status='failed',fulfillment_error=:error WHERE id=:id")->execute(['id'=>$orderId,'error'=>mb_substr(trim($error),0,500)]);}
+
+    /** @return array<string,mixed>|null */
+    public function orderForReview(int$organizationId,int$orderId):?array{$statement=$this->database->prepare("SELECT * FROM organization_site_orders WHERE id=:id AND organization_id=:organization AND fulfillment_status IN ('manual_review','failed') AND student_enrollment_id IS NOT NULL LIMIT 1");$statement->execute(['id'=>$orderId,'organization'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;}
+
     /** @param array<string,mixed> $checkout */
     public function updateOrderFromWebhook(array $checkout):void{$id=trim((string)($checkout['id']??''));if($id==='')return;$this->database->prepare('UPDATE organization_site_orders SET status=:status,link=COALESCE(:link,link) WHERE asaas_checkout_id=:id')->execute(['status'=>(string)($checkout['status']??'ACTIVE'),'link'=>isset($checkout['link'])?(string)$checkout['link']:null,'id'=>$id]);}
 
@@ -226,5 +257,5 @@ final readonly class SiteRepository
     private function link(mixed$value):?string{$link=trim((string)$value);if($link==='')return null;if(str_starts_with($link,'#')||str_starts_with($link,'/'))return$link;return$this->url($link,'o botão do banner');}
     private function slug(string$value):string{$ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',trim($value));$slug=strtolower(is_string($ascii)?$ascii:$value);$slug=trim(preg_replace('/[^a-z0-9]+/','-',$slug)??'','-');if($slug===''||strlen($slug)>120)throw new RuntimeException('Informe um endereço válido para a página.');return$slug;}
     /** @return array<string,mixed> */
-    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','seo_title'=>'','seo_description'=>'','published_at'=>null];}
+    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','seo_title'=>'','seo_description'=>'','published_at'=>null];}
 }

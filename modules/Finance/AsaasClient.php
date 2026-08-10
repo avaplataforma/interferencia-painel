@@ -126,6 +126,13 @@ final readonly class AsaasClient
     }
 
     /** @return array<string,mixed> */
+    public function customer(string $customerId): array
+    {
+        if (preg_match('/^cus_[A-Za-z0-9]+$/', $customerId) !== 1) throw new RuntimeException('Identificador do cliente inválido.');
+        return $this->request('GET', '/customers/' . rawurlencode($customerId), []);
+    }
+
+    /** @return array<string,mixed> */
     public function payment(string $paymentId): array
     {
         if (!preg_match('/^pay_[A-Za-z0-9]+$/', $paymentId)) throw new RuntimeException('Identificador da cobrança inválido.');
