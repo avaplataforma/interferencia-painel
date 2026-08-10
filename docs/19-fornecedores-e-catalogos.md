@@ -213,3 +213,29 @@ Uma oferta aprovada aparece na loja em uma seção própria, identificada como
 atualiza um Lead e registra o interesse, mas não emite cobrança nem cria
 matrícula automaticamente. Até a homologação da API acadêmica do fornecedor, a
 equipe confirma manualmente pagamento, matrícula e acesso ao AVA parceiro.
+
+## Registro oficial de catálogos
+
+O cadastro central passa a reconhecer oito linhas acadêmicas independentes:
+
+| Catálogo | Fornecedor | Ambiente acadêmico |
+| --- | --- | --- |
+| INTER | AVA Cursos | `https://avacursos.com.br/{franquia}` |
+| PRO | Escola Avançada | `https://interferenciaead.com.br/metodo/login.php` |
+| UP | SIE | `https://www.sie.com.br/interferenciaead` |
+| MASTER | IESDE | `https://eadservidor.com.br/avacursos/interferencia/` |
+| CEFE | EJA CEFE | `https://avacefe.com.br/login/` |
+| CONCLUSÃO | EJA Conclusão | `https://avaconclusao.com.br/login/` |
+| PREPARA | Aprova Concursos | `https://aprovaconcursos.com.br/?ref=interf2026` |
+| DRIVE | Trânsito | `https://ava.eadcursosdetransito.com.br/login` |
+
+Na aba **AVA** de cada franquia, o ADM Central controla a licença geral de cada
+catálogo. Essa licença não substitui a curadoria nem a oferta individual do
+curso. Catálogo, API e curso precisam estar liberados para que uma nova venda
+possa seguir para matrícula automática.
+
+O Catálogo INTER permanece liberado para as franquias atuais. Novos catálogos
+externos começam bloqueados e com a API pendente, preservando o princípio de
+negação por padrão. A integração de cada fornecedor será ativada somente depois
+de cadastradas as credenciais, testada a consulta de cursos e homologada a
+operação de matrícula/liberação de acesso.

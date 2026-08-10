@@ -1624,6 +1624,15 @@ $tests['controla catalogos comerciais pela aba AVA da franquia'] = static functi
     assertTrue(str_contains($view,'catalog_ids[]'));
 };
 
+$tests['registra todos os catalogos e fornecedores academicos'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999910_register_course_provider_catalogs.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    foreach(['Catálogo INTER','Catálogo PRO','Catálogo UP','Catálogo MASTER','Catálogo CEFE','Catálogo CONCLUSÃO','Catálogo PREPARA','Catálogo DRIVE'] as$catalog) assertTrue(str_contains($migration,$catalog));
+    foreach(['Escola Avançada','SIE','IESDE','EJA CEFE','EJA Conclusão','Aprova Concursos','Trânsito'] as$provider) assertTrue(str_contains($migration,$provider));
+    assertTrue(str_contains($repository,'providerCatalogRegistry'));
+    assertTrue(str_contains($repository,'integration_active'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

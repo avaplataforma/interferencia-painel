@@ -177,11 +177,31 @@ final readonly class CourseProviderRepository
     }
 
     /** @return list<array<string,mixed>> */
+    public function providerCatalogRegistry(): array
+    {
+        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
+            CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
+            CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
+            CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_test_status,'not_tested') END integration_status,
+            CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_sync_status,'never') END sync_status,
+            (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1) course_count,
+            (SELECT COUNT(*) FROM organization_course_catalog_access access WHERE access.course_catalog_id=catalog.id AND access.is_enabled=1) organization_count
+            FROM course_catalogs catalog
+            LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
+            WHERE catalog.is_active=1
+            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return list<array<string,mixed>> */
     public function catalogsForOrganization(int $organizationId): array
     {
         $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
             COALESCE(access.is_enabled,CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END) is_enabled,
-            CASE WHEN catalog.code='ava-cursos' THEN 'Mundo Inter' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
+            CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
+            CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
             CASE WHEN catalog.code='ava-cursos'
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
                 ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.is_available=1)
@@ -189,10 +209,10 @@ final readonly class CourseProviderRepository
             (SELECT COUNT(*) FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id WHERE offer.organization_id=:offer_organization AND course.catalog_id=catalog.id AND offer.is_active=1) offer_count
             FROM course_catalogs catalog
             LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization
-            LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id AND provider.is_active=1
+            LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,access.is_enabled,provider.name
-            ORDER BY CASE WHEN catalog.code='ava-cursos' THEN 0 ELSE 1 END,catalog.name");
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,access.is_enabled,provider.name,provider.launch_url_template,provider.is_active
+            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }
