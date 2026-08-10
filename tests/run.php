@@ -1550,7 +1550,7 @@ function assertSame(mixed $expected, mixed $actual): void
 function assertTrue(bool $condition, string $message = 'A condição esperada não foi atendida.'): void
 {
     if (!$condition) {
-        $caller=debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS,2)[1]??[];
+        $caller=debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS,1)[0]??[];
         $location=isset($caller['line'])?' (linha '.(int)$caller['line'].')':'';
         throw new RuntimeException($message.$location);
     }
