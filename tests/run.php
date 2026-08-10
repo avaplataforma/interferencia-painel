@@ -1390,6 +1390,48 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicSite,'Modo de pré-visualização'));
 };
 
+$tests['publica o site da franquia com versões mídia métricas SEO e LGPD'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999300_create_site_publication_suite.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $media=(string)file_get_contents($rootPath.'/modules/Site/SiteMediaStorage.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $admin=(string)file_get_contents($rootPath.'/views/site/admin.php');
+    $commandCenter=(string)file_get_contents($rootPath.'/views/site/admin-command-center.php');
+    $extensions=(string)file_get_contents($rootPath.'/views/site/admin-extensions.php');
+    $public=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+    $contacts=(string)file_get_contents($rootPath.'/modules/Crm/ContactRepository.php');
+    $contactView=(string)file_get_contents($rootPath.'/views/crm/contacts/show.php');
+
+    assertTrue(str_contains($migration,'organization_site_versions'));
+    assertTrue(str_contains($migration,'organization_site_media'));
+    assertTrue(str_contains($migration,'organization_site_events'));
+    assertTrue(str_contains($migration,'organization_site_domain_checks'));
+    assertTrue(str_contains($migration,'organization_site_product_seo'));
+    assertTrue(str_contains($repository,'saveRevision'));
+    assertTrue(str_contains($repository,'publishVersion'));
+    assertTrue(str_contains($repository,'analyticsSummary'));
+    assertTrue(str_contains($repository,'recordEvent'));
+    assertTrue(str_contains($repository,"['logo_path','favicon_path']"));
+    assertTrue(str_contains($media,'imagewebp'));
+    assertTrue(str_contains($routes,"'/admin/site/media'"));
+    assertTrue(str_contains($routes,"'/admin/site/versions/{id:\\d+}/publish'"));
+    assertTrue(str_contains($routes,"'/site/events'"));
+    assertTrue(str_contains($admin,'publication_action'));
+    assertTrue(str_contains($admin,'cookie_banner_enabled'));
+    assertTrue(str_contains($commandCenter,'Prévia mobile'));
+    assertTrue(str_contains($commandCenter,'Histórico de versões'));
+    assertTrue(str_contains($extensions,'Biblioteca de mídia'));
+    assertTrue(str_contains($public,'site-cookie-banner'));
+    assertTrue(str_contains($public,'Política de privacidade'));
+    assertTrue(str_contains($javascript,'site-metrics-consent'));
+    assertTrue(str_contains($javascript,'course_click'));
+    assertTrue(str_contains($javascript,'utm_campaign'));
+    assertTrue(str_contains($contacts,'landing_page'));
+    assertTrue(str_contains($contacts,'utm_campaign'));
+    assertTrue(str_contains($contactView,'Origem digital'));
+};
+
 $tests['automatiza pedido pago do site sem misturar cobranças das franquias'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260809_997000_automate_site_order_fulfillment.php');
     $service=(string)file_get_contents($rootPath.'/modules/Site/SiteOrderFulfillmentService.php');

@@ -8,6 +8,9 @@ $phoneDigits=preg_replace('/\D/','',(string)($contact['phone']??''));
 $whatsAppDigits=in_array(strlen((string)$phoneDigits),[10,11],true)?'55'.$phoneDigits:$phoneDigits;
 $tagsData=array_filter(explode(';;',(string)($contact['tags_data']??'')));
 $nextOverdue=$nextFollowUp!==null&&strtotime((string)$nextFollowUp['scheduled_at'])<strtotime('today');
+$hasDigitalOrigin=array_filter([$contact['landing_page']??null,$contact['utm_source']??null,$contact['utm_medium']??null,$contact['utm_campaign']??null,$contact['utm_content']??null,$contact['utm_term']??null])!==[];
+$originMedia=implode(' / ',array_filter([(string)($contact['utm_source']??''),(string)($contact['utm_medium']??'')]));
+$contentTerm=implode(' / ',array_filter([(string)($contact['utm_content']??''),(string)($contact['utm_term']??'')]));
 ?>
 <?php if($message):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
 <?php if($error):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
@@ -32,6 +35,10 @@ $nextOverdue=$nextFollowUp!==null&&strtotime((string)$nextFollowUp['scheduled_at
       <div><dt>Atendente</dt><dd><?= $escape($contact['responsible_name']?:'Não definido') ?></dd></div><div><dt>Unidade responsável</dt><dd><?= $escape($contact['unit_name']) ?></dd></div>
       <div><dt>Origem</dt><dd><?= $escape($sourceLabels[$contact['registration_source']]??$contact['registration_source']) ?></dd></div><div><dt>Entrada</dt><dd><?= $escape(date('d/m/Y H:i',strtotime((string)$contact['registered_at']))) ?></dd></div>
     </dl>
+    <?php if($hasDigitalOrigin):?><div class="contact-notes"><h3><i class="fa-solid fa-chart-line" aria-hidden="true"></i> Origem digital</h3><dl class="contact-data-grid">
+      <div><dt>Página de entrada</dt><dd><?= $escape($contact['landing_page']??'—') ?></dd></div><div><dt>Origem / mídia</dt><dd><?= $escape($originMedia!==''?$originMedia:'—') ?></dd></div>
+      <div><dt>Campanha</dt><dd><?= $escape($contact['utm_campaign']??'—') ?></dd></div><div><dt>Conteúdo / termo</dt><dd><?= $escape($contentTerm!==''?$contentTerm:'—') ?></dd></div>
+    </dl></div><?php endif;?>
     <div class="contact-notes"><h3>Observações</h3><p><?= nl2br($escape($contact['notes']?:'Nenhuma observação registrada.')) ?></p></div>
   </section>
 

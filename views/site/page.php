@@ -1,16 +1,31 @@
 <?php
 $primaryCandidate = (string) ($site['site_primary_color'] ?? '');
-$primary = preg_match('/^#[0-9a-fA-F]{6}$/', $primaryCandidate) === 1 ? $primaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['primary_color'] ?? '')) === 1 ? (string) $site['primary_color'] : '#ed1c24');
+$primary = preg_match('/^#[0-9a-fA-F]{6}$/', $primaryCandidate) === 1 ? $primaryCandidate : '#ed1c24';
 $secondaryCandidate = (string) ($site['site_secondary_color'] ?? '');
-$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', $secondaryCandidate) === 1 ? $secondaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['secondary_color'] ?? '')) === 1 ? (string) $site['secondary_color'] : '#102a56');
+$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', $secondaryCandidate) === 1 ? $secondaryCandidate : '#102a56';
 $siteTitle = (string) ($site['site_title'] ?: $site['display_name']);
 $logo = (string) ($site['logo_path'] ?? '');
 $favicon = (string) ($site['favicon_path'] ?? '');
 $publicBase = rtrim((string) $basePath, '/') . '/site';
+$seoTitle = trim((string) ($page['seo_title'] ?? '')) ?: (string) $page['title'];
+$seoDescription = trim((string) ($page['seo_description'] ?? '')) ?: trim((string) ($page['summary'] ?? ''));
 ?>
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= $escape($page['title']) ?> · <?= $escape($siteTitle) ?></title><?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?><style>
-:root{--primary:<?= $escape($primary) ?>;--secondary:<?= $escape($secondary) ?>;--ink:#14202d;--muted:#607181}*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#f4f7f9;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}.shell{width:min(70rem,calc(100% - 2rem));margin:auto}.top{border-bottom:1px solid #e4e9ec;background:#fff}.nav{display:flex;align-items:center;justify-content:space-between;min-height:4.8rem;gap:1rem}.brand{display:flex;align-items:center;gap:.8rem;color:inherit;text-decoration:none;font-weight:850}.brand img{width:9rem;height:3rem;object-fit:contain;object-position:left}.back{display:inline-flex;align-items:center;min-height:2.7rem;padding:.65rem .9rem;border:1px solid #d6dfe5;border-radius:.65rem;color:inherit;text-decoration:none;font-weight:750}.hero{padding:4.5rem 0 3rem;color:#fff;background:linear-gradient(135deg,var(--secondary),color-mix(in srgb,var(--secondary) 72%,var(--primary)))}.hero p{max-width:45rem;margin:.7rem 0 0;color:#e6edf5;line-height:1.65}.hero h1{margin:0;font-size:clamp(2.4rem,6vw,4.4rem);letter-spacing:-.045em}.content{margin:2rem auto 4rem;padding:clamp(1.4rem,4vw,3rem);border:1px solid #e0e6ea;border-radius:1rem;background:#fff;box-shadow:0 .7rem 2rem rgb(28 48 68 / 7%)}.content{font-family:Georgia,serif;font-size:1.08rem;line-height:1.85}.content p{white-space:pre-line}.preview{position:fixed;right:1rem;bottom:1rem;padding:.55rem .8rem;border-radius:999px;color:#704d00;background:#fff1bd;border:1px solid #e6ca65;font-size:.78rem;font-weight:850}</style></head><body>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title><?= $escape($seoTitle) ?> · <?= $escape($siteTitle) ?></title>
+ <meta name="description" content="<?= $escape($seoDescription) ?>"><meta property="og:title" content="<?= $escape($seoTitle) ?>"><meta property="og:description" content="<?= $escape($seoDescription) ?>">
+ <?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?>
+ <style>
+ :root{--primary:<?= $escape($primary) ?>;--secondary:<?= $escape($secondary) ?>;--ink:#14202d;--muted:#607181}*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#f4f7f9;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif}.shell{width:min(70rem,calc(100% - 2rem));margin:auto}.top{border-bottom:1px solid #e4e9ec;background:#fff}.nav{display:flex;align-items:center;justify-content:space-between;min-height:4.8rem;gap:1rem}.brand{display:flex;align-items:center;gap:.8rem;color:inherit;text-decoration:none;font-weight:850}.brand img{width:9rem;height:3rem;object-fit:contain;object-position:left}.back{display:inline-flex;align-items:center;min-height:2.7rem;padding:.65rem .9rem;border:1px solid #d6dfe5;border-radius:.65rem;color:inherit;text-decoration:none;font-weight:750}.hero{padding:4.5rem 0 3rem;color:#fff;background:linear-gradient(135deg,var(--secondary),color-mix(in srgb,var(--secondary) 72%,var(--primary)))}.hero p{max-width:45rem;margin:.7rem 0 0;color:#e6edf5;line-height:1.65}.hero h1{margin:0;font-size:clamp(2.4rem,6vw,4.4rem);letter-spacing:-.045em}.content{margin:2rem auto 4rem;padding:clamp(1.4rem,4vw,3rem);border:1px solid #e0e6ea;border-radius:1rem;background:#fff;box-shadow:0 .7rem 2rem rgb(28 48 68 / 7%);font-family:Georgia,serif;font-size:1.08rem;line-height:1.85}.content p{white-space:pre-line}.preview{position:fixed;right:1rem;bottom:1rem;padding:.55rem .8rem;border-radius:999px;color:#704d00;background:#fff1bd;border:1px solid #e6ca65;font-size:.78rem;font-weight:850}
+ </style>
+</head>
+<body data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="page_view" data-site-entity-type="page" data-site-entity-id="<?= (int) $page['id'] ?>">
 <header class="top"><nav class="shell nav"><a class="brand" href="<?= $escape($publicBase) ?>"><?php if ($logo !== ''): ?><img src="<?= $escape($assetBasePath . $logo) ?>" alt="<?= $escape($siteTitle) ?>"><?php else: ?><?= $escape($siteTitle) ?><?php endif; ?></a><a class="back" href="<?= $escape($publicBase) ?>">← Voltar ao site</a></nav></header>
 <section class="hero"><div class="shell"><h1><?= $escape($page['title']) ?></h1><?php if (!empty($page['summary'])): ?><p><?= $escape($page['summary']) ?></p><?php endif; ?></div></section>
 <main class="shell content"><p><?= nl2br($escape($page['content'])) ?></p></main>
-<?php if (!empty($preview)): ?><span class="preview">Modo de pré-visualização</span><?php endif; ?></body></html>
+<?php if (!empty($preview)): ?><span class="preview">Modo de pré-visualização</span><?php endif; ?>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=3" defer></script>
+</body>
+</html>

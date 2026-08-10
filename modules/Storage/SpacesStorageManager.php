@@ -31,6 +31,7 @@ final readonly class SpacesStorageManager
     public function storeCentral(string$category,string$content,string$name,string$mime='application/octet-stream',?int$userId=null):?string{return$this->store('central',null,$category,$content,$name,$mime,$userId);}
     public function storeFranchise(int$organizationId,string$category,string$content,string$name,string$mime='application/octet-stream',?int$userId=null):?string{return$this->store('franchise',$organizationId,$category,$content,$name,$mime,$userId);}
     public function read(string$storagePath):string{$key=$this->keyFromStoragePath($storagePath);return$this->client($this->repository->settings())->get($key);}
+    public function delete(string$storagePath):void{$key=$this->keyFromStoragePath($storagePath);$this->client($this->repository->settings())->delete($key);}
 
     private function store(string$scope,?int$organizationId,string$category,string$content,string$name,string$mime,?int$userId):?string
     {

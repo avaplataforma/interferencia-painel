@@ -81,11 +81,15 @@ final readonly class SiteRepository
             'scholarship_repeat'=>$this->limit($data['scholarship_popup_repeat_hours']??24,1,720,'horas para repetir o formulário de bolsas'),
             'scholarship_title'=>$this->text($data['scholarship_title']??'',160,'título do formulário de bolsas',true),'scholarship_subtitle'=>$this->text($data['scholarship_subtitle']??'',250,'subtítulo do formulário de bolsas'),'scholarship_button'=>$this->text($data['scholarship_button_label']??'',80,'texto do botão de bolsas',true),
             'seo_title'=>$this->text($data['seo_title']??'',190,'título de busca'),'seo_description'=>$this->text($data['seo_description']??'',320,'descrição de busca'),
+            'privacy_policy'=>$this->text($data['privacy_policy']??'',50000,'política de privacidade'),
+            'cookie_notice'=>$this->text($data['cookie_notice']??'',2000,'aviso de cookies'),
+            'terms_text'=>$this->text($data['terms_text']??'',50000,'termos de uso'),
+            'cookie_banner_enabled'=>(int)$this->checked($data['cookie_banner_enabled']??false),
             'status_value'=>$status,'organization'=>$organizationId,
         ];
         $this->database->beginTransaction();
         try{
-            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,template_key=:template,site_primary_color=:site_primary_color,site_secondary_color=:site_secondary_color,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
+            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,template_key=:template,site_primary_color=:site_primary_color,site_secondary_color=:site_secondary_color,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,privacy_policy=:privacy_policy,cookie_notice=:cookie_notice,terms_text=:terms_text,cookie_banner_enabled=:cookie_banner_enabled,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
             $statement->execute($values);
             $this->database->prepare('DELETE FROM organization_site_products WHERE organization_id=:organization')->execute(['organization'=>$organizationId]);
             $insert=$this->database->prepare('INSERT INTO organization_site_products(organization_id,finance_product_id,sort_order) VALUES(:organization,:product,:sort_order)');
@@ -158,6 +162,7 @@ final readonly class SiteRepository
     /** @return array<string,mixed>|null */
     public function publicPage(int $organizationId,string $slug,bool $preview=false):?array
     {
+        if(!$preview){$site=$this->publicSite($organizationId,false);if($site===null)return null;$wanted=$this->slug($slug);foreach(($site['pages']??[])as$page)if(($page['slug']??'')===$wanted&&($page['publication_status']??'published')==='published')return$page;return null;}
         $sql="SELECT * FROM organization_site_pages WHERE organization_id=:organization AND slug=:slug".($preview?'':" AND publication_status='published'").' LIMIT 1';
         $statement=$this->database->prepare($sql);$statement->execute(['organization'=>$organizationId,'slug'=>$this->slug($slug)]);$row=$statement->fetch();return is_array($row)?$row:null;
     }
@@ -172,8 +177,8 @@ final readonly class SiteRepository
         if($id===null&&count($this->pages($organizationId))>=(int)$settings['max_pages'])throw new RuntimeException('O limite de páginas definido pelo ADM Central foi atingido.');
         $status=(string)($data['publication_status']??'draft');if(!in_array($status,['draft','published'],true))throw new RuntimeException('Situação da página inválida.');
         $slug=$this->slug((string)($data['slug']??$data['title']??''));if(in_array($slug,['admin','checkout','banner','site'],true))throw new RuntimeException('Escolha outro endereço para a página.');
-        $values=['organization'=>$organizationId,'title'=>$this->text($data['title']??'',190,'título da página',true),'slug'=>$slug,'summary'=>$this->text($data['summary']??'',500,'resumo'),'content'=>$this->text($data['content']??'',50000,'conteúdo',true),'status'=>$status,'menu'=>(int)(($data['show_in_menu']??false)===true),'sort_order'=>$this->limit($data['sort_order']??0,0,999,'na ordem')];
-        try{if($id===null){$statement=$this->database->prepare('INSERT INTO organization_site_pages(organization_id,title,slug,summary,content,publication_status,show_in_menu,sort_order) VALUES(:organization,:title,:slug,:summary,:content,:status,:menu,:sort_order)');$statement->execute($values);return(int)$this->database->lastInsertId();}$values['id']=$id;$statement=$this->database->prepare('UPDATE organization_site_pages SET title=:title,slug=:slug,summary=:summary,content=:content,publication_status=:status,show_in_menu=:menu,sort_order=:sort_order WHERE id=:id AND organization_id=:organization');$statement->execute($values);return$id;}catch(\PDOException$e){if((string)$e->getCode()==='23000')throw new RuntimeException('Já existe uma página com esse endereço.');throw$e;}
+        $values=['organization'=>$organizationId,'title'=>$this->text($data['title']??'',190,'título da página',true),'slug'=>$slug,'summary'=>$this->text($data['summary']??'',500,'resumo'),'seo_title'=>$this->text($data['seo_title']??'',190,'título SEO'),'seo_description'=>$this->text($data['seo_description']??'',320,'descrição SEO'),'content'=>$this->text($data['content']??'',50000,'conteúdo',true),'status'=>$status,'menu'=>(int)(($data['show_in_menu']??false)===true),'sort_order'=>$this->limit($data['sort_order']??0,0,999,'na ordem')];
+        try{if($id===null){$statement=$this->database->prepare('INSERT INTO organization_site_pages(organization_id,title,slug,summary,seo_title,seo_description,content,publication_status,show_in_menu,sort_order) VALUES(:organization,:title,:slug,:summary,:seo_title,:seo_description,:content,:status,:menu,:sort_order)');$statement->execute($values);return(int)$this->database->lastInsertId();}$values['id']=$id;$statement=$this->database->prepare('UPDATE organization_site_pages SET title=:title,slug=:slug,summary=:summary,seo_title=:seo_title,seo_description=:seo_description,content=:content,publication_status=:status,show_in_menu=:menu,sort_order=:sort_order WHERE id=:id AND organization_id=:organization');$statement->execute($values);return$id;}catch(\PDOException$e){if((string)$e->getCode()==='23000')throw new RuntimeException('Já existe uma página com esse endereço.');throw$e;}
     }
 
     public function deletePage(int $organizationId,int $id):void
@@ -184,15 +189,13 @@ final readonly class SiteRepository
     /** @return array<string,mixed>|null */
     public function publicProduct(int $organizationId,int $productId):?array
     {
-        $statement=$this->database->prepare("SELECT p.* FROM organization_site_products sp INNER JOIN organization_finance_products scope ON scope.organization_id=sp.organization_id AND scope.finance_product_id=sp.finance_product_id AND scope.is_visible=1 INNER JOIN finance_products p ON p.id=sp.finance_product_id INNER JOIN organization_sites s ON s.organization_id=sp.organization_id LEFT JOIN units u ON u.id=p.unit_id WHERE sp.organization_id=:organization AND p.id=:product AND p.is_active=1 AND p.value>=5 AND s.is_enabled=1 AND s.publication_status='published' AND s.selected_mode='store' AND s.allow_store=1 AND (p.unit_id IS NULL OR u.organization_id=:organization_unit) LIMIT 1");
-        $statement->execute(['organization'=>$organizationId,'product'=>$productId,'organization_unit'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
+        $site=$this->publicSite($organizationId);if($site===null||($site['selected_mode']??'')!=='store'||(int)($site['allow_store']??0)!==1)return null;foreach(($site['products']??[])as$product)if((int)$product['id']===$productId&&(float)$product['value']>=5)return$product;return null;
     }
 
     /** @return array<string,mixed>|null */
     public function publicCatalogProduct(int $organizationId,int $productId):?array
     {
-        $statement=$this->database->prepare("SELECT p.*,s.selected_mode FROM organization_site_products sp INNER JOIN organization_finance_products scope ON scope.organization_id=sp.organization_id AND scope.finance_product_id=sp.finance_product_id AND scope.is_visible=1 INNER JOIN finance_products p ON p.id=sp.finance_product_id INNER JOIN organization_sites s ON s.organization_id=sp.organization_id LEFT JOIN units u ON u.id=p.unit_id WHERE sp.organization_id=:organization AND p.id=:product AND p.is_active=1 AND s.is_enabled=1 AND s.publication_status='published' AND ((s.selected_mode='store' AND s.allow_store=1 AND p.value>=5) OR (s.selected_mode='catalog' AND s.allow_catalog=1)) AND (p.unit_id IS NULL OR u.organization_id=:organization_unit) LIMIT 1");
-        $statement->execute(['organization'=>$organizationId,'product'=>$productId,'organization_unit'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
+        $site=$this->publicSite($organizationId);if($site===null)return null;$mode=(string)($site['selected_mode']??'catalog');if($mode==='store'&&(int)($site['allow_store']??0)!==1)return null;if($mode==='catalog'&&(int)($site['allow_catalog']??0)!==1)return null;foreach(($site['products']??[])as$product)if((int)$product['id']===$productId&&($mode!=='store'||(float)$product['value']>=5))return$product+['selected_mode'=>$mode];return null;
     }
 
     /** @return list<array<string,mixed>> */
@@ -288,17 +291,128 @@ final readonly class SiteRepository
         $statement->execute([$orderId,$organizationId,...$unitIds]);$row=$statement->fetch();return is_array($row)?$row:null;
     }
 
+    /** @param array<string,mixed> $data @param list<int> $productIds */
+    public function saveRevision(int $organizationId,array $data,array $productIds,string $action,?string $scheduledAt,?int $userId):int
+    {
+        if(!in_array($action,['draft','publish','schedule'],true))throw new RuntimeException('Escolha uma ação de publicação válida.');
+        $before=$this->settings($organizationId);
+        if(trim((string)($before['live_snapshot_json']??''))===''&&($before['publication_status']??'')==='published'){
+            $initial=$this->snapshot($organizationId,$before);
+            $this->database->prepare('UPDATE organization_sites SET live_snapshot_json=:snapshot,live_version=1 WHERE organization_id=:organization')->execute(['snapshot'=>$this->encode($initial),'organization'=>$organizationId]);
+        }
+        $data['publication_status']='draft';
+        $this->saveContent($organizationId,$data,$productIds);
+        $snapshot=$this->snapshot($organizationId,$this->settings($organizationId));
+        foreach(['logo_path','favicon_path']as$brandField)if(array_key_exists($brandField,$data))$snapshot['settings'][$brandField]=$data[$brandField];
+        $next=(int)$this->database->query('SELECT COALESCE(MAX(version_number),0)+1 FROM organization_site_versions WHERE organization_id='.(int)$organizationId)->fetchColumn();
+        $status=$action==='draft'?'draft':($action==='schedule'?'scheduled':'published');
+        $when=null;
+        if($action==='schedule'){
+            $date=$scheduledAt!==null?date_create($scheduledAt):false;
+            if($date===false||$date->getTimestamp()<=time())throw new RuntimeException('Escolha uma data futura para a publicação.');
+            $when=$date->format('Y-m-d H:i:s');
+        }
+        $statement=$this->database->prepare('INSERT INTO organization_site_versions(organization_id,version_number,status,label,snapshot_json,scheduled_at,published_at,created_by) VALUES(:organization,:version,:status,:label,:snapshot,:scheduled,:published,:user)');
+        $statement->execute(['organization'=>$organizationId,'version'=>$next,'status'=>$status,'label'=>$action==='publish'?'Publicação manual':($action==='schedule'?'Publicação agendada':'Rascunho salvo'),'snapshot'=>$this->encode($snapshot),'scheduled'=>$when,'published'=>$action==='publish'?date('Y-m-d H:i:s'):null,'user'=>$userId]);
+        $id=(int)$this->database->lastInsertId();
+        if($action==='publish')$this->publishSnapshot($organizationId,$snapshot,$next);
+        elseif($action==='schedule')$this->database->prepare('UPDATE organization_sites SET scheduled_snapshot_json=:snapshot,scheduled_publish_at=:scheduled WHERE organization_id=:organization')->execute(['snapshot'=>$this->encode($snapshot),'scheduled'=>$when,'organization'=>$organizationId]);
+        return$id;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function versions(int $organizationId,int $limit=20):array
+    {
+        $limit=max(1,min(100,$limit));$statement=$this->database->prepare("SELECT v.*,u.name created_by_name FROM organization_site_versions v LEFT JOIN users u ON u.id=v.created_by WHERE v.organization_id=:organization ORDER BY v.version_number DESC LIMIT {$limit}");$statement->execute(['organization'=>$organizationId]);return$statement->fetchAll();
+    }
+
+    public function publishVersion(int $organizationId,int $versionId):void
+    {
+        $statement=$this->database->prepare('SELECT * FROM organization_site_versions WHERE id=:id AND organization_id=:organization LIMIT 1');$statement->execute(['id'=>$versionId,'organization'=>$organizationId]);$version=$statement->fetch();if(!is_array($version))throw new RuntimeException('Versão não encontrada.');
+        $snapshot=json_decode((string)$version['snapshot_json'],true,512,JSON_THROW_ON_ERROR);if(!is_array($snapshot))throw new RuntimeException('A versão está inválida.');
+        $this->publishSnapshot($organizationId,$snapshot,(int)$version['version_number']);
+        $this->database->prepare("UPDATE organization_site_versions SET status='published',published_at=NOW() WHERE id=:id")->execute(['id'=>$versionId]);
+    }
+
+    public function cancelSchedule(int $organizationId):void
+    {
+        $this->database->prepare('UPDATE organization_sites SET scheduled_snapshot_json=NULL,scheduled_publish_at=NULL WHERE organization_id=:organization')->execute(['organization'=>$organizationId]);
+        $this->database->prepare("UPDATE organization_site_versions SET status='archived' WHERE organization_id=:organization AND status='scheduled'")->execute(['organization'=>$organizationId]);
+    }
+
+    /** @param array<string,mixed> $data */
+    public function recordEvent(int $organizationId,array $data):void
+    {
+        $type=(string)($data['event_type']??'');if(!in_array($type,['page_view','course_view','course_click','whatsapp_click','contact_submit','scholarship_submit','checkout_start'],true))throw new RuntimeException('Evento inválido.');
+        $statement=$this->database->prepare('INSERT INTO organization_site_events(organization_id,session_hash,event_type,page_path,entity_type,entity_id,utm_source,utm_medium,utm_campaign,metadata_json) VALUES(:organization,:session,:event,:page,:entity_type,:entity_id,:utm_source,:utm_medium,:utm_campaign,:metadata)');
+        $statement->execute(['organization'=>$organizationId,'session'=>$this->nullable($data['session_hash']??null,64),'event'=>$type,'page'=>$this->nullable($data['page_path']??null,500),'entity_type'=>$this->nullable($data['entity_type']??null,40),'entity_id'=>isset($data['entity_id'])&&is_numeric($data['entity_id'])?(int)$data['entity_id']:null,'utm_source'=>$this->nullable($data['utm_source']??null,190),'utm_medium'=>$this->nullable($data['utm_medium']??null,190),'utm_campaign'=>$this->nullable($data['utm_campaign']??null,190),'metadata'=>isset($data['metadata'])?$this->encode($data['metadata']):null]);
+    }
+
+    /** @return array<string,int> */
+    public function analyticsSummary(int $organizationId,int $days=30):array
+    {
+        $days=max(1,min(365,$days));$statement=$this->database->prepare("SELECT event_type,COUNT(*) total FROM organization_site_events WHERE organization_id=:organization AND occurred_at>=DATE_SUB(NOW(),INTERVAL {$days} DAY) GROUP BY event_type");$statement->execute(['organization'=>$organizationId]);$summary=['page_view'=>0,'course_view'=>0,'course_click'=>0,'whatsapp_click'=>0,'contact_submit'=>0,'scholarship_submit'=>0,'checkout_start'=>0];foreach($statement->fetchAll()as$row)$summary[(string)$row['event_type']]=(int)$row['total'];return$summary;
+    }
+
+    /** @return array<string,mixed> */
+    public function checkDomain(int $organizationId):array
+    {
+        $statement=$this->database->prepare("SELECT host FROM organization_domains WHERE organization_id=:organization AND purpose='site' AND is_primary=1 LIMIT 1");$statement->execute(['organization'=>$organizationId]);$host=trim((string)($statement->fetchColumn()?:''));$dns=false;$ssl=false;$ip=null;$error=null;
+        if($host==='')$error='Domínio personalizado ainda não configurado.';
+        else{
+            $resolved=gethostbyname($host);$dns=$resolved!==$host;$ip=$dns?$resolved:null;
+            if($dns){$errno=0;$errstr='';$socket=@stream_socket_client('ssl://'.$host.':443',$errno,$errstr,4,STREAM_CLIENT_CONNECT);$ssl=is_resource($socket);if(is_resource($socket))fclose($socket);if(!$ssl)$error=$errstr!==''?$errstr:'Certificado HTTPS indisponível.';}
+            else $error='DNS ainda não aponta para a plataforma.';
+        }
+        $save=$this->database->prepare('INSERT INTO organization_site_domain_checks(organization_id,host,dns_ok,ssl_ok,resolved_ip,error_message,checked_at) VALUES(:organization,:host,:dns,:ssl,:ip,:error,NOW()) ON DUPLICATE KEY UPDATE host=VALUES(host),dns_ok=VALUES(dns_ok),ssl_ok=VALUES(ssl_ok),resolved_ip=VALUES(resolved_ip),error_message=VALUES(error_message),checked_at=NOW()');$save->execute(['organization'=>$organizationId,'host'=>$host!==''?$host:null,'dns'=>(int)$dns,'ssl'=>(int)$ssl,'ip'=>$ip,'error'=>$error]);return['host'=>$host,'dns_ok'=>$dns,'ssl_ok'=>$ssl,'resolved_ip'=>$ip,'error_message'=>$error,'checked_at'=>date('Y-m-d H:i:s')];
+    }
+
+    /** @return array<string,mixed> */
+    public function domainStatus(int $organizationId):array
+    {
+        $statement=$this->database->prepare('SELECT * FROM organization_site_domain_checks WHERE organization_id=:organization LIMIT 1');$statement->execute(['organization'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:['host'=>null,'dns_ok'=>0,'ssl_ok'=>0,'resolved_ip'=>null,'error_message'=>'Verificação ainda não executada.','checked_at'=>null];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function media(int $organizationId):array{$statement=$this->database->prepare('SELECT * FROM organization_site_media WHERE organization_id=:organization ORDER BY created_at DESC,id DESC');$statement->execute(['organization'=>$organizationId]);return$statement->fetchAll();}
+    /** @return array<string,mixed>|null */
+    public function mediaItem(int $organizationId,int $id):?array{$statement=$this->database->prepare('SELECT * FROM organization_site_media WHERE id=:id AND organization_id=:organization LIMIT 1');$statement->execute(['id'=>$id,'organization'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;}
+    public function registerMedia(int $organizationId,array $data,?int $userId):int{$statement=$this->database->prepare('INSERT INTO organization_site_media(organization_id,title,alt_text,storage_path,public_path,mime_type,width,height,file_size,created_by) VALUES(:organization,:title,:alt,:storage,:public,:mime,:width,:height,:bytes,:user)');$statement->execute(['organization'=>$organizationId,'title'=>$this->text($data['title']??'',190,'título da imagem',true),'alt'=>$this->text($data['alt_text']??'',255,'texto alternativo'),'storage'=>$data['storage_path'],'public'=>$data['public_path']??null,'mime'=>$data['mime_type'],'width'=>$data['width']??null,'height'=>$data['height']??null,'bytes'=>$data['file_size'],'user'=>$userId]);return(int)$this->database->lastInsertId();}
+    public function deleteMedia(int $organizationId,int $id):void{$statement=$this->database->prepare('DELETE FROM organization_site_media WHERE id=:id AND organization_id=:organization');$statement->execute(['id'=>$id,'organization'=>$organizationId]);if($statement->rowCount()!==1)throw new RuntimeException('Imagem não encontrada.');}
+
+    /** @return array<string,mixed> */
+    public function productSeo(int $organizationId):array{$statement=$this->database->prepare('SELECT finance_product_id,seo_title,seo_description FROM organization_site_product_seo WHERE organization_id=:organization');$statement->execute(['organization'=>$organizationId]);$result=[];foreach($statement->fetchAll()as$row)$result[(int)$row['finance_product_id']]=$row;return$result;}
+    public function saveProductSeo(int $organizationId,int $productId,string $title,string $description):void{$statement=$this->database->prepare('INSERT INTO organization_site_product_seo(organization_id,finance_product_id,seo_title,seo_description) VALUES(:organization,:product,:title,:description) ON DUPLICATE KEY UPDATE seo_title=VALUES(seo_title),seo_description=VALUES(seo_description)');$statement->execute(['organization'=>$organizationId,'product'=>$productId,'title'=>$this->text($title,190,'título SEO'),'description'=>$this->text($description,320,'descrição SEO')]);}
+
     /** @return array<string,mixed>|null */
     public function publicSite(int $organizationId,bool $preview=false):?array
     {
+        $this->processScheduled($organizationId);
         $statement=$this->database->prepare("SELECT s.*,o.display_name,o.legal_name,o.cnpj,o.panel_slug,o.logo_path,o.favicon_path,o.primary_color,o.secondary_color,o.support_email organization_email,o.support_phone organization_phone,o.status organization_status,d.host site_host,d.status domain_status FROM organization_sites s INNER JOIN organizations o ON o.id=s.organization_id LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.purpose='site' AND d.is_primary=1 WHERE s.organization_id=:organization LIMIT 1");
         $statement->execute(['organization'=>$organizationId]);$site=$statement->fetch();
         if(!is_array($site)||(int)$site['is_enabled']!==1||($site['organization_status']??'')!=='active')return null;
-        if(!$preview&&($site['publication_status']??'')!=='published')return null;
-        $ids=$this->selectedProductIds($organizationId);$products=[];
+        $live=null;if(!$preview&&trim((string)($site['live_snapshot_json']??''))!==''){$decoded=json_decode((string)$site['live_snapshot_json'],true);if(is_array($decoded))$live=$decoded;}
+        if(!$preview&&$live===null&&($site['publication_status']??'')!=='published')return null;
+        if($live!==null&&isset($live['settings'])&&is_array($live['settings']))$site=array_replace($site,$live['settings']);
+        $ids=$live!==null&&isset($live['product_ids'])&&is_array($live['product_ids'])?array_map('intval',$live['product_ids']):$this->selectedProductIds($organizationId);$products=[];
         if($ids!==[]){$marks=implode(',',array_fill(0,count($ids),'?'));$query=$this->database->prepare("SELECT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM finance_products p INNER JOIN organization_finance_products scope ON scope.finance_product_id=p.id AND scope.organization_id=? AND scope.is_visible=1 WHERE p.id IN ($marks) AND p.is_active=1");$query->execute([$organizationId,...$ids]);$byId=[];foreach($query->fetchAll()as$row)$byId[(int)$row['id']]=$row;foreach($ids as$id)if(isset($byId[$id]))$products[]=$byId[$id];}
-        $site['products']=$products;$site['banners']=$this->banners($organizationId,!$preview);$site['pages']=$this->pages($organizationId,!$preview);return$site;
+        $seo=$this->productSeo($organizationId);foreach($products as&$product)if(isset($seo[(int)$product['id']]))$product=array_replace($product,$seo[(int)$product['id']]);unset($product);
+        $site['products']=$products;$site['banners']=$live!==null&&isset($live['banners'])&&is_array($live['banners'])?$live['banners']:$this->banners($organizationId,!$preview);$site['pages']=$live!==null&&isset($live['pages'])&&is_array($live['pages'])?$live['pages']:$this->pages($organizationId,!$preview);return$site;
     }
+
+    /** @return array<string,mixed> */
+    private function snapshot(int $organizationId,array $settings):array
+    {
+        unset($settings['live_snapshot_json'],$settings['scheduled_snapshot_json']);
+        $branding=$this->database->prepare('SELECT logo_path,favicon_path FROM organizations WHERE id=:organization LIMIT 1');
+        $branding->execute(['organization'=>$organizationId]);$brand=$branding->fetch();
+        if(is_array($brand)){$settings['logo_path']=$brand['logo_path']??null;$settings['favicon_path']=$brand['favicon_path']??null;}
+        return['settings'=>$settings,'product_ids'=>$this->selectedProductIds($organizationId),'banners'=>$this->banners($organizationId),'pages'=>$this->pages($organizationId),'captured_at'=>date(DATE_ATOM)];
+    }
+    private function publishSnapshot(int $organizationId,array $snapshot,int $version):void{$this->database->prepare("UPDATE organization_site_versions SET status='archived' WHERE organization_id=:organization AND status='published'")->execute(['organization'=>$organizationId]);$this->database->prepare("UPDATE organization_sites SET live_snapshot_json=:snapshot,live_version=:version,publication_status='published',published_at=NOW(),scheduled_snapshot_json=NULL,scheduled_publish_at=NULL WHERE organization_id=:organization")->execute(['snapshot'=>$this->encode($snapshot),'version'=>$version,'organization'=>$organizationId]);$this->database->prepare("UPDATE organization_site_versions SET status='published',published_at=COALESCE(published_at,NOW()) WHERE organization_id=:organization AND version_number=:version")->execute(['organization'=>$organizationId,'version'=>$version]);}
+    private function processScheduled(int $organizationId):void{$statement=$this->database->prepare('SELECT scheduled_snapshot_json,scheduled_publish_at FROM organization_sites WHERE organization_id=:organization LIMIT 1');$statement->execute(['organization'=>$organizationId]);$row=$statement->fetch();if(!is_array($row)||empty($row['scheduled_snapshot_json'])||empty($row['scheduled_publish_at'])||strtotime((string)$row['scheduled_publish_at'])>time())return;$snapshot=json_decode((string)$row['scheduled_snapshot_json'],true);if(!is_array($snapshot))return;$version=$this->database->prepare("SELECT id,version_number FROM organization_site_versions WHERE organization_id=:organization AND status='scheduled' ORDER BY version_number DESC LIMIT 1");$version->execute(['organization'=>$organizationId]);$item=$version->fetch();$number=is_array($item)?(int)$item['version_number']:((int)$this->settings($organizationId)['live_version']+1);$this->publishSnapshot($organizationId,$snapshot,$number);if(is_array($item))$this->database->prepare("UPDATE organization_site_versions SET status='published',published_at=NOW() WHERE id=:id")->execute(['id'=>$item['id']]);}
+    private function encode(mixed$value):string{return json_encode($value,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);}
+    private function nullable(mixed$value,int$max):?string{$text=trim((string)$value);return$text!==''?mb_substr($text,0,$max):null;}
 
     /** @return array<string,mixed> */
     private function editableSettings(int $organizationId):array{$settings=$this->settings($organizationId);if((int)$settings['is_enabled']!==1)throw new RuntimeException('O Site Institucional ainda não foi liberado pelo ADM Central.');return$settings;}
@@ -312,5 +426,5 @@ final readonly class SiteRepository
     private function link(mixed$value):?string{$link=trim((string)$value);if($link==='')return null;if(str_starts_with($link,'#')||str_starts_with($link,'/'))return$link;return$this->url($link,'o botão do banner');}
     private function slug(string$value):string{$ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',trim($value));$slug=strtolower(is_string($ascii)?$ascii:$value);$slug=trim(preg_replace('/[^a-z0-9]+/','-',$slug)??'','-');if($slug===''||strlen($slug)>120)throw new RuntimeException('Informe um endereço válido para a página.');return$slug;}
     /** @return array<string,mixed> */
-    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','youtube_url'=>'','linkedin_url'=>'','tiktok_url'=>'','classroom_url'=>'','classroom_label'=>'Sala de Aula','webmail_url'=>'','social_bar_enabled'=>1,'site_search_enabled'=>1,'footer_text'=>'','footer_show_legal_data'=>1,'whatsapp_button_enabled'=>1,'whatsapp_button_label'=>'Fale pelo WhatsApp','whatsapp_button_message'=>'Olá! Gostaria de saber mais sobre os cursos.','scholarship_form_enabled'=>0,'scholarship_display_mode'=>'floating','scholarship_popup_delay_seconds'=>15,'scholarship_popup_repeat_hours'=>24,'scholarship_title'=>'GANHE BOLSAS DE ESTUDOS','scholarship_subtitle'=>'Preencha e participe!','scholarship_button_label'=>'Ganhe uma bolsa','seo_title'=>'','seo_description'=>'','published_at'=>null];}
+    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','youtube_url'=>'','linkedin_url'=>'','tiktok_url'=>'','classroom_url'=>'','classroom_label'=>'Sala de Aula','webmail_url'=>'','social_bar_enabled'=>1,'site_search_enabled'=>1,'footer_text'=>'','footer_show_legal_data'=>1,'whatsapp_button_enabled'=>1,'whatsapp_button_label'=>'Fale pelo WhatsApp','whatsapp_button_message'=>'Olá! Gostaria de saber mais sobre os cursos.','scholarship_form_enabled'=>0,'scholarship_display_mode'=>'floating','scholarship_popup_delay_seconds'=>15,'scholarship_popup_repeat_hours'=>24,'scholarship_title'=>'GANHE BOLSAS DE ESTUDOS','scholarship_subtitle'=>'Preencha e participe!','scholarship_button_label'=>'Ganhe uma bolsa','seo_title'=>'','seo_description'=>'','privacy_policy'=>'','cookie_notice'=>'Usamos cookies essenciais e de medição para melhorar sua experiência.','terms_text'=>'','cookie_banner_enabled'=>1,'live_version'=>null,'scheduled_publish_at'=>null,'published_at'=>null];}
 }
