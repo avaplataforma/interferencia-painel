@@ -442,21 +442,25 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
   const validTabs = tabs.map((tab) => tab.dataset.siteTab || '');
   const show = (requestedName, updateHash = true) => {
-    const name = validTabs.includes(requestedName) ? requestedName : 'publicacao';
+    const legacyGroups = { publicacao: 'geral', 'pagina-inicial': 'geral', buscadores: 'geral', contato: 'comunicacao', links: 'comunicacao', whatsapp: 'comunicacao', banners: 'conteudo', paginas: 'conteudo' };
+    const normalizedName = legacyGroups[requestedName] || requestedName;
+    const name = validTabs.includes(normalizedName) ? normalizedName : 'geral';
+    const activeTab = tabs.find((tab) => tab.dataset.siteTab === name);
+    const targets = new Set((activeTab?.dataset.siteTargets || name).split(',').filter(Boolean));
     tabs.forEach((tab) => {
       const active = tab.dataset.siteTab === name;
       tab.setAttribute('aria-selected', active ? 'true' : 'false');
       tab.tabIndex = active ? 0 : -1;
     });
-    panels.forEach((panel) => { panel.hidden = panel.dataset.sitePanel !== name; });
-    if (savebar instanceof HTMLElement) savebar.hidden = ['banners', 'paginas'].includes(name);
+    panels.forEach((panel) => { panel.hidden = !targets.has(panel.dataset.sitePanel || ''); });
+    if (savebar instanceof HTMLElement) savebar.hidden = !['geral', 'cursos', 'comunicacao', 'bolsas'].includes(name);
     if (activeInput instanceof HTMLInputElement) activeInput.value = name;
     if (updateHash && history.replaceState) history.replaceState(null, '', `#${name}`);
   };
 
-  tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.siteTab || 'publicacao')));
+  tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.siteTab || 'geral')));
   window.addEventListener('hashchange', () => show(location.hash.replace('#', ''), false));
-  show(location.hash.replace('#', '') || 'publicacao', false);
+  show(location.hash.replace('#', '') || 'geral', false);
 })();
 
 (() => {

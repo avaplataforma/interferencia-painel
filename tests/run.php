@@ -644,9 +644,13 @@ $tests['carrega personalização visual das organizações'] = static function (
     $repository = file_get_contents($rootPath . '/modules/Organization/OrganizationRepository.php');
     $storage = file_get_contents($rootPath . '/modules/Organization/OrganizationBrandingStorage.php');
     $form = file_get_contents($rootPath . '/views/admin/organizations/form.php');
+    $site = file_get_contents($rootPath . '/views/site/admin.php');
+    $routes = file_get_contents($rootPath . '/routes/web.php');
     assertTrue(is_string($repository) && str_contains($repository, 'primary_color') && str_contains($repository, 'login_welcome_text'));
     assertTrue(is_string($storage) && str_contains($storage, "['image/png' => 'png'"));
-    assertTrue(is_string($form) && str_contains($form, 'enctype="multipart/form-data"') && str_contains($form, 'name="favicon"'));
+    assertTrue(is_string($form) && !str_contains($form, 'name="favicon"') && str_contains($form, 'Geral e identidade'));
+    assertTrue(is_string($site) && str_contains($site, 'enctype="multipart/form-data"') && str_contains($site, 'name="logo"') && str_contains($site, 'name="favicon"'));
+    assertTrue(is_string($routes) && str_contains($routes, '$organizationBranding->store($organizationId,$logo'));
 };
 
 $tests['organiza a administração central da rede'] = static function () use ($rootPath): void {
@@ -1341,10 +1345,12 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
-    assertTrue(str_contains($tenantAdmin,"'bolsas'=>['fa-graduation-cap'"));
+    assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));
+    assertTrue(str_contains($tenantAdmin,'data-site-targets'));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
-    assertTrue(str_contains($tenantAdmin,'Contato e rodapé'));
-    assertTrue(str_contains($tenantAdmin,'Links e acessos'));
+    assertTrue(str_contains($tenantAdmin,'Contato e canais'));
+    assertTrue(str_contains($tenantAdmin,'Banners e páginas'));
+    assertTrue(str_contains($tenantAdmin,'.site-preview-card{grid-column:span 6'));
     assertTrue(str_contains($tenantAdmin,'classroom_url'));
     assertTrue(str_contains($tenantAdmin,'youtube_url'));
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));

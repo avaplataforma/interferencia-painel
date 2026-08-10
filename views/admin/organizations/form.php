@@ -1,7 +1,6 @@
 <?php
 $editing=is_array($organization);$siteDomain=null;
 foreach($domains as$domain){if(($domain['purpose']??'')==='site'&&($domain['is_primary']??0)){$siteDomain=$domain;break;}}
-$logo=(string)($organization['logo_path']??'');$favicon=(string)($organization['favicon_path']??'');
 $application=$application??null;$contracts=$contracts??[];
 ?>
 <style>
@@ -73,11 +72,9 @@ $application=$application??null;$contracts=$contracts??[];
         <label class="field-full">Login exclusivo da franquia *<div class="input-prefix"><span>mundointer.com.br/</span><input required maxlength="100" name="panel_slug" value="<?= $escape($organization['panel_slug']??'') ?>" placeholder="nome-da-franquia"></div><small>Endereço usado pela equipe da franquia para entrar no painel.</small></label>
         <label class="field-full">Domínio público do site<input maxlength="253" name="site_host" value="<?= $escape($siteDomain['host']??'') ?>" placeholder="www.franquiatal.com.br"><small>Informe somente o domínio, sem caminhos internos.</small></label>
         <label class="checkbox-row field-full"><input type="checkbox" name="domain_active" value="1" <?= ($siteDomain['status']??'pending')==='active'?'checked':'' ?>> Domínio público já validado e ativo</label>
-        <div class="organization-panel-block"><h3>Identidade visual do painel</h3><p class="meta">Marca aplicada no login exclusivo e na navegação interna da franquia.</p></div>
+        <div class="organization-panel-block"><h3>Cores institucionais do painel</h3><p class="meta">O logo e o favicon passam a ser administrados pela própria franquia em <strong>ADM → Site Institucional → Geral e identidade</strong>.</p></div>
         <label class="field-third">Cor principal *<div class="color-field"><input type="color" name="primary_color" value="<?= $escape($organization['primary_color']??'#ed1c24') ?>"><input aria-label="Cor principal em hexadecimal" maxlength="7" value="<?= $escape($organization['primary_color']??'#ed1c24') ?>" data-color-text readonly></div></label>
         <label class="field-third">Cor secundária<div class="color-field"><input type="color" name="secondary_color" value="<?= $escape($organization['secondary_color']??'#102a56') ?>"><input aria-label="Cor secundária em hexadecimal" maxlength="7" value="<?= $escape($organization['secondary_color']??'#102a56') ?>" data-color-text readonly></div></label>
-        <label>Logo da franquia<input type="file" name="logo" accept="image/png,image/jpeg,image/webp"><small>PNG, JPG ou WebP, até 3 MB.</small><?php if($logo!==''):?><span class="organization-brand-preview"><img src="<?= $escape($basePath.$logo) ?>" alt="Logo atual"><label class="checkbox-row"><input type="checkbox" name="remove_logo" value="1"> Remover logo atual</label></span><?php endif;?></label>
-        <label>Favicon<input type="file" name="favicon" accept="image/png,image/jpeg,image/webp"><small>Use uma imagem quadrada.</small><?php if($favicon!==''):?><span class="organization-brand-preview icon"><img src="<?= $escape($basePath.$favicon) ?>" alt="Favicon atual"><label class="checkbox-row"><input type="checkbox" name="remove_favicon" value="1"> Remover favicon atual</label></span><?php endif;?></label>
       </div>
     </section>
 
