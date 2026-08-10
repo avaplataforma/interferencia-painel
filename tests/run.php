@@ -1108,10 +1108,15 @@ $tests['organiza cadastro da franquia e comunicacao do AVA'] = static function (
     $repository=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $plugin=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php');
-    $tabs=['dados','endereco','contatos','documentos','marca','ava','polos','integracoes'];
+    $tabs=['dados','contatos','documentos','polos','contrato','painel','ava','site','integracoes'];
     $last=-1;
     foreach($tabs as$tab){$position=strpos($form,'data-organization-tab="'.$tab.'"');assertTrue($position!==false&&$position>$last);$last=$position;}
     assertTrue(!str_contains($form,'data-organization-tab="acesso"'));
+    assertTrue(!str_contains($form,'data-organization-tab="endereco"'));
+    assertTrue(!str_contains($form,'data-organization-tab="marca"'));
+    assertTrue(str_contains($form,'data-organization-panel="painel"'));
+    assertTrue(str_contains($form,'data-organization-panel="site"'));
+    assertTrue(strpos($form,'name="postal_code"')<strpos($form,'data-organization-panel="contatos"'));
     assertTrue(str_contains($form,'name="panel_slug"'));
     assertTrue(!str_contains($form,'name="login_welcome_text"'));
     assertTrue(!str_contains($form,'name="login_title"'));
