@@ -25,14 +25,12 @@ final readonly class SiteRepository
     public function saveGovernance(int $organizationId,array $data):void
     {
         $this->assertOrganization($organizationId);
-        $template=(string)($data['template_key']??'modern');
-        if(!in_array($template,['modern','classic','minimal'],true))throw new RuntimeException('Selecione um modelo-base válido.');
         $this->ensure($organizationId);
         $fulfillment=(string)($data['checkout_fulfillment_mode']??'manual_review');
         if(!in_array($fulfillment,['manual_review','automatic'],true))throw new RuntimeException('Selecione uma regra válida para a liberação das compras.');
-        $statement=$this->database->prepare('UPDATE organization_sites SET is_enabled=:enabled,template_key=:template,allow_catalog=:catalog,allow_store=:store,checkout_fulfillment_mode=:fulfillment,allow_custom_pages=:pages,max_banners=:banners,max_pages=:max_pages,max_featured_courses=:courses WHERE organization_id=:organization');
+        $statement=$this->database->prepare('UPDATE organization_sites SET is_enabled=:enabled,allow_catalog=:catalog,allow_store=:store,checkout_fulfillment_mode=:fulfillment,allow_custom_pages=:pages,max_banners=:banners,max_pages=:max_pages,max_featured_courses=:courses WHERE organization_id=:organization');
         $statement->execute([
-            'enabled'=>(int)(($data['is_enabled']??false)===true),'template'=>$template,
+            'enabled'=>(int)(($data['is_enabled']??false)===true),
             'catalog'=>(int)(($data['allow_catalog']??false)===true),'store'=>(int)(($data['allow_store']??false)===true),
             'fulfillment'=>$fulfillment,
             'pages'=>(int)(($data['allow_custom_pages']??false)===true),
@@ -54,6 +52,8 @@ final readonly class SiteRepository
         if($mode==='store'&&(int)$current['allow_store']!==1)throw new RuntimeException('O formato loja não está liberado pelo ADM Central.');
         $status=(string)($data['publication_status']??'draft');
         if(!in_array($status,['draft','published','maintenance'],true))throw new RuntimeException('Situação de publicação inválida.');
+        $template=(string)($data['template_key']??($current['template_key']??'modern'));
+        if(!in_array($template,['modern','classic','minimal'],true))throw new RuntimeException('Selecione um modelo-base válido.');
         $email=strtolower(trim((string)($data['contact_email']??'')));
         if($email!==''&&filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail de contato válido.');
         $scholarshipMode=(string)($data['scholarship_display_mode']??'floating');
@@ -63,7 +63,10 @@ final readonly class SiteRepository
         $allowed=array_map('intval',array_column($this->availableProducts($organizationId),'id'));
         if(array_diff($productIds,$allowed)!==[])throw new RuntimeException('Um dos cursos selecionados não pertence ao catálogo disponível da franquia.');
         $values=[
-            'mode'=>$mode,'status'=>$status,'site_title'=>$this->text($data['site_title']??'',160,'nome do site',true),
+            'mode'=>$mode,'status'=>$status,'template'=>$template,
+            'site_primary_color'=>$this->color($data['site_primary_color']??($current['site_primary_color']??''),'#ed1c24','cor principal do site'),
+            'site_secondary_color'=>$this->color($data['site_secondary_color']??($current['site_secondary_color']??''),'#102a56','cor secundária do site'),
+            'site_title'=>$this->text($data['site_title']??'',160,'nome do site',true),
             'hero_title'=>$this->text($data['hero_title']??'',190,'título principal',true),'hero_text'=>$this->text($data['hero_text']??'',700,'texto principal'),
             'about_title'=>$this->text($data['about_title']??'',160,'título institucional'),'about_text'=>$this->text($data['about_text']??'',5000,'texto institucional'),
             'email'=>$email!==''?$email:null,'phone'=>$this->text($data['contact_phone']??'',30,'telefone'),'whatsapp'=>$this->text($data['whatsapp']??'',30,'WhatsApp'),
@@ -82,7 +85,7 @@ final readonly class SiteRepository
         ];
         $this->database->beginTransaction();
         try{
-            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
+            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,template_key=:template,site_primary_color=:site_primary_color,site_secondary_color=:site_secondary_color,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
             $statement->execute($values);
             $this->database->prepare('DELETE FROM organization_site_products WHERE organization_id=:organization')->execute(['organization'=>$organizationId]);
             $insert=$this->database->prepare('INSERT INTO organization_site_products(organization_id,finance_product_id,sort_order) VALUES(:organization,:product,:sort_order)');
@@ -303,6 +306,7 @@ final readonly class SiteRepository
     private function assertOrganization(int $organizationId):void{if($organizationId<1)throw new RuntimeException('Franquia inválida.');$s=$this->database->prepare('SELECT 1 FROM organizations WHERE id=:id');$s->execute(['id'=>$organizationId]);if($s->fetchColumn()===false)throw new RuntimeException('Franquia não encontrada.');}
     private function limit(mixed$value,int$min,int$max,string$label):int{$number=(int)$value;if($number<$min||$number>$max)throw new RuntimeException("Informe entre {$min} e {$max} {$label}.");return$number;}
     private function checked(mixed$value):bool{return $value===true||(string)$value==='1'||(string)$value==='on';}
+    private function color(mixed$value,string$fallback,string$label):string{$color=strtolower(trim((string)$value));if($color==='')return$fallback;if(preg_match('/^#[0-9a-f]{6}$/',$color)!==1)throw new RuntimeException('Informe uma '.$label.' válida.');return$color;}
     private function text(mixed$value,int$max,string$label,bool$required=false):?string{$text=trim((string)$value);if($required&&$text==='')throw new RuntimeException('Informe o '.$label.'.');if(mb_strlen($text)>$max)throw new RuntimeException('O campo '.$label.' excede o tamanho permitido.');return$text!==''?$text:null;}
     private function url(mixed$value,string$label):?string{$url=trim((string)$value);if($url==='')return null;if(filter_var($url,FILTER_VALIDATE_URL)===false||!str_starts_with($url,'https://'))throw new RuntimeException('Informe uma URL HTTPS válida para '.$label.'.');return$url;}
     private function link(mixed$value):?string{$link=trim((string)$value);if($link==='')return null;if(str_starts_with($link,'#')||str_starts_with($link,'/'))return$link;return$this->url($link,'o botão do banner');}

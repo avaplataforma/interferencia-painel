@@ -1301,6 +1301,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     $expansion=(string)file_get_contents($rootPath.'/database/migrations/20260809_996000_expand_institutional_sites.php');
     $marketing=(string)file_get_contents($rootPath.'/database/migrations/20260810_999000_add_site_marketing_tools.php');
     $navigationFooter=(string)file_get_contents($rootPath.'/database/migrations/20260810_999100_add_site_navigation_footer.php');
+    $visualIdentity=(string)file_get_contents($rootPath.'/database/migrations/20260810_999200_add_site_visual_identity.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
@@ -1324,6 +1325,8 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($navigationFooter,'classroom_url'));
     assertTrue(str_contains($navigationFooter,'webmail_url'));
     assertTrue(str_contains($navigationFooter,'site_search_enabled'));
+    assertTrue(str_contains($visualIdentity,'site_primary_color'));
+    assertTrue(str_contains($visualIdentity,'site_secondary_color'));
     assertTrue(str_contains($repository,'saveGovernance'));
     assertTrue(str_contains($repository,'saveContent'));
     assertTrue(str_contains($repository,'saveBanner'));
@@ -1345,6 +1348,8 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
+    assertTrue(str_contains($tenantAdmin,'Modelo e cores do site'));
+    assertTrue(str_contains($publicSite,'<title><?= $escape($siteTitle) ?></title>'));
     assertTrue(str_contains($tenantAdmin,'Título do site'));
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));

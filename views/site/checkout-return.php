@@ -1,6 +1,8 @@
 <?php
-$primary = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['primary_color'] ?? '')) === 1 ? (string) $site['primary_color'] : '#ed1c24';
-$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['secondary_color'] ?? '')) === 1 ? (string) $site['secondary_color'] : '#102a56';
+$primaryCandidate = (string) ($site['site_primary_color'] ?? '');
+$primary = preg_match('/^#[0-9a-fA-F]{6}$/', $primaryCandidate) === 1 ? $primaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['primary_color'] ?? '')) === 1 ? (string) $site['primary_color'] : '#ed1c24');
+$secondaryCandidate = (string) ($site['site_secondary_color'] ?? '');
+$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', $secondaryCandidate) === 1 ? $secondaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['secondary_color'] ?? '')) === 1 ? (string) $site['secondary_color'] : '#102a56');
 $publicBase = rtrim((string) $basePath, '/') . '/site';
 $messages = [
  'success' => ['Pedido recebido', 'O checkout foi concluído. A confirmação financeira será atualizada automaticamente e nossa equipe dará sequência à matrícula.', '✓'],

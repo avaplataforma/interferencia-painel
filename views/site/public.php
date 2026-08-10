@@ -1,11 +1,14 @@
 <?php
-$primary = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['primary_color'] ?? '')) === 1 ? (string) $site['primary_color'] : '#ed1c24';
-$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['secondary_color'] ?? '')) === 1 ? (string) $site['secondary_color'] : '#102a56';
+$primaryCandidate = (string) ($site['site_primary_color'] ?? '');
+$primary = preg_match('/^#[0-9a-fA-F]{6}$/', $primaryCandidate) === 1 ? $primaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['primary_color'] ?? '')) === 1 ? (string) $site['primary_color'] : '#ed1c24');
+$secondaryCandidate = (string) ($site['site_secondary_color'] ?? '');
+$secondary = preg_match('/^#[0-9a-fA-F]{6}$/', $secondaryCandidate) === 1 ? $secondaryCandidate : (preg_match('/^#[0-9a-fA-F]{6}$/', (string) ($site['secondary_color'] ?? '')) === 1 ? (string) $site['secondary_color'] : '#102a56');
 $logo = (string) ($site['logo_path'] ?? '');
 $favicon = (string) ($site['favicon_path'] ?? '');
 $siteTitle = (string) ($site['site_title'] ?: $site['display_name']);
 $seoTitle = (string) ($site['seo_title'] ?: $siteTitle);
 $seoDescription = (string) ($site['seo_description'] ?: $site['hero_text']);
+$templateKey = in_array((string) ($site['template_key'] ?? 'modern'), ['modern', 'classic', 'minimal'], true) ? (string) $site['template_key'] : 'modern';
 $store = ($site['selected_mode'] ?? 'catalog') === 'store';
 $publicBase = rtrim((string) $basePath, '/') . '/site';
 $whatsappDigits = preg_replace('/\D+/', '', (string) ($site['whatsapp'] ?? '')) ?? '';
@@ -37,8 +40,12 @@ $cnpj = strlen($cnpjDigits) === 14 ? substr($cnpjDigits, 0, 2) . '.' . substr($c
 <head>
  <meta charset="utf-8">
  <meta name="viewport" content="width=device-width,initial-scale=1">
- <title><?= $escape($seoTitle) ?></title>
+ <title><?= $escape($siteTitle) ?></title>
  <meta name="description" content="<?= $escape($seoDescription) ?>">
+ <meta property="og:title" content="<?= $escape($seoTitle) ?>">
+ <meta property="og:description" content="<?= $escape($seoDescription) ?>">
+ <meta name="twitter:title" content="<?= $escape($seoTitle) ?>">
+ <meta name="twitter:description" content="<?= $escape($seoDescription) ?>">
  <?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?>
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css">
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/solid.min.css">
@@ -64,8 +71,12 @@ $cnpj = strlen($cnpjDigits) === 14 ? substr($cnpjDigits, 0, 2) . '.' . substr($c
   @media(max-width:850px){.contact{grid-template-columns:1fr}}
   @media(max-width:650px){.scholarship-rail{padding:.72rem .62rem;font-size:.85rem}.floating-action.whatsapp-orb{width:3.25rem;height:3.25rem;padding:0;font-size:1.6rem}}
  </style>
+ <style>
+ .site-template-classic h1,.site-template-classic h2,.site-template-classic h3{font-family:Georgia,"Times New Roman",serif;letter-spacing:-.02em}.site-template-classic .hero{background:linear-gradient(120deg,var(--secondary),color-mix(in srgb,var(--secondary) 72%,var(--primary)))}.site-template-classic .course,.site-template-classic .banner,.site-template-classic .contact{border-radius:.35rem}
+ .site-template-minimal .hero{padding:5rem 0;background:var(--secondary)}.site-template-minimal .hero:after{display:none}.site-template-minimal .course,.site-template-minimal .banner,.site-template-minimal .contact,.site-template-minimal .button{border-radius:.35rem;box-shadow:none}.site-template-minimal .section{padding:4rem 0}
+ </style>
 </head>
-<body data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>">
+<body class="site-template-<?= $escape($templateKey) ?>" data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>">
 <?php if ($socialBarEnabled && ($socialLinks !== [] || $searchEnabled)): ?>
 <div class="utility"><div class="shell utility-row"><nav class="socials" aria-label="Redes sociais"><?php foreach ($socialLinks as $social): ?><a class="social-link" href="<?= $escape($social['url']) ?>" <?= str_starts_with($social['url'], 'http') ? 'target="_blank" rel="noopener"' : '' ?> title="<?= $escape($social['label']) ?>" aria-label="<?= $escape($social['label']) ?>"><i class="<?= $escape($social['icon']) ?>"></i></a><?php endforeach; ?></nav><div class="utility-actions"><?php if ($searchEnabled): ?><button class="utility-button" type="button" data-site-search-open aria-label="Pesquisar no site" title="Pesquisar"><i class="fa-solid fa-magnifying-glass"></i></button><?php endif; ?></div></div></div>
 <?php endif; ?>
