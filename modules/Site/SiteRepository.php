@@ -184,7 +184,7 @@ final readonly class SiteRepository
     /** @return list<array<string,mixed>> */
     public function publicUnits(int $organizationId,?int $productUnitId):array
     {
-        $sql='SELECT id,code,name,city,state FROM units WHERE organization_id=:organization AND is_active=1'.($productUnitId!==null?' AND id=:unit':'').' ORDER BY name';
+        $sql='SELECT id,code,name,city FROM units WHERE organization_id=:organization AND is_active=1'.($productUnitId!==null?' AND id=:unit':'').' ORDER BY name';
         $statement=$this->database->prepare($sql);$params=['organization'=>$organizationId];if($productUnitId!==null)$params['unit']=$productUnitId;$statement->execute($params);return$statement->fetchAll();
     }
 
