@@ -198,3 +198,18 @@ fornecedor um identificador estável de curso e a forma oficial de criar o acess
 do aluno. A solução preferencial é SSO ou deep link assinado; LTI é a segunda
 opção. Iframe simples não deve transportar credenciais nem substituir uma
 integração acadêmica oficial.
+
+### Curadoria e publicação assistida
+
+O ADM Central controla duas etapas separadas após cada sincronização:
+
+1. **Curadoria:** aprovar ou rejeitar o curso, definir nome e descrição
+   comerciais e registrar observações internas.
+2. **Liberação por franquia:** escolher a franquia, preço próprio, quantidade
+   máxima de parcelas, visibilidade e situação da oferta.
+
+Uma oferta aprovada aparece na loja em uma seção própria, identificada como
+**Catálogo PRO** e separada dos cursos do AVA Cursos. O botão público cria ou
+atualiza um Lead e registra o interesse, mas não emite cobrança nem cria
+matrícula automaticamente. Até a homologação da API acadêmica do fornecedor, a
+equipe confirma manualmente pagamento, matrícula e acesso ao AVA parceiro.

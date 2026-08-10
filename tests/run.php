@@ -1588,6 +1588,26 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains($view,'nunca publica, vende ou matricula automaticamente'));
 };
 
+$tests['publica Catalogo PRO por franquia com venda assistida'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999800_create_provider_course_offers.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $admin=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $public=(string)file_get_contents($rootPath.'/views/site/public.php');
+
+    assertTrue(str_contains($migration,'organization_provider_course_offers'));
+    assertTrue(str_contains($migration,"sale_mode VARCHAR(30) NOT NULL DEFAULT 'assisted'"));
+    assertTrue(str_contains($repository,'public function review'));
+    assertTrue(str_contains($repository,'public function saveOffer'));
+    assertTrue(str_contains($siteRepository,'external_products'));
+    assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}'"));
+    assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}/interesse'"));
+    assertTrue(str_contains($admin,'Liberação por franquia'));
+    assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
+    assertTrue(str_contains($public,'Curso ministrado no AVA do parceiro'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

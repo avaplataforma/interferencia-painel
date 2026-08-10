@@ -169,11 +169,93 @@ final readonly class CourseProviderRepository
         return $statement->fetchAll() ?: [];
     }
 
-    /** @return array{total:int,available:int,categories:int} */
+    /** @return list<array<string,mixed>> */
+    public function organizations(): array
+    {
+        $statement = $this->database->query("SELECT id,display_name,legal_name FROM organizations WHERE status='active' ORDER BY display_name,legal_name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    public function review(int $courseId, string $status, string $commercialName, string $commercialDescription, string $notes, ?int $userId): void
+    {
+        if (!in_array($status, ['pending', 'approved', 'rejected'], true)) throw new RuntimeException('Situação da curadoria inválida.');
+        $commercialName = trim($commercialName);
+        $commercialDescription = trim($commercialDescription);
+        $notes = trim($notes);
+        if ($status === 'approved' && $commercialName === '') throw new RuntimeException('Informe o nome comercial antes de aprovar o curso.');
+        if (mb_strlen($commercialName) > 500) throw new RuntimeException('O nome comercial é muito extenso.');
+
+        $statement = $this->database->prepare('UPDATE provider_courses SET review_status=:status,commercial_name=:name,commercial_description=:description,review_notes=:notes,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
+        $statement->execute([
+            'status' => $status,
+            'name' => $commercialName !== '' ? $commercialName : null,
+            'description' => $commercialDescription !== '' ? $commercialDescription : null,
+            'notes' => $notes !== '' ? $notes : null,
+            'user' => $userId,
+            'id' => $courseId,
+        ]);
+        if ($statement->rowCount() !== 1) {
+            $exists = $this->database->prepare('SELECT 1 FROM provider_courses WHERE id=:id');
+            $exists->execute(['id' => $courseId]);
+            if ($exists->fetchColumn() === false) throw new RuntimeException('Curso externo não encontrado.');
+        }
+
+        if ($status !== 'approved') {
+            $this->database->prepare('UPDATE organization_provider_course_offers SET is_visible=0,updated_by=:user WHERE provider_course_id=:course')->execute(['user' => $userId, 'course' => $courseId]);
+        }
+    }
+
+    public function saveOffer(int $courseId, int $organizationId, string $name, string $description, float $price, int $installments, bool $visible, bool $active, ?int $userId): int
+    {
+        if ($organizationId < 1) throw new RuntimeException('Selecione a franquia.');
+        $course = $this->database->prepare("SELECT id,commercial_name,name,review_status,is_available FROM provider_courses WHERE id=:id LIMIT 1");
+        $course->execute(['id' => $courseId]);
+        $row = $course->fetch();
+        if (!is_array($row)) throw new RuntimeException('Curso externo não encontrado.');
+        if (($row['review_status'] ?? '') !== 'approved' || (int)($row['is_available'] ?? 0) !== 1) throw new RuntimeException('Apenas cursos disponíveis e aprovados podem ser liberados.');
+
+        $organization = $this->database->prepare("SELECT 1 FROM organizations WHERE id=:id AND status='active'");
+        $organization->execute(['id' => $organizationId]);
+        if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia ativa não encontrada.');
+
+        $name = trim($name) ?: trim((string)($row['commercial_name'] ?: $row['name']));
+        $description = trim($description);
+        $price = round($price, 2);
+        $installments = max(1, min(60, $installments));
+        if ($name === '' || mb_strlen($name) > 500) throw new RuntimeException('Informe um nome comercial válido.');
+        if ($price < 0) throw new RuntimeException('O preço não pode ser negativo.');
+        if ($visible && $price < 5) throw new RuntimeException('Informe um preço comercial de pelo menos R$ 5,00 antes de publicar.');
+
+        $statement = $this->database->prepare("INSERT INTO organization_provider_course_offers(organization_id,provider_course_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by) VALUES(:organization,:course,:name,:description,:price,:installments,'assisted',:visible,:active,:user,:user) ON DUPLICATE KEY UPDATE commercial_name=VALUES(commercial_name),commercial_description=VALUES(commercial_description),price=VALUES(price),max_installments=VALUES(max_installments),sale_mode='assisted',is_visible=VALUES(is_visible),is_active=VALUES(is_active),updated_by=VALUES(updated_by)");
+        $statement->execute(['organization' => $organizationId, 'course' => $courseId, 'name' => $name, 'description' => $description !== '' ? $description : null, 'price' => $price, 'installments' => $installments, 'visible' => (int)$visible, 'active' => (int)$active, 'user' => $userId]);
+
+        $id = (int)$this->database->lastInsertId();
+        if ($id > 0) return $id;
+        $current = $this->database->prepare('SELECT id FROM organization_provider_course_offers WHERE organization_id=:organization AND provider_course_id=:course');
+        $current->execute(['organization' => $organizationId, 'course' => $courseId]);
+        return (int)$current->fetchColumn();
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function offers(): array
+    {
+        $statement = $this->database->query("SELECT o.*,org.display_name organization_name,COALESCE(NULLIF(o.commercial_name,''),NULLIF(pc.commercial_name,''),pc.name) course_name,c.name catalog_name,pc.review_status,pc.is_available FROM organization_provider_course_offers o INNER JOIN organizations org ON org.id=o.organization_id INNER JOIN provider_courses pc ON pc.id=o.provider_course_id INNER JOIN course_catalogs c ON c.id=pc.catalog_id ORDER BY org.display_name,course_name");
+        return $statement->fetchAll() ?: [];
+    }
+
+    public function deleteOffer(int $offerId): void
+    {
+        $statement = $this->database->prepare('DELETE FROM organization_provider_course_offers WHERE id=:id');
+        $statement->execute(['id' => $offerId]);
+        if ($statement->rowCount() !== 1) throw new RuntimeException('Liberação de catálogo não encontrada.');
+    }
+
+    /** @return array{total:int,available:int,categories:int,approved:int,offers:int} */
     public function summary(): array
     {
-        $row = $this->database->query("SELECT COUNT(*) total,SUM(is_available=1) available,COUNT(DISTINCT NULLIF(category,'')) categories FROM provider_courses pc INNER JOIN course_provider_integrations p ON p.id=pc.provider_id WHERE p.provider_code='escola_avancada'")->fetch() ?: [];
-        return ['total' => (int)($row['total'] ?? 0), 'available' => (int)($row['available'] ?? 0), 'categories' => (int)($row['categories'] ?? 0)];
+        $row = $this->database->query("SELECT COUNT(*) total,SUM(is_available=1) available,COUNT(DISTINCT NULLIF(category,'')) categories,SUM(review_status='approved') approved FROM provider_courses pc INNER JOIN course_provider_integrations p ON p.id=pc.provider_id WHERE p.provider_code='escola_avancada'")->fetch() ?: [];
+        $offers = (int)$this->database->query('SELECT COUNT(*) FROM organization_provider_course_offers WHERE is_active=1')->fetchColumn();
+        return ['total' => (int)($row['total'] ?? 0), 'available' => (int)($row['available'] ?? 0), 'categories' => (int)($row['categories'] ?? 0), 'approved' => (int)($row['approved'] ?? 0), 'offers' => $offers];
     }
 
     private function recordSyncFailure(string $error): void
