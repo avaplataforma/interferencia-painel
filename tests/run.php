@@ -1335,7 +1335,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
     assertTrue(str_contains($tenantAdmin,'Cursos em destaque'));
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
-    assertTrue(str_contains($tenantAdmin,'data-site-tab="bolsas"'));
+    assertTrue(str_contains($tenantAdmin,"'bolsas'=>['fa-graduation-cap'"));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
     assertTrue(str_contains($tenantAdmin,'Contato e rodapé'));
     assertTrue(str_contains($tenantAdmin,'Páginas personalizadas'));
