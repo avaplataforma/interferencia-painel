@@ -1715,6 +1715,7 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     assertTrue(str_contains($repository,'public function saveCapabilities'));
     assertTrue(str_contains($repository,"COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name"));
     assertTrue(str_contains($repository,"course.review_status='approved' AND course.release_status IN ('released','published')"));
+    assertTrue(substr_count($repository,"THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)")>=2);
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/capabilities'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/catalogs/{catalogId:\\d+}/apply-policy'"));
     assertTrue(str_contains($catalogView,'Matriz real de recursos deste fornecedor'));

@@ -370,8 +370,14 @@ final readonly class CourseProviderRepository
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.certificate_access,0) END capability_certificate_access,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.suspend_access,0) END capability_suspend_access,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.send_access,0) END capability_send_access,
-            (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1) course_count,
-            (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1) approved_count,
+            CASE WHEN catalog.code='ava-cursos'
+                THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1)
+            END course_count,
+            CASE WHEN catalog.code='ava-cursos'
+                THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1)
+            END approved_count,
             (SELECT COUNT(*) FROM organization_course_catalog_access access WHERE access.course_catalog_id=catalog.id AND access.is_enabled=1) organization_count
             FROM course_catalogs catalog
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
