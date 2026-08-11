@@ -1639,9 +1639,9 @@ $tests['controla catalogos comerciais pela aba AVA da franquia'] = static functi
     assertTrue(str_contains($migration,"'ava-cursos'"));
     assertTrue(str_contains($repository,'catalogsForOrganization'));
     assertTrue(str_contains($repository,'saveCatalogAccess'));
-    assertTrue(str_contains($site,'access.is_enabled=1'));
+    assertTrue(str_contains($site,'COALESCE(access.is_enabled,1)=1'));
     assertTrue(str_contains($financeCatalog,'catalog_enabled'));
-    assertTrue(str_contains($view,'Catálogos liberados para venda'));
+    assertTrue(str_contains($view,'Catálogos e exceções da franquia'));
     assertTrue(str_contains($view,'catalog_ids[]'));
 };
 
