@@ -453,7 +453,16 @@ final readonly class SiteRepository
     {
         $statement=$this->database->prepare("SELECT offer.id,offer.organization_id,offer.price value,offer.max_installments,offer.sale_mode,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(offer.commercial_description,''),NULLIF(course.commercial_description,''),course.description) description,course.category,course.workload workload_text,course.lesson_count,course.cover_url,catalog.name catalog_name,catalog.code catalog_code,provider.name provider_name,provider.delivery_mode,provider.launch_url_template,course.remote_id,course.external_key FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=offer.organization_id AND access.is_enabled=1 INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id WHERE offer.organization_id=:organization AND offer.is_active=1 AND offer.is_visible=1 AND course.review_status='approved' AND course.is_available=1 AND catalog.is_active=1 AND provider.is_active=1 ORDER BY catalog.name,name");
         $statement->execute(['organization'=>$organizationId]);$products=$statement->fetchAll()?:[];
-        foreach($products as&$product){$product['is_external']=1;$product['modality']='AVA do parceiro';$product['workload_hours']=(int)(preg_replace('/\D+/', '', (string)($product['workload_text']??''))?:0);$product['billing_types']='[]';$product['minutes_to_expire']=0;$product['seo_title']=$product['name'];$product['seo_description']=$product['description'];}
+        foreach($products as&$product){$product['is_external']=1;$product['product_kind']='provider_course';$product['modality']='AVA do parceiro';$product['workload_hours']=(int)(preg_replace('/\D+/', '', (string)($product['workload_text']??''))?:0);$product['billing_types']='[]';$product['minutes_to_expire']=0;$product['seo_title']=$product['name'];$product['seo_description']=$product['description'];}
+        unset($product);return$products;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function externalContentProducts(int $organizationId):array
+    {
+        $statement=$this->database->prepare("SELECT offer.id,offer.organization_id,offer.price value,offer.max_installments,offer.sale_mode,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,COALESCE(NULLIF(offer.commercial_description,''),NULLIF(content.commercial_description,''),'Conteúdo individual disponível para matrícula.') description,COALESCE(NULLIF(content.commercial_category,''),'Conteúdo individual') category,COALESCE(NULLIF(content.commercial_workload,''),'') workload_text,COALESCE(NULLIF(content.commercial_cover_url,''),'') cover_url,catalog.name catalog_name,catalog.code catalog_code,provider.name provider_name,provider.delivery_mode,provider.launch_url_template,content.external_key,content.content_type FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=offer.organization_id AND access.is_enabled=1 INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id WHERE offer.organization_id=:organization AND offer.is_active=1 AND offer.is_visible=1 AND content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 AND catalog.is_active=1 AND provider.is_active=1 ORDER BY catalog.name,name");
+        $statement->execute(['organization'=>$organizationId]);$products=$statement->fetchAll()?:[];
+        foreach($products as&$product){$product['is_external']=1;$product['product_kind']='provider_content';$product['modality']='AVA Cursos';$product['lesson_count']=1;$product['workload_hours']=(int)(preg_replace('/\D+/','',(string)($product['workload_text']??''))?:0);$product['billing_types']='[]';$product['minutes_to_expire']=0;$product['seo_title']=$product['name'];$product['seo_description']=$product['description'];}
         unset($product);return$products;
     }
 
@@ -461,6 +470,13 @@ final readonly class SiteRepository
     public function publicExternalProduct(int $organizationId,int $offerId):?array
     {
         foreach($this->externalProducts($organizationId)as$product)if((int)$product['id']===$offerId)return$product;
+        return null;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function publicExternalContent(int $organizationId,int $offerId):?array
+    {
+        foreach($this->externalContentProducts($organizationId)as$product)if((int)$product['id']===$offerId)return$product;
         return null;
     }
 
@@ -477,7 +493,7 @@ final readonly class SiteRepository
         $ids=$live!==null&&isset($live['product_ids'])&&is_array($live['product_ids'])?array_map('intval',$live['product_ids']):$this->selectedProductIds($organizationId);$products=[];
         if($ids!==[]){$marks=implode(',',array_fill(0,count($ids),'?'));$query=$this->database->prepare("SELECT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM finance_products p INNER JOIN organization_finance_products scope ON scope.finance_product_id=p.id AND scope.organization_id=? AND scope.is_visible=1 WHERE p.id IN ($marks) AND p.is_active=1 AND (scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=? WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND COALESCE(access.is_enabled,1)=1))");$query->execute([$organizationId,...$ids,$organizationId]);$byId=[];foreach($query->fetchAll()as$row)$byId[(int)$row['id']]=$row;foreach($ids as$id)if(isset($byId[$id]))$products[]=$byId[$id];}
         $seo=$this->productSeo($organizationId);$details=$this->productDetails($organizationId);foreach($products as&$product){$id=(int)$product['id'];if(isset($seo[$id]))$product=array_replace($product,$seo[$id]);if(isset($details[$id]))$product=array_replace($product,$details[$id]);}unset($product);
-        $site['products']=$products;$site['external_products']=$this->externalProducts($organizationId);$site['banners']=$live!==null&&isset($live['banners'])&&is_array($live['banners'])?$live['banners']:$this->banners($organizationId,!$preview);$site['pages']=$live!==null&&isset($live['pages'])&&is_array($live['pages'])?$live['pages']:$this->pages($organizationId,!$preview);$site['blocks']=$live!==null&&isset($live['blocks'])&&is_array($live['blocks'])?$live['blocks']:$this->blocks($organizationId,!$preview);return$site;
+        $site['products']=$products;$site['external_products']=array_merge($this->externalProducts($organizationId),$this->externalContentProducts($organizationId));$site['banners']=$live!==null&&isset($live['banners'])&&is_array($live['banners'])?$live['banners']:$this->banners($organizationId,!$preview);$site['pages']=$live!==null&&isset($live['pages'])&&is_array($live['pages'])?$live['pages']:$this->pages($organizationId,!$preview);$site['blocks']=$live!==null&&isset($live['blocks'])&&is_array($live['blocks'])?$live['blocks']:$this->blocks($organizationId,!$preview);return$site;
     }
 
     /** @return array<string,mixed> */

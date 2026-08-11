@@ -283,6 +283,23 @@ acadêmico: não publica cursos, não define preços, não gera cobranças e nã
 matrículas comerciais automaticamente. O destino acadêmico continua sendo o
 AVA Cursos, que abre o conteúdo EXPERT pelo link temporário oficial.
 
+Os cursos EXPERT são decompostos sem duplicar o material do fornecedor:
+
+1. curso, semestre e disciplina continuam como estrutura acadêmica;
+2. cada aula/unidade com `type` e `batch` vira um conteúdo individual canônico;
+3. o mesmo conteúdo usado em mais de um curso é armazenado uma vez e vinculado
+   a todos os cursos de origem;
+4. o ADM Central aprova ou bloqueia cada conteúdo individual;
+5. cada franquia recebe seu próprio nome comercial, preço, parcelamento e estado
+   de publicação para o conteúdo;
+6. a loja apresenta o item como produto individual, mas o acesso continua sendo
+   gerado pelo `POST /api/v2/content/link` exatamente para o `type` e `batch`
+   adquiridos.
+
+A sincronização atualiza nome, estrutura e disponibilidade sem apagar curadoria,
+preços ou ofertas já definidos. Conteúdos retirados pelo fornecedor deixam de
+aceitar novas vendas, preservando o histórico das vendas anteriores.
+
 ## IESDE e Catálogo MASTER por LTI 1.3
 
 O Catálogo MASTER utiliza o **AVA Cursos como plataforma LTI 1.3** e o IESDE

@@ -152,6 +152,7 @@ final class ContedTechClient
         $type = trim((string)($course['type'] ?? ''));
         $updated = trim((string)($course['updated'] ?? ''));
         $structure = $course['semesters'] ?? $course['disciplines'] ?? [];
+        $contents = self::extractSellableContents($course);
 
         return [
             'id' => $batch,
@@ -161,7 +162,67 @@ final class ContedTechClient
             'tipo_acesso' => 'AVA Cursos',
             'data_atualizacao' => $updated,
             'estrutura' => is_array($structure) ? $structure : [],
+            'conteudos' => $contents,
+            'aulas' => count($contents),
         ];
+    }
+
+    /**
+     * A CONTED identifica cada unidade vendável por type + batch. Disciplinas são
+     * agrupadores e não são liberadas diretamente quando não possuem batch próprio.
+     *
+     * @param array<string,mixed> $course
+     * @return list<array<string,mixed>>
+     */
+    public static function extractSellableContents(array $course): array
+    {
+        $semesters = $course['semesters'] ?? null;
+        if (!is_array($semesters) || !array_is_list($semesters)) {
+            $disciplines = $course['disciplines'] ?? [];
+            $semesters = [['semester' => null, 'disciplines' => is_array($disciplines) ? $disciplines : []]];
+        }
+
+        $contents = [];
+        $seen = [];
+        $position = 0;
+        foreach ($semesters as $semesterIndex => $semester) {
+            if (!is_array($semester)) continue;
+            $semesterNumber = isset($semester['semester']) && is_numeric($semester['semester'])
+                ? max(1, (int)$semester['semester'])
+                : ($semester['semester'] === null ? null : $semesterIndex + 1);
+            $disciplines = $semester['disciplines'] ?? [];
+            if (!is_array($disciplines)) continue;
+
+            foreach ($disciplines as $discipline) {
+                if (!is_array($discipline)) continue;
+                $disciplineName = trim((string)($discipline['name'] ?? ''));
+                $classes = $discipline['classes'] ?? $discipline['contents'] ?? [];
+                if (!is_array($classes)) continue;
+
+                foreach ($classes as $class) {
+                    if (!is_array($class)) continue;
+                    $name = trim((string)($class['name'] ?? ''));
+                    $type = trim((string)($class['type'] ?? 'unit')) ?: 'unit';
+                    $batch = trim((string)($class['batch'] ?? ''));
+                    if ($name === '' || $batch === '') continue;
+                    $identity = mb_strtolower($type) . '|' . $batch;
+                    if (isset($seen[$identity])) continue;
+                    $seen[$identity] = true;
+                    $position++;
+                    $contents[] = [
+                        'name' => $name,
+                        'type' => $type,
+                        'batch' => $batch,
+                        'semester' => $semesterNumber,
+                        'discipline' => $disciplineName,
+                        'position' => $position,
+                        'raw' => $class,
+                    ];
+                }
+            }
+        }
+
+        return $contents;
     }
 
     /** @param array<string,mixed> $data */

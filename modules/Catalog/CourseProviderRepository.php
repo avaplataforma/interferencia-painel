@@ -232,13 +232,13 @@ final readonly class CourseProviderRepository
         ]);
     }
 
-    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int} */
+    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int,contents:int,content_created:int,content_updated:int,content_unavailable:int} */
     public function synchronize(array $courses): array
     {
         return $this->synchronizeProvider(self::PROVIDER, $courses);
     }
 
-    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int} */
+    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int,contents:int,content_created:int,content_updated:int,content_unavailable:int} */
     public function synchronizeProvider(string $providerCode, array $courses): array
     {
         $settings = $this->settingsForProvider($providerCode, true);
@@ -251,6 +251,10 @@ final readonly class CourseProviderRepository
         $seen = [];
         $created = 0;
         $updated = 0;
+        $contentCount = 0;
+        $contentCreated = 0;
+        $contentUpdated = 0;
+        $contentUnavailable = 0;
 
         $this->database->beginTransaction();
         try {
@@ -292,7 +296,21 @@ final readonly class CourseProviderRepository
                     unset($insertPayload['seen']);
                     $insertPayload += ['changed_at' => $now, 'first_seen' => $now, 'last_seen' => $now];
                     $this->database->prepare("INSERT INTO provider_courses(provider_id,catalog_id,external_key,remote_id,name,slug,short_description,description,category,workload,certificate,access_type,supplier_updated_at,lesson_count,cover_url,remote_reference_price,remote_promotional_price,remote_installments,remote_status,is_available,raw_payload,content_hash,sync_state,last_changed_at,first_seen_at,last_seen_at) VALUES(:provider,:catalog,:external,:remote_id,:name,:slug,:summary,:description,:category,:workload,:certificate,:access_type,:supplier_updated,:lessons,:cover,:price,:promotional,:installments,:remote_status,1,:raw,:content_hash,:sync_state,:changed_at,:first_seen,:last_seen)")->execute($insertPayload);
+                    $id = (int)$this->database->lastInsertId();
                     $created++;
+                }
+
+                if ($providerCode === 'conted_tech') {
+                    $contentResult = $this->synchronizeCourseContents(
+                        $providerId,
+                        $catalogId,
+                        $id,
+                        is_array($course['conteudos'] ?? null) ? $course['conteudos'] : [],
+                        $now,
+                    );
+                    $contentCount += $contentResult['received'];
+                    $contentCreated += $contentResult['created'];
+                    $contentUpdated += $contentResult['updated'];
                 }
             }
 
@@ -304,13 +322,84 @@ final readonly class CourseProviderRepository
                 $unavailable = $statement->rowCount();
             }
 
+            if ($providerCode === 'conted_tech') {
+                $contentsRemoved = $this->database->prepare("UPDATE provider_catalog_contents SET is_available=0,sync_state='removed',last_changed_at=NOW() WHERE provider_id=:provider AND last_seen_at<:seen AND is_available=1");
+                $contentsRemoved->execute(['provider' => $providerId, 'seen' => $now]);
+                $contentUnavailable = $contentsRemoved->rowCount();
+            }
+
             $this->database->prepare("UPDATE course_provider_integrations SET last_sync_status='success',last_synced_at=NOW(),last_error=NULL,consecutive_failures=0,last_created_count=:created,last_updated_count=:updated,last_unavailable_count=:unavailable,next_retry_at=NULL WHERE id=:id")->execute(['id' => $providerId, 'created' => $created, 'updated' => $updated, 'unavailable' => $unavailable]);
             $this->database->commit();
-            return ['received' => count($courses), 'created' => $created, 'updated' => $updated, 'unavailable' => $unavailable];
+            return ['received' => count($courses), 'created' => $created, 'updated' => $updated, 'unavailable' => $unavailable, 'contents' => $contentCount, 'content_created' => $contentCreated, 'content_updated' => $contentUpdated, 'content_unavailable' => $contentUnavailable];
         } catch (Throwable $exception) {
             if ($this->database->inTransaction()) $this->database->rollBack();
             throw $exception;
         }
+    }
+
+    /**
+     * @param list<array<string,mixed>> $contents
+     * @return array{received:int,created:int,updated:int}
+     */
+    private function synchronizeCourseContents(int $providerId, int $catalogId, int $courseId, array $contents, string $seenAt): array
+    {
+        if ($courseId < 1) return ['received' => 0, 'created' => 0, 'updated' => 0];
+        $linked = [];
+        $created = 0;
+        $updated = 0;
+
+        foreach ($contents as $content) {
+            if (!is_array($content)) continue;
+            $external = trim((string)($content['batch'] ?? ''));
+            $type = trim((string)($content['type'] ?? 'unit')) ?: 'unit';
+            $name = trim((string)($content['name'] ?? ''));
+            if ($external === '' || $name === '') continue;
+            $raw = is_array($content['raw'] ?? null) ? $content['raw'] : $content;
+            $hash = hash('sha256', json_encode(['name' => $name, 'type' => $type, 'batch' => $external, 'raw' => $raw], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+            $exists = $this->database->prepare('SELECT id,content_hash FROM provider_catalog_contents WHERE provider_id=:provider AND content_type=:type AND external_key=:external LIMIT 1');
+            $exists->execute(['provider' => $providerId, 'type' => $type, 'external' => $external]);
+            $row = $exists->fetch();
+            $contentId = is_array($row) ? (int)$row['id'] : 0;
+            $syncState = $contentId < 1 ? 'new' : (hash_equals((string)($row['content_hash'] ?? ''), $hash) ? 'unchanged' : 'changed');
+            $rawJson = json_encode($raw, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+            if ($contentId > 0) {
+                $this->database->prepare("UPDATE provider_catalog_contents SET catalog_id=:catalog,name=:name,is_available=1,raw_payload=:raw,content_hash=:hash,sync_state=:state,last_changed_at=IF(:changed='changed',:changed_at,last_changed_at),last_seen_at=:seen WHERE id=:id")->execute([
+                    'catalog' => $catalogId, 'name' => $name, 'raw' => $rawJson, 'hash' => $hash,
+                    'state' => $syncState, 'changed' => $syncState, 'changed_at' => $seenAt,
+                    'seen' => $seenAt, 'id' => $contentId,
+                ]);
+                if ($syncState === 'changed') $updated++;
+            } else {
+                $this->database->prepare("INSERT INTO provider_catalog_contents(provider_id,catalog_id,external_key,content_type,name,is_available,raw_payload,content_hash,sync_state,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:catalog,:external,:type,:name,1,:raw,:hash,'new',:seen,:seen,:seen)")->execute([
+                    'provider' => $providerId, 'catalog' => $catalogId, 'external' => $external,
+                    'type' => $type, 'name' => $name, 'raw' => $rawJson, 'hash' => $hash, 'seen' => $seenAt,
+                ]);
+                $contentId = (int)$this->database->lastInsertId();
+                $created++;
+            }
+
+            if ($contentId < 1) continue;
+            $linked[] = $contentId;
+            $semester = isset($content['semester']) && is_numeric($content['semester']) ? max(1, (int)$content['semester']) : null;
+            $discipline = trim((string)($content['discipline'] ?? ''));
+            $this->database->prepare('INSERT INTO provider_course_content_links(provider_course_id,provider_content_id,semester_number,discipline_name,position) VALUES(:course,:content,:semester,:discipline,:position) ON DUPLICATE KEY UPDATE semester_number=VALUES(semester_number),discipline_name=VALUES(discipline_name),position=VALUES(position)')->execute([
+                'course' => $courseId, 'content' => $contentId, 'semester' => $semester,
+                'discipline' => $discipline !== '' ? $discipline : null,
+                'position' => max(0, (int)($content['position'] ?? 0)),
+            ]);
+        }
+
+        if ($linked === []) {
+            $this->database->prepare('DELETE FROM provider_course_content_links WHERE provider_course_id=:course')->execute(['course' => $courseId]);
+        } else {
+            $marks = implode(',', array_fill(0, count($linked), '?'));
+            $delete = $this->database->prepare("DELETE FROM provider_course_content_links WHERE provider_course_id=? AND provider_content_id NOT IN ($marks)");
+            $delete->execute(array_merge([$courseId], $linked));
+        }
+
+        return ['received' => count($linked), 'created' => $created, 'updated' => $updated];
     }
 
     /** @return list<array<string,mixed>> */
@@ -394,6 +483,138 @@ final readonly class CourseProviderRepository
     {
         $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,p.provider_code,p.name provider_name FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
         return $statement->fetchAll() ?: [];
+    }
+
+    /**
+     * @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,per_page:int}
+     */
+    public function catalogContents(string $providerCode, string $query = '', int $page = 1, int $perPage = 50): array
+    {
+        $providerCode = trim($providerCode);
+        $query = trim($query);
+        $page = max(1, $page);
+        $perPage = max(10, min(100, $perPage));
+        $where = 'provider.provider_code=?';
+        $params = [$providerCode];
+        if ($query !== '') {
+            $where .= " AND (content.name LIKE ? OR content.commercial_name LIKE ? OR content.external_key LIKE ? OR EXISTS(SELECT 1 FROM provider_course_content_links search_link INNER JOIN provider_courses search_course ON search_course.id=search_link.provider_course_id WHERE search_link.provider_content_id=content.id AND (search_link.discipline_name LIKE ? OR search_course.name LIKE ?)))";
+            $needle = '%' . $query . '%';
+            array_push($params, $needle, $needle, $needle, $needle, $needle);
+        }
+
+        $count = $this->database->prepare("SELECT COUNT(*) FROM provider_catalog_contents content INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id WHERE $where");
+        $count->execute($params);
+        $total = (int)$count->fetchColumn();
+        $pages = max(1, (int)ceil($total / $perPage));
+        $page = min($page, $pages);
+        $offset = ($page - 1) * $perPage;
+
+        $sql = "SELECT content.*,
+            COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
+            COALESCE(NULLIF(content.commercial_description,''),'') effective_description,
+            COALESCE(NULLIF(content.commercial_category,''),MIN(link.discipline_name),'Conteúdo individual') effective_category,
+            catalog.name catalog_name,catalog.code catalog_code,provider.provider_code,provider.name provider_name,
+            MIN(link.semester_number) semester_number,MIN(link.discipline_name) discipline_name,
+            COUNT(DISTINCT link.provider_course_id) course_count,
+            GROUP_CONCAT(DISTINCT course.name ORDER BY course.name SEPARATOR '||') course_names,
+            (SELECT COUNT(*) FROM organization_provider_content_offers offer WHERE offer.provider_content_id=content.id AND offer.is_active=1) offer_count
+            FROM provider_catalog_contents content
+            INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
+            INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id
+            LEFT JOIN provider_course_content_links link ON link.provider_content_id=content.id
+            LEFT JOIN provider_courses course ON course.id=link.provider_course_id
+            WHERE $where
+            GROUP BY content.id,catalog.id,provider.id
+            ORDER BY content.is_available DESC,effective_name
+            LIMIT $perPage OFFSET $offset";
+        $statement = $this->database->prepare($sql);
+        $statement->execute($params);
+
+        return [
+            'items' => $statement->fetchAll() ?: [],
+            'total' => $total,
+            'page' => $page,
+            'pages' => $pages,
+            'per_page' => $perPage,
+        ];
+    }
+
+    /** @param array<string,mixed> $metadata */
+    public function reviewContent(int $contentId, string $status, string $releaseStatus, array $metadata, ?int $userId): void
+    {
+        if (!in_array($status, ['imported', 'reviewing', 'approved', 'rejected'], true)) throw new RuntimeException('Situação da curadoria do conteúdo inválida.');
+        if (!in_array($releaseStatus, ['private', 'released', 'published'], true)) throw new RuntimeException('Liberação comercial do conteúdo inválida.');
+        if ($status !== 'approved') $releaseStatus = 'private';
+        $name = trim((string)($metadata['commercial_name'] ?? ''));
+        if ($status === 'approved' && $name === '') throw new RuntimeException('Informe o nome comercial antes de aprovar o conteúdo.');
+        if (mb_strlen($name) > 500) throw new RuntimeException('O nome comercial do conteúdo é muito extenso.');
+        $description = trim((string)($metadata['commercial_description'] ?? ''));
+        $category = trim((string)($metadata['commercial_category'] ?? ''));
+        $workload = trim((string)($metadata['commercial_workload'] ?? ''));
+        $cover = trim((string)($metadata['commercial_cover_url'] ?? ''));
+        $notes = trim((string)($metadata['review_notes'] ?? ''));
+        if ($cover !== '' && filter_var($cover, FILTER_VALIDATE_URL) === false) throw new RuntimeException('Informe uma URL válida para a imagem do conteúdo.');
+
+        $statement = $this->database->prepare('UPDATE provider_catalog_contents SET review_status=:status,release_status=:release,commercial_name=:name,commercial_description=:description,commercial_category=:category,commercial_workload=:workload,commercial_cover_url=:cover,review_notes=:notes,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
+        $statement->execute([
+            'status' => $status, 'release' => $releaseStatus,
+            'name' => $name !== '' ? $name : null,
+            'description' => $description !== '' ? $description : null,
+            'category' => $category !== '' ? $category : null,
+            'workload' => $workload !== '' ? $workload : null,
+            'cover' => $cover !== '' ? $cover : null,
+            'notes' => $notes !== '' ? $notes : null,
+            'user' => $userId, 'id' => $contentId,
+        ]);
+        if ($statement->rowCount() !== 1) {
+            $exists = $this->database->prepare('SELECT 1 FROM provider_catalog_contents WHERE id=:id');
+            $exists->execute(['id' => $contentId]);
+            if ($exists->fetchColumn() === false) throw new RuntimeException('Conteúdo externo não encontrado.');
+        }
+        if ($status !== 'approved' || $releaseStatus === 'private') {
+            $this->database->prepare('UPDATE organization_provider_content_offers SET is_visible=0,updated_by=:user WHERE provider_content_id=:content')->execute(['user' => $userId, 'content' => $contentId]);
+        }
+    }
+
+    public function saveContentOffer(int $contentId, int $organizationId, string $name, string $description, float $price, int $installments, bool $visible, bool $active, ?int $userId): int
+    {
+        if ($organizationId < 1) throw new RuntimeException('Selecione a franquia.');
+        $content = $this->database->prepare('SELECT id,name,commercial_name,review_status,release_status,is_available FROM provider_catalog_contents WHERE id=:id LIMIT 1');
+        $content->execute(['id' => $contentId]);
+        $row = $content->fetch();
+        if (!is_array($row)) throw new RuntimeException('Conteúdo externo não encontrado.');
+        if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released', 'published'], true) || (int)($row['is_available'] ?? 0) !== 1) {
+            throw new RuntimeException('Apenas conteúdos disponíveis, aprovados e liberados podem ser vendidos individualmente.');
+        }
+        $organization = $this->database->prepare("SELECT 1 FROM organizations WHERE id=:id AND status='active'");
+        $organization->execute(['id' => $organizationId]);
+        if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia ativa não encontrada.');
+
+        $name = trim($name) ?: trim((string)($row['commercial_name'] ?: $row['name']));
+        $description = trim($description);
+        $price = round($price, 2);
+        $installments = max(1, min(60, $installments));
+        if ($name === '' || mb_strlen($name) > 500) throw new RuntimeException('Informe um nome comercial válido para o conteúdo.');
+        if ($price < 0) throw new RuntimeException('O preço não pode ser negativo.');
+        if ($visible && $price < 5) throw new RuntimeException('Informe um preço de pelo menos R$ 5,00 antes de publicar o conteúdo.');
+
+        $statement = $this->database->prepare("INSERT INTO organization_provider_content_offers(organization_id,provider_content_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by) VALUES(:organization,:content,:name,:description,:price,:installments,'assisted',:visible,:active,:user,:user) ON DUPLICATE KEY UPDATE commercial_name=VALUES(commercial_name),commercial_description=VALUES(commercial_description),price=VALUES(price),max_installments=VALUES(max_installments),sale_mode='assisted',is_visible=VALUES(is_visible),is_active=VALUES(is_active),updated_by=VALUES(updated_by)");
+        $statement->execute(['organization' => $organizationId, 'content' => $contentId, 'name' => $name, 'description' => $description !== '' ? $description : null, 'price' => $price, 'installments' => $installments, 'visible' => (int)$visible, 'active' => (int)$active, 'user' => $userId]);
+        $id = (int)$this->database->lastInsertId();
+        if ($id > 0) return $id;
+        $current = $this->database->prepare('SELECT id FROM organization_provider_content_offers WHERE organization_id=:organization AND provider_content_id=:content');
+        $current->execute(['organization' => $organizationId, 'content' => $contentId]);
+        return (int)$current->fetchColumn();
+    }
+
+    /** @return array<string,mixed> */
+    public function contentAccessTargetForOffer(int $offerId): array
+    {
+        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,content.id content_id,content.content_type,content.external_key batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,provider.provider_code FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id WHERE offer.id=:id AND offer.is_active=1 AND content.is_available=1 AND content.review_status='approved' AND content.release_status IN ('released','published') LIMIT 1");
+        $statement->execute(['id' => $offerId]);
+        $row = $statement->fetch();
+        if (!is_array($row)) throw new RuntimeException('Oferta de conteúdo individual não encontrada ou não liberada.');
+        return $row;
     }
 
     /** @return list<array<string,mixed>> */

@@ -8,8 +8,9 @@ $favicon = (string) ($site['favicon_path'] ?? '');
 $store = ($site['selected_mode'] ?? 'catalog') === 'store';
 $publicBase = rtrim((string) $basePath, '/') . '/site';
 $isExternal = (int)($product['is_external'] ?? 0) === 1;
+$isIndividualContent = ($product['product_kind'] ?? '') === 'provider_content';
 $catalogName = trim((string)($product['catalog_name'] ?? '')) ?: 'Catálogo de cursos';
-$coursePath = $isExternal ? '/catalogo-pro/' . (int)$product['id'] : '/curso/' . (int)$product['id'];
+$coursePath = $isIndividualContent ? '/conteudo/' . (int)$product['id'] : ($isExternal ? '/catalogo-pro/' . (int)$product['id'] : '/curso/' . (int)$product['id']);
 $whatsappDigits = preg_replace('/\D+/', '', (string) ($site['whatsapp'] ?? '')) ?? '';
 $whatsapp = $whatsappDigits !== '' ? (str_starts_with($whatsappDigits, '55') ? $whatsappDigits : '55' . $whatsappDigits) : '';
 $whatsappMessage = rawurlencode('Olá! Tenho interesse no curso ' . $product['name'] . '.');
@@ -65,7 +66,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
    <?php if ($curriculum !== []): ?><section class="detail-section"><h2>Conteúdo programático</h2><ul class="curriculum"><?php foreach ($curriculum as $item): ?><li><i class="fa-regular fa-circle-check"></i> <?= $escape($item) ?></li><?php endforeach; ?></ul></section><?php endif; ?>
    <?php if ($requirements !== '' || $certificateText !== ''): ?><section class="detail-section"><div class="facts"><?php if ($requirements !== ''): ?><div class="fact"><strong><i class="fa-solid fa-list-check"></i> Requisitos</strong><span><?= nl2br($escape($requirements)) ?></span></div><?php endif; ?><?php if ($certificateText !== ''): ?><div class="fact"><strong><i class="fa-solid fa-certificate"></i> Certificado</strong><span><?= nl2br($escape($certificateText)) ?></span></div><?php endif; ?><div class="fact"><strong><i class="fa-solid fa-shield-halved"></i> Compra segura</strong><span>Atendimento e pagamento integrados à franquia.</span></div></div></section><?php endif; ?>
    <?php if ($faq !== []): ?><section class="detail-section"><h2>Perguntas frequentes</h2><div class="faq"><?php foreach ($faq as $item): ?><details><summary><?= $escape($item['question']) ?></summary><?php if ($item['answer'] !== ''): ?><p><?= nl2br($escape($item['answer'])) ?></p><?php endif; ?></details><?php endforeach; ?></div></section><?php endif; ?>
-   <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): ?><a href="<?= $escape($publicBase) ?><?= $isExternal?'/catalogo-pro/':'/curso/' ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
+   <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): $relatedPath=($related['product_kind']??'')==='provider_content'?'/conteudo/':($isExternal?'/catalogo-pro/':'/curso/');?><a href="<?= $escape($publicBase.$relatedPath) ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
   </div>
  </article>
  <aside class="action">

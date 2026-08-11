@@ -1769,6 +1769,42 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     assertTrue(str_contains($organizationView,'catalog_policy['));
 };
 
+$tests['decompoe cursos EXPERT em conteudos individuais vendaveis'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000050_create_provider_catalog_contents.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+
+    $contents=\Interferencia\Modules\Catalog\ContedTechClient::extractSellableContents([
+        'semesters'=>[[
+            'semester'=>1,
+            'disciplines'=>[[
+                'name'=>'Atendimento ao cliente',
+                'classes'=>[
+                    ['name'=>'Postura profissional','type'=>'unit','batch'=>'batch-a'],
+                    ['name'=>'Postura profissional duplicada','type'=>'unit','batch'=>'batch-a'],
+                    ['name'=>'Comunicação','type'=>'unit','batch'=>'batch-b'],
+                ],
+            ]],
+        ]],
+    ]);
+
+    assertSame(2,count($contents));
+    assertSame('batch-a',$contents[0]['batch']);
+    assertSame('Atendimento ao cliente',$contents[0]['discipline']);
+    assertSame(1,$contents[0]['semester']);
+    assertTrue(str_contains($migration,'provider_catalog_contents'));
+    assertTrue(str_contains($migration,'provider_course_content_links'));
+    assertTrue(str_contains($migration,'organization_provider_content_offers'));
+    assertTrue(str_contains($repository,'public function catalogContents'));
+    assertTrue(str_contains($repository,'public function saveContentOffer'));
+    assertTrue(str_contains($repository,'public function contentAccessTargetForOffer'));
+    assertTrue(str_contains($siteRepository,'externalContentProducts'));
+    assertTrue(str_contains($routes,"'/site/conteudo/{offer:\\d+}'"));
+    assertTrue(str_contains($view,'Conteúdos individuais'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
