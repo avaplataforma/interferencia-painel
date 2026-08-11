@@ -1653,7 +1653,21 @@ $tests['registra todos os catalogos e fornecedores academicos'] = static functio
     assertTrue(str_contains($repository,'providerCatalogRegistry'));
     assertTrue(str_contains($repository,'integration_active'));
     assertTrue(str_contains($repository,'settingsForProvider'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),'catalogCourseOffersForOrganization'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),'catalogItemsForOrganization'));
+};
+
+$tests['organiza a oferta comercial dos catalogos por franquia'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $route=(string)file_get_contents($rootPath.'/routes/web.php');
+    $manager=(string)file_get_contents($rootPath.'/views/admin/organizations/ava_catalog_manager.php');
+
+    assertTrue(str_contains($repository,'catalogItemsForOrganization'));
+    assertTrue(str_contains($repository,'missing_commercial_fields'));
+    assertTrue(str_contains($repository,'is_commercially_ready'));
+    assertTrue(str_contains($route,"'catalogItems'=>"));
+    assertTrue(str_contains($manager,'Prontidão comercial'));
+    assertTrue(str_contains($manager,'Bloquear nesta franquia'));
+    assertTrue(str_contains($manager,'return_to'));
 };
 
 $tests['registra o Catalogo EXPERT com credenciais protegidas e destino academico explicito'] = static function () use ($rootPath): void {

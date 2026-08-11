@@ -1,6 +1,6 @@
 <?php
 $ava=$avaSettings??[];$mode=(string)($ava['access_mode']??'shared');$primary=(string)($ava['primary_ava']??'shared');$shared=$ava['shared']??[];$own=$ava['own']??[];$catalogs=$catalogAccess??[];
-$catalogOfferRows=$catalogCourseOffers??[];$catalogContentRows=$catalogContentOffers??[];$offerRowsByCatalog=[];$contentRowsByCatalog=[];$catalogState=[];
+$catalogOfferRows=[];$catalogContentRows=[];$offerRowsByCatalog=[];$contentRowsByCatalog=[];$catalogState=[];
 $executionLabels=['shared_ava'=>'Dentro do AVA Cursos','provider_ava'=>'AVA do fornecedor','franchise_moodle'=>'Moodle exclusivo da franquia'];
 $executionIcons=['shared_ava'=>'fa-earth-americas','provider_ava'=>'fa-arrow-up-right-from-square','franchise_moodle'=>'fa-school'];
 foreach($catalogs as$catalog)$catalogState[(string)$catalog['code']]=$catalog;
@@ -55,7 +55,8 @@ $offerCatalogCodes=array_values(array_unique(array_merge(array_keys($offerRowsBy
   <div class="organization-savebar ava-savebar"><p class="meta"><i class="fa-solid fa-shield-halved"></i> Tokens criptografados e acessíveis somente ao ADM Central.</p><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar configuração AVA</button></div>
  </form>
 </section>
-<section class="card organization-section ava-offers-section" data-organization-panel="ava" hidden>
+<?php require __DIR__.'/ava_catalog_manager.php'; ?>
+<section class="card organization-section ava-offers-section" style="display:none" aria-hidden="true">
  <header class="organization-section-header"><span class="organization-section-icon"><i class="fa-solid fa-tags"></i></span><div><h2>Cursos e preços da franquia</h2><p class="meta">A curadoria e as APIs ficam no catálogo central. Aqui você decide quais cursos aprovados esta franquia vende, o preço e a visibilidade no site.</p></div></header>
  <?php if($offerCatalogCodes===[]):?>
   <div class="alert alert-info"><i class="fa-solid fa-circle-info"></i> Ainda não há cursos externos aprovados. Importe e aprove os cursos na integração do catálogo correspondente.</div>
