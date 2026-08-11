@@ -1593,9 +1593,16 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(!str_contains($view,'<script>'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-catalog-tab]')"));
     assertTrue(str_contains($javascript,'showCatalog'));
+    assertTrue(str_contains($javascript,"params.get('section') || 'connection'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'.btn-primary { border-color: var(--inter-accent);'));
     assertTrue(str_contains($view,'Conexão e API'));
     assertTrue(str_contains($view,'Cursos e curadoria'));
+    assertTrue(str_contains($view,'Conexão central'));
+    assertTrue(str_contains($view,'Acesso do aluno'));
+    assertTrue(str_contains($view,'/admin/platform/integrations/ava-cursos/access-policy'));
+    assertTrue(!str_contains($view,'Abrir integração AVA Cursos'));
+    assertTrue(str_contains($routes,"'interSettings'=>\$avaConnections->shared()"));
+    assertTrue(str_contains($routes,"course-providers?catalog=ava_cursos&section=access"));
     assertTrue(str_contains($view,'Não use aqui o endereço público do AVA'));
 };
 

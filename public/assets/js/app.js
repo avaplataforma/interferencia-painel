@@ -487,7 +487,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
   const params = new URL(location.href).searchParams;
   const activeProvider = showCatalog(params.get('catalog') || tabs[0]?.dataset.catalogTab || '', false);
-  if (params.get('section') === 'courses') openSection(activeProvider, 'courses');
+  openSection(activeProvider, params.get('section') || 'connection');
 })();
 
 (() => {
