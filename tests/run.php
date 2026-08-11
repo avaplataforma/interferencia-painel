@@ -1954,6 +1954,25 @@ $tests['gera capas contextuais em fila e publica a versao final no Spaces'] = st
     assertTrue(str_contains($javascript,'data-course-curation-toggle'));
 };
 
+$tests['unifica ofertas comerciais e trilhas na vitrine publica'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $view=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+
+    assertTrue(str_contains($repository,'private function publicOffers'));
+    assertTrue(str_contains($repository,"\$site['offers']=\$offers"));
+    assertTrue(str_contains($repository,"\$site['trails']=\$this->publicTrails(\$offers)"));
+    assertTrue(str_contains($repository,'offer.price>=5'));
+    assertTrue(str_contains($repository,'catalog.central_valid_from'));
+    assertTrue(str_contains($repository,'catalog.central_valid_until'));
+    assertTrue(str_contains($view,"\$site['offers']"));
+    assertTrue(str_contains($view,'data-catalog-trail'));
+    assertTrue(str_contains($view,'Escolha uma Trilha'));
+    assertTrue(str_contains($view,'data-site-offer'));
+    assertTrue(str_contains($javascript,'catalogTrail'));
+    assertTrue(str_contains($javascript,'card.dataset.courseTrail'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

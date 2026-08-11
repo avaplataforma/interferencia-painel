@@ -72,9 +72,9 @@
   }));
   if (metricsAllowed()) track(body.dataset.siteEventType || 'page_view');
 
-  document.querySelectorAll('[data-site-course],a[href*="/site/curso/"]').forEach((link) => link.addEventListener('click', () => {
+  document.querySelectorAll('[data-site-offer],a[href*="/site/curso/"]').forEach((link) => link.addEventListener('click', () => {
     const match = link.getAttribute('href')?.match(/\/site\/curso\/(\d+)/);
-    track('course_click', { entityType: 'course', entityId: link.dataset.siteCourse || match?.[1] || '' });
+    track('course_click', { entityType: link.dataset.offerKind || 'course', entityId: link.dataset.offerId || match?.[1] || '' });
   }));
   document.querySelectorAll('a[href*="wa.me"]').forEach((link) => link.addEventListener('click', () => track('whatsapp_click')));
   document.querySelectorAll('form[action$="/contato"]').forEach((form) => form.addEventListener('submit', () => track('contact_submit')));
@@ -82,6 +82,7 @@
   document.querySelectorAll('a[href*="/site/checkout/"]').forEach((link) => link.addEventListener('click', () => track('checkout_start', { entityType: 'course' })));
 
   const catalogSearch = document.querySelector('[data-catalog-search]');
+  const catalogTrail = document.querySelector('[data-catalog-trail]');
   const catalogCategory = document.querySelector('[data-catalog-category]');
   const catalogSort = document.querySelector('[data-catalog-sort]');
   const catalogGrid = document.querySelector('[data-course-grid]');
@@ -95,11 +96,12 @@
   const filterCatalog = () => {
     if (!(catalogGrid instanceof HTMLElement)) return;
     const term = normalizeCatalog(catalogSearch?.value || '');
+    const trail = normalizeCatalog(catalogTrail?.value || '');
     const category = normalizeCatalog(catalogCategory?.value || '');
     const sort = catalogSort?.value || 'featured';
     const matching = catalogCards.filter((card) => {
       const searchable = normalizeCatalog(card.textContent || '');
-      const visible = (!term || searchable.includes(term)) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
+      const visible = (!term || searchable.includes(term)) && (!trail || normalizeCatalog(card.dataset.courseTrail) === trail) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
       card.hidden = !visible;
       return visible;
     });
@@ -112,7 +114,7 @@
     if (catalogEmpty instanceof HTMLElement) catalogEmpty.hidden = matching.length !== 0;
   };
   catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
-  [catalogSearch, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
+  [catalogSearch, catalogTrail, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
   syncFavoriteButtons();
   filterCatalog();
 
