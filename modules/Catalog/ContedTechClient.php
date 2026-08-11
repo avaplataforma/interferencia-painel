@@ -185,6 +185,61 @@ final class ContedTechClient
         $contents = [];
         $seen = [];
         $position = 0;
+
+        /**
+         * @param array<string,mixed> $node
+         */
+        $walk = static function (
+            array $node,
+            ?int $semesterNumber,
+            string $disciplineName,
+            string $fallbackType,
+        ) use (&$walk, &$contents, &$seen, &$position): void {
+            $name = trim((string)($node['name'] ?? ''));
+            $rawType = mb_strtolower(trim((string)($node['type'] ?? $fallbackType)));
+            $type = match (true) {
+                $rawType === 'disciplina' || $rawType === 'discipline' => 'discipline',
+                $rawType === 'unidade' || $rawType === 'unit' || $rawType === 'class' => 'unit',
+                $rawType === 'objeto' || $rawType === 'object' || str_starts_with($rawType, 'objeto:') => 'object',
+                default => $fallbackType,
+            };
+            $batch = trim((string)($node['batch'] ?? ''));
+            $currentDiscipline = $type === 'discipline' && $name !== '' ? $name : $disciplineName;
+
+            if ($name !== '' && $batch !== '' && in_array($type, ['discipline', 'unit', 'object'], true)) {
+                $identity = $type . '|' . $batch;
+                if (!isset($seen[$identity])) {
+                    $seen[$identity] = true;
+                    $position++;
+                    $contents[] = [
+                        'name' => $name,
+                        'type' => $type,
+                        'batch' => $batch,
+                        'semester' => $semesterNumber,
+                        'discipline' => $currentDiscipline,
+                        'position' => $position,
+                        'raw' => $node,
+                    ];
+                }
+            }
+
+            $childGroups = [
+                'disciplines' => 'discipline',
+                'classes' => 'unit',
+                'units' => 'unit',
+                'contents' => 'unit',
+                'objects' => 'object',
+            ];
+            foreach ($childGroups as $key => $childType) {
+                $children = $node[$key] ?? [];
+                if (!is_array($children)) continue;
+                foreach ($children as $child) {
+                    if (!is_array($child)) continue;
+                    $walk($child, $semesterNumber, $currentDiscipline, $childType);
+                }
+            }
+        };
+
         foreach ($semesters as $semesterIndex => $semester) {
             if (!is_array($semester)) continue;
             $semesterNumber = isset($semester['semester']) && is_numeric($semester['semester'])
@@ -195,30 +250,15 @@ final class ContedTechClient
 
             foreach ($disciplines as $discipline) {
                 if (!is_array($discipline)) continue;
-                $disciplineName = trim((string)($discipline['name'] ?? ''));
-                $classes = $discipline['classes'] ?? $discipline['contents'] ?? [];
-                if (!is_array($classes)) continue;
+                $walk($discipline, $semesterNumber, '', 'discipline');
+            }
+        }
 
-                foreach ($classes as $class) {
-                    if (!is_array($class)) continue;
-                    $name = trim((string)($class['name'] ?? ''));
-                    $type = trim((string)($class['type'] ?? 'unit')) ?: 'unit';
-                    $batch = trim((string)($class['batch'] ?? ''));
-                    if ($name === '' || $batch === '') continue;
-                    $identity = mb_strtolower($type) . '|' . $batch;
-                    if (isset($seen[$identity])) continue;
-                    $seen[$identity] = true;
-                    $position++;
-                    $contents[] = [
-                        'name' => $name,
-                        'type' => $type,
-                        'batch' => $batch,
-                        'semester' => $semesterNumber,
-                        'discipline' => $disciplineName,
-                        'position' => $position,
-                        'raw' => $class,
-                    ];
-                }
+        foreach (['units' => 'unit', 'objects' => 'object'] as $key => $type) {
+            $children = $course[$key] ?? [];
+            if (!is_array($children)) continue;
+            foreach ($children as $child) {
+                if (is_array($child)) $walk($child, null, '', $type);
             }
         }
 

@@ -1794,6 +1794,34 @@ $tests['decompoe cursos EXPERT em conteudos individuais vendaveis'] = static fun
     assertSame('batch-a',$contents[0]['batch']);
     assertSame('Atendimento ao cliente',$contents[0]['discipline']);
     assertSame(1,$contents[0]['semester']);
+
+    $officialFormats=\Interferencia\Modules\Catalog\ContedTechClient::extractSellableContents([
+        'disciplines'=>[[
+            'name'=>'Políticas Educacionais',
+            'type'=>'discipline',
+            'batch'=>'discipline-a',
+            'units'=>[[
+                'name'=>'Legislação Educacional',
+                'type'=>'unit',
+                'batch'=>'unit-a',
+                'objects'=>[[
+                    'name'=>'Vídeo introdutório',
+                    'type'=>'object',
+                    'batch'=>'object-a',
+                ]],
+            ]],
+        ],[
+            'name'=>'Projeto Integrador',
+            'type'=>'unit',
+            'batch'=>'unit-b',
+        ]],
+    ]);
+
+    assertSame(4,count($officialFormats));
+    assertSame('discipline',$officialFormats[0]['type']);
+    assertSame('unit',$officialFormats[1]['type']);
+    assertSame('object',$officialFormats[2]['type']);
+    assertSame('unit-b',$officialFormats[3]['batch']);
     assertTrue(str_contains($migration,'provider_catalog_contents'));
     assertTrue(str_contains($migration,'provider_course_content_links'));
     assertTrue(str_contains($migration,'organization_provider_content_offers'));

@@ -285,8 +285,8 @@ AVA Cursos, que abre o conteúdo EXPERT pelo link temporário oficial.
 
 Os cursos EXPERT são decompostos sem duplicar o material do fornecedor:
 
-1. curso, semestre e disciplina continuam como estrutura acadêmica;
-2. cada aula/unidade com `type` e `batch` vira um conteúdo individual canônico;
+1. curso e semestre continuam como estrutura acadêmica;
+2. cada disciplina, unidade e objeto com `type` e `batch` pode virar um conteúdo individual canônico;
 3. o mesmo conteúdo usado em mais de um curso é armazenado uma vez e vinculado
    a todos os cursos de origem;
 4. o ADM Central aprova ou bloqueia cada conteúdo individual;
