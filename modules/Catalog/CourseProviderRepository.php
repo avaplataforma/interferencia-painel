@@ -14,7 +14,7 @@ final readonly class CourseProviderRepository
 {
     private const PROVIDER = 'escola_avancada';
     private const READY_PROVIDERS = ['escola_avancada', 'iesde'];
-    private const DELIVERY_MODES = ['external_link', 'iframe', 'sso'];
+    private const DELIVERY_MODES = ['external_link', 'iframe', 'sso', 'lti'];
 
     public function __construct(private PDO $database, private SecretCipher $cipher) {}
 
@@ -37,8 +37,11 @@ final readonly class CourseProviderRepository
         $username = $includeSecret ? $this->cipher->decrypt(isset($row['username_encrypted']) ? (string)$row['username_encrypted'] : null) : '';
         $password = $includeSecret ? $this->cipher->decrypt(isset($row['password_encrypted']) ? (string)$row['password_encrypted'] : null) : '';
         $providerCode = (string)$row['provider_code'];
+        $integrationMode = (string)($row['integration_mode'] ?? 'api');
         $configured = trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '';
-        if ($providerCode === 'iesde') {
+        if ($providerCode === 'iesde' && $integrationMode === 'lti13') {
+            $configured = trim((string)($row['lti_platform_url'] ?? '')) !== '';
+        } elseif ($providerCode === 'iesde') {
             $configured = $configured && (string)($row['username_encrypted'] ?? '') !== '' && (string)($row['password_encrypted'] ?? '') !== '';
         }
 
@@ -53,6 +56,17 @@ final readonly class CourseProviderRepository
             'username_last4' => (string)($row['username_last4'] ?? ''),
             'password' => $password,
             'password_last4' => (string)($row['password_last4'] ?? ''),
+            'integration_mode' => $integrationMode,
+            'lti_integration_name' => (string)($row['lti_integration_name'] ?? ''),
+            'lti_platform_url' => (string)($row['lti_platform_url'] ?? ''),
+            'lti_registration_url' => (string)($row['lti_registration_url'] ?? ''),
+            'lti_tool_url' => (string)($row['lti_tool_url'] ?? ''),
+            'lti_login_url' => (string)($row['lti_login_url'] ?? ''),
+            'lti_jwks_url' => (string)($row['lti_jwks_url'] ?? ''),
+            'lti_redirect_uris' => (string)($row['lti_redirect_uris'] ?? ''),
+            'lti_client_id' => (string)($row['lti_client_id'] ?? ''),
+            'lti_deployment_id' => (string)($row['lti_deployment_id'] ?? ''),
+            'lti_status' => (string)($row['lti_status'] ?? 'draft'),
             'catalog_id' => (int)($row['catalog_id'] ?? 0),
             'catalog_name' => (string)($row['catalog_name'] ?? ''),
             'catalog_code' => (string)($row['catalog_code'] ?? ''),
@@ -77,6 +91,10 @@ final readonly class CourseProviderRepository
         }
 
         $current = $this->settingsForProvider($providerCode);
+        if ($providerCode === 'iesde' && (string)($input['integration_mode'] ?? $current['integration_mode']) === 'lti13') {
+            $this->saveLtiProvider($providerCode, $input, $userId);
+            return;
+        }
         $baseUrl = trim((string)($input['base_url'] ?? ''));
         $token = trim((string)($input['token'] ?? ''));
         $username = trim((string)($input['username'] ?? ''));
@@ -111,6 +129,56 @@ final readonly class CourseProviderRepository
         }
         $sql .= ' WHERE provider_code=:code';
         $this->database->prepare($sql)->execute($params);
+    }
+
+    public function saveLtiProvider(string $providerCode, array $input, ?int $userId): void
+    {
+        $name = trim((string)($input['lti_integration_name'] ?? ''));
+        $platform = rtrim(trim((string)($input['lti_platform_url'] ?? '')), '/');
+        $registration = trim((string)($input['lti_registration_url'] ?? ''));
+        $tool = trim((string)($input['lti_tool_url'] ?? ''));
+        $login = trim((string)($input['lti_login_url'] ?? ''));
+        $jwks = trim((string)($input['lti_jwks_url'] ?? ''));
+        $redirects = trim((string)($input['lti_redirect_uris'] ?? ''));
+        $clientId = trim((string)($input['lti_client_id'] ?? ''));
+        $deploymentId = trim((string)($input['lti_deployment_id'] ?? ''));
+
+        if ($name === '') throw new RuntimeException('Informe o nome da integração LTI.');
+        $this->assertHttpsUrl($platform, 'Informe a URL HTTPS do LMS.');
+        foreach ([[$registration, 'URL de registro dinâmico'], [$tool, 'URL da ferramenta'], [$login, 'URL de início de login'], [$jwks, 'URL do conjunto de chaves']] as [$url, $label]) {
+            if ($url !== '') $this->assertHttpsUrl($url, $label.' deve usar HTTPS.');
+        }
+        foreach (preg_split('/\R+/', $redirects) ?: [] as $redirect) {
+            if (trim($redirect) !== '') $this->assertHttpsUrl(trim($redirect), 'Toda URI de redirecionamento deve usar HTTPS.');
+        }
+
+        $toolConfigured = $registration !== '' || ($tool !== '' && $login !== '' && $jwks !== '');
+        $moodleConfigured = $clientId !== '' && $deploymentId !== '';
+        $complete = $toolConfigured && $moodleConfigured;
+        $active = $complete && (bool)($input['is_active'] ?? false);
+        $status = $active ? 'active' : ($moodleConfigured ? 'moodle_configured' : ($toolConfigured ? 'tool_received' : 'provider_started'));
+
+        $this->database->prepare("UPDATE course_provider_integrations SET
+            integration_mode='lti13',lti_integration_name=:name,lti_platform_url=:platform,
+            lti_registration_url=:registration,lti_tool_url=:tool,lti_login_url=:login,
+            lti_jwks_url=:jwks,lti_redirect_uris=:redirects,lti_client_id=:client,
+            lti_deployment_id=:deployment,lti_status=:status,delivery_mode='lti',
+            is_active=:active,updated_by=:user,last_error=NULL WHERE provider_code=:code")->execute([
+                'name' => $name, 'platform' => $platform,
+                'registration' => $registration !== '' ? $registration : null,
+                'tool' => $tool !== '' ? $tool : null, 'login' => $login !== '' ? $login : null,
+                'jwks' => $jwks !== '' ? $jwks : null, 'redirects' => $redirects !== '' ? $redirects : null,
+                'client' => $clientId !== '' ? $clientId : null,
+                'deployment' => $deploymentId !== '' ? $deploymentId : null,
+                'status' => $status, 'active' => (int)$active, 'user' => $userId, 'code' => $providerCode,
+            ]);
+    }
+
+    private function assertHttpsUrl(string $url, string $message): void
+    {
+        if ($url === '' || filter_var($url, FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($url, PHP_URL_SCHEME)) !== 'https') {
+            throw new RuntimeException($message);
+        }
     }
 
     public function save(array $input, ?int $userId): void
@@ -257,9 +325,21 @@ final readonly class CourseProviderRepository
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
             COALESCE(provider.username_last4,'') username_last4,COALESCE(provider.password_last4,'') password_last4,
             COALESCE(provider.delivery_mode,'external_link') delivery_mode,
+            COALESCE(provider.integration_mode,'api') integration_mode,
+            COALESCE(provider.lti_integration_name,'') lti_integration_name,
+            COALESCE(provider.lti_platform_url,'') lti_platform_url,
+            COALESCE(provider.lti_registration_url,'') lti_registration_url,
+            COALESCE(provider.lti_tool_url,'') lti_tool_url,
+            COALESCE(provider.lti_login_url,'') lti_login_url,
+            COALESCE(provider.lti_jwks_url,'') lti_jwks_url,
+            COALESCE(provider.lti_redirect_uris,'') lti_redirect_uris,
+            COALESCE(provider.lti_client_id,'') lti_client_id,
+            COALESCE(provider.lti_deployment_id,'') lti_deployment_id,
+            COALESCE(provider.lti_status,'draft') lti_status,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
             CASE WHEN catalog.code='ava-cursos' THEN 1
+                WHEN provider.provider_code='iesde' AND provider.integration_mode='lti13' AND provider.lti_platform_url IS NOT NULL AND provider.lti_platform_url<>'' THEN 1
                 WHEN provider.provider_code='iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
                 WHEN provider.provider_code<>'iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
             CASE WHEN provider.provider_code IN ('escola_avancada','iesde') THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,

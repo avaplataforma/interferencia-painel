@@ -229,6 +229,32 @@ O cadastro central passa a reconhecer oito linhas acadêmicas independentes:
 | PREPARA | Aprova Concursos | `https://aprovaconcursos.com.br/?ref=interf2026` |
 | DRIVE | Trânsito | `https://ava.eadcursosdetransito.com.br/login` |
 
+## IESDE e Catálogo MASTER por LTI 1.3
+
+O Catálogo MASTER utiliza o **AVA Cursos como plataforma LTI 1.3** e o IESDE
+como ferramenta externa. A integração antiga do Portal AVA permanece somente
+como registro técnico e contingência desativada; suas credenciais não são
+apagadas, mas não participam do fluxo acadêmico novo.
+
+O cadastro é concluído em duas pontas:
+
+1. No IESDE, registrar `Mundo Inter — Catálogo MASTER` informando
+   `https://avacursos.com.br` como URL do LMS/Issuer.
+2. Receber do fornecedor o registro dinâmico ou os endereços manuais da
+   ferramenta: Target Link URI, início de login OIDC, JWKS e redirecionamentos.
+3. No Moodle, cadastrar a ferramenta externa em **Administração do site →
+   Plugins → Módulos de atividade → Ferramenta externa → Gerenciar
+   ferramentas**.
+4. Informar ao IESDE os endereços da plataforma Moodle, o Client ID e o
+   Deployment ID gerados.
+5. Homologar o lançamento com um usuário aluno antes de ativar o catálogo.
+
+O LTI cuida do lançamento autenticado do conteúdo e evita uma segunda senha.
+Ele não substitui preço, cobrança, matrícula comercial ou liberação por
+franquia, que continuam no Mundo Inter. A composição do catálogo para a loja
+será feita separadamente por **Deep Linking** quando oferecido pelo IESDE ou por
+importação/curadoria controlada no ADM Central.
+
 Na aba **AVA** de cada franquia, o ADM Central controla a licença geral de cada
 catálogo. Essa licença não substitui a curadoria nem a oferta individual do
 curso. Catálogo, API e curso precisam estar liberados para que uma nova venda
