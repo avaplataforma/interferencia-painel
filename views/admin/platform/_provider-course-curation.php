@@ -1,4 +1,4 @@
-<tr class="course-curation-row content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="5">
+<tr class="course-curation-row content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="6">
  <div class="course-curation-shell">
   <form class="course-curation-form content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int)$course['id'] ?>/review"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>">
    <header><div><span class="eyebrow">Curadoria comercial</span><h3><?= $escape((string)($course['effective_name']??$course['name'])) ?></h3><p>Edite a apresentação comercial sem alterar os dados recebidos do fornecedor.</p></div><button class="action-icon" type="button" data-course-curation-close="<?= $escape($editorId) ?>" title="Fechar curadoria"><i class="fa-solid fa-xmark"></i></button></header>

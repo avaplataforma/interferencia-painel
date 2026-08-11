@@ -25,10 +25,21 @@ $imageAi=is_array($imageGenerationSettings??null)?$imageGenerationSettings:[];
 $imageAiReady=(bool)($imageAi['configured']??false)&&(bool)($imageAi['is_active']??false);
 $contentQuery=trim((string)($_GET['content_q']??''));
 $activeProvider=(string)($_GET['catalog']??'');
+$courseQuery=trim((string)($_GET['course_q']??''));
+$courseReview=(string)($_GET['course_review']??'');
+$courseAvailability=(string)($_GET['course_availability']??'');
 $knownProviders=array_map(static fn(array$row):string=>(string)$row['provider_code'],$catalogRows);
 if(!in_array($activeProvider,$knownProviders,true))$activeProvider=(string)($knownProviders[0]??'ava_cursos');
 $coursesByCatalog=[];
-foreach($courseRows as$course)$coursesByCatalog[(string)$course['catalog_code']][]=$course;
+foreach($courseRows as$course){
+ $haystack=mb_strtolower(implode(' ',[(string)($course['effective_name']??''),(string)($course['name']??''),(string)($course['effective_category']??''),(string)($course['external_id']??'')]));
+ if($courseQuery!==''&&!str_contains($haystack,mb_strtolower($courseQuery)))continue;
+ if($courseReview!==''&&(string)($course['review_status']??'')!==$courseReview)continue;
+ if($courseAvailability==='enabled'&&(int)($course['is_globally_enabled']??1)!==1)continue;
+ if($courseAvailability==='blocked'&&(int)($course['is_globally_enabled']??1)===1)continue;
+ if($courseAvailability==='removed'&&(int)($course['is_available']??1)===1)continue;
+ $coursesByCatalog[(string)$course['catalog_code']][]=$course;
+}
 $formatDate=static fn(mixed$value):string=>is_string($value)&&$value!==''?date('d/m/Y H:i',strtotime($value)):'Ainda não executado';
 $tabLabel=static function(string $name):string{
  $label=preg_replace('/^Catálogo\s+/u','',$name);
@@ -60,6 +71,7 @@ $tabLabel=static function(string $name):string{
 @media(max-width:1000px){.course-curation-shell{grid-template-columns:1fr}.course-curation-aside{grid-template-columns:minmax(12rem,.6fr) minmax(18rem,1.4fr);align-items:start}.course-curation-aside>div:first-child{grid-column:1/-1}}
 @media(max-width:650px){.course-curation-aside{grid-template-columns:1fr}.content-ai-form{grid-template-columns:1fr}.content-ai-form small{grid-column:auto}}
 </style>
+<style>.course-management-toolbar{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(20rem,.75fr);gap:.8rem;margin:1rem 0;padding:.9rem;border:1px solid #dce4e9;border-radius:.85rem;background:#f8fafc}.course-filter-form{display:grid;grid-template-columns:minmax(15rem,1fr) minmax(9rem,.45fr) minmax(9rem,.45fr) auto;gap:.65rem;align-items:end}.course-bulk-form{display:grid;grid-template-columns:minmax(12rem,1fr) auto;gap:.65rem;align-items:end;padding-left:.8rem;border-left:1px solid #dce4e9}.course-filter-form label,.course-bulk-form label{display:grid;gap:.3rem;margin:0}.course-filter-form input,.course-filter-form select,.course-bulk-form select{width:100%;min-height:2.8rem}.course-filter-form .btn,.course-bulk-form .btn{min-height:2.8rem;margin:0;white-space:nowrap}.course-select-column{width:2.8rem!important;text-align:center}.course-select-column input{width:1.15rem;height:1.15rem;accent-color:#ed1c24}@media(max-width:1100px){.course-management-toolbar{grid-template-columns:1fr}.course-bulk-form{padding:0;border-left:0;border-top:1px solid #dce4e9;padding-top:.8rem}}@media(max-width:750px){.course-filter-form,.course-bulk-form{grid-template-columns:1fr}.course-filter-form .btn,.course-bulk-form .btn{width:100%}}</style>
 
 <div class="catalog-shell" data-catalog-content-provider="<?= $escape($activeProvider) ?>">
  <nav class="catalog-tabs" aria-label="Catálogos" role="tablist">
@@ -196,12 +208,16 @@ $tabLabel=static function(string $name):string{
     </div>
    </div>
     <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:courses" hidden>
+     <div class="course-management-toolbar">
+      <form class="course-filter-form" method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><input type="hidden" name="catalog" value="<?= $escape($provider) ?>"><input type="hidden" name="section" value="courses"><label>Localizar curso<input name="course_q" value="<?= $escape($courseQuery) ?>" placeholder="Nome, categoria ou código"></label><label>Curadoria<select name="course_review"><option value="">Todas</option><?php foreach($reviewLabels as$key=>$label):?><option value="<?= $escape($key) ?>" <?= $courseReview===$key?'selected':'' ?>><?= $escape($label) ?></option><?php endforeach;?></select></label><label>Disponibilidade<select name="course_availability"><option value="">Todas</option><option value="enabled" <?= $courseAvailability==='enabled'?'selected':'' ?>>Liberados</option><option value="blocked" <?= $courseAvailability==='blocked'?'selected':'' ?>>Bloqueados</option><option value="removed" <?= $courseAvailability==='removed'?'selected':'' ?>>Retirados</option></select></label><button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> Filtrar</button></form>
+      <form class="course-bulk-form" id="course-bulk-<?= $escape($provider) ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/catalog/<?= $escape($provider) ?>/courses/bulk"><?= $csrfField ?><input type="hidden" name="course_q" value="<?= $escape($courseQuery) ?>"><input type="hidden" name="course_review" value="<?= $escape($courseReview) ?>"><input type="hidden" name="course_availability" value="<?= $escape($courseAvailability) ?>"><label>Ação nos selecionados<select required name="bulk_action"><option value="">Selecione</option><option value="approve_release">Aprovar e liberar</option><option value="release">Liberar globalmente</option><option value="block">Bloquear globalmente</option></select></label><button class="btn btn-primary" type="submit" onclick="return confirm('Aplicar esta ação aos cursos selecionados?')"><i class="fa-solid fa-layer-group"></i> Aplicar em lote</button></form>
+     </div>
      <?php if($catalogCourses===[]):?>
-      <div class="catalog-empty"><i class="fa-solid fa-box-open fa-2x"></i><h3>Nenhum curso importado</h3><p>Depois de homologar a API, use a sincronização desta aba.</p></div>
+      <div class="catalog-empty"><i class="fa-solid fa-box-open fa-2x"></i><h3>Nenhum curso encontrado</h3><p>Revise os filtros ou sincronize este catálogo.</p></div>
      <?php else:?>
-      <div class="table-responsive"><table><thead><tr><th>Curso</th><th>Dados comerciais</th><th>Sincronização</th><th>Curadoria e liberação</th><th>Ação</th></tr></thead><tbody>
+      <div class="table-responsive"><table><thead><tr><th class="course-select-column"><i class="fa-solid fa-square-check"></i></th><th>Curso</th><th>Dados comerciais</th><th>Sincronização</th><th>Curadoria e liberação</th><th>Ação</th></tr></thead><tbody>
        <?php foreach($catalogCourses as$course):$review=(string)($course['review_status']??'imported');$release=(string)($course['release_status']??'private');$syncState=(string)($course['sync_state']??'unchanged');$cover=!empty($course['media_asset_id'])?$basePath.'/catalog-media/'.(int)$course['media_asset_id']:(string)($course['effective_cover_url']??$course['cover_url']??'');$courseGloballyEnabled=(int)($course['is_globally_enabled']??1)===1&&$catalogGloballyEnabled;$editorId='course-curation-'.(int)$course['id']; ?>
-       <tr>
+       <tr><td class="course-select-column"><input type="checkbox" name="course_ids[]" value="<?= (int)$course['id'] ?>" form="course-bulk-<?= $escape($provider) ?>" aria-label="Selecionar <?= $escape((string)($course['effective_name']??$course['name'])) ?>"></td>
         <td><div class="catalog-course"><?php if($cover!==''):?><img class="catalog-cover" src="<?= $escape($cover) ?>" alt="" loading="lazy"><?php else:?><span class="catalog-cover catalog-icon"><i class="fa-solid fa-book"></i></span><?php endif;?><div><strong><?= $escape((string)($course['effective_name']??$course['name'])) ?></strong><small>Fornecedor: <?= $escape((string)$course['name']) ?></small><div class="catalog-course-state"><span class="catalog-badge <?= (int)$course['is_available']===1?'ok':'' ?>"><?= (int)$course['is_available']===1?'Disponível':'Retirado' ?></span><span class="catalog-badge <?= $syncState==='changed'?'changed':'private' ?>"><?= $syncState==='new'?'Novo':($syncState==='changed'?'Alterado':($syncState==='removed'?'Retirado':'Atualizado')) ?></span></div></div></div></td>
         <td><strong><?= $escape((string)($course['effective_category']?:'Sem categoria')) ?></strong><small><?= $escape((string)($course['effective_workload']?:'Carga não informada')) ?><?= (string)($course['effective_certificate']??'')!==''?' · '.$escape((string)$course['effective_certificate']):'' ?></small></td>
         <td><span class="catalog-badge <?= $syncState==='changed'?'changed':'ok' ?>"><?= $syncState==='changed'?'Revisar alteração':'Sincronizado' ?></span><small><?= $escape($formatDate($course['last_seen_at']??null)) ?></small></td>

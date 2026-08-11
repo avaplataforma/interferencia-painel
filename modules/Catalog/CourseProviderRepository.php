@@ -534,6 +534,32 @@ final readonly class CourseProviderRepository
         if (!$enabled) $this->database->prepare("UPDATE {$offerTable} SET is_visible=0,updated_by=:user WHERE {$offerColumn}=:item")->execute(['user' => $userId, 'item' => $itemId]);
     }
 
+    /** @param list<int|string> $courseIds */
+    public function bulkCourseAction(string $providerCode, array $courseIds, string $action, ?int $userId): int
+    {
+        if (!in_array($action, ['approve_release', 'release', 'block'], true)) throw new RuntimeException('Ação em lote inválida.');
+        $ids = array_values(array_unique(array_filter(array_map('intval', $courseIds), static fn(int $id): bool => $id > 0)));
+        if ($ids === []) throw new RuntimeException('Selecione pelo menos um curso.');
+        if (count($ids) > 200) throw new RuntimeException('Selecione no máximo 200 cursos por operação.');
+
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $parameters = array_merge([$userId, $providerCode], $ids);
+        $set = match ($action) {
+            'approve_release' => "course.review_status='approved',course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW()",
+            'release' => 'course.is_globally_enabled=1,course.reviewed_by=?',
+            'block' => 'course.is_globally_enabled=0,course.reviewed_by=?',
+        };
+        $statement = $this->database->prepare("UPDATE provider_courses course INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id SET {$set} WHERE provider.provider_code=? AND course.id IN ({$placeholders})");
+        $statement->execute($parameters);
+        $affected = $statement->rowCount();
+
+        if ($action === 'block') {
+            $offer = $this->database->prepare("UPDATE organization_provider_course_offers SET is_visible=0,updated_by=? WHERE provider_course_id IN ({$placeholders})");
+            $offer->execute(array_merge([$userId], $ids));
+        }
+        return $affected;
+    }
+
     public function setOrganizationItemAvailability(int $organizationId, string $itemType, int $itemId, bool $enabled, ?int $userId): void
     {
         if (!in_array($itemType, ['course', 'content'], true)) throw new RuntimeException('Tipo de item do catálogo inválido.');
@@ -888,7 +914,7 @@ final readonly class CourseProviderRepository
     {
         $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
             COALESCE(access.is_enabled,1) is_enabled,
-            COALESCE(access.markup_percent,0) markup_percent,COALESCE(access.default_max_installments,1) default_max_installments,
+            COALESCE(access.markup_percent,0) markup_percent,access.default_price,COALESCE(access.default_max_installments,1) default_max_installments,
             access.valid_from,access.valid_until,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
@@ -914,7 +940,7 @@ final readonly class CourseProviderRepository
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,access.is_enabled,access.markup_percent,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,access.is_enabled,access.markup_percent,access.default_price,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
@@ -929,7 +955,7 @@ final readonly class CourseProviderRepository
 
         $enabled = array_values(array_unique(array_filter(array_map('intval', $enabledCatalogIds), static fn(int $id): bool => $id > 0)));
         $catalogs = $this->database->query('SELECT id FROM course_catalogs WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN) ?: [];
-        $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,:enabled,:markup,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),markup_percent=VALUES(markup_percent),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
+        $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,:enabled,:markup,:default_price,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
 
         $this->database->beginTransaction();
         try {
@@ -937,12 +963,15 @@ final readonly class CourseProviderRepository
                 $id = (int)$catalogId;
                 $policy = is_array($policies[$id] ?? null) ? $policies[$id] : (is_array($policies[(string)$id] ?? null) ? $policies[(string)$id] : []);
                 $markup = round((float)str_replace(',', '.', (string)($policy['markup_percent'] ?? '0')), 4);
+                $defaultPriceInput = trim((string)($policy['default_price'] ?? ''));
+                $defaultPrice = $defaultPriceInput === '' ? null : round((float)str_replace(',', '.', $defaultPriceInput), 2);
                 $installments = max(1, min(60, (int)($policy['default_max_installments'] ?? 1)));
                 $validFrom = $this->dateOrNull((string)($policy['valid_from'] ?? ''));
                 $validUntil = $this->dateOrNull((string)($policy['valid_until'] ?? ''));
                 if ($markup < -100 || $markup > 1000) throw new RuntimeException('O ajuste em lote deve ficar entre -100% e 1.000%.');
+                if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
                 if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final da regra não pode ser anterior ao início.');
-                $statement->execute(['organization' => $organizationId, 'catalog' => $id, 'enabled' => (int)in_array($id, $enabled, true), 'markup' => $markup, 'installments' => $installments, 'valid_from' => $validFrom, 'valid_until' => $validUntil, 'user' => $userId]);
+                $statement->execute(['organization' => $organizationId, 'catalog' => $id, 'enabled' => (int)in_array($id, $enabled, true), 'markup' => $markup, 'default_price' => $defaultPrice, 'installments' => $installments, 'valid_from' => $validFrom, 'valid_until' => $validUntil, 'user' => $userId]);
             }
             $this->database->commit();
         } catch (Throwable $exception) {
@@ -962,14 +991,15 @@ final readonly class CourseProviderRepository
         if (($row['valid_until'] ?? null) !== null && (string)$row['valid_until'] < $today) throw new RuntimeException('Esta regra comercial está vencida.');
 
         $markup = (float)$row['markup_percent'];
+        $defaultPrice = isset($row['default_price']) && $row['default_price'] !== null ? (float)$row['default_price'] : null;
         $installments = max(1, min(60, (int)$row['default_max_installments']));
         $statement = $this->database->prepare("INSERT INTO organization_provider_course_offers(organization_id,provider_course_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by)
             SELECT :organization,course.id,COALESCE(NULLIF(course.commercial_name,''),course.name),course.commercial_description,
-                ROUND(COALESCE(course.remote_promotional_price,course.remote_reference_price,0)*(1+(:markup/100)),2),:installments,'assisted',0,1,:created_by,:updated_by
+                CASE WHEN :default_price IS NOT NULL THEN :default_price_value ELSE ROUND(COALESCE(course.remote_promotional_price,course.remote_reference_price,0)*(1+(:markup/100)),2) END,:installments,'assisted',0,1,:created_by,:updated_by
             FROM provider_courses course
             WHERE course.catalog_id=:catalog AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1 AND NOT EXISTS(SELECT 1 FROM organization_catalog_item_access item_access WHERE item_access.organization_id=:item_organization AND item_access.item_type='course' AND item_access.item_id=course.id AND item_access.is_enabled=0)
             ON DUPLICATE KEY UPDATE price=VALUES(price),max_installments=VALUES(max_installments),is_active=1,updated_by=VALUES(updated_by)");
-        $statement->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'markup' => $markup, 'installments' => $installments, 'created_by' => $userId, 'updated_by' => $userId, 'item_organization' => $organizationId]);
+        $statement->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'default_price' => $defaultPrice, 'default_price_value' => $defaultPrice, 'markup' => $markup, 'installments' => $installments, 'created_by' => $userId, 'updated_by' => $userId, 'item_organization' => $organizationId]);
         return $statement->rowCount();
     }
 

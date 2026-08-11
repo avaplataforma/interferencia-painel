@@ -1764,6 +1764,7 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
 
 $tests['governa catalogos com curadoria preservada recursos e regra por franquia'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000020_expand_course_catalog_governance.php');
+    $priceMigration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000090_add_default_price_to_catalog_policy.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $catalogView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
@@ -1771,16 +1772,21 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     $organizationView=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
 
     foreach(['commercial_cover_url','release_status','content_hash','sync_state','course_provider_capabilities','markup_percent','default_max_installments'] as$field) assertTrue(str_contains($migration,$field));
+    assertTrue(str_contains($priceMigration,'default_price'));
     assertTrue(str_contains($repository,'public function applyCatalogPolicy'));
+    assertTrue(str_contains($repository,'public function bulkCourseAction'));
     assertTrue(str_contains($repository,'public function saveCapabilities'));
     assertTrue(str_contains($repository,"COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name"));
     assertTrue(str_contains($repository,"course.review_status='approved' AND course.release_status IN ('released','published')"));
     assertTrue(substr_count($repository,"THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)")>=2);
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/capabilities'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/catalogs/{catalogId:\\d+}/apply-policy'"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/courses/bulk'"));
     assertTrue(str_contains($catalogView,'Matriz real de recursos deste fornecedor'));
+    assertTrue(str_contains($catalogView,'Aplicar em lote'));
     assertTrue(str_contains($courseCuration,'Aprovar não publica sozinho'));
-    assertTrue(str_contains($organizationView,'Salvar e aplicar aos cursos'));
+    assertTrue(str_contains($organizationView,'Preço padrão para todos'));
+    assertTrue(str_contains($organizationView,'Salvar regra e aplicar em lote'));
     assertTrue(str_contains($organizationView,'catalog_policy['));
 };
 
