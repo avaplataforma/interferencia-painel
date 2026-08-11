@@ -266,10 +266,22 @@ Key — armazenadas separadamente e criptografadas no ADM Central. O endereço-b
 é registrado sem incorporar segredos e a franquia enxerga apenas o estado da
 integração e os recursos homologados.
 
-O destino acadêmico é o AVA Cursos. Entretanto, o conector permanece inativo e
-sem sincronização até a CONTED TECH confirmar as rotas, cabeçalhos de
-autenticação, paginação, matrícula e liberação. Salvar credenciais não equivale
-a homologar o fornecedor e não libera vendas ou acessos automaticamente.
+O conector segue a documentação OpenAPI V2 publicada pelo fornecedor:
+
+1. autentica em `POST /api/v2/login` com API Key e Secret Key;
+2. mantém o JWT recebido apenas durante a comunicação atual;
+3. consulta cursos em `POST /api/v2/contents`, com `type=course`, `limit` e
+   `offset`;
+4. preserva o `batch` como identificador remoto estável e mantém a estrutura de
+   semestres ou disciplinas para a curadoria;
+5. gera o acesso temporário do aluno em `POST /api/v2/content/link`;
+6. suspende o acesso em `POST /api/v2/student/inactive`.
+
+A Integration Key continua armazenada e criptografada, mas não é enviada em
+cabeçalhos não documentados. A sincronização importa somente o catálogo
+acadêmico: não publica cursos, não define preços, não gera cobranças e não cria
+matrículas comerciais automaticamente. O destino acadêmico continua sendo o
+AVA Cursos, que abre o conteúdo EXPERT pelo link temporário oficial.
 
 ## IESDE e Catálogo MASTER por LTI 1.3
 

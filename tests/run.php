@@ -1671,10 +1671,33 @@ $tests['registra o Catalogo EXPERT com credenciais protegidas e destino academic
     assertTrue(str_contains($repository,'Integration Key e a Secret Key da CONTED TECH'));
     assertTrue(str_contains($catalogView,'Integration Key'));
     assertTrue(str_contains($catalogView,'Secret Key'));
-    assertTrue(str_contains($catalogView,'rotas e os cabeçalhos oficiais da CONTED TECH'));
+    assertTrue(str_contains($catalogView,'documentação OpenAPI V2'));
     assertTrue(str_contains($organizationView,'Moodle exclusivo da franquia'));
     assertTrue(str_contains($organizationView,'Dentro do AVA Cursos'));
     assertTrue(str_contains($organizationView,'AVA do fornecedor'));
+};
+
+$tests['homologa o conector oficial JWT do Catalogo EXPERT'] = static function () use ($rootPath): void {
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/ContedTechClient.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000040_enable_conted_tech_connector.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+
+    assertTrue(str_contains($client,"'api_key'"));
+    assertTrue(str_contains($client,"'secret_key'"));
+    assertTrue(str_contains($client,"'Authorization: Bearer '"));
+    assertTrue(str_contains($client,"'type' => 'course'"));
+    assertTrue(str_contains($client,"'limit' => \$pageSize"));
+    assertTrue(str_contains($client,"'offset' => \$page * \$pageSize"));
+    assertTrue(str_contains($client,"'content/link'"));
+    assertTrue(str_contains($client,"'student/inactive'"));
+    assertTrue(str_contains($client,'CURLOPT_PROTOCOLS => CURLPROTO_HTTPS'));
+    assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));
+    assertTrue(str_contains($migration,"delivery_mode='sso'"));
+    assertTrue(str_contains($migration,'catalog_sync=1'));
+    assertTrue(str_contains($repository,"['escola_avancada', 'iesde', 'conted_tech']"));
+    assertTrue(str_contains($repository,"\$course['batch']"));
+    assertTrue(str_contains($routes,'new ContedTechClient'));
 };
 
 $tests['prepara conector paginado e seguro do Catalogo MASTER'] = static function () use ($rootPath): void {
@@ -1696,7 +1719,7 @@ $tests['prepara conector paginado e seguro do Catalogo MASTER'] = static functio
     assertTrue(str_contains($client,'web_service/cadastro/format/json'));
     assertTrue(str_contains($client,'web_service/situacao/format/json'));
     assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));
-    assertTrue(str_contains($repository,"['escola_avancada', 'iesde']"));
+    assertTrue(str_contains($repository,"['escola_avancada', 'iesde', 'conted_tech']"));
     assertTrue(str_contains($repository,'synchronizeProvider'));
     assertTrue(str_contains($routes,'new PortalAvaClient'));
     assertTrue(str_contains($view,'Usuário HTTP Digest'));

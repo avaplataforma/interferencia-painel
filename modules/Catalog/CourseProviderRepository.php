@@ -13,7 +13,7 @@ use Throwable;
 final readonly class CourseProviderRepository
 {
     private const PROVIDER = 'escola_avancada';
-    private const READY_PROVIDERS = ['escola_avancada', 'iesde'];
+    private const READY_PROVIDERS = ['escola_avancada', 'iesde', 'conted_tech'];
     private const DELIVERY_MODES = ['external_link', 'iframe', 'sso', 'lti'];
 
     public function __construct(private PDO $database, private SecretCipher $cipher) {}
@@ -622,7 +622,7 @@ final readonly class CourseProviderRepository
             $supplierUpdated = $timestamp === false ? '' : date('Y-m-d H:i:s', $timestamp);
         }
         return [
-            'remote_id' => trim((string)($course['id'] ?? $course['ID'] ?? $course['CursoID'] ?? $course['curso_id'] ?? $course['codigo'] ?? $course['Codigo'] ?? '')),
+            'remote_id' => trim((string)($course['id'] ?? $course['batch'] ?? $course['ID'] ?? $course['CursoID'] ?? $course['curso_id'] ?? $course['codigo'] ?? $course['Codigo'] ?? '')),
             'name' => $name,
             'slug' => trim((string)($course['slug'] ?? $course['Slug'] ?? $this->slug($name))),
             'short_description' => trim((string)($course['resumo'] ?? $course['Resumo'] ?? $course['ementa'] ?? $course['Ementa'] ?? '')),
