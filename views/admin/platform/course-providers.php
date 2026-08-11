@@ -216,6 +216,7 @@ $tabLabel=static function(string $name):string{
       </tbody></table></div>
      <?php endif;?>
     </div>
+    <?php if($isConted)require __DIR__.'/_provider-content-panel.php';?>
     <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:capabilities" hidden>
      <div class="catalog-note" style="margin-top:0"><i class="fa-solid fa-circle-info"></i><div><strong>Matriz real de recursos deste fornecedor.</strong><br>Marque somente operações confirmadas em homologação. Essa matriz guiará matrículas, suporte e automações sem prometer recursos indisponíveis.</div></div>
      <form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/catalog/<?= $escape($provider) ?>/capabilities"><?= $csrfField ?>
