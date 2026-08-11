@@ -372,9 +372,10 @@ final readonly class CourseProviderRepository
                 ]);
                 if ($syncState === 'changed') $updated++;
             } else {
-                $this->database->prepare("INSERT INTO provider_catalog_contents(provider_id,catalog_id,external_key,content_type,name,is_available,raw_payload,content_hash,sync_state,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:catalog,:external,:type,:name,1,:raw,:hash,'new',:seen,:seen,:seen)")->execute([
+                $this->database->prepare("INSERT INTO provider_catalog_contents(provider_id,catalog_id,external_key,content_type,name,is_available,raw_payload,content_hash,sync_state,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:catalog,:external,:type,:name,1,:raw,:hash,'new',:first_seen,:last_seen,:changed_at)")->execute([
                     'provider' => $providerId, 'catalog' => $catalogId, 'external' => $external,
-                    'type' => $type, 'name' => $name, 'raw' => $rawJson, 'hash' => $hash, 'seen' => $seenAt,
+                    'type' => $type, 'name' => $name, 'raw' => $rawJson, 'hash' => $hash,
+                    'first_seen' => $seenAt, 'last_seen' => $seenAt, 'changed_at' => $seenAt,
                 ]);
                 $contentId = (int)$this->database->lastInsertId();
                 $created++;

@@ -1828,6 +1828,7 @@ $tests['decompoe cursos EXPERT em conteudos individuais vendaveis'] = static fun
     assertTrue(str_contains($repository,'public function catalogContents'));
     assertTrue(str_contains($repository,'public function saveContentOffer'));
     assertTrue(str_contains($repository,'public function contentAccessTargetForOffer'));
+    assertTrue(str_contains($repository,':first_seen,:last_seen,:changed_at'));
     assertTrue(str_contains($siteRepository,'externalContentProducts'));
     assertTrue(str_contains($routes,"'/site/conteudo/{offer:\\d+}'"));
     assertTrue(str_contains($view,'Conteúdos individuais'));
