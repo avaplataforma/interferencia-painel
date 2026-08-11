@@ -13,6 +13,7 @@ use Throwable;
 final readonly class CourseProviderRepository
 {
     private const PROVIDER = 'escola_avancada';
+    private const READY_PROVIDERS = ['escola_avancada', 'iesde'];
     private const DELIVERY_MODES = ['external_link', 'iframe', 'sso'];
 
     public function __construct(private PDO $database, private SecretCipher $cipher) {}
@@ -33,6 +34,13 @@ final readonly class CourseProviderRepository
         $row = $statement->fetch();
         if (!is_array($row)) throw new RuntimeException('Fornecedor de cursos não encontrado.');
         $token = $includeSecret ? $this->cipher->decrypt(isset($row['token_encrypted']) ? (string)$row['token_encrypted'] : null) : '';
+        $username = $includeSecret ? $this->cipher->decrypt(isset($row['username_encrypted']) ? (string)$row['username_encrypted'] : null) : '';
+        $password = $includeSecret ? $this->cipher->decrypt(isset($row['password_encrypted']) ? (string)$row['password_encrypted'] : null) : '';
+        $providerCode = (string)$row['provider_code'];
+        $configured = trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '';
+        if ($providerCode === 'iesde') {
+            $configured = $configured && (string)($row['username_encrypted'] ?? '') !== '' && (string)($row['password_encrypted'] ?? '') !== '';
+        }
 
         return [
             'id' => (int)$row['id'],
@@ -41,14 +49,18 @@ final readonly class CourseProviderRepository
             'base_url' => (string)($row['base_url'] ?? ''),
             'token' => $token,
             'token_last4' => (string)($row['token_last4'] ?? ''),
+            'username' => $username,
+            'username_last4' => (string)($row['username_last4'] ?? ''),
+            'password' => $password,
+            'password_last4' => (string)($row['password_last4'] ?? ''),
             'catalog_id' => (int)($row['catalog_id'] ?? 0),
             'catalog_name' => (string)($row['catalog_name'] ?? ''),
             'catalog_code' => (string)($row['catalog_code'] ?? ''),
             'delivery_mode' => (string)($row['delivery_mode'] ?? 'external_link'),
             'launch_url_template' => (string)($row['launch_url_template'] ?? ''),
             'is_active' => (int)($row['is_active'] ?? 0) === 1,
-            'configured' => trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '',
-            'adapter_ready' => (string)$row['provider_code'] === self::PROVIDER,
+            'configured' => $configured,
+            'adapter_ready' => in_array($providerCode, self::READY_PROVIDERS, true),
             'last_test_status' => (string)($row['last_test_status'] ?? 'not_tested'),
             'last_tested_at' => $row['last_tested_at'] ?? null,
             'last_sync_status' => (string)($row['last_sync_status'] ?? 'never'),
@@ -67,20 +79,35 @@ final readonly class CourseProviderRepository
         $current = $this->settingsForProvider($providerCode);
         $baseUrl = trim((string)($input['base_url'] ?? ''));
         $token = trim((string)($input['token'] ?? ''));
+        $username = trim((string)($input['username'] ?? ''));
+        $password = (string)($input['password'] ?? '');
         $delivery = trim((string)($input['delivery_mode'] ?? 'external_link'));
         $launch = trim((string)($input['launch_url_template'] ?? ''));
+        $adapterReady = in_array($providerCode, self::READY_PROVIDERS, true);
+        $active = $adapterReady && (bool)($input['is_active'] ?? false);
         if ($baseUrl === '' || filter_var($baseUrl, FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($baseUrl, PHP_URL_SCHEME)) !== 'https') throw new RuntimeException('Informe a URL HTTPS oficial da API do fornecedor.');
         if (!in_array($delivery, self::DELIVERY_MODES, true)) throw new RuntimeException('Forma de acesso ao curso inválida.');
         if ($launch !== '' && (filter_var(str_replace(['{curso}', '{id}'], ['1', '1'], $launch), FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($launch, PHP_URL_SCHEME)) !== 'https')) throw new RuntimeException('O endereço do AVA deve usar HTTPS.');
         if ($token === '' && !$current['configured']) throw new RuntimeException('Informe a chave ou token da API.');
-        if ($token !== '' && !$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
+        if ($providerCode === 'iesde' && !$current['configured'] && ($username === '' || trim($password) === '')) throw new RuntimeException('Informe o usuário e a senha HTTP Digest do Portal AVA.');
+        if (($token !== '' || $username !== '' || trim($password) !== '') && !$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
 
-        $sql = 'UPDATE course_provider_integrations SET base_url=:base,delivery_mode=:delivery,launch_url_template=:launch,is_active=0,updated_by=:user';
-        $params = ['base' => rtrim($baseUrl, '/'), 'delivery' => $delivery, 'launch' => $launch !== '' ? $launch : null, 'user' => $userId, 'code' => $providerCode];
+        $sql = 'UPDATE course_provider_integrations SET base_url=:base,delivery_mode=:delivery,launch_url_template=:launch,is_active=:active,updated_by=:user';
+        $params = ['base' => rtrim($baseUrl, '/'), 'delivery' => $delivery, 'launch' => $launch !== '' ? $launch : null, 'active' => (int)$active, 'user' => $userId, 'code' => $providerCode];
         if ($token !== '') {
             $sql .= ',token_encrypted=:token,token_last4=:last4';
             $params['token'] = $this->cipher->encrypt($token);
             $params['last4'] = substr($token, -4);
+        }
+        if ($username !== '') {
+            $sql .= ',username_encrypted=:username,username_last4=:username_last4';
+            $params['username'] = $this->cipher->encrypt($username);
+            $params['username_last4'] = substr($username, -4);
+        }
+        if (trim($password) !== '') {
+            $sql .= ',password_encrypted=:password,password_last4=:password_last4';
+            $params['password'] = $this->cipher->encrypt($password);
+            $params['password_last4'] = substr($password, -4);
         }
         $sql .= ' WHERE provider_code=:code';
         $this->database->prepare($sql)->execute($params);
@@ -124,22 +151,28 @@ final readonly class CourseProviderRepository
         }
     }
 
-    public function recordTest(?string $error): void
+    public function recordTest(?string $error, string $providerCode = self::PROVIDER): void
     {
         $this->database->prepare("UPDATE course_provider_integrations SET last_test_status=:status,last_tested_at=NOW(),last_error=:error WHERE provider_code=:code")->execute([
             'status' => $error === null ? 'success' : 'failed',
             'error' => $error,
-            'code' => self::PROVIDER,
+            'code' => $providerCode,
         ]);
     }
 
     /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int} */
     public function synchronize(array $courses): array
     {
-        $settings = $this->settings();
-        if ((int)$settings['id'] < 1) throw new RuntimeException('Integração da Escola Avançada não encontrada.');
-        $catalogId = (int)$this->database->query("SELECT id FROM course_catalogs WHERE code='catalogo-pro'")->fetchColumn();
-        if ($catalogId < 1) throw new RuntimeException('Catálogo PRO não encontrado.');
+        return $this->synchronizeProvider(self::PROVIDER, $courses);
+    }
+
+    /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int} */
+    public function synchronizeProvider(string $providerCode, array $courses): array
+    {
+        $settings = $this->settingsForProvider($providerCode, true);
+        if ((int)$settings['id'] < 1) throw new RuntimeException('Integração do fornecedor não encontrada.');
+        $catalogId = (int)$settings['catalog_id'];
+        if ($catalogId < 1) throw new RuntimeException('Catálogo do fornecedor não encontrado.');
 
         $providerId = (int)$settings['id'];
         $now = date('Y-m-d H:i:s');
@@ -196,7 +229,7 @@ final readonly class CourseProviderRepository
             return ['received' => count($courses), 'created' => $created, 'updated' => $updated, 'unavailable' => $unavailable];
         } catch (Throwable $exception) {
             if ($this->database->inTransaction()) $this->database->rollBack();
-            $this->recordSyncFailure($exception->getMessage());
+            $this->recordSyncFailure($exception->getMessage(), $providerCode);
             throw $exception;
         }
     }
@@ -222,11 +255,14 @@ final readonly class CourseProviderRepository
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
+            COALESCE(provider.username_last4,'') username_last4,COALESCE(provider.password_last4,'') password_last4,
             COALESCE(provider.delivery_mode,'external_link') delivery_mode,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
-            CASE WHEN catalog.code='ava-cursos' THEN 1 WHEN provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
-            CASE WHEN provider.provider_code='escola_avancada' THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
+            CASE WHEN catalog.code='ava-cursos' THEN 1
+                WHEN provider.provider_code='iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
+                WHEN provider.provider_code<>'iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
+            CASE WHEN provider.provider_code IN ('escola_avancada','iesde') THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_test_status,'not_tested') END integration_status,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_sync_status,'never') END sync_status,
             provider.last_tested_at,provider.last_synced_at,COALESCE(provider.last_error,'') last_error,
@@ -391,26 +427,26 @@ final readonly class CourseProviderRepository
         return ['total' => (int)($row['total'] ?? 0), 'available' => (int)($row['available'] ?? 0), 'categories' => (int)($row['categories'] ?? 0), 'approved' => (int)($row['approved'] ?? 0), 'offers' => $offers];
     }
 
-    private function recordSyncFailure(string $error): void
+    private function recordSyncFailure(string $error, string $providerCode = self::PROVIDER): void
     {
-        $this->database->prepare("UPDATE course_provider_integrations SET last_sync_status='failed',last_synced_at=NOW(),last_error=:error WHERE provider_code=:code")->execute(['error' => mb_substr($error, 0, 2000), 'code' => self::PROVIDER]);
+        $this->database->prepare("UPDATE course_provider_integrations SET last_sync_status='failed',last_synced_at=NOW(),last_error=:error WHERE provider_code=:code")->execute(['error' => mb_substr($error, 0, 2000), 'code' => $providerCode]);
     }
 
     /** @param array<string,mixed> $course @return array<string,mixed> */
     private function normalizeCourse(array $course): array
     {
         return [
-            'remote_id' => trim((string)($course['id'] ?? $course['curso_id'] ?? $course['codigo'] ?? '')),
-            'name' => trim((string)($course['nome'] ?? $course['titulo'] ?? '')),
-            'description' => trim((string)($course['obs'] ?? $course['descricao'] ?? '')),
-            'category' => trim((string)($course['categoria_loja'] ?? $course['categoria_interna'] ?? $course['categoria'] ?? '')),
-            'workload' => trim((string)($course['carga_horaria'] ?? '')),
-            'lesson_count' => max(0, (int)($course['aulas'] ?? 0)),
-            'cover_url' => trim((string)($course['capa_image'] ?? $course['capa'] ?? '')),
-            'price' => $this->money($course['preco'] ?? null),
-            'promotional_price' => $this->money($course['preco_promocional'] ?? null),
-            'installments' => isset($course['parcelas']) && is_numeric($course['parcelas']) ? max(0, (int)$course['parcelas']) : null,
-            'status' => trim((string)($course['status'] ?? '')),
+            'remote_id' => trim((string)($course['id'] ?? $course['ID'] ?? $course['CursoID'] ?? $course['curso_id'] ?? $course['codigo'] ?? $course['Codigo'] ?? '')),
+            'name' => trim((string)($course['nome'] ?? $course['Nome'] ?? $course['Curso'] ?? $course['curso'] ?? $course['titulo'] ?? $course['Titulo'] ?? '')),
+            'description' => trim((string)($course['obs'] ?? $course['Obs'] ?? $course['descricao'] ?? $course['Descricao'] ?? $course['Descrição'] ?? '')),
+            'category' => trim((string)($course['categoria_loja'] ?? $course['categoria_interna'] ?? $course['categoria'] ?? $course['Categoria'] ?? $course['CategoriaNome'] ?? '')),
+            'workload' => trim((string)($course['carga_horaria'] ?? $course['CargaHoraria'] ?? $course['Carga_Horaria'] ?? '')),
+            'lesson_count' => max(0, (int)($course['aulas'] ?? $course['Aulas'] ?? $course['QtdAulas'] ?? 0)),
+            'cover_url' => trim((string)($course['capa_image'] ?? $course['capa'] ?? $course['Capa'] ?? $course['Imagem'] ?? $course['imagem'] ?? '')),
+            'price' => $this->money($course['preco'] ?? $course['Preco'] ?? null),
+            'promotional_price' => $this->money($course['preco_promocional'] ?? $course['PrecoPromocional'] ?? null),
+            'installments' => isset($course['parcelas']) && is_numeric($course['parcelas']) ? max(0, (int)$course['parcelas']) : (isset($course['Parcelas']) && is_numeric($course['Parcelas']) ? max(0, (int)$course['Parcelas']) : null),
+            'status' => trim((string)($course['status'] ?? $course['Status'] ?? $course['Situacao'] ?? $course['Situação'] ?? '')),
         ];
     }
 

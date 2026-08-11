@@ -239,3 +239,19 @@ externos começam bloqueados e com a API pendente, preservando o princípio de
 negação por padrão. A integração de cada fornecedor será ativada somente depois
 de cadastradas as credenciais, testada a consulta de cursos e homologada a
 operação de matrícula/liberação de acesso.
+
+### Catálogo MASTER — Portal AVA / IESDE
+
+O conector MASTER usa o WebService paginado do Portal AVA. A URL-base oficial é
+separada do endereço que o aluno abre no navegador. A autenticação combina:
+
+- usuário HTTP Digest;
+- senha HTTP Digest;
+- cabeçalho `EAD-API-KEY`.
+
+As três credenciais são criptografadas pelo Painel e nunca aparecem novamente
+na interface. A consulta de cursos usa
+`web_servicePg/getCursos/format/json`, com paginação e intervalo de datas. O
+conector também deixa preparados os serviços oficiais de criação de matrícula,
+mudança de situação e consulta de matrículas, sem importar o financeiro do
+fornecedor e sem desabilitar a validação TLS.

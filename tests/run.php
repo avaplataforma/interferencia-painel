@@ -1649,6 +1649,28 @@ $tests['registra todos os catalogos e fornecedores academicos'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),'catalogCourseOffersForOrganization'));
 };
 
+$tests['prepara conector paginado e seguro do Catalogo MASTER'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260810_999920_add_portalava_provider_credentials.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/PortalAvaClient.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    assertTrue(str_contains($migration,'username_encrypted'));
+    assertTrue(str_contains($migration,'password_encrypted'));
+    assertTrue(str_contains($migration,"https://ead.portalava.com.br"));
+    assertTrue(str_contains($client,'CURLAUTH_DIGEST'));
+    assertTrue(str_contains($client,'EAD-API-KEY'));
+    assertTrue(str_contains($client,'web_servicePg/getCursos/format/json'));
+    assertTrue(str_contains($client,'web_service/cadastro/format/json'));
+    assertTrue(str_contains($client,'web_service/situacao/format/json'));
+    assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));
+    assertTrue(str_contains($repository,"['escola_avancada', 'iesde']"));
+    assertTrue(str_contains($repository,'synchronizeProvider'));
+    assertTrue(str_contains($routes,'new PortalAvaClient'));
+    assertTrue(str_contains($view,'Usuário HTTP Digest'));
+    assertTrue(str_contains($view,'Chave EAD-API-KEY'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
