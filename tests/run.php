@@ -1767,6 +1767,7 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $catalogView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $courseCuration=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
     $organizationView=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
 
     foreach(['commercial_cover_url','release_status','content_hash','sync_state','course_provider_capabilities','markup_percent','default_max_installments'] as$field) assertTrue(str_contains($migration,$field));
@@ -1778,7 +1779,7 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/capabilities'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/catalogs/{catalogId:\\d+}/apply-policy'"));
     assertTrue(str_contains($catalogView,'Matriz real de recursos deste fornecedor'));
-    assertTrue(str_contains($catalogView,'Aprovar não publica sozinho'));
+    assertTrue(str_contains($courseCuration,'Aprovar não publica sozinho'));
     assertTrue(str_contains($organizationView,'Salvar e aplicar aos cursos'));
     assertTrue(str_contains($organizationView,'catalog_policy['));
 };
@@ -1856,6 +1857,7 @@ $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = stat
     $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $courseCuration=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
     $contentView=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
     $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
@@ -1871,7 +1873,7 @@ $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = stat
     assertTrue(str_contains($generator,'interface CatalogImageGenerator'));
     assertTrue(str_contains($siteRepository,'media_asset_id'));
     assertTrue(str_contains($routes,"'/catalog-media/{id:\\d+}'"));
-    assertTrue(str_contains($view,'Capa otimizada no Spaces'));
+    assertTrue(str_contains($courseCuration,'Capa otimizada no Spaces'));
     assertTrue(str_contains($contentView,'Capa herdada'));
     assertTrue(str_contains($javascript,"section === 'contents' && provider !== loadedContentProvider"));
 };
