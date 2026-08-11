@@ -108,6 +108,7 @@ final readonly class PortalAvaClient
         $curl = curl_init($this->apiBase() . '/' . ltrim($endpoint, '/'));
         if ($curl === false) throw new RuntimeException('Não foi possível iniciar a conexão com o Catálogo MASTER.');
 
+        $responseHeaders = [];
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST => true,
@@ -124,6 +125,12 @@ final readonly class PortalAvaClient
                 'EAD-API-KEY: ' . trim($this->apiKey),
                 'User-Agent: MUNDO-INTER/1.0',
             ],
+            CURLOPT_HEADERFUNCTION => static function ($handle, string $header) use (&$responseHeaders): int {
+                $length = strlen($header);
+                $parts = explode(':', $header, 2);
+                if (count($parts) === 2) $responseHeaders[mb_strtolower(trim($parts[0]))] = trim($parts[1]);
+                return $length;
+            },
         ]);
 
         $body = curl_exec($curl);
@@ -135,6 +142,9 @@ final readonly class PortalAvaClient
         if (!is_string($body)) throw new RuntimeException('Falha de comunicação com o Catálogo MASTER' . ($error !== '' ? ': ' . $error : '') . '.');
         $data = json_decode($body, true);
         if (!is_array($data)) {
+            if (mb_strtolower((string)($responseHeaders['x-amzn-waf-action'] ?? '')) === 'captcha') {
+                throw new RuntimeException('O firewall do Portal AVA bloqueou a integração com uma verificação CAPTCHA. Solicite ao fornecedor a liberação do IP público do servidor Mundo Inter para as rotas da API.');
+            }
             $detail = $status > 0 ? ' (HTTP ' . $status . ')' : '';
             if (str_contains($contentType, 'text/html')) $detail .= ' A resposta recebida foi uma página HTML.';
             throw new RuntimeException('O Portal AVA respondeu em formato diferente de JSON' . $detail . ' Confirme a URL e as três credenciais com o fornecedor.');
