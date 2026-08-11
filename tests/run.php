@@ -1663,6 +1663,8 @@ $tests['prepara conector paginado e seguro do Catalogo MASTER'] = static functio
     assertTrue(str_contains($client,'web_servicePg/getCursos/format/json'));
     assertTrue(str_contains($client,'x-amzn-waf-action'));
     assertTrue(str_contains($client,'verificação CAPTCHA'));
+    assertTrue(str_contains($client,'CURLOPT_NOBODY => true'));
+    assertTrue(str_contains($client,"'totalPaginas'"));
     assertTrue(str_contains($client,'web_service/cadastro/format/json'));
     assertTrue(str_contains($client,'web_service/situacao/format/json'));
     assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));

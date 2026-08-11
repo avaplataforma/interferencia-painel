@@ -38,8 +38,8 @@ final readonly class PortalAvaClient
 
         for ($page = 1; $page <= $maxPages; $page++) {
             $response = $this->request(self::COURSE_ENDPOINT, [
-                'DtInicio' => '01/01/2000',
-                'DtFim' => '31/12/2099',
+                'DtInicio' => '01/01/2020',
+                'DtFim' => date('d/m/Y'),
                 'registros_pagina' => $pageSize,
                 'pagina' => $page,
             ]);
@@ -111,8 +111,7 @@ final readonly class PortalAvaClient
         $responseHeaders = [];
         curl_setopt_array($curl, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => http_build_query($payload, '', '&', PHP_QUERY_RFC3986),
+            CURLOPT_NOBODY => true,
             CURLOPT_HTTPAUTH => CURLAUTH_DIGEST,
             CURLOPT_USERPWD => trim($this->username) . ':' . $this->password,
             CURLOPT_CONNECTTIMEOUT => 10,
@@ -131,6 +130,17 @@ final readonly class PortalAvaClient
                 if (count($parts) === 2) $responseHeaders[mb_strtolower(trim($parts[0]))] = trim($parts[1]);
                 return $length;
             },
+        ]);
+
+        // O Portal AVA exige um handshake HEAD para negociar o desafio HTTP Digest
+        // antes do POST real. O projeto legado funcional do fornecedor segue esse fluxo.
+        curl_exec($curl);
+        curl_setopt_array($curl, [
+            CURLOPT_NOBODY => false,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER => false,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query($payload, '', '&', PHP_QUERY_RFC3986),
         ]);
 
         $body = curl_exec($curl);
@@ -186,7 +196,7 @@ final readonly class PortalAvaClient
     {
         $source = $response['Paginacao'] ?? $response['paginacao'] ?? $response['Info'] ?? $response['info'] ?? $response;
         if (!is_array($source)) return true;
-        $last = $source['total_paginas'] ?? $source['TotalPaginas'] ?? $source['paginas'] ?? $source['Paginas'] ?? null;
+        $last = $source['total_paginas'] ?? $source['TotalPaginas'] ?? $source['totalPaginas'] ?? $source['paginas'] ?? $source['Paginas'] ?? null;
         return !is_numeric($last) || $currentPage < (int)$last;
     }
 
