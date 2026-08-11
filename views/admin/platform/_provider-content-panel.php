@@ -44,6 +44,7 @@
      </div>
      <footer><span><i class="fa-solid fa-circle-info"></i> A disponibilidade para franquias é controlada por exceções no cadastro de cada franquia.</span><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar curadoria</button></footer>
     </form>
+    <form class="catalog-ai-form <?= $imageAiReady?'':'is-disabled' ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/generate-cover"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><label>Orientação opcional para a IA<input name="prompt" maxlength="500" placeholder="Ex.: aula prática, tecnologia e ambiente moderno"></label><button class="btn btn-secondary" type="submit" <?= $imageAiReady?'':'disabled' ?>><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar capa com IA</button><small><?= $imageAiReady?'A tarefa entra na fila; a vitrine adotará a imagem otimizada no Spaces quando estiver pronta.':'Ative a integração IA para capas dos cursos no ADM Central.' ?></small></form>
    </td></tr>
   <?php endforeach;?>
   </tbody></table></div>

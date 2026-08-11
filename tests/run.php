@@ -1897,6 +1897,34 @@ $tests['libera catalogos por padrao e registra bloqueios como excecoes'] = stati
     assertTrue(str_contains($javascript,'data-content-curation-toggle'));
 };
 
+$tests['gera capas contextuais em fila e publica a versao final no Spaces'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000080_create_catalog_image_generation.php');
+    $settings=(string)file_get_contents($rootPath.'/modules/Catalog/ImageGenerationRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiImageClient.php');
+    $generator=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogCoverGenerator.php');
+    $storage=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogMediaStorage.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+    $courseView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $contentView=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+
+    assertTrue(str_contains($migration,'catalog_image_generation_settings'));
+    assertTrue(str_contains($migration,'catalog_image_generation_jobs'));
+    assertTrue(str_contains($migration,'auto_generate_missing'));
+    assertTrue(str_contains($settings,"status IN ('pending','processing')"));
+    assertTrue(str_contains($client,'/v1/images/generations'));
+    assertTrue(str_contains($client,"'output_format'=>'webp'"));
+    assertTrue(str_contains($generator,'storeGenerated'));
+    assertTrue(str_contains($generator,'queueAfterApproval'));
+    assertTrue(str_contains($generator,'Não inclua palavras'));
+    assertTrue(str_contains($storage,'public function storeGenerated'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/image-generation'"));
+    assertTrue(str_contains($routes,"/generate-cover'"));
+    assertTrue(str_contains($console,"catalog-images:process"));
+    assertTrue(str_contains($courseView,'Gerar capa com IA'));
+    assertTrue(str_contains($contentView,'Gerar capa com IA'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

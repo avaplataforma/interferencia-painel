@@ -487,15 +487,16 @@ final readonly class CourseProviderRepository
         return $statement->fetchAll() ?: [];
     }
 
-    /** @return array{id:int,catalog_code:string}|null */
+    /** @return array<string,mixed>|null */
     public function catalogEntity(string $entityType, int $entityId): ?array
     {
         if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
-        $table = $entityType === 'course' ? 'provider_courses' : 'provider_catalog_contents';
-        $statement = $this->database->prepare("SELECT entity.id,catalog.code catalog_code FROM {$table} entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1");
+        if($entityType==='course')$sql="SELECT entity.id,catalog.code catalog_code,COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,COALESCE(NULLIF(entity.commercial_description,''),entity.description) description,COALESCE(NULLIF(entity.commercial_category,''),entity.category) category FROM provider_courses entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
+        else$sql="SELECT entity.id,catalog.code catalog_code,COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,COALESCE(NULLIF(entity.commercial_description,''),entity.description) description,COALESCE(NULLIF(entity.commercial_category,''),entity.discipline_name) category FROM provider_catalog_contents entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
+        $statement = $this->database->prepare($sql);
         $statement->execute(['id' => $entityId]);
         $row = $statement->fetch();
-        return is_array($row) ? ['id' => (int)$row['id'], 'catalog_code' => (string)$row['catalog_code']] : null;
+        return is_array($row) ? $row : null;
     }
 
     public function setCatalogGlobalAvailability(int $catalogId, bool $enabled, ?int $userId): void

@@ -4,6 +4,9 @@
   <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/integrations/digital-ocean"><span class="quick-icon"><i class="fa-solid fa-cloud"></i></span><strong>DigitalOcean Spaces</strong><small>Arquivos privados do ADM Central, franquias, alunos, tickets e personalizações.</small><span class="connection-badge <?= $spacesConfigured&&$spacesActive?'connection-approved':'connection-pending' ?>"><?= $spacesConfigured&&$spacesActive?'Ativa':'Configuração pendente' ?></span></a></div>
 </div>
 <div class="row">
+  <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/integrations/image-generation"><span class="quick-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span><strong>IA para capas dos cursos</strong><small>Gera capas contextuais, otimiza e salva a imagem definitiva no Spaces.</small><span class="connection-badge <?= $imageAiConfigured&&$imageAiActive?'connection-approved':'connection-pending' ?>"><?= $imageAiConfigured&&$imageAiActive?'Ativa':'Configuração pendente' ?></span></a></div>
+</div>
+<div class="row">
   <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><span class="quick-icon"><i class="fa-solid fa-book-open-reader"></i></span><strong>Fornecedores de cursos</strong><small>Catálogos externos para ampliar a loja, sem importar o financeiro do fornecedor.</small><span class="connection-badge <?= $courseProviderConfigured&&$courseProviderActive?'connection-approved':'connection-pending' ?>"><?= $courseProviderConfigured&&$courseProviderActive?((int)$courseProviderCourses.' curso(s) ativos'):'Configuração pendente' ?></span></a></div>
 </div>
 <div class="row">

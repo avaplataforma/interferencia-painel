@@ -24,6 +24,10 @@ use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Site\SiteRecoveryService;
 use Interferencia\Kernel\Security\SecretCipher;
+use Interferencia\Modules\Catalog\CourseProviderRepository;
+use Interferencia\Modules\Catalog\ImageGenerationRepository;
+use Interferencia\Modules\Catalog\CatalogMediaStorage;
+use Interferencia\Modules\Catalog\CatalogCoverGenerator;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -54,6 +58,7 @@ Comandos disponíveis:
 
   moodle:pedagogical:sync  Atualiza progresso e último acesso dos alunos
   site:recoveries:sync  Atualiza alertas e follow-ups de checkouts abandonados
+  catalog-images:process  Gera capas pendentes e salva a versão final no Spaces
 
 TEXT);
         exit(0);
@@ -151,6 +156,19 @@ TEXT);
         $result=(new SiteRecoveryService($database,new FollowUpRepository($database)))->sync(null,1000);
         fwrite(STDOUT,sprintf("Recuperação comercial: %d criada(s), %d alerta(s) avançado(s), %d follow-up(s) e %d cancelada(s).\n",$result['created'],$result['advanced'],$result['follow_ups'],$result['cancelled']));
         exit(0);
+    }
+
+    if ($command === 'catalog-images:process') {
+        $database=$connection->pdo();
+        $cipher=new SecretCipher((string)$config->get('app.encryption_key'));
+        $spaces=new SpacesStorageManager(new SpacesIntegrationRepository($database,$cipher));
+        $catalogs=new CourseProviderRepository($database,$cipher);
+        $images=new ImageGenerationRepository($database,$cipher);
+        $media=new CatalogMediaStorage($spaces);
+        $limit=max(1,min(20,(int)($argv[2]??1)));
+        $result=(new CatalogCoverGenerator($images,$catalogs,$media,$spaces))->process($limit);
+        fwrite(STDOUT,sprintf("Capas processadas: %d; falhas: %d.\n",$result['processed'],$result['failed']));
+        exit($result['failed']>0?1:0);
     }
 
     $migrator = new Migrator(

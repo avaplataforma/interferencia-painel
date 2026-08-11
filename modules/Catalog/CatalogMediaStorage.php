@@ -54,6 +54,21 @@ final readonly class CatalogMediaStorage
         ];
     }
 
+    /** @return array{storage_path:string,mime_type:string,width:int,height:int,file_size:int,source:string,generation_provider:string,generation_prompt:string,generation_status:string,generated_at:string} */
+    public function storeGenerated(string $catalogCode,string $contents,string $mime,string $name,?int $userId,string $provider,string $prompt):array
+    {
+        if($contents===''||strlen($contents)>25*1024*1024)throw new RuntimeException('A imagem gerada está vazia ou excede o limite de segurança.');
+        $detected=(new \finfo(FILEINFO_MIME_TYPE))->buffer($contents);
+        if(!is_string($detected)||!in_array($detected,['image/jpeg','image/png','image/webp'],true))throw new RuntimeException('O serviço de IA não retornou uma imagem válida.');
+        $dimensions=@getimagesizefromstring($contents);if(!is_array($dimensions))throw new RuntimeException('Não foi possível validar a imagem gerada.');
+        [$contents,$mime,$width,$height]=$this->optimize($contents,$detected,(int)$dimensions[0],(int)$dimensions[1]);
+        $extension=$mime==='image/webp'?'webp':($mime==='image/png'?'png':'jpg');
+        $baseName=preg_replace('/[^A-Za-z0-9._-]+/','-',pathinfo($name,PATHINFO_FILENAME))?:'capa-ia';
+        $path=$this->spaces->storeCentral('Catalogos/'.$this->segment($catalogCode),$contents,$baseName.'-ia.'.$extension,$mime,$userId);
+        if($path===null)throw new RuntimeException('Ative a integração DigitalOcean Spaces antes de gerar capas.');
+        return['storage_path'=>$path,'mime_type'=>$mime,'width'=>$width,'height'=>$height,'file_size'=>strlen($contents),'source'=>'generated','generation_provider'=>$provider,'generation_prompt'=>$prompt,'generation_status'=>'ready','generated_at'=>date('Y-m-d H:i:s')];
+    }
+
     /** @return array{string,string,int,int} */
     private function optimize(string $contents, string $mime, int $width, int $height): array
     {
