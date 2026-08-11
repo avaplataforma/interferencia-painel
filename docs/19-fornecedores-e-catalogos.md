@@ -241,13 +241,19 @@ O cadastro é concluído em duas pontas:
 1. No IESDE, registrar `Mundo Inter — Catálogo MASTER` informando
    `https://avacursos.com.br` como URL do LMS/Issuer.
 2. Receber do fornecedor o registro dinâmico ou os endereços manuais da
-   ferramenta: Target Link URI, início de login OIDC, JWKS e redirecionamentos.
+   ferramenta: Target Link URI, seleção de conteúdo/Deep Linking, início de
+   login OIDC, JWKS e redirecionamentos.
 3. No Moodle, cadastrar a ferramenta externa em **Administração do site →
    Plugins → Módulos de atividade → Ferramenta externa → Gerenciar
    ferramentas**.
 4. Informar ao IESDE os endereços da plataforma Moodle, o Client ID e o
    Deployment ID gerados.
 5. Homologar o lançamento com um usuário aluno antes de ativar o catálogo.
+
+Na ferramenta externa do Moodle ficam habilitados o compartilhamento de nome e
+e-mail, o retorno de notas e os serviços de notas e lista de participantes. A
+ferramenta deve aparecer no seletor de atividades para permitir a escolha do
+material pelo Deep Linking.
 
 O LTI cuida do lançamento autenticado do conteúdo e evita uma segunda senha.
 Ele não substitui preço, cobrança, matrícula comercial ou liberação por

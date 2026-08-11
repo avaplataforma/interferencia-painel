@@ -1682,12 +1682,16 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     assertTrue(str_contains($migration,'lti_registration_url'));
     assertTrue(str_contains($migration,"integration_mode='lti13'"));
+    $deepLinkMigration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000010_add_lti13_deep_link_url.php');
+    assertTrue(str_contains($deepLinkMigration,'lti_deep_link_url'));
     assertTrue(str_contains($repository,'saveLtiProvider'));
     assertTrue(str_contains($repository,"delivery_mode='lti'"));
     assertTrue(str_contains($routes,"No LTI 1.3 o catálogo MASTER"));
     assertTrue(str_contains($view,'Configuração LTI 1.3'));
     assertTrue(str_contains($view,'Mundo Inter — Catálogo MASTER'));
     assertTrue(str_contains($view,'/mod/lti/certs.php'));
+    assertTrue(str_contains($view,'Deep Linking'));
+    assertTrue(str_contains($view,'compartilhar nome e e-mail'));
     assertTrue(str_contains($view,'Client ID'));
     assertTrue(str_contains($view,'Deployment ID'));
 };

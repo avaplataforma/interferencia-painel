@@ -61,6 +61,7 @@ final readonly class CourseProviderRepository
             'lti_platform_url' => (string)($row['lti_platform_url'] ?? ''),
             'lti_registration_url' => (string)($row['lti_registration_url'] ?? ''),
             'lti_tool_url' => (string)($row['lti_tool_url'] ?? ''),
+            'lti_deep_link_url' => (string)($row['lti_deep_link_url'] ?? ''),
             'lti_login_url' => (string)($row['lti_login_url'] ?? ''),
             'lti_jwks_url' => (string)($row['lti_jwks_url'] ?? ''),
             'lti_redirect_uris' => (string)($row['lti_redirect_uris'] ?? ''),
@@ -137,6 +138,7 @@ final readonly class CourseProviderRepository
         $platform = rtrim(trim((string)($input['lti_platform_url'] ?? '')), '/');
         $registration = trim((string)($input['lti_registration_url'] ?? ''));
         $tool = trim((string)($input['lti_tool_url'] ?? ''));
+        $deepLink = trim((string)($input['lti_deep_link_url'] ?? ''));
         $login = trim((string)($input['lti_login_url'] ?? ''));
         $jwks = trim((string)($input['lti_jwks_url'] ?? ''));
         $redirects = trim((string)($input['lti_redirect_uris'] ?? ''));
@@ -145,14 +147,14 @@ final readonly class CourseProviderRepository
 
         if ($name === '') throw new RuntimeException('Informe o nome da integração LTI.');
         $this->assertHttpsUrl($platform, 'Informe a URL HTTPS do LMS.');
-        foreach ([[$registration, 'URL de registro dinâmico'], [$tool, 'URL da ferramenta'], [$login, 'URL de início de login'], [$jwks, 'URL do conjunto de chaves']] as [$url, $label]) {
+        foreach ([[$registration, 'URL de registro dinâmico'], [$tool, 'URL da ferramenta'], [$deepLink, 'URL de seleção de conteúdo'], [$login, 'URL de início de login'], [$jwks, 'URL do conjunto de chaves']] as [$url, $label]) {
             if ($url !== '') $this->assertHttpsUrl($url, $label.' deve usar HTTPS.');
         }
         foreach (preg_split('/\R+/', $redirects) ?: [] as $redirect) {
             if (trim($redirect) !== '') $this->assertHttpsUrl(trim($redirect), 'Toda URI de redirecionamento deve usar HTTPS.');
         }
 
-        $toolConfigured = $registration !== '' || ($tool !== '' && $login !== '' && $jwks !== '');
+        $toolConfigured = $registration !== '' || ($tool !== '' && $deepLink !== '' && $login !== '' && $jwks !== '');
         $moodleConfigured = $clientId !== '' && $deploymentId !== '';
         $complete = $toolConfigured && $moodleConfigured;
         $active = $complete && (bool)($input['is_active'] ?? false);
@@ -160,13 +162,14 @@ final readonly class CourseProviderRepository
 
         $this->database->prepare("UPDATE course_provider_integrations SET
             integration_mode='lti13',lti_integration_name=:name,lti_platform_url=:platform,
-            lti_registration_url=:registration,lti_tool_url=:tool,lti_login_url=:login,
+            lti_registration_url=:registration,lti_tool_url=:tool,lti_deep_link_url=:deep_link,lti_login_url=:login,
             lti_jwks_url=:jwks,lti_redirect_uris=:redirects,lti_client_id=:client,
             lti_deployment_id=:deployment,lti_status=:status,delivery_mode='lti',
             is_active=:active,updated_by=:user,last_error=NULL WHERE provider_code=:code")->execute([
                 'name' => $name, 'platform' => $platform,
                 'registration' => $registration !== '' ? $registration : null,
                 'tool' => $tool !== '' ? $tool : null, 'login' => $login !== '' ? $login : null,
+                'deep_link' => $deepLink !== '' ? $deepLink : null,
                 'jwks' => $jwks !== '' ? $jwks : null, 'redirects' => $redirects !== '' ? $redirects : null,
                 'client' => $clientId !== '' ? $clientId : null,
                 'deployment' => $deploymentId !== '' ? $deploymentId : null,
@@ -330,6 +333,7 @@ final readonly class CourseProviderRepository
             COALESCE(provider.lti_platform_url,'') lti_platform_url,
             COALESCE(provider.lti_registration_url,'') lti_registration_url,
             COALESCE(provider.lti_tool_url,'') lti_tool_url,
+            COALESCE(provider.lti_deep_link_url,'') lti_deep_link_url,
             COALESCE(provider.lti_login_url,'') lti_login_url,
             COALESCE(provider.lti_jwks_url,'') lti_jwks_url,
             COALESCE(provider.lti_redirect_uris,'') lti_redirect_uris,
