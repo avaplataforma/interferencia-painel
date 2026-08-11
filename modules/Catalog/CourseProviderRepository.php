@@ -492,7 +492,11 @@ final readonly class CourseProviderRepository
     {
         if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
         if($entityType==='course')$sql="SELECT entity.id,catalog.code catalog_code,COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,COALESCE(NULLIF(entity.commercial_description,''),entity.description) description,COALESCE(NULLIF(entity.commercial_category,''),entity.category) category FROM provider_courses entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
-        else$sql="SELECT entity.id,catalog.code catalog_code,COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,COALESCE(NULLIF(entity.commercial_description,''),entity.description) description,COALESCE(NULLIF(entity.commercial_category,''),entity.discipline_name) category FROM provider_catalog_contents entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
+        else$sql="SELECT entity.id,catalog.code catalog_code,
+            COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,
+            COALESCE(NULLIF(entity.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') description,
+            COALESCE(NULLIF(entity.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,''),NULLIF(inherited_link.discipline_name,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Conteúdo individual') category
+            FROM provider_catalog_contents entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
         $statement = $this->database->prepare($sql);
         $statement->execute(['id' => $entityId]);
         $row = $statement->fetch();

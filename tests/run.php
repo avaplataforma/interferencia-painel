@@ -1905,10 +1905,13 @@ $tests['gera capas contextuais em fila e publica a versao final no Spaces'] = st
     $client=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiImageClient.php');
     $generator=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogCoverGenerator.php');
     $storage=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogMediaStorage.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $console=(string)file_get_contents($rootPath.'/bin/console');
     $courseView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $courseCuration=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
     $contentView=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
     assertTrue(str_contains($migration,'catalog_image_generation_settings'));
     assertTrue(str_contains($migration,'catalog_image_generation_jobs'));
@@ -1920,11 +1923,17 @@ $tests['gera capas contextuais em fila e publica a versao final no Spaces'] = st
     assertTrue(str_contains($generator,'queueAfterApproval'));
     assertTrue(str_contains($generator,'Não inclua palavras'));
     assertTrue(str_contains($storage,'public function storeGenerated'));
+    assertTrue(str_contains($repository,'provider_course_content_links inherited_link'));
+    assertTrue(!str_contains($repository,"entity.discipline_name) category"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/image-generation'"));
     assertTrue(str_contains($routes,"/generate-cover'"));
     assertTrue(str_contains($console,"catalog-images:process"));
-    assertTrue(str_contains($courseView,'Gerar capa com IA'));
+    assertTrue(str_contains($courseView,'data-course-curation-toggle'));
+    assertTrue(str_contains($courseCuration,'Gerar capa com IA'));
+    assertTrue(str_contains($courseCuration,'course-curation-shell'));
     assertTrue(str_contains($contentView,'Gerar capa com IA'));
+    assertTrue(str_contains($contentView,'content-ai-form'));
+    assertTrue(str_contains($javascript,'data-course-curation-toggle'));
 };
 
 $failures = 0;

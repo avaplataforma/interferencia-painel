@@ -535,6 +535,38 @@ document.querySelectorAll('.color-field').forEach((group) => {
 })();
 
 (() => {
+  const rows = Array.from(document.querySelectorAll('.course-curation-row'));
+  if (rows.length === 0) return;
+
+  const close = (row) => {
+    row.hidden = true;
+    const trigger = document.querySelector(`[data-course-curation-toggle="${row.id}"]`);
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  };
+
+  document.querySelectorAll('[data-course-curation-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = document.getElementById(button.dataset.courseCurationToggle || '');
+      if (!row) return;
+      const opening = row.hidden;
+      rows.forEach(close);
+      if (opening) {
+        row.hidden = false;
+        button.setAttribute('aria-expanded', 'true');
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-course-curation-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = document.getElementById(button.dataset.courseCurationClose || '');
+      if (row) close(row);
+    });
+  });
+})();
+
+(() => {
   const tabs = Array.from(document.querySelectorAll('[data-site-tab]'));
   const panels = Array.from(document.querySelectorAll('[data-site-panel]'));
   const savebar = document.querySelector('[data-site-savebar]');
