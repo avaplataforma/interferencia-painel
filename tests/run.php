@@ -1696,6 +1696,7 @@ $tests['homologa o conector oficial JWT do Catalogo EXPERT'] = static function (
     assertTrue(str_contains($migration,"delivery_mode='sso'"));
     assertTrue(str_contains($migration,'catalog_sync=1'));
     assertTrue(str_contains($repository,"['escola_avancada', 'iesde', 'conted_tech']"));
+    assertTrue(str_contains($repository,"IN ('escola_avancada','iesde','conted_tech')"));
     assertTrue(str_contains($repository,"\$course['batch']"));
     assertTrue(str_contains($routes,'new ContedTechClient'));
 };

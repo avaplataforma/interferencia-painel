@@ -355,7 +355,7 @@ final readonly class CourseProviderRepository
                 WHEN provider.provider_code='iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
                 WHEN provider.provider_code='conted_tech' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
                 WHEN provider.provider_code NOT IN ('iesde','conted_tech') AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
-            CASE WHEN provider.provider_code IN ('escola_avancada','iesde') THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
+            CASE WHEN provider.provider_code IN ('escola_avancada','iesde','conted_tech') THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_test_status,'not_tested') END integration_status,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_sync_status,'never') END sync_status,
             provider.last_tested_at,provider.last_synced_at,COALESCE(provider.last_error,'') last_error,
