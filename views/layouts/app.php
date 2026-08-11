@@ -43,6 +43,8 @@ $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentP
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: .45rem; min-height: 2.75rem; margin: 0; padding: .55rem .8rem; border: 1px solid transparent; border-radius: .55rem; background: transparent; font: inherit; font-weight: 700; line-height: 1.2; text-decoration: none; cursor: pointer; }
     .btn-primary { border-color: var(--inter-accent); color: #fff !important; background: var(--inter-accent); }
     .btn-primary:hover { border-color: var(--inter-accent-dark); color: #fff !important; background: var(--inter-accent-dark); }
+    .btn-danger { border-color: #b91c2a; color: #fff !important; background: #b91c2a; }
+    .btn-danger:hover { border-color: #991b25; color: #fff !important; background: #991b25; }
     .btn-secondary { border-color: #bcc6ce; color: var(--inter-ink) !important; background: #fff; }
     .btn-secondary:hover { border-color: #9aa7b2; color: var(--inter-accent-dark) !important; background: #f8fafb; }
     .btn:disabled, .btn.disabled { border-color: #cbd3d9; color: #65727e !important; background: #edf1f4; opacity: 1; cursor: not-allowed; }
