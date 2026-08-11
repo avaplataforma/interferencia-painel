@@ -15,7 +15,7 @@ final readonly class CatalogRepository
     /** @return list<array<string,mixed>> */
     public function all(): array
     {
-        $statement=$this->database->prepare("SELECT p.*,u.name unit_name,m.shortname moodle_shortname,m.visible moodle_visible,scope.source catalog_source,scope.is_owner catalog_owner,scope.is_visible catalog_visible,CASE WHEN scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND COALESCE(access.is_enabled,1)=1) THEN 1 ELSE 0 END catalog_enabled
+        $statement=$this->database->prepare("SELECT p.*,u.name unit_name,m.shortname moodle_shortname,m.visible moodle_visible,scope.source catalog_source,scope.is_owner catalog_owner,scope.is_visible catalog_visible,CASE WHEN scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1) THEN 1 ELSE 0 END catalog_enabled
             FROM organization_finance_products scope
             INNER JOIN finance_products p ON p.id=scope.finance_product_id
             LEFT JOIN units u ON u.id=p.unit_id
@@ -33,7 +33,7 @@ final readonly class CatalogRepository
             FROM organization_finance_products scope
             INNER JOIN finance_products p ON p.id=scope.finance_product_id
             LEFT JOIN units u ON u.id=p.unit_id
-            WHERE scope.organization_id=:organization AND scope.is_visible=1 AND p.is_active=1 AND (p.unit_id=:unit OR p.unit_id IS NULL) AND (scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND COALESCE(access.is_enabled,1)=1))
+            WHERE scope.organization_id=:organization AND scope.is_visible=1 AND p.is_active=1 AND (p.unit_id=:unit OR p.unit_id IS NULL) AND (scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1))
             ORDER BY p.name,p.id");
         $statement->execute(['organization'=>$this->organizationId,'unit'=>$unitId]);
         return $statement->fetchAll();
@@ -42,7 +42,7 @@ final readonly class CatalogRepository
     /** @return array<string,mixed>|null */
     public function find(int $id): ?array
     {
-        $statement=$this->database->prepare("SELECT p.*,u.name unit_name,m.shortname moodle_shortname,scope.source catalog_source,scope.is_owner catalog_owner,scope.is_visible catalog_visible,CASE WHEN scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND COALESCE(access.is_enabled,1)=1) THEN 1 ELSE 0 END catalog_enabled
+        $statement=$this->database->prepare("SELECT p.*,u.name unit_name,m.shortname moodle_shortname,scope.source catalog_source,scope.is_owner catalog_owner,scope.is_visible catalog_visible,CASE WHEN scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=scope.organization_id WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1) THEN 1 ELSE 0 END catalog_enabled
             FROM organization_finance_products scope
             INNER JOIN finance_products p ON p.id=scope.finance_product_id
             LEFT JOIN units u ON u.id=p.unit_id

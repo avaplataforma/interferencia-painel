@@ -503,6 +503,38 @@ document.querySelectorAll('.color-field').forEach((group) => {
 })();
 
 (() => {
+  const rows = Array.from(document.querySelectorAll('.content-curation-row'));
+  if (rows.length === 0) return;
+
+  const close = (row) => {
+    row.hidden = true;
+    const trigger = document.querySelector(`[data-content-curation-toggle="${row.id}"]`);
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  };
+
+  document.querySelectorAll('[data-content-curation-toggle]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = document.getElementById(button.dataset.contentCurationToggle || '');
+      if (!row) return;
+      const opening = row.hidden;
+      rows.forEach(close);
+      if (opening) {
+        row.hidden = false;
+        button.setAttribute('aria-expanded', 'true');
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-content-curation-close]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = document.getElementById(button.dataset.contentCurationClose || '');
+      if (row) close(row);
+    });
+  });
+})();
+
+(() => {
   const tabs = Array.from(document.querySelectorAll('[data-site-tab]'));
   const panels = Array.from(document.querySelectorAll('[data-site-panel]'));
   const savebar = document.querySelector('[data-site-savebar]');

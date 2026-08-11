@@ -420,7 +420,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function providerCatalogRegistry(): array
     {
-        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,
+        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
@@ -464,14 +464,14 @@ final readonly class CourseProviderRepository
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.send_access,0) END capability_send_access,
             CASE WHEN catalog.code='ava-cursos'
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
-                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.is_available=1 AND course.is_globally_enabled=1)
             END course_count,
             CASE WHEN catalog.code='ava-cursos'
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
-                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1)
             END approved_count,
-            (SELECT COUNT(*) FROM provider_catalog_contents content WHERE content.catalog_id=catalog.id AND content.is_available=1) content_count,
-            (SELECT COUNT(*) FROM organization_course_catalog_access access WHERE access.course_catalog_id=catalog.id AND access.is_enabled=1) organization_count
+            (SELECT COUNT(*) FROM provider_catalog_contents content WHERE content.catalog_id=catalog.id AND content.is_available=1 AND content.is_globally_enabled=1) content_count,
+            (SELECT COUNT(*) FROM organizations organization LEFT JOIN organization_course_catalog_access access ON access.organization_id=organization.id AND access.course_catalog_id=catalog.id WHERE organization.status='active' AND COALESCE(access.is_enabled,1)=1) organization_count
             FROM course_catalogs catalog
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
@@ -483,7 +483,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function allCourses(): array
     {
-        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
+        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,c.is_globally_enabled catalog_globally_enabled,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
         return $statement->fetchAll() ?: [];
     }
 
@@ -496,6 +496,53 @@ final readonly class CourseProviderRepository
         $statement->execute(['id' => $entityId]);
         $row = $statement->fetch();
         return is_array($row) ? ['id' => (int)$row['id'], 'catalog_code' => (string)$row['catalog_code']] : null;
+    }
+
+    public function setCatalogGlobalAvailability(int $catalogId, bool $enabled, ?int $userId): void
+    {
+        $statement = $this->database->prepare('UPDATE course_catalogs SET is_globally_enabled=:enabled WHERE id=:id');
+        $statement->execute(['enabled' => (int)$enabled, 'id' => $catalogId]);
+        if ($statement->rowCount() !== 1) {
+            $exists = $this->database->prepare('SELECT 1 FROM course_catalogs WHERE id=:id');
+            $exists->execute(['id' => $catalogId]);
+            if ($exists->fetchColumn() === false) throw new RuntimeException('Catálogo não encontrado.');
+        }
+        if (!$enabled) {
+            $this->database->prepare('UPDATE organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id SET offer.is_visible=0,offer.updated_by=:user WHERE course.catalog_id=:catalog')->execute(['user' => $userId, 'catalog' => $catalogId]);
+            $this->database->prepare('UPDATE organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id SET offer.is_visible=0,offer.updated_by=:user WHERE content.catalog_id=:catalog')->execute(['user' => $userId, 'catalog' => $catalogId]);
+        }
+    }
+
+    public function setItemGlobalAvailability(string $itemType, int $itemId, bool $enabled, ?int $userId): void
+    {
+        if (!in_array($itemType, ['course', 'content'], true)) throw new RuntimeException('Tipo de item do catálogo inválido.');
+        $table = $itemType === 'course' ? 'provider_courses' : 'provider_catalog_contents';
+        $offerTable = $itemType === 'course' ? 'organization_provider_course_offers' : 'organization_provider_content_offers';
+        $offerColumn = $itemType === 'course' ? 'provider_course_id' : 'provider_content_id';
+        $statement = $this->database->prepare("UPDATE {$table} SET is_globally_enabled=:enabled WHERE id=:id");
+        $statement->execute(['enabled' => (int)$enabled, 'id' => $itemId]);
+        if ($statement->rowCount() !== 1) {
+            $exists = $this->database->prepare("SELECT 1 FROM {$table} WHERE id=:id");
+            $exists->execute(['id' => $itemId]);
+            if ($exists->fetchColumn() === false) throw new RuntimeException('Curso ou conteúdo não encontrado.');
+        }
+        if (!$enabled) $this->database->prepare("UPDATE {$offerTable} SET is_visible=0,updated_by=:user WHERE {$offerColumn}=:item")->execute(['user' => $userId, 'item' => $itemId]);
+    }
+
+    public function setOrganizationItemAvailability(int $organizationId, string $itemType, int $itemId, bool $enabled, ?int $userId): void
+    {
+        if (!in_array($itemType, ['course', 'content'], true)) throw new RuntimeException('Tipo de item do catálogo inválido.');
+        if ($this->catalogEntity($itemType, $itemId) === null) throw new RuntimeException('Curso ou conteúdo não encontrado.');
+        $organization = $this->database->prepare('SELECT 1 FROM organizations WHERE id=:id');
+        $organization->execute(['id' => $organizationId]);
+        if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia não encontrada.');
+        $statement = $this->database->prepare('INSERT INTO organization_catalog_item_access(organization_id,item_type,item_id,is_enabled,updated_by) VALUES(:organization,:type,:item,:enabled,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),updated_by=VALUES(updated_by)');
+        $statement->execute(['organization' => $organizationId, 'type' => $itemType, 'item' => $itemId, 'enabled' => (int)$enabled, 'user' => $userId]);
+        if (!$enabled) {
+            $offerTable = $itemType === 'course' ? 'organization_provider_course_offers' : 'organization_provider_content_offers';
+            $offerColumn = $itemType === 'course' ? 'provider_course_id' : 'provider_content_id';
+            $this->database->prepare("UPDATE {$offerTable} SET is_visible=0,updated_by=:user WHERE organization_id=:organization AND {$offerColumn}=:item")->execute(['user' => $userId, 'organization' => $organizationId, 'item' => $itemId]);
+        }
     }
 
     /** @param array<string,mixed> $data */
@@ -582,7 +629,7 @@ final readonly class CourseProviderRepository
                 (SELECT media.id FROM provider_course_content_links inherited_link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=inherited_link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1)
             ) media_asset_id,
             CASE WHEN EXISTS(SELECT 1 FROM catalog_media_assets own_media WHERE own_media.entity_type='content' AND own_media.entity_id=content.id AND own_media.purpose='cover' AND own_media.generation_status='ready') THEN 'own' ELSE 'inherited' END media_inheritance,
-            catalog.name catalog_name,catalog.code catalog_code,provider.provider_code,provider.name provider_name,
+            catalog.name catalog_name,catalog.code catalog_code,catalog.is_globally_enabled catalog_globally_enabled,provider.provider_code,provider.name provider_name,
             MIN(link.semester_number) semester_number,MIN(link.discipline_name) discipline_name,
             COUNT(DISTINCT link.provider_course_id) course_count,
             GROUP_CONCAT(DISTINCT course.name ORDER BY course.name SEPARATOR '||') course_names,
@@ -648,13 +695,14 @@ final readonly class CourseProviderRepository
     public function saveContentOffer(int $contentId, int $organizationId, string $name, string $description, float $price, int $installments, bool $visible, bool $active, ?int $userId): int
     {
         if ($organizationId < 1) throw new RuntimeException('Selecione a franquia.');
-        $content = $this->database->prepare('SELECT id,name,commercial_name,review_status,release_status,is_available FROM provider_catalog_contents WHERE id=:id LIMIT 1');
-        $content->execute(['id' => $contentId]);
+        $content = $this->database->prepare("SELECT content.id,content.name,content.commercial_name,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.is_globally_enabled catalog_globally_enabled,COALESCE(catalog_access.is_enabled,1) organization_catalog_enabled,COALESCE(item_access.is_enabled,1) organization_item_enabled FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=:organization AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id WHERE content.id=:id LIMIT 1");
+        $content->execute(['organization' => $organizationId, 'item_organization' => $organizationId, 'id' => $contentId]);
         $row = $content->fetch();
         if (!is_array($row)) throw new RuntimeException('Conteúdo externo não encontrado.');
         if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released', 'published'], true) || (int)($row['is_available'] ?? 0) !== 1) {
             throw new RuntimeException('Apenas conteúdos disponíveis, aprovados e liberados podem ser vendidos individualmente.');
         }
+        if ((int)($row['catalog_globally_enabled'] ?? 0) !== 1 || (int)($row['is_globally_enabled'] ?? 0) !== 1 || (int)($row['organization_catalog_enabled'] ?? 0) !== 1 || (int)($row['organization_item_enabled'] ?? 0) !== 1) throw new RuntimeException('Este conteúdo está bloqueado globalmente ou para esta franquia.');
         $organization = $this->database->prepare("SELECT 1 FROM organizations WHERE id=:id AND status='active'");
         $organization->execute(['id' => $organizationId]);
         if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia ativa não encontrada.');
@@ -679,7 +727,7 @@ final readonly class CourseProviderRepository
     /** @return array<string,mixed> */
     public function contentAccessTargetForOffer(int $offerId): array
     {
-        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,content.id content_id,content.content_type,content.external_key batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,provider.provider_code FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id WHERE offer.id=:id AND offer.is_active=1 AND content.is_available=1 AND content.review_status='approved' AND content.release_status IN ('released','published') LIMIT 1");
+        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,content.id content_id,content.content_type,content.external_key batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,provider.provider_code FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=offer.organization_id AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='content' AND item_access.item_id=content.id WHERE offer.id=:id AND offer.is_active=1 AND content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_globally_enabled=1 AND COALESCE(catalog_access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND content.review_status='approved' AND content.release_status IN ('released','published') LIMIT 1");
         $statement->execute(['id' => $offerId]);
         $row = $statement->fetch();
         if (!is_array($row)) throw new RuntimeException('Oferta de conteúdo individual não encontrada ou não liberada.');
@@ -689,16 +737,24 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function catalogCourseOffersForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT pc.id course_id,pc.catalog_id,pc.name source_name,pc.commercial_name approved_name,pc.commercial_description approved_description,COALESCE(NULLIF(pc.commercial_category,''),pc.category) category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) workload,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) cover_url,pc.review_status,pc.release_status,pc.is_available,c.code catalog_code,c.name catalog_name,p.name provider_name,o.id offer_id,o.commercial_name offer_name,o.commercial_description offer_description,o.price,o.max_installments,o.is_visible,o.is_active FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN organization_provider_course_offers o ON o.provider_course_id=pc.id AND o.organization_id=:organization WHERE pc.review_status='approved' AND pc.release_status IN ('released','published') AND pc.is_available=1 ORDER BY c.name,COALESCE(NULLIF(pc.commercial_name,''),pc.name)");
-        $statement->execute(['organization' => $organizationId]);
+        $statement = $this->database->prepare("SELECT pc.id course_id,pc.catalog_id,pc.name source_name,pc.commercial_name approved_name,pc.commercial_description approved_description,COALESCE(NULLIF(pc.commercial_category,''),pc.category) category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) workload,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) cover_url,pc.review_status,pc.release_status,pc.is_available,pc.is_globally_enabled,c.code catalog_code,c.name catalog_name,c.is_globally_enabled catalog_globally_enabled,p.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,o.id offer_id,o.commercial_name offer_name,o.commercial_description offer_description,o.price,o.max_installments,o.is_visible,o.is_active FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='course' AND item_access.item_id=pc.id LEFT JOIN organization_provider_course_offers o ON o.provider_course_id=pc.id AND o.organization_id=:offer_organization WHERE pc.review_status='approved' AND pc.release_status IN ('released','published') AND pc.is_available=1 ORDER BY c.name,COALESCE(NULLIF(pc.commercial_name,''),pc.name)");
+        $statement->execute(['item_organization' => $organizationId, 'offer_organization' => $organizationId]);
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function catalogContentOffersForOrganization(int $organizationId): array
+    {
+        $statement = $this->database->prepare("SELECT content.id content_id,content.catalog_id,content.name source_name,content.commercial_name approved_name,content.commercial_description approved_description,COALESCE(NULLIF(content.commercial_category,''),'Conteúdo individual') category,content.commercial_workload workload,content.commercial_cover_url cover_url,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.code catalog_code,catalog.name catalog_name,catalog.is_globally_enabled catalog_globally_enabled,provider.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,offer.id offer_id,offer.commercial_name offer_name,offer.commercial_description offer_description,offer.price,offer.max_installments,offer.is_visible,offer.is_active FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id LEFT JOIN organization_provider_content_offers offer ON offer.provider_content_id=content.id AND offer.organization_id=:offer_organization WHERE content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 ORDER BY catalog.name,COALESCE(NULLIF(content.commercial_name,''),content.name)");
+        $statement->execute(['item_organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }
 
     /** @return list<array<string,mixed>> */
     public function catalogsForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,
-            COALESCE(access.is_enabled,CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END) is_enabled,
+        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
+            COALESCE(access.is_enabled,1) is_enabled,
             COALESCE(access.markup_percent,0) markup_percent,COALESCE(access.default_max_installments,1) default_max_installments,
             access.valid_from,access.valid_until,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
@@ -712,7 +768,7 @@ final readonly class CourseProviderRepository
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.certificate_access,0) END certificate_access,
             CASE WHEN catalog.code='ava-cursos'
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
-                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1)
+                ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1)
             END course_count,
             (SELECT COUNT(*) FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id WHERE offer.organization_id=:offer_organization AND course.catalog_id=catalog.id AND offer.is_active=1) offer_count
             FROM course_catalogs catalog
@@ -720,7 +776,7 @@ final readonly class CourseProviderRepository
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,access.is_enabled,access.markup_percent,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,access.is_enabled,access.markup_percent,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
@@ -759,7 +815,7 @@ final readonly class CourseProviderRepository
 
     public function applyCatalogPolicy(int $organizationId, int $catalogId, ?int $userId): int
     {
-        $policy = $this->database->prepare('SELECT * FROM organization_course_catalog_access WHERE organization_id=:organization AND course_catalog_id=:catalog AND is_enabled=1 LIMIT 1');
+        $policy = $this->database->prepare('SELECT access.* FROM organization_course_catalog_access access INNER JOIN course_catalogs catalog ON catalog.id=access.course_catalog_id AND catalog.is_globally_enabled=1 WHERE access.organization_id=:organization AND access.course_catalog_id=:catalog AND access.is_enabled=1 LIMIT 1');
         $policy->execute(['organization' => $organizationId, 'catalog' => $catalogId]);
         $row = $policy->fetch();
         if (!is_array($row)) throw new RuntimeException('Ative e salve primeiro este catálogo para a franquia.');
@@ -773,9 +829,9 @@ final readonly class CourseProviderRepository
             SELECT :organization,course.id,COALESCE(NULLIF(course.commercial_name,''),course.name),course.commercial_description,
                 ROUND(COALESCE(course.remote_promotional_price,course.remote_reference_price,0)*(1+(:markup/100)),2),:installments,'assisted',0,1,:created_by,:updated_by
             FROM provider_courses course
-            WHERE course.catalog_id=:catalog AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1
+            WHERE course.catalog_id=:catalog AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1 AND NOT EXISTS(SELECT 1 FROM organization_catalog_item_access item_access WHERE item_access.organization_id=:item_organization AND item_access.item_type='course' AND item_access.item_id=course.id AND item_access.is_enabled=0)
             ON DUPLICATE KEY UPDATE price=VALUES(price),max_installments=VALUES(max_installments),is_active=1,updated_by=VALUES(updated_by)");
-        $statement->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'markup' => $markup, 'installments' => $installments, 'created_by' => $userId, 'updated_by' => $userId]);
+        $statement->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'markup' => $markup, 'installments' => $installments, 'created_by' => $userId, 'updated_by' => $userId, 'item_organization' => $organizationId]);
         return $statement->rowCount();
     }
 
@@ -840,11 +896,12 @@ final readonly class CourseProviderRepository
     public function saveOffer(int $courseId, int $organizationId, string $name, string $description, float $price, int $installments, bool $visible, bool $active, ?int $userId): int
     {
         if ($organizationId < 1) throw new RuntimeException('Selecione a franquia.');
-        $course = $this->database->prepare("SELECT id,commercial_name,name,review_status,release_status,is_available FROM provider_courses WHERE id=:id LIMIT 1");
-        $course->execute(['id' => $courseId]);
+        $course = $this->database->prepare("SELECT course.id,course.commercial_name,course.name,course.review_status,course.release_status,course.is_available,course.is_globally_enabled,catalog.is_globally_enabled catalog_globally_enabled,COALESCE(catalog_access.is_enabled,1) organization_catalog_enabled,COALESCE(item_access.is_enabled,1) organization_item_enabled FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=:organization AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='course' AND item_access.item_id=course.id WHERE course.id=:id LIMIT 1");
+        $course->execute(['organization' => $organizationId, 'item_organization' => $organizationId, 'id' => $courseId]);
         $row = $course->fetch();
         if (!is_array($row)) throw new RuntimeException('Curso externo não encontrado.');
         if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released','published'], true) || (int)($row['is_available'] ?? 0) !== 1) throw new RuntimeException('Apenas cursos disponíveis, aprovados e liberados pelo ADM Central podem ser ofertados.');
+        if ((int)($row['catalog_globally_enabled'] ?? 0) !== 1 || (int)($row['is_globally_enabled'] ?? 0) !== 1 || (int)($row['organization_catalog_enabled'] ?? 0) !== 1 || (int)($row['organization_item_enabled'] ?? 0) !== 1) throw new RuntimeException('Este curso está bloqueado globalmente ou para esta franquia.');
 
         $organization = $this->database->prepare("SELECT 1 FROM organizations WHERE id=:id AND status='active'");
         $organization->execute(['id' => $organizationId]);
@@ -887,6 +944,13 @@ final readonly class CourseProviderRepository
         $statement = $this->database->prepare('DELETE FROM organization_provider_course_offers WHERE id=:id AND organization_id=:organization');
         $statement->execute(['id' => $offerId, 'organization' => $organizationId]);
         if ($statement->rowCount() !== 1) throw new RuntimeException('Oferta da franquia não encontrada.');
+    }
+
+    public function deleteOrganizationContentOffer(int $offerId, int $organizationId): void
+    {
+        $statement = $this->database->prepare('DELETE FROM organization_provider_content_offers WHERE id=:id AND organization_id=:organization');
+        $statement->execute(['id' => $offerId, 'organization' => $organizationId]);
+        if ($statement->rowCount() !== 1) throw new RuntimeException('Oferta de conteúdo da franquia não encontrada.');
     }
 
     /** @return array{total:int,available:int,categories:int,approved:int,offers:int} */

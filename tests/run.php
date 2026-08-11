@@ -1860,6 +1860,29 @@ $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = stat
     assertTrue(str_contains($javascript,"section === 'contents' && provider !== loadedContentProvider"));
 };
 
+$tests['libera catalogos por padrao e registra bloqueios como excecoes'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000070_create_catalog_access_overrides.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $catalogView=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+    $organizationView=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+
+    assertTrue(substr_count($migration,'is_globally_enabled')>=3);
+    assertTrue(str_contains($migration,'organization_catalog_item_access'));
+    assertTrue(str_contains($repository,'public function setCatalogGlobalAvailability'));
+    assertTrue(str_contains($repository,'public function setItemGlobalAvailability'));
+    assertTrue(str_contains($repository,'public function setOrganizationItemAvailability'));
+    assertTrue(str_contains($repository,'COALESCE(item_access.is_enabled,1)'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalogs/{id:\\d+}/availability'"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{organizationId:\\d+}/catalog-items/{type:course|content}/{itemId:\\d+}/availability'"));
+    assertTrue(str_contains($catalogView,'Conteúdos liberados por padrão'));
+    assertTrue(str_contains($catalogView,'content-curation-row'));
+    assertTrue(str_contains($organizationView,'Todos os catálogos são liberados por padrão'));
+    assertTrue(str_contains($organizationView,'Conteúdos individuais'));
+    assertTrue(str_contains($javascript,'data-content-curation-toggle'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
