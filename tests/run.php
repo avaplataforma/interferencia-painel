@@ -1834,6 +1834,32 @@ $tests['decompoe cursos EXPERT em conteudos individuais vendaveis'] = static fun
     assertTrue(str_contains($view,'Conteúdos individuais'));
 };
 
+$tests['padroniza capas leves e heranca comercial em todos os catalogos'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000060_create_catalog_media_assets.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $mediaStorage=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogMediaStorage.php');
+    $generator=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogImageGenerator.php');
+    $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $contentView=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+
+    foreach(['catalog_media_assets','generation_provider','generation_prompt','generation_status'] as$field) assertTrue(str_contains($migration,$field));
+    assertTrue(str_contains($repository,'public function saveMediaAsset'));
+    assertTrue(str_contains($repository,"NULLIF(MAX(course.commercial_description),'')"));
+    assertTrue(str_contains($repository,"entity_type='course'"));
+    assertTrue(str_contains($mediaStorage,'1280'));
+    assertTrue(str_contains($mediaStorage,'imagewebp'));
+    assertTrue(str_contains($mediaStorage,"'Catalogos/'"));
+    assertTrue(str_contains($generator,'interface CatalogImageGenerator'));
+    assertTrue(str_contains($siteRepository,'media_asset_id'));
+    assertTrue(str_contains($routes,"'/catalog-media/{id:\\d+}'"));
+    assertTrue(str_contains($view,'Capa otimizada no Spaces'));
+    assertTrue(str_contains($contentView,'Capa herdada'));
+    assertTrue(str_contains($javascript,"section === 'contents' && provider !== loadedContentProvider"));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

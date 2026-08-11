@@ -444,6 +444,8 @@ document.querySelectorAll('.color-field').forEach((group) => {
   const panels = Array.from(document.querySelectorAll('[data-catalog-panel]'));
   const subtabs = Array.from(document.querySelectorAll('[data-catalog-subtab]'));
   const subpanels = Array.from(document.querySelectorAll('[data-catalog-subpanel]'));
+  const catalogShell = document.querySelector('[data-catalog-content-provider]');
+  const loadedContentProvider = catalogShell?.dataset.catalogContentProvider || '';
   if (tabs.length === 0) return;
 
   const openSection = (provider, requestedSection) => {
@@ -482,7 +484,17 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
   tabs.forEach((tab) => tab.addEventListener('click', () => showCatalog(tab.dataset.catalogTab || '')));
   subtabs.forEach((button) => button.addEventListener('click', () => {
-    openSection(button.dataset.provider || '', button.dataset.catalogSubtab || 'connection');
+    const provider = button.dataset.provider || '';
+    const section = button.dataset.catalogSubtab || 'connection';
+    if (section === 'contents' && provider !== loadedContentProvider) {
+      const url = new URL(location.href);
+      url.searchParams.set('catalog', provider);
+      url.searchParams.set('section', 'contents');
+      url.searchParams.delete('content_page');
+      location.assign(url.toString());
+      return;
+    }
+    openSection(provider, section);
   }));
 
   const params = new URL(location.href).searchParams;

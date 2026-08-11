@@ -9,7 +9,7 @@ use Throwable;
 
 final readonly class SpacesStorageManager
 {
-    private const CENTRAL_FOLDERS=['Personalizacao','Contratos','Solicitacoes','Tickets','Documentos','Backups'];
+    private const CENTRAL_FOLDERS=['Personalizacao','Contratos','Solicitacoes','Tickets','Documentos','Catalogos','Backups'];
     private const FRANCHISE_FOLDERS=['Personalizacao','Alunos','Tickets','Documentos','Contratos','Importacoes','Backups'];
     public function __construct(private SpacesIntegrationRepository$repository){}
     public function status():array{return$this->repository->settings(false)+$this->repository->summary()+['encryption_ready'=>$this->repository->encryptionReady()];}
@@ -35,7 +35,7 @@ final readonly class SpacesStorageManager
 
     private function store(string$scope,?int$organizationId,string$category,string$content,string$name,string$mime,?int$userId):?string
     {
-        if(!$this->active())return null;$settings=$this->repository->settings();$root=$scope==='central'?(string)$settings['central_prefix']:$this->franchiseRoot((int)$organizationId,$this->repository->organizationCode((int)$organizationId),$settings);$folder=$this->segment($category);$safeName=$this->fileName($name);$key=$root.'/'.$folder.'/'.date('Y/m').'/'.bin2hex(random_bytes(16)).'-'.$safeName;$this->client($settings)->put($key,$content,$mime);$this->repository->register($scope,$organizationId,$folder,$key,['name'=>$name,'mime'=>$mime,'bytes'=>strlen($content),'checksum'=>hash('sha256',$content),'user'=>$userId]);return'spaces:'.$key;
+        if(!$this->active())return null;$settings=$this->repository->settings();$root=$scope==='central'?(string)$settings['central_prefix']:$this->franchiseRoot((int)$organizationId,$this->repository->organizationCode((int)$organizationId),$settings);$folder=$this->folder($category);$safeName=$this->fileName($name);$key=$root.'/'.$folder.'/'.date('Y/m').'/'.bin2hex(random_bytes(16)).'-'.$safeName;$this->client($settings)->put($key,$content,$mime);$this->repository->register($scope,$organizationId,$folder,$key,['name'=>$name,'mime'=>$mime,'bytes'=>strlen($content),'checksum'=>hash('sha256',$content),'user'=>$userId]);return'spaces:'.$key;
     }
     private function client(array$settings):SpacesClient
     {
@@ -43,6 +43,7 @@ final readonly class SpacesStorageManager
     }
     private function provision(SpacesClient$client,string$root,array$folders):int{$count=0;foreach($folders as$folder){$client->put(rtrim($root,'/').'/'.$folder.'/.keep','Mundo Inter','text/plain');$count++;}return$count;}
     private function franchiseRoot(int$id,string$code,array$settings):string{return rtrim((string)$settings['franchises_prefix'],'/').'/'.str_pad((string)$id,6,'0',STR_PAD_LEFT).'-'.$this->segment($code);}
+    private function folder(string$value):string{$parts=preg_split('~[\\\\/]+~',trim($value))?:[];$parts=array_values(array_filter(array_map(fn(string$part):string=>$this->segment($part),$parts),static fn(string$part):bool=>$part!==''));return implode('/',$parts)?:'arquivos';}
     private function segment(string$value):string{$ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',trim($value));$value=strtolower(is_string($ascii)?$ascii:$value);$value=preg_replace('/[^a-z0-9]+/','-',$value)??'';return trim($value,'-')?:'arquivos';}
     private function fileName(string$value):string{$value=preg_replace('/[^\pL\pN._ -]+/u','_',basename($value))??'';return mb_substr($value!==''?$value:'arquivo',0,180);}
     private function keyFromStoragePath(string$path):string{if(!str_starts_with($path,'spaces:'))throw new RuntimeException('Referência externa inválida.');$key=substr($path,7);if($key===''||str_contains($key,'..'))throw new RuntimeException('Caminho externo inválido.');return$key;}

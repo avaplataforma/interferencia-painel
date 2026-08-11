@@ -470,6 +470,7 @@ final readonly class CourseProviderRepository
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
                 ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1)
             END approved_count,
+            (SELECT COUNT(*) FROM provider_catalog_contents content WHERE content.catalog_id=catalog.id AND content.is_available=1) content_count,
             (SELECT COUNT(*) FROM organization_course_catalog_access access WHERE access.course_catalog_id=catalog.id AND access.is_enabled=1) organization_count
             FROM course_catalogs catalog
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
@@ -482,8 +483,68 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function allCourses(): array
     {
-        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,p.provider_code,p.name provider_name FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
+        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
         return $statement->fetchAll() ?: [];
+    }
+
+    /** @return array{id:int,catalog_code:string}|null */
+    public function catalogEntity(string $entityType, int $entityId): ?array
+    {
+        if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
+        $table = $entityType === 'course' ? 'provider_courses' : 'provider_catalog_contents';
+        $statement = $this->database->prepare("SELECT entity.id,catalog.code catalog_code FROM {$table} entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1");
+        $statement->execute(['id' => $entityId]);
+        $row = $statement->fetch();
+        return is_array($row) ? ['id' => (int)$row['id'], 'catalog_code' => (string)$row['catalog_code']] : null;
+    }
+
+    /** @param array<string,mixed> $data */
+    public function saveMediaAsset(string $entityType, int $entityId, array $data, ?int $userId): int
+    {
+        if ($this->catalogEntity($entityType, $entityId) === null) throw new RuntimeException('Curso ou conteúdo do catálogo não encontrado.');
+        $statement = $this->database->prepare("INSERT INTO catalog_media_assets(entity_type,entity_id,purpose,storage_path,mime_type,width,height,file_size,source,generation_provider,generation_prompt,generation_status,generation_error,generated_at,created_by,updated_by) VALUES(:type,:entity,'cover',:path,:mime,:width,:height,:size,:source,:provider,:prompt,:status,:error,:generated_at,:user,:user) ON DUPLICATE KEY UPDATE storage_path=VALUES(storage_path),mime_type=VALUES(mime_type),width=VALUES(width),height=VALUES(height),file_size=VALUES(file_size),source=VALUES(source),generation_provider=VALUES(generation_provider),generation_prompt=VALUES(generation_prompt),generation_status=VALUES(generation_status),generation_error=VALUES(generation_error),generated_at=VALUES(generated_at),updated_by=VALUES(updated_by)");
+        $statement->execute([
+            'type' => $entityType, 'entity' => $entityId,
+            'path' => $data['storage_path'] ?? null, 'mime' => $data['mime_type'] ?? null,
+            'width' => $data['width'] ?? null, 'height' => $data['height'] ?? null,
+            'size' => $data['file_size'] ?? null, 'source' => $data['source'] ?? 'upload',
+            'provider' => $data['generation_provider'] ?? null, 'prompt' => $data['generation_prompt'] ?? null,
+            'status' => $data['generation_status'] ?? 'ready', 'error' => $data['generation_error'] ?? null,
+            'generated_at' => $data['generated_at'] ?? null, 'user' => $userId,
+        ]);
+        $id = (int)$this->database->lastInsertId();
+        if ($id > 0) return $id;
+        $current = $this->entityMediaAsset($entityType, $entityId);
+        return (int)($current['id'] ?? 0);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function mediaAsset(int $id): ?array
+    {
+        $statement = $this->database->prepare("SELECT * FROM catalog_media_assets WHERE id=:id AND purpose='cover' LIMIT 1");
+        $statement->execute(['id' => $id]);
+        $row = $statement->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function entityMediaAsset(string $entityType, int $entityId): ?array
+    {
+        if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
+        $statement = $this->database->prepare("SELECT * FROM catalog_media_assets WHERE entity_type=:type AND entity_id=:entity AND purpose='cover' LIMIT 1");
+        $statement->execute(['type' => $entityType, 'entity' => $entityId]);
+        $row = $statement->fetch();
+        return is_array($row) ? $row : null;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function deleteMediaAsset(string $entityType, int $entityId): ?array
+    {
+        $current = $this->entityMediaAsset($entityType, $entityId);
+        if ($current === null) return null;
+        $statement = $this->database->prepare('DELETE FROM catalog_media_assets WHERE id=:id');
+        $statement->execute(['id' => (int)$current['id']]);
+        return $current;
     }
 
     /**
@@ -512,8 +573,15 @@ final readonly class CourseProviderRepository
 
         $sql = "SELECT content.*,
             COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
-            COALESCE(NULLIF(content.commercial_description,''),'') effective_description,
-            COALESCE(NULLIF(content.commercial_category,''),MIN(link.discipline_name),'Conteúdo individual') effective_category,
+            COALESCE(NULLIF(content.commercial_description,''),NULLIF(MAX(course.commercial_description),''),NULLIF(MAX(course.description),''),'') effective_description,
+            COALESCE(NULLIF(content.commercial_category,''),NULLIF(MAX(course.commercial_category),''),NULLIF(MAX(course.category),''),MIN(link.discipline_name),'Conteúdo individual') effective_category,
+            COALESCE(NULLIF(content.commercial_workload,''),NULLIF(MAX(course.commercial_workload),''),NULLIF(MAX(course.workload),''),'') effective_workload,
+            COALESCE(NULLIF(content.commercial_cover_url,''),NULLIF(MAX(course.commercial_cover_url),''),NULLIF(MAX(course.cover_url),''),'') effective_cover_url,
+            COALESCE(
+                (SELECT media.id FROM catalog_media_assets media WHERE media.entity_type='content' AND media.entity_id=content.id AND media.purpose='cover' AND media.generation_status='ready' LIMIT 1),
+                (SELECT media.id FROM provider_course_content_links inherited_link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=inherited_link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1)
+            ) media_asset_id,
+            CASE WHEN EXISTS(SELECT 1 FROM catalog_media_assets own_media WHERE own_media.entity_type='content' AND own_media.entity_id=content.id AND own_media.purpose='cover' AND own_media.generation_status='ready') THEN 'own' ELSE 'inherited' END media_inheritance,
             catalog.name catalog_name,catalog.code catalog_code,provider.provider_code,provider.name provider_name,
             MIN(link.semester_number) semester_number,MIN(link.discipline_name) discipline_name,
             COUNT(DISTINCT link.provider_course_id) course_count,

@@ -69,6 +69,7 @@ use Interferencia\Modules\Site\SiteRepository;
 use Interferencia\Modules\Site\SiteOrderFulfillmentService;
 use Interferencia\Modules\Site\SiteRecoveryService;
 use Interferencia\Modules\Catalog\CourseProviderRepository;
+use Interferencia\Modules\Catalog\CatalogMediaStorage;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -168,6 +169,7 @@ $ticketFiles = new MediaStorage($rootPath . '/storage/tickets',$spacesStorage,$s
 $financeSecretCipher = new SecretCipher((string)$config->get('app.encryption_key'));
 $financeIntegrations = new IntegrationRepository($database,$financeSecretCipher);
 $courseProviders = new CourseProviderRepository($database,$financeSecretCipher);
+$catalogMedia = new CatalogMediaStorage($spacesStorage);
 $organizationFinanceIntegrations = new \Interferencia\Modules\Finance\OrganizationIntegrationRepository($database,$financeSecretCipher);
 $moodleIntegrations = new MoodleIntegrationRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
 $avaConnections = new AvaConnectionRepository($database,new SecretCipher((string)$config->get('app.encryption_key')));
@@ -266,6 +268,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$courseProviders,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$courseProviders,$catalogMedia,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
 
 return new Application($router, $request);

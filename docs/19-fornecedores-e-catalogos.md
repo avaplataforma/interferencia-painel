@@ -358,3 +358,22 @@ na interface. A consulta de cursos usa
 conector também deixa preparados os serviços oficiais de criação de matrícula,
 mudança de situação e consulta de matrículas, sem importar o financeiro do
 fornecedor e sem desabilitar a validação TLS.
+
+## Curadoria comercial e imagens dos catálogos
+
+A curadoria comercial é comum a todos os fornecedores. Curso e conteúdo
+individual podem receber nome, descrição, categoria, carga horária e capa sem
+alterar o dado técnico sincronizado da API. Quando um conteúdo individual não
+possui dados próprios, ele herda esses campos do curso ao qual está vinculado;
+uma edição própria substitui apenas o campo informado.
+
+As capas enviadas manualmente aceitam JPG, PNG ou WebP, são reduzidas para no
+máximo 1280 pixels e convertidas para WebP quando o servidor oferece esse
+formato. O arquivo final fica no DigitalOcean Spaces, dentro da área central
+`Catalogos/<catalogo>`, e a VPS mantém somente a referência e os metadados.
+
+A tabela de mídia também registra origem, fornecedor de geração, prompt,
+situação e erro. O contrato `CatalogImageGenerator` permite conectar no futuro
+um gerador externo sem alterar as telas, a loja ou o armazenamento. A imagem
+gerada deverá passar pela mesma otimização e ser gravada no Spaces antes de ser
+marcada como pronta para publicação.
