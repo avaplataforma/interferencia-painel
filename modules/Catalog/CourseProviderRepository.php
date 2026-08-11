@@ -41,7 +41,7 @@ final readonly class CourseProviderRepository
         $configured = trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '';
         if ($providerCode === 'iesde' && $integrationMode === 'lti13') {
             $configured = trim((string)($row['lti_platform_url'] ?? '')) !== '';
-        } elseif ($providerCode === 'iesde') {
+        } elseif (in_array($providerCode, ['iesde', 'conted_tech'], true)) {
             $configured = $configured && (string)($row['username_encrypted'] ?? '') !== '' && (string)($row['password_encrypted'] ?? '') !== '';
         }
 
@@ -109,6 +109,7 @@ final readonly class CourseProviderRepository
         if ($launch !== '' && (filter_var(str_replace(['{curso}', '{id}'], ['1', '1'], $launch), FILTER_VALIDATE_URL) === false || strtolower((string)parse_url($launch, PHP_URL_SCHEME)) !== 'https')) throw new RuntimeException('O endereço do AVA deve usar HTTPS.');
         if ($token === '' && !$current['configured']) throw new RuntimeException('Informe a chave ou token da API.');
         if ($providerCode === 'iesde' && !$current['configured'] && ($username === '' || trim($password) === '')) throw new RuntimeException('Informe o usuário e a senha HTTP Digest do Portal AVA.');
+        if ($providerCode === 'conted_tech' && !$current['configured'] && ($username === '' || trim($password) === '')) throw new RuntimeException('Informe a Integration Key e a Secret Key da CONTED TECH.');
         if (($token !== '' || $username !== '' || trim($password) !== '') && !$this->cipher->ready()) throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
 
         $sql = 'UPDATE course_provider_integrations SET base_url=:base,delivery_mode=:delivery,launch_url_template=:launch,is_active=:active,updated_by=:user';
@@ -329,7 +330,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function providerCatalogRegistry(): array
     {
-        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
+        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
@@ -352,7 +353,8 @@ final readonly class CourseProviderRepository
             CASE WHEN catalog.code='ava-cursos' THEN 1
                 WHEN provider.provider_code='iesde' AND provider.integration_mode='lti13' AND provider.lti_platform_url IS NOT NULL AND provider.lti_platform_url<>'' THEN 1
                 WHEN provider.provider_code='iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
-                WHEN provider.provider_code<>'iesde' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
+                WHEN provider.provider_code='conted_tech' AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' AND provider.username_encrypted IS NOT NULL AND provider.username_encrypted<>'' AND provider.password_encrypted IS NOT NULL AND provider.password_encrypted<>'' THEN 1
+                WHEN provider.provider_code NOT IN ('iesde','conted_tech') AND provider.base_url IS NOT NULL AND provider.base_url<>'' AND provider.token_encrypted IS NOT NULL AND provider.token_encrypted<>'' THEN 1 ELSE 0 END configured,
             CASE WHEN provider.provider_code IN ('escola_avancada','iesde') THEN 1 WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END adapter_ready,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_test_status,'not_tested') END integration_status,
             CASE WHEN catalog.code='ava-cursos' THEN 'success' ELSE COALESCE(provider.last_sync_status,'never') END sync_status,
@@ -383,7 +385,7 @@ final readonly class CourseProviderRepository
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
+            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         return $statement->fetchAll() ?: [];
     }
 
@@ -405,13 +407,19 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function catalogsForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,
+        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,
             COALESCE(access.is_enabled,CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE 0 END) is_enabled,
             COALESCE(access.markup_percent,0) markup_percent,COALESCE(access.default_max_installments,1) default_max_installments,
             access.valid_from,access.valid_until,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
+            COALESCE(provider.provider_code,'ava_cursos') provider_code,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.automatic_enrollment,0) END automatic_enrollment,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.single_sign_on,0) END single_sign_on,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.progress_tracking,0) END progress_tracking,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.grade_tracking,0) END grade_tracking,
+            CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(capability.certificate_access,0) END certificate_access,
             CASE WHEN catalog.code='ava-cursos'
                 THEN (SELECT COUNT(*) FROM moodle_courses course WHERE course.visible=1)
                 ELSE (SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=catalog.id AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1)
@@ -420,9 +428,10 @@ final readonly class CourseProviderRepository
             FROM course_catalogs catalog
             LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
+            LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,access.is_enabled,access.markup_percent,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.launch_url_template,provider.is_active
-            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,access.is_enabled,access.markup_percent,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
+            ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }

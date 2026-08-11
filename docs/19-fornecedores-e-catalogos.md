@@ -239,18 +239,37 @@ equipe confirma manualmente pagamento, matrícula e acesso ao AVA parceiro.
 
 ## Registro oficial de catálogos
 
-O cadastro central passa a reconhecer oito linhas acadêmicas independentes:
+O cadastro central passa a reconhecer nove linhas acadêmicas independentes. O
+ambiente acadêmico é propriedade do catálogo e não deve ser confundido com um
+Moodle exclusivo da franquia:
 
-| Catálogo | Fornecedor | Ambiente acadêmico |
+| Catálogo | Fornecedor | Onde o conteúdo roda |
 | --- | --- | --- |
-| INTER | AVA Cursos | `https://avacursos.com.br/{franquia}` |
-| PRO | Escola Avançada | `https://interferenciaead.com.br/metodo/login.php` |
-| UP | SIE | `https://www.sie.com.br/interferenciaead` |
-| MASTER | IESDE | `https://eadservidor.com.br/avacursos/interferencia/` |
-| CEFE | EJA CEFE | `https://avacefe.com.br/login/` |
-| CONCLUSÃO | EJA Conclusão | `https://avaconclusao.com.br/login/` |
-| PREPARA | Aprova Concursos | `https://aprovaconcursos.com.br/?ref=interf2026` |
-| DRIVE | Trânsito | `https://ava.eadcursosdetransito.com.br/login` |
+| INTER | AVA Cursos | Dentro do `avacursos.com.br` |
+| PRO | Escola Avançada | AVA do fornecedor |
+| UP | SIE | Dentro do `avacursos.com.br` |
+| MASTER | IESDE | Dentro do `avacursos.com.br`, por LTI 1.3 |
+| EXPERT | CONTED TECH | Dentro do `avacursos.com.br` |
+| CEFE | EJA CEFE | AVA do fornecedor |
+| CONCLUSÃO | EJA Conclusão | AVA do fornecedor |
+| PREPARA | Aprova Concursos | AVA do fornecedor |
+| DRIVE | Trânsito | AVA do fornecedor |
+
+O **Moodle exclusivo da franquia** é outra escolha: uma instalação Moodle
+administrada especificamente por aquela franquia. Ele não é um destino
+genérico para catálogos cujo conteúdo roda no AVA do fornecedor.
+
+### Catálogo EXPERT — CONTED TECH
+
+O EXPERT possui três credenciais distintas — API Key, Integration Key e Secret
+Key — armazenadas separadamente e criptografadas no ADM Central. O endereço-base
+é registrado sem incorporar segredos e a franquia enxerga apenas o estado da
+integração e os recursos homologados.
+
+O destino acadêmico é o AVA Cursos. Entretanto, o conector permanece inativo e
+sem sincronização até a CONTED TECH confirmar as rotas, cabeçalhos de
+autenticação, paginação, matrícula e liberação. Salvar credenciais não equivale
+a homologar o fornecedor e não libera vendas ou acessos automaticamente.
 
 ## IESDE e Catálogo MASTER por LTI 1.3
 

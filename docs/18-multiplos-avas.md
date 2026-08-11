@@ -57,6 +57,11 @@ Uma matrícula comercial poderá gerar uma ou várias entregas acadêmicas. Cada
 entrega registra plataforma, curso remoto, usuário remoto, situação, datas,
 tentativas, erro e origem da liberação.
 
+O destino também pode ser definido pelo catálogo. INTER, UP, MASTER e EXPERT
+rodam dentro do AVA Cursos compartilhado; PRO, CEFE, CONCLUSÃO, PREPARA e DRIVE
+abrem o ambiente acadêmico de seus respectivos fornecedores. Essa decisão é
+independente da opção de a franquia possuir ou não um Moodle exclusivo.
+
 ## Entidades previstas
 
 - `learning_platforms`: cada Moodle conhecido pela plataforma.

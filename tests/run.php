@@ -1073,8 +1073,8 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($routes,"'/admin/platform/painel-inter'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/ava'"));
     assertTrue(str_contains($form,'data-organization-tab="ava"'));
-    assertTrue(str_contains($ava,'Somente nosso AVA (AVA Cursos)'));
-    assertTrue(str_contains($ava,'AVA Cursos + AVA próprio'));
+    assertTrue(str_contains($ava,'AVA Cursos compartilhado'));
+    assertTrue(str_contains($ava,'AVA Cursos + Moodle exclusivo'));
     assertTrue(!str_contains($navigation,'/admin/platform/painel-inter'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/platform/integrations.php'),'/admin/platform/painel-inter'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/version.php'));
@@ -1654,6 +1654,27 @@ $tests['registra todos os catalogos e fornecedores academicos'] = static functio
     assertTrue(str_contains($repository,'integration_active'));
     assertTrue(str_contains($repository,'settingsForProvider'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/routes/web.php'),'catalogCourseOffersForOrganization'));
+};
+
+$tests['registra o Catalogo EXPERT com credenciais protegidas e destino academico explicito'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000030_register_expert_catalog_execution.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $catalogView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $organizationView=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+
+    assertTrue(str_contains($migration,'execution_environment'));
+    assertTrue(str_contains($migration,"'catalogo-expert','Catálogo EXPERT'"));
+    assertTrue(str_contains($migration,"'conted_tech','CONTED TECH'"));
+    assertTrue(str_contains($migration,"'shared_ava'"));
+    assertTrue(!str_contains($migration,'Secret Key'));
+    assertTrue(str_contains($repository,"['iesde', 'conted_tech']"));
+    assertTrue(str_contains($repository,'Integration Key e a Secret Key da CONTED TECH'));
+    assertTrue(str_contains($catalogView,'Integration Key'));
+    assertTrue(str_contains($catalogView,'Secret Key'));
+    assertTrue(str_contains($catalogView,'rotas e os cabeçalhos oficiais da CONTED TECH'));
+    assertTrue(str_contains($organizationView,'Moodle exclusivo da franquia'));
+    assertTrue(str_contains($organizationView,'Dentro do AVA Cursos'));
+    assertTrue(str_contains($organizationView,'AVA do fornecedor'));
 };
 
 $tests['prepara conector paginado e seguro do Catalogo MASTER'] = static function () use ($rootPath): void {
