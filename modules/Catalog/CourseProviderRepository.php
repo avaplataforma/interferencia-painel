@@ -421,6 +421,8 @@ final readonly class CourseProviderRepository
     public function providerCatalogRegistry(): array
     {
         $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
+            catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,
+            catalog.allow_franchise_commercial_override,catalog.commercial_policy_updated_at,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
@@ -914,8 +916,13 @@ final readonly class CourseProviderRepository
     {
         $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
             COALESCE(access.is_enabled,1) is_enabled,
-            COALESCE(access.markup_percent,0) markup_percent,access.default_price,COALESCE(access.default_max_installments,1) default_max_installments,
-            access.valid_from,access.valid_until,
+            catalog.allow_franchise_commercial_override,
+            CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.markup_percent,catalog.central_markup_percent,0) ELSE catalog.central_markup_percent END markup_percent,
+            CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.default_price,catalog.central_default_price) ELSE catalog.central_default_price END default_price,
+            CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.default_max_installments,catalog.central_default_max_installments,1) ELSE catalog.central_default_max_installments END default_max_installments,
+            CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_from,catalog.central_valid_from) ELSE catalog.central_valid_from END valid_from,
+            CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_until,catalog.central_valid_until) ELSE catalog.central_valid_until END valid_until,
+            catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor externo') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
@@ -940,7 +947,7 @@ final readonly class CourseProviderRepository
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,access.is_enabled,access.markup_percent,access.default_price,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.allow_franchise_commercial_override,catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,access.is_enabled,access.markup_percent,access.default_price,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
@@ -954,20 +961,21 @@ final readonly class CourseProviderRepository
         if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia não encontrada.');
 
         $enabled = array_values(array_unique(array_filter(array_map('intval', $enabledCatalogIds), static fn(int $id): bool => $id > 0)));
-        $catalogs = $this->database->query('SELECT id FROM course_catalogs WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        $catalogs = $this->database->query('SELECT id,central_default_price,central_markup_percent,central_default_max_installments,central_valid_from,central_valid_until,allow_franchise_commercial_override FROM course_catalogs WHERE is_active=1')->fetchAll() ?: [];
         $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,:enabled,:markup,:default_price,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
 
         $this->database->beginTransaction();
         try {
-            foreach ($catalogs as $catalogId) {
-                $id = (int)$catalogId;
+            foreach ($catalogs as $catalog) {
+                $id = (int)$catalog['id'];
                 $policy = is_array($policies[$id] ?? null) ? $policies[$id] : (is_array($policies[(string)$id] ?? null) ? $policies[(string)$id] : []);
-                $markup = round((float)str_replace(',', '.', (string)($policy['markup_percent'] ?? '0')), 4);
-                $defaultPriceInput = trim((string)($policy['default_price'] ?? ''));
+                $locked = (int)$catalog['allow_franchise_commercial_override'] !== 1;
+                $markup = $locked ? (float)$catalog['central_markup_percent'] : round((float)str_replace(',', '.', (string)($policy['markup_percent'] ?? '0')), 4);
+                $defaultPriceInput = $locked ? (string)($catalog['central_default_price'] ?? '') : trim((string)($policy['default_price'] ?? ''));
                 $defaultPrice = $defaultPriceInput === '' ? null : round((float)str_replace(',', '.', $defaultPriceInput), 2);
-                $installments = max(1, min(60, (int)($policy['default_max_installments'] ?? 1)));
-                $validFrom = $this->dateOrNull((string)($policy['valid_from'] ?? ''));
-                $validUntil = $this->dateOrNull((string)($policy['valid_until'] ?? ''));
+                $installments = max(1, min(60, $locked ? (int)$catalog['central_default_max_installments'] : (int)($policy['default_max_installments'] ?? 1)));
+                $validFrom = $this->dateOrNull((string)($locked ? ($catalog['central_valid_from'] ?? '') : ($policy['valid_from'] ?? '')));
+                $validUntil = $this->dateOrNull((string)($locked ? ($catalog['central_valid_until'] ?? '') : ($policy['valid_until'] ?? '')));
                 if ($markup < -100 || $markup > 1000) throw new RuntimeException('O ajuste em lote deve ficar entre -100% e 1.000%.');
                 if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
                 if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final da regra não pode ser anterior ao início.');
@@ -1001,6 +1009,85 @@ final readonly class CourseProviderRepository
             ON DUPLICATE KEY UPDATE price=VALUES(price),max_installments=VALUES(max_installments),is_active=1,updated_by=VALUES(updated_by)");
         $statement->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'default_price' => $defaultPrice, 'default_price_value' => $defaultPrice, 'markup' => $markup, 'installments' => $installments, 'created_by' => $userId, 'updated_by' => $userId, 'item_organization' => $organizationId]);
         return $statement->rowCount();
+    }
+
+    /** @param array<string,mixed> $input */
+    public function saveCentralCatalogPolicy(int $catalogId, array $input, bool $allowFranchiseOverride, ?int $userId): void
+    {
+        $catalog = $this->database->prepare('SELECT 1 FROM course_catalogs WHERE id=:id AND is_active=1');
+        $catalog->execute(['id' => $catalogId]);
+        if ($catalog->fetchColumn() === false) throw new RuntimeException('Catálogo não encontrado.');
+
+        $defaultPriceInput = trim((string)($input['default_price'] ?? ''));
+        $defaultPrice = $this->money($defaultPriceInput);
+        $markup = round((float)str_replace(',', '.', preg_replace('/[^0-9,.-]/', '', (string)($input['markup_percent'] ?? '0')) ?? '0'), 4);
+        $installments = max(1, min(60, (int)($input['default_max_installments'] ?? 1)));
+        $validFrom = $this->dateOrNull((string)($input['valid_from'] ?? ''));
+        $validUntil = $this->dateOrNull((string)($input['valid_until'] ?? ''));
+        if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
+        if ($markup < -100 || $markup > 1000) throw new RuntimeException('O ajuste deve ficar entre -100% e 1.000%.');
+        if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final não pode ser anterior ao início.');
+
+        $statement = $this->database->prepare('UPDATE course_catalogs SET central_default_price=:default_price,central_markup_percent=:markup,central_default_max_installments=:installments,central_valid_from=:valid_from,central_valid_until=:valid_until,allow_franchise_commercial_override=:allow_override,commercial_policy_updated_by=:user,commercial_policy_updated_at=NOW() WHERE id=:id');
+        $statement->execute([
+            'default_price' => $defaultPrice,
+            'markup' => $markup,
+            'installments' => $installments,
+            'valid_from' => $validFrom,
+            'valid_until' => $validUntil,
+            'allow_override' => $allowFranchiseOverride ? 1 : 0,
+            'user' => $userId,
+            'id' => $catalogId,
+        ]);
+    }
+
+    /** @return array{franchises:int,offers:int} */
+    public function applyCentralCatalogPolicy(int $catalogId, ?int $organizationId, ?int $userId): array
+    {
+        $catalog = $this->database->prepare('SELECT id,central_default_price,central_markup_percent,central_default_max_installments,central_valid_from,central_valid_until FROM course_catalogs WHERE id=:id AND is_active=1');
+        $catalog->execute(['id' => $catalogId]);
+        $policy = $catalog->fetch();
+        if (!is_array($policy)) throw new RuntimeException('Catálogo não encontrado.');
+
+        $sql = "SELECT id FROM organizations WHERE status='active'";
+        $parameters = [];
+        if ($organizationId !== null && $organizationId > 0) {
+            $sql .= ' AND id=:organization';
+            $parameters['organization'] = $organizationId;
+        }
+        $sql .= ' ORDER BY id';
+        $targets = $this->database->prepare($sql);
+        $targets->execute($parameters);
+        $organizationIds = array_map('intval', $targets->fetchAll(PDO::FETCH_COLUMN) ?: []);
+        if ($organizationIds === []) throw new RuntimeException('Nenhuma franquia ativa foi encontrada para aplicar esta regra.');
+
+        $upsert = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,1,:markup,:default_price,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
+        $enabled = $this->database->prepare('SELECT COALESCE(access.is_enabled,1) FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization WHERE catalog.id=:catalog AND catalog.is_globally_enabled=1');
+        $offers = 0;
+
+        $this->database->beginTransaction();
+        try {
+            foreach ($organizationIds as $targetId) {
+                $upsert->execute([
+                    'organization' => $targetId,
+                    'catalog' => $catalogId,
+                    'markup' => (float)$policy['central_markup_percent'],
+                    'default_price' => $policy['central_default_price'],
+                    'installments' => max(1, (int)$policy['central_default_max_installments']),
+                    'valid_from' => $policy['central_valid_from'],
+                    'valid_until' => $policy['central_valid_until'],
+                    'user' => $userId,
+                ]);
+                $enabled->execute(['organization' => $targetId, 'catalog' => $catalogId]);
+                if ((int)$enabled->fetchColumn() === 1) $offers += $this->applyCatalogPolicy($targetId, $catalogId, $userId);
+            }
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+
+        return ['franchises' => count($organizationIds), 'offers' => $offers];
     }
 
     /** @param array<string,mixed> $metadata */
