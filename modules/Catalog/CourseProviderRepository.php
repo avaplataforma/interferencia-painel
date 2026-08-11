@@ -550,7 +550,7 @@ final readonly class CourseProviderRepository
     public function saveMediaAsset(string $entityType, int $entityId, array $data, ?int $userId): int
     {
         if ($this->catalogEntity($entityType, $entityId) === null) throw new RuntimeException('Curso ou conteúdo do catálogo não encontrado.');
-        $statement = $this->database->prepare("INSERT INTO catalog_media_assets(entity_type,entity_id,purpose,storage_path,mime_type,width,height,file_size,source,generation_provider,generation_prompt,generation_status,generation_error,generated_at,created_by,updated_by) VALUES(:type,:entity,'cover',:path,:mime,:width,:height,:size,:source,:provider,:prompt,:status,:error,:generated_at,:user,:user) ON DUPLICATE KEY UPDATE storage_path=VALUES(storage_path),mime_type=VALUES(mime_type),width=VALUES(width),height=VALUES(height),file_size=VALUES(file_size),source=VALUES(source),generation_provider=VALUES(generation_provider),generation_prompt=VALUES(generation_prompt),generation_status=VALUES(generation_status),generation_error=VALUES(generation_error),generated_at=VALUES(generated_at),updated_by=VALUES(updated_by)");
+        $statement = $this->database->prepare("INSERT INTO catalog_media_assets(entity_type,entity_id,purpose,storage_path,mime_type,width,height,file_size,source,generation_provider,generation_prompt,generation_status,generation_error,generated_at,created_by,updated_by) VALUES(:type,:entity,'cover',:path,:mime,:width,:height,:size,:source,:provider,:prompt,:status,:error,:generated_at,:created_user,:updated_user) ON DUPLICATE KEY UPDATE storage_path=VALUES(storage_path),mime_type=VALUES(mime_type),width=VALUES(width),height=VALUES(height),file_size=VALUES(file_size),source=VALUES(source),generation_provider=VALUES(generation_provider),generation_prompt=VALUES(generation_prompt),generation_status=VALUES(generation_status),generation_error=VALUES(generation_error),generated_at=VALUES(generated_at),updated_by=VALUES(updated_by)");
         $statement->execute([
             'type' => $entityType, 'entity' => $entityId,
             'path' => $data['storage_path'] ?? null, 'mime' => $data['mime_type'] ?? null,
@@ -558,7 +558,8 @@ final readonly class CourseProviderRepository
             'size' => $data['file_size'] ?? null, 'source' => $data['source'] ?? 'upload',
             'provider' => $data['generation_provider'] ?? null, 'prompt' => $data['generation_prompt'] ?? null,
             'status' => $data['generation_status'] ?? 'ready', 'error' => $data['generation_error'] ?? null,
-            'generated_at' => $data['generated_at'] ?? null, 'user' => $userId,
+            'generated_at' => $data['generated_at'] ?? null,
+            'created_user' => $userId, 'updated_user' => $userId,
         ]);
         $id = (int)$this->database->lastInsertId();
         if ($id > 0) return $id;

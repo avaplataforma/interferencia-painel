@@ -1861,6 +1861,8 @@ $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = stat
 
     foreach(['catalog_media_assets','generation_provider','generation_prompt','generation_status'] as$field) assertTrue(str_contains($migration,$field));
     assertTrue(str_contains($repository,'public function saveMediaAsset'));
+    assertTrue(str_contains($repository,':created_user,:updated_user'));
+    assertTrue(!str_contains($repository,':user,:user'));
     assertTrue(str_contains($repository,"NULLIF(MAX(course.commercial_description),'')"));
     assertTrue(str_contains($repository,"entity_type='course'"));
     assertTrue(str_contains($mediaStorage,'1280'));
