@@ -52,6 +52,29 @@ Cada conector deverá registrar:
 As sincronizações serão idempotentes. A indisponibilidade de um fornecedor não
 interromperá os demais catálogos.
 
+### Governança implantada
+
+Cada curso importado passa por três estados independentes:
+
+1. **Sincronização:** novo, alterado, atualizado ou retirado na origem.
+2. **Curadoria:** importado, em revisão, aprovado ou reprovado.
+3. **Liberação:** somente ADM Central, liberado às franquias ou publicado.
+
+Os dados recebidos do fornecedor ficam separados dos dados comerciais. Uma
+nova sincronização pode atualizar nome, categoria, capa, carga horária e preço
+de referência da origem, mas preserva o nome comercial, a descrição, a imagem,
+a categoria, a carga e o certificado já revisados pelo Mundo Inter.
+
+Cada integração possui uma matriz de capacidades homologadas: sincronização de
+catálogo, matrícula automática, acesso integrado, progresso, notas,
+certificados, suspensão e envio de credenciais. Recursos ainda não confirmados
+permanecem desligados e não são prometidos no fluxo de matrícula.
+
+Na aba AVA da franquia, cada catálogo externo pode ter uma regra em lote com
+ajuste percentual sobre o preço de referência, parcelamento padrão e validade.
+A aplicação cria ou atualiza as condições-base dos cursos aprovados, sem
+sobrescrever exceções individuais de nome, descrição ou visibilidade.
+
 ## Curadoria e deduplicação
 
 Cursos parecidos de fornecedores diferentes não serão unidos automaticamente.

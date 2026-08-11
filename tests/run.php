@@ -1703,6 +1703,26 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($view,'Deployment ID'));
 };
 
+$tests['governa catalogos com curadoria preservada recursos e regra por franquia'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000020_expand_course_catalog_governance.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $catalogView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $organizationView=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+
+    foreach(['commercial_cover_url','release_status','content_hash','sync_state','course_provider_capabilities','markup_percent','default_max_installments'] as$field) assertTrue(str_contains($migration,$field));
+    assertTrue(str_contains($repository,'public function applyCatalogPolicy'));
+    assertTrue(str_contains($repository,'public function saveCapabilities'));
+    assertTrue(str_contains($repository,"COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name"));
+    assertTrue(str_contains($repository,"course.review_status='approved' AND course.release_status IN ('released','published')"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/capabilities'"));
+    assertTrue(str_contains($routes,"'/admin/organizations/{id:\\d+}/catalogs/{catalogId:\\d+}/apply-policy'"));
+    assertTrue(str_contains($catalogView,'Matriz real de recursos deste fornecedor'));
+    assertTrue(str_contains($catalogView,'Aprovar não publica sozinho'));
+    assertTrue(str_contains($organizationView,'Salvar e aplicar aos cursos'));
+    assertTrue(str_contains($organizationView,'catalog_policy['));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
