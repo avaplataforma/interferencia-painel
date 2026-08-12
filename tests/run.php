@@ -2045,7 +2045,11 @@ $tests['organiza trilhas comerciais em categorias hierarquicas'] = static functi
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/categories'"));
     assertTrue(str_contains($view,'name="category_id"'));
     assertTrue(str_contains($view,'Categoria *'));
+    assertTrue(str_contains($view,'Selecionar todos desta Trilha'));
+    assertTrue(str_contains($view,'data-trail-select-visible'));
+    assertTrue(str_contains($view,'class="span-6">Endereço amigável'));
     assertTrue(str_contains($view,'mínimo 2'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'setVisibleSelection'));
     assertTrue(str_contains($integrations,'Cursos individuais e Trilhas'));
 };
 

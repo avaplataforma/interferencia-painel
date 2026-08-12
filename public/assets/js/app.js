@@ -740,6 +740,9 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const packageFilter = picker?.querySelector('[data-trail-package-filter]');
     const packageField = picker?.querySelector('[data-trail-package-field]');
     const packageNote = picker?.querySelector('[data-trail-package-note]');
+    const packageActions = picker?.querySelector('[data-trail-package-actions]');
+    const selectVisible = picker?.querySelector('[data-trail-select-visible]');
+    const clearVisible = picker?.querySelector('[data-trail-clear-visible]');
     const selectedOnly = picker?.querySelector('[data-trail-selected-only]');
     const selectedCount = picker?.querySelector('[data-trail-selection-count]');
     const visibleCount = picker?.querySelector('[data-trail-visible-count]');
@@ -781,6 +784,18 @@ document.querySelectorAll('.color-field').forEach((group) => {
       });
       if (packageField instanceof HTMLElement) packageField.hidden = filterMode !== 'packages';
       if (packageNote instanceof HTMLElement) packageNote.hidden = filterMode !== 'packages';
+      if (packageActions instanceof HTMLElement) packageActions.hidden = filterMode !== 'packages';
+      apply();
+    };
+
+    const setVisibleSelection = (checked) => {
+      items.forEach((item) => {
+        if (!(item instanceof HTMLElement) || item.hidden) return;
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        if (!(checkbox instanceof HTMLInputElement) || checkbox.checked === checked) return;
+        checkbox.checked = checked;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      });
       apply();
     };
 
@@ -788,6 +803,8 @@ document.querySelectorAll('.color-field').forEach((group) => {
     catalog?.addEventListener('change', apply);
     packageFilter?.addEventListener('change', apply);
     modeButtons.forEach((button) => button.addEventListener('click', () => setFilterMode(button.dataset.trailFilterMode)));
+    selectVisible?.addEventListener('click', () => setVisibleSelection(true));
+    clearVisible?.addEventListener('click', () => setVisibleSelection(false));
     selectedOnly?.addEventListener('change', apply);
     items.forEach((item) => item.querySelector('input[type="checkbox"]')?.addEventListener('change', apply));
     setFilterMode('items');
