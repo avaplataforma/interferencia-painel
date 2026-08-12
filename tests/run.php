@@ -1993,6 +1993,32 @@ $tests['homologa catalogo em amostra assistida sem gerar cobranca'] = static fun
     assertTrue(str_contains($homologation,'não chama o Asaas'));
 };
 
+$tests['libera matricula externa EXPERT sem criar cobranca'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000010_add_external_provider_enrollments.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
+    $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
+
+    assertTrue(str_contains($migration,'provider_content_offer_id'));
+    assertTrue(str_contains($migration,'provider_access_url'));
+    assertTrue(str_contains($migration,'MODIFY moodle_course_id BIGINT UNSIGNED NULL'));
+    assertTrue(str_contains($catalog,'public function courseAccessTargetForOffer'));
+    assertTrue(str_contains($catalog,'public function contentAccessTargetForOffer'));
+    assertTrue(str_contains($enrollments,'public function createProviderWaived'));
+    assertTrue(str_contains($enrollments,"'payment_waived'"));
+    assertTrue(str_contains($enrollments,'public function markProviderReleased'));
+    assertTrue(str_contains($releaser,'contentLink($contentType, $batch, $document)'));
+    assertTrue(str_contains($releaser,'providerAccessUrl'));
+    assertTrue(str_contains($notifier,'Link pessoal de acesso:'));
+    assertTrue(str_contains($routes,"'/students/enrollments/provider-waivers'"));
+    assertTrue(str_contains($routes,'createProviderWaived'));
+    assertTrue(str_contains($view,'Catálogo EXPERT'));
+    assertTrue(str_contains($view,'não será gerada nenhuma cobrança'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

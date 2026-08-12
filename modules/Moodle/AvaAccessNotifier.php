@@ -27,19 +27,23 @@ final readonly class AvaAccessNotifier
         }
         $settings = $this->integrations->settings();
         $login = (string) ($context['username'] ?: preg_replace('/\D/', '', (string) $context['cpf_cnpj']));
-        $lines = [
-            'Olá, ' . $context['name'] . '!',
-            '',
-            'Seu acesso ao curso ' . $context['course_name'] . ' foi liberado no AVA.',
-            'Endereço: ' . rtrim((string) ($context['ava_base_url'] ?: $settings['base_url']), '/') . '/',
-            'Login: ' . $login,
-            $settings['initial_password_mode'] === 'cpf5'
+        $providerAccess = (string)($context['academic_provider_code'] ?? '') !== '';
+        $lines = ['Olá, ' . $context['name'] . '!', ''];
+        if ($providerAccess) {
+            $lines[] = 'Seu acesso ao curso ' . $context['course_name'] . ' foi liberado no Catálogo EXPERT.';
+            $lines[] = 'Link pessoal de acesso: ' . (string)$context['ava_base_url'];
+            $lines[] = 'Use este endereço individual para entrar diretamente no conteúdo contratado.';
+        } else {
+            $lines[] = 'Seu acesso ao curso ' . $context['course_name'] . ' foi liberado no AVA.';
+            $lines[] = 'Endereço: ' . rtrim((string) ($context['ava_base_url'] ?: $settings['base_url']), '/') . '/';
+            $lines[] = 'Login: ' . $login;
+            $lines[] = $settings['initial_password_mode'] === 'cpf5'
                 ? 'Senha inicial: os 5 primeiros dígitos do seu CPF.'
-                : 'A senha foi gerada pelo AVA. Consulte o e-mail enviado pelo AVA ou use a opção “Esqueci minha senha”.',
-            'Unidade: ' . $context['unit_name'],
-            '',
-            'PAINEL INTER',
-        ];
+                : 'A senha foi gerada pelo AVA. Consulte o e-mail enviado pelo AVA ou use a opção “Esqueci minha senha”.';
+        }
+        $lines[] = 'Unidade: ' . $context['unit_name'];
+        $lines[] = '';
+        $lines[] = 'PAINEL INTER';
         $subject = preg_replace('/[\r\n]+/', ' ', 'Seu acesso ao AVA — ' . $context['course_name']) ?: 'Seu acesso ao AVA';
         try {
             $sent = mail($email, mb_encode_mimeheader($subject, 'UTF-8'), implode("\r\n", $lines), "Content-Type: text/plain; charset=UTF-8\r\nMIME-Version: 1.0");

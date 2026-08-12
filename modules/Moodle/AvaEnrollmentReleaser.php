@@ -6,6 +6,8 @@ namespace Interferencia\Modules\Moodle;
 
 use RuntimeException;
 use Throwable;
+use Interferencia\Modules\Catalog\ContedTechClient;
+use Interferencia\Modules\Catalog\CourseProviderRepository;
 use Interferencia\Modules\Organization\OrganizationPoleRepository;
 
 final readonly class AvaEnrollmentReleaser
@@ -16,6 +18,7 @@ final readonly class AvaEnrollmentReleaser
         private MoodleRepository $moodle,
         private EnrollmentRepository $enrollments,
         private OrganizationPoleRepository $poles,
+        private CourseProviderRepository $courseProviders,
         private string $automaticFrom,
     ) {}
 
@@ -37,6 +40,10 @@ final readonly class AvaEnrollmentReleaser
             }
             if ($context['moodle_enrolment_status'] === 'released') {
                 return ['status' => 'already_released'];
+            }
+
+            if ((string)($context['academic_provider_code'] ?? '') !== '') {
+                return $this->releaseProvider($enrollmentId, $context, $operatorId);
             }
 
             $connection=$this->connections->find((int)($context['ava_connection_id']??0));
@@ -133,5 +140,69 @@ final readonly class AvaEnrollmentReleaser
             $this->enrollments->recordReleaseFailure($enrollmentId, $exception->getMessage(), $operatorId);
             throw $exception;
         }
+    }
+
+    /** @param array<string,mixed> $context @return array{status:string,connection:string,access_url:string} */
+    private function releaseProvider(int $enrollmentId, array $context, ?int $operatorId): array
+    {
+        $providerCode = (string)($context['academic_provider_code'] ?? '');
+        if ($providerCode !== 'conted_tech') {
+            throw new RuntimeException('O conector acadêmico desta matrícula ainda não está homologado para liberação automática.');
+        }
+
+        $document = preg_replace('/\D/', '', (string)($context['cpf_cnpj'] ?? '')) ?? '';
+        if (strlen($document) !== 11) {
+            throw new RuntimeException('O aluno precisa ter um CPF válido para gerar o acesso no Catálogo EXPERT.');
+        }
+        $contentType = trim((string)($context['provider_content_type'] ?? ''));
+        $batch = trim((string)($context['provider_batch'] ?? ''));
+        if ($contentType === '' || $batch === '') {
+            throw new RuntimeException('A oferta EXPERT não possui os identificadores acadêmicos exigidos pela CONTED TECH.');
+        }
+
+        $settings = $this->courseProviders->settingsForProvider($providerCode, true);
+        $client = new ContedTechClient(
+            (string)$settings['base_url'],
+            (string)$settings['token'],
+            (string)$settings['password'],
+            (string)$settings['username'],
+            (bool)$settings['is_active'],
+        );
+        $response = $client->contentLink($contentType, $batch, $document);
+        $accessUrl = $this->providerAccessUrl($response);
+        if ($accessUrl === '') {
+            throw new RuntimeException('A CONTED TECH confirmou a solicitação, mas não retornou o link pessoal de acesso esperado.');
+        }
+
+        $this->enrollments->markProviderReleased($enrollmentId, $document, $accessUrl, $response, $operatorId);
+        return ['status' => 'released', 'connection' => 'Catálogo EXPERT', 'access_url' => $accessUrl];
+    }
+
+    /** @param array<string,mixed> $response */
+    private function providerAccessUrl(array $response): string
+    {
+        $priorityKeys = ['url', 'link', 'access_url', 'accessUrl', 'content_url', 'contentUrl'];
+        foreach ($priorityKeys as $key) {
+            $candidate = trim((string)($response[$key] ?? ''));
+            if ($this->isSafeProviderUrl($candidate)) return $candidate;
+        }
+        foreach ($response as $value) {
+            if (is_string($value)) {
+                $candidate = trim($value);
+                if ($this->isSafeProviderUrl($candidate)) return $candidate;
+            }
+            if (is_array($value)) {
+                $candidate = $this->providerAccessUrl($value);
+                if ($candidate !== '') return $candidate;
+            }
+        }
+        return '';
+    }
+
+    private function isSafeProviderUrl(string $url): bool
+    {
+        return $url !== ''
+            && filter_var($url, FILTER_VALIDATE_URL) !== false
+            && strtolower((string)parse_url($url, PHP_URL_SCHEME)) === 'https';
     }
 }

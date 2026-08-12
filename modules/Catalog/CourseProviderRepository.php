@@ -925,6 +925,17 @@ final readonly class CourseProviderRepository
         return $row;
     }
 
+    /** @return array<string,mixed> */
+    public function courseAccessTargetForOffer(int $offerId): array
+    {
+        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,course.id course_id,COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(course.raw_payload,'$.categoria')),''),NULLIF(course.category,''),'course') content_type,course.remote_id batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(course.commercial_name,''),course.name) name,provider.provider_code FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=offer.organization_id AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='course' AND item_access.item_id=course.id WHERE offer.id=:id AND offer.is_active=1 AND course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_globally_enabled=1 AND COALESCE(catalog_access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND course.review_status='approved' AND course.release_status IN ('released','published') LIMIT 1");
+        $statement->execute(['id' => $offerId]);
+        $row = $statement->fetch();
+        if (!is_array($row)) throw new RuntimeException('Oferta de curso externo não encontrada ou não liberada.');
+        if (trim((string)($row['batch'] ?? '')) === '') throw new RuntimeException('O curso externo ainda não possui o identificador exigido pelo fornecedor.');
+        return $row;
+    }
+
     /** @return list<array<string,mixed>> */
     public function catalogCourseOffersForOrganization(int $organizationId): array
     {
