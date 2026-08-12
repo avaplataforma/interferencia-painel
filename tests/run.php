@@ -2046,6 +2046,8 @@ $tests['organiza trilhas comerciais em categorias hierarquicas'] = static functi
     assertTrue(str_contains($repository,'count($items) < 2'));
     assertTrue(str_contains($repository,"if (\$slug === '') \$slug = \$this->slug(\$name);"));
     assertTrue(str_contains($repository,'workload_hours=:workload'));
+    assertTrue(str_contains($repository,':created_by,:updated_by'));
+    assertTrue(!str_contains($repository,':user,:user'));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails'"));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/categories'"));
     assertTrue(str_contains($view,'name="category_id"'));

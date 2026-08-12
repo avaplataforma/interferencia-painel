@@ -58,16 +58,14 @@ final readonly class LearningCatalogRepository
             'description' => trim((string)($data['description'] ?? '')) ?: null,
             'sort_order' => max(0, min(999, (int)($data['sort_order'] ?? 0))),
             'is_active' => (int)(bool)($data['is_active'] ?? false),
-            'user' => $userId,
         ];
         if ($id === null) {
-            $statement = $this->database->prepare('INSERT INTO catalog_categories(parent_id,name,code,description,sort_order,is_active,created_by,updated_by) VALUES(:parent,:name,:code,:description,:sort_order,:is_active,:user,:user)');
-            $statement->execute($values);
+            $statement = $this->database->prepare('INSERT INTO catalog_categories(parent_id,name,code,description,sort_order,is_active,created_by,updated_by) VALUES(:parent,:name,:code,:description,:sort_order,:is_active,:created_by,:updated_by)');
+            $statement->execute($values + ['created_by' => $userId, 'updated_by' => $userId]);
             return (int)$this->database->lastInsertId();
         }
-        $values['id'] = $id;
-        $statement = $this->database->prepare('UPDATE catalog_categories SET parent_id=:parent,name=:name,code=:code,description=:description,sort_order=:sort_order,is_active=:is_active,updated_by=:user WHERE id=:id');
-        $statement->execute($values);
+        $statement = $this->database->prepare('UPDATE catalog_categories SET parent_id=:parent,name=:name,code=:code,description=:description,sort_order=:sort_order,is_active=:is_active,updated_by=:updated_by WHERE id=:id');
+        $statement->execute($values + ['updated_by' => $userId, 'id' => $id]);
         if ($statement->rowCount() < 1 && !$this->exists('catalog_categories', $id)) throw new RuntimeException('Categoria não encontrada.');
         return $id;
     }
@@ -182,8 +180,8 @@ final readonly class LearningCatalogRepository
 
     public function markPublicationReady(int$trailId,int$connectionId,string$signature,?int$userId):int
     {
-        $sql="INSERT INTO catalog_ava_publications(entity_type,entity_id,ava_connection_id,publication_status,source_signature,prepared_at,created_by,updated_by) VALUES('trail',:entity,:connection,'ready',:signature,NOW(),:user,:user) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),publication_status='ready',source_signature=VALUES(source_signature),prepared_at=NOW(),last_error=NULL,updated_by=VALUES(updated_by)";
-        $this->database->prepare($sql)->execute(['entity'=>$trailId,'connection'=>$connectionId,'signature'=>$signature,'user'=>$userId]);
+        $sql="INSERT INTO catalog_ava_publications(entity_type,entity_id,ava_connection_id,publication_status,source_signature,prepared_at,created_by,updated_by) VALUES('trail',:entity,:connection,'ready',:signature,NOW(),:created_by,:updated_by) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),publication_status='ready',source_signature=VALUES(source_signature),prepared_at=NOW(),last_error=NULL,updated_by=VALUES(updated_by)";
+        $this->database->prepare($sql)->execute(['entity'=>$trailId,'connection'=>$connectionId,'signature'=>$signature,'created_by'=>$userId,'updated_by'=>$userId]);
         return(int)$this->database->lastInsertId();
     }
 
@@ -273,18 +271,16 @@ final readonly class LearningCatalogRepository
             'installments' => max(1, min(60, (int)($data['max_installments'] ?? 1))),
             'cover' => trim((string)($data['cover_url'] ?? '')) ?: null,
             'active' => (int)(bool)($data['is_active'] ?? false),
-            'user' => $userId,
         ];
         $this->database->beginTransaction();
         try {
             if ($id === null) {
-                $statement = $this->database->prepare('INSERT INTO catalog_trails(category_id,name,slug,short_description,description,workload_hours,default_price,max_installments,cover_url,is_active,created_by,updated_by) VALUES(:category,:name,:slug,:short_description,:description,:workload,:price,:installments,:cover,:active,:user,:user)');
-                $statement->execute($values);
+                $statement = $this->database->prepare('INSERT INTO catalog_trails(category_id,name,slug,short_description,description,workload_hours,default_price,max_installments,cover_url,is_active,created_by,updated_by) VALUES(:category,:name,:slug,:short_description,:description,:workload,:price,:installments,:cover,:active,:created_by,:updated_by)');
+                $statement->execute($values + ['created_by' => $userId, 'updated_by' => $userId]);
                 $id = (int)$this->database->lastInsertId();
             } else {
-                $values['id'] = $id;
-                $statement = $this->database->prepare('UPDATE catalog_trails SET category_id=:category,name=:name,slug=:slug,short_description=:short_description,description=:description,workload_hours=:workload,default_price=:price,max_installments=:installments,cover_url=:cover,is_active=:active,updated_by=:user WHERE id=:id');
-                $statement->execute($values);
+                $statement = $this->database->prepare('UPDATE catalog_trails SET category_id=:category,name=:name,slug=:slug,short_description=:short_description,description=:description,workload_hours=:workload,default_price=:price,max_installments=:installments,cover_url=:cover,is_active=:active,updated_by=:updated_by WHERE id=:id');
+                $statement->execute($values + ['updated_by' => $userId, 'id' => $id]);
                 if ($statement->rowCount() < 1 && !$this->exists('catalog_trails', $id)) throw new RuntimeException('Trilha não encontrada.');
             }
             $this->database->prepare('DELETE FROM catalog_trail_items WHERE catalog_trail_id=:id')->execute(['id' => $id]);
