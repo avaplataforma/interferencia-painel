@@ -771,3 +771,89 @@ document.querySelectorAll('.color-field').forEach((group) => {
     apply();
   });
 })();
+
+(() => {
+  const assistant = document.querySelector('[data-trail-ai]');
+  const form = document.querySelector('[data-trail-editor-form]');
+  if (!(assistant instanceof HTMLElement) || !(form instanceof HTMLFormElement)) return;
+
+  const textButton = assistant.querySelector('[data-trail-ai-text]');
+  const coverButton = assistant.querySelector('[data-trail-ai-cover]');
+  const textGuidance = assistant.querySelector('[data-trail-ai-text-guidance]');
+  const coverGuidance = assistant.querySelector('[data-trail-ai-cover-guidance]');
+  const feedback = assistant.querySelector('[data-trail-ai-feedback]');
+  const coverData = form.querySelector('[data-trail-ai-cover-data]');
+  const coverPrompt = form.querySelector('[data-trail-ai-cover-prompt]');
+  const coverPreview = form.querySelector('[data-trail-cover-preview]');
+  const coverImage = form.querySelector('[data-trail-cover-image]');
+  const coverPlaceholder = form.querySelector('[data-trail-cover-placeholder]');
+  const coverLabel = form.querySelector('[data-trail-cover-label]');
+  const coverNote = form.querySelector('[data-trail-cover-note]');
+
+  const announce = (message, error = false) => {
+    if (!(feedback instanceof HTMLElement)) return;
+    feedback.hidden = false;
+    feedback.classList.toggle('is-error', error);
+    const icon = document.createElement('i');
+    icon.className = `fa-solid ${error ? 'fa-triangle-exclamation' : 'fa-circle-check'}`;
+    const text = document.createElement('span');
+    text.textContent = String(message);
+    feedback.replaceChildren(icon, text);
+  };
+
+  const request = async (url, additions, button, loadingLabel) => {
+    if (!(button instanceof HTMLButtonElement) || !url) return null;
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> ${loadingLabel}`;
+    try {
+      const payload = new FormData(form);
+      Object.entries(additions).forEach(([key, value]) => payload.set(key, value));
+      const response = await fetch(url, { method: 'POST', body: payload, headers: { Accept: 'application/json' } });
+      const result = await response.json();
+      if (!response.ok || result.ok !== true) throw new Error(result.error || 'Não foi possível gerar a prévia.');
+      return result;
+    } catch (error) {
+      announce(error instanceof Error ? error.message : 'Não foi possível gerar a prévia.', true);
+      return null;
+    } finally {
+      button.disabled = false;
+      button.innerHTML = original;
+    }
+  };
+
+  textButton?.addEventListener('click', async () => {
+    const result = await request(
+      assistant.dataset.textUrl || '',
+      { ai_text_guidance: textGuidance instanceof HTMLInputElement ? textGuidance.value : '' },
+      textButton,
+      'Gerando textos...'
+    );
+    if (!result) return;
+    const shortDescription = form.elements.namedItem('short_description');
+    const description = form.elements.namedItem('description');
+    if (shortDescription instanceof HTMLTextAreaElement) shortDescription.value = String(result.short_description || '');
+    if (description instanceof HTMLTextAreaElement) description.value = String(result.description || '');
+    announce('Textos gerados e exibidos para revisão. Salve somente quando estiverem aprovados.');
+  });
+
+  coverButton?.addEventListener('click', async () => {
+    coverPreview?.classList.add('is-generating');
+    const result = await request(
+      assistant.dataset.coverUrl || '',
+      { ai_cover_guidance: coverGuidance instanceof HTMLInputElement ? coverGuidance.value : '' },
+      coverButton,
+      'Gerando capa...'
+    );
+    coverPreview?.classList.remove('is-generating');
+    if (!result) return;
+    const imageData = String(result.image_data || '');
+    if (coverData instanceof HTMLInputElement) coverData.value = imageData;
+    if (coverPrompt instanceof HTMLInputElement) coverPrompt.value = String(result.prompt || '');
+    if (coverImage instanceof HTMLImageElement) { coverImage.src = imageData; coverImage.hidden = false; }
+    if (coverPlaceholder instanceof HTMLElement) coverPlaceholder.hidden = true;
+    if (coverLabel instanceof HTMLElement) coverLabel.textContent = 'Prévia gerada com IA';
+    if (coverNote instanceof HTMLElement) coverNote.textContent = 'Esta imagem será otimizada no Spaces somente quando você salvar a Trilha.';
+    announce('Capa gerada e exibida para aprovação. Você ainda pode gerar outra antes de salvar.');
+  });
+})();

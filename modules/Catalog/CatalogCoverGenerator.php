@@ -34,6 +34,30 @@ final readonly class CatalogCoverGenerator
         try{$this->queue($entityType,$entityId,null,$userId);return true;}catch(Throwable){return false;}
     }
 
+    /** @return array{contents:string,mime_type:string,provider:string,prompt:string} */
+    public function previewTrail(string$name,string$category,string$description,string$extra=''):array
+    {
+        $name=trim($name);if($name==='')throw new RuntimeException('Informe o nome da Trilha antes de gerar a capa.');
+        $settings=$this->images->settings(true);
+        if(!(bool)$settings['configured']||!(bool)$settings['is_active'])throw new RuntimeException('Ative a integração IA - OpenAI no ADM Central.');
+        $prompt=$this->prompt(['name'=>$name,'category'=>trim($category),'description'=>trim($description)],$extra,(string)$settings['style_prompt']);
+        return(new OpenAiImageClient((string)$settings['api_key'],(string)$settings['model'],(string)$settings['quality'],(string)$settings['size']))->generate($prompt);
+    }
+
+    public function attachPreview(string$entityType,int$entityId,string$dataUrl,string$prompt,?int$userId):void
+    {
+        $entity=$this->catalogs->catalogEntity($entityType,$entityId);if($entity===null)throw new RuntimeException('Trilha não encontrada para salvar a capa.');
+        if(!$this->spaces->active())throw new RuntimeException('Ative a integração DigitalOcean Spaces antes de salvar a capa.');
+        if(!preg_match('#^data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$#',$dataUrl,$match))throw new RuntimeException('A prévia da capa é inválida. Gere a imagem novamente.');
+        $contents=base64_decode($match[2],true);
+        if(!is_string($contents)||$contents===''||strlen($contents)>8*1024*1024)throw new RuntimeException('A prévia da capa está vazia ou excede 8 MB.');
+        $settings=$this->images->settings();
+        $asset=$this->media->storeGenerated((string)$entity['catalog_code'],$contents,$match[1],(string)$entity['name'],$userId,(string)($settings['model']??'OpenAI'),mb_substr(trim($prompt),0,4000));
+        $old=$this->catalogs->entityMediaAsset($entityType,$entityId);
+        $this->catalogs->saveMediaAsset($entityType,$entityId,$asset,$userId);
+        if($old!==null&&trim((string)($old['storage_path']??''))!==''&&$old['storage_path']!==$asset['storage_path'])$this->spaces->delete((string)$old['storage_path']);
+    }
+
     /** @return array{processed:int,failed:int} */
     public function process(int $limit=1):array
     {

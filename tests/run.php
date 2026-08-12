@@ -1359,7 +1359,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));
     assertTrue(str_contains($tenantAdmin,'data-site-targets'));
-    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=28'));
+    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=29'));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
     assertTrue(str_contains($tenantAdmin,'Contato e canais'));
     assertTrue(str_contains($tenantAdmin,'Conteúdo visual'));
@@ -2125,6 +2125,8 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $textClient=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiCatalogTextClient.php');
     $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $learningCatalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $coverGenerator=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogCoverGenerator.php');
     $images=(string)file_get_contents($rootPath.'/modules/Catalog/ImageGenerationRepository.php');
 
     assertTrue(str_contains($view,'is-trail-editing'));
@@ -2133,14 +2135,22 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
     assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
-    assertTrue(str_contains($view,'Gerar resumo e descrição'));
-    assertTrue(str_contains($view,'Gerar capa com IA'));
+    assertTrue(str_contains($view,'Prévia com IA antes de salvar'));
+    assertTrue(str_contains($view,'Gerar e visualizar textos'));
+    assertTrue(str_contains($view,'Gerar e visualizar capa'));
+    assertTrue(str_contains($view,'data-trail-ai-cover-data'));
+    assertTrue(str_contains($javascript,"document.querySelector('[data-trail-ai]')"));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/preview-text'"));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/preview-cover'"));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-text'"));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-cover'"));
     assertTrue(str_contains($routes,'OpenAiCatalogTextClient'));
     assertTrue(str_contains($textClient,'https://api.openai.com/v1/responses'));
     assertTrue(str_contains($textClient,"'type'=>'json_schema'"));
     assertTrue(str_contains($catalog,"['course', 'content', 'trail']"));
+    assertTrue(str_contains($coverGenerator,'public function previewTrail'));
+    assertTrue(str_contains($coverGenerator,'public function attachPreview'));
+    assertTrue(!str_contains($learningCatalog,"course.review_status='approved' AND course.release_status"));
     assertTrue(str_contains($images,"['course','content','trail']"));
 };
 

@@ -202,7 +202,7 @@ final readonly class LearningCatalogRepository
         foreach ($finance as $item) $items[] = $item;
         $courses = $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,'provider_course' item_type
             FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
-            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND course.review_status='approved' AND course.release_status IN ('released','published') AND catalog.is_active=1 AND catalog.is_globally_enabled=1
+            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
             ORDER BY catalog.name,name LIMIT 2000")->fetchAll() ?: [];
         foreach ($courses as $item) $items[] = $item;
         $contents = $this->database->query("SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,'provider_content' item_type
