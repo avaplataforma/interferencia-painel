@@ -2119,6 +2119,27 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($view,'Histórico de publicação'));
 };
 
+$tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $textClient=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiCatalogTextClient.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $images=(string)file_get_contents($rootPath.'/modules/Catalog/ImageGenerationRepository.php');
+
+    assertTrue(str_contains($view,'is-trail-editing'));
+    assertTrue(str_contains($view,'data-trail-catalog-filter'));
+    assertTrue(str_contains($view,'data-trail-selected-only'));
+    assertTrue(str_contains($view,'Gerar resumo e descrição'));
+    assertTrue(str_contains($view,'Gerar capa com IA'));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-text'"));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-cover'"));
+    assertTrue(str_contains($routes,'OpenAiCatalogTextClient'));
+    assertTrue(str_contains($textClient,'https://api.openai.com/v1/responses'));
+    assertTrue(str_contains($textClient,"'type'=>'json_schema'"));
+    assertTrue(str_contains($catalog,"['course', 'content', 'trail']"));
+    assertTrue(str_contains($images,"['course','content','trail']"));
+};
+
 $tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = static function () use ($rootPath): void {
     $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
     $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');

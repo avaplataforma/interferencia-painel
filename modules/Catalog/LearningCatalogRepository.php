@@ -127,7 +127,7 @@ final readonly class LearningCatalogRepository
     public function trail(int $id): ?array
     {
         if ($id < 1) return null;
-        $statement = $this->database->prepare("SELECT trail.*,COALESCE(publication.publication_status,CASE WHEN trail.is_active=1 THEN 'ready' ELSE 'draft' END) publication_status,publication.remote_course_id,publication.remote_category_id,publication.published_at,publication.last_error publication_error FROM catalog_trails trail LEFT JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id WHERE trail.id=:id LIMIT 1");
+        $statement = $this->database->prepare("SELECT trail.*,COALESCE(publication.publication_status,CASE WHEN trail.is_active=1 THEN 'ready' ELSE 'draft' END) publication_status,publication.remote_course_id,publication.remote_category_id,publication.published_at,publication.last_error publication_error,asset.id media_asset_id,asset.generation_status media_status,asset.generation_error media_error FROM catalog_trails trail LEFT JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id LEFT JOIN catalog_media_assets asset ON asset.entity_type='trail' AND asset.entity_id=trail.id AND asset.purpose='cover' WHERE trail.id=:id LIMIT 1");
         $statement->execute(['id' => $id]);
         $trail = $statement->fetch();
         if (!is_array($trail)) return null;
@@ -154,6 +154,15 @@ final readonly class LearningCatalogRepository
         $limit=max(1,min(50,$limit));
         $statement=$this->database->prepare("SELECT event.*,user.name user_name FROM catalog_ava_publication_events event INNER JOIN catalog_ava_publications publication ON publication.id=event.publication_id LEFT JOIN platform_users user ON user.id=event.created_by WHERE publication.entity_type='trail' AND publication.entity_id=:trail ORDER BY event.created_at DESC,event.id DESC LIMIT {$limit}");
         $statement->execute(['trail'=>$trailId]);return$statement->fetchAll()?:[];
+    }
+
+    public function updateTrailGeneratedText(int $id,string $shortDescription,string $description,?int $userId):void
+    {
+        $shortDescription=trim($shortDescription);$description=trim($description);
+        if($shortDescription===''||$description==='')throw new RuntimeException('A IA não retornou textos completos para a Trilha.');
+        $statement=$this->database->prepare('UPDATE catalog_trails SET short_description=:short_description,description=:description,updated_by=:user WHERE id=:id');
+        $statement->execute(['short_description'=>mb_substr($shortDescription,0,500),'description'=>$description,'user'=>$userId,'id'=>$id]);
+        if($statement->rowCount()<1&&!$this->exists('catalog_trails',$id))throw new RuntimeException('Trilha não encontrada.');
     }
 
     public function markPublicationReady(int$trailId,int$connectionId,string$signature,?int$userId):int

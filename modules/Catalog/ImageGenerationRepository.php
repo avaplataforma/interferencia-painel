@@ -68,7 +68,7 @@ final readonly class ImageGenerationRepository
 
     public function queue(string $entityType, int $entityId, ?string $prompt, ?int $userId): int
     {
-        if(!in_array($entityType,['course','content'],true)||$entityId<1)throw new RuntimeException('Item do catálogo inválido.');
+        if(!in_array($entityType,['course','content','trail'],true)||$entityId<1)throw new RuntimeException('Item do catálogo inválido.');
         $existing=$this->database->prepare("SELECT id FROM catalog_image_generation_jobs WHERE entity_type=:type AND entity_id=:entity AND status IN ('pending','processing') ORDER BY id DESC LIMIT 1");
         $existing->execute(['type'=>$entityType,'entity'=>$entityId]);$id=(int)($existing->fetchColumn()?:0);if($id>0)return$id;
         $statement=$this->database->prepare("INSERT INTO catalog_image_generation_jobs(entity_type,entity_id,prompt,status,requested_by) VALUES(:type,:entity,:prompt,'pending',:user)");

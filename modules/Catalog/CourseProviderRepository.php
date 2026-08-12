@@ -635,13 +635,14 @@ final readonly class CourseProviderRepository
     /** @return array<string,mixed>|null */
     public function catalogEntity(string $entityType, int $entityId): ?array
     {
-        if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
+        if (!in_array($entityType, ['course', 'content', 'trail'], true) || $entityId < 1) return null;
         if($entityType==='course')$sql="SELECT entity.id,catalog.code catalog_code,COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,COALESCE(NULLIF(entity.commercial_description,''),entity.description) description,COALESCE(NULLIF(entity.commercial_category,''),entity.category) category FROM provider_courses entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
-        else$sql="SELECT entity.id,catalog.code catalog_code,
+        elseif($entityType==='content')$sql="SELECT entity.id,catalog.code catalog_code,
             COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,
             COALESCE(NULLIF(entity.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') description,
             COALESCE(NULLIF(entity.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,''),NULLIF(inherited_link.discipline_name,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Curso individual') category
             FROM provider_catalog_contents entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
+        else $sql="SELECT entity.id,'trilhas' catalog_code,entity.name,COALESCE(entity.description,entity.short_description,'') description,category.name category FROM catalog_trails entity INNER JOIN catalog_categories category ON category.id=entity.category_id WHERE entity.id=:id LIMIT 1";
         $statement = $this->database->prepare($sql);
         $statement->execute(['id' => $entityId]);
         $row = $statement->fetch();
@@ -754,7 +755,7 @@ final readonly class CourseProviderRepository
     /** @return array<string,mixed>|null */
     public function entityMediaAsset(string $entityType, int $entityId): ?array
     {
-        if (!in_array($entityType, ['course', 'content'], true) || $entityId < 1) return null;
+        if (!in_array($entityType, ['course', 'content', 'trail'], true) || $entityId < 1) return null;
         $statement = $this->database->prepare("SELECT * FROM catalog_media_assets WHERE entity_type=:type AND entity_id=:entity AND purpose='cover' LIMIT 1");
         $statement->execute(['type' => $entityType, 'entity' => $entityId]);
         $row = $statement->fetch();
