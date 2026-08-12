@@ -97,6 +97,32 @@ final readonly class LearningCatalogRepository
         return $statement->fetchAll() ?: [];
     }
 
+    /** @return list<array<string,mixed>> */
+    public function enrollmentTrailsForOrganization(int $organizationId): array
+    {
+        if ($organizationId < 1) return [];
+        $statement = $this->database->prepare("SELECT trail.id,trail.name,trail.default_price,
+            COALESCE(access.price_override,trail.default_price) price,
+            COALESCE(access.max_installments_override,trail.max_installments,1) max_installments,
+            publication.moodle_course_id,publication.ava_connection_id,publication.remote_course_id,
+            connection.name ava_connection_name,connection.connection_type,
+            (SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count
+            FROM catalog_trails trail
+            INNER JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id AND publication.publication_status='published'
+            INNER JOIN ava_connections connection ON connection.id=publication.ava_connection_id AND connection.is_active=1
+            LEFT JOIN organization_catalog_trail_access access ON access.organization_id=:organization_access AND access.catalog_trail_id=trail.id
+            WHERE trail.is_active=1
+              AND publication.moodle_course_id IS NOT NULL
+              AND publication.remote_course_id IS NOT NULL
+              AND (connection.connection_type='shared' OR connection.organization_id=:organization_connection)
+              AND COALESCE(access.is_enabled,1)=1
+              AND COALESCE(access.is_visible,1)=1
+              AND COALESCE(access.price_override,trail.default_price,0)>=5
+            ORDER BY trail.name");
+        $statement->execute(['organization_access' => $organizationId, 'organization_connection' => $organizationId]);
+        return $statement->fetchAll() ?: [];
+    }
+
     /** @return array<string,mixed>|null */
     public function trail(int $id): ?array
     {

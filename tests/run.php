@@ -2119,6 +2119,26 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($view,'Histórico de publicação'));
 };
 
+$tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = static function () use ($rootPath): void {
+    $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
+    $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
+
+    assertTrue(str_contains($catalog,'public function enrollmentTrailsForOrganization'));
+    assertTrue(str_contains($catalog,"publication.publication_status='published'"));
+    assertTrue(str_contains($enrollments,'public function createTrail'));
+    assertTrue(str_contains($enrollments,'catalog_trail_id'));
+    assertTrue(str_contains($enrollments,"'trail_selected'"));
+    assertTrue(str_contains($enrollments,'COALESCE(p.name,trail.name) product_name'));
+    assertTrue(str_contains($routes,"'trail:'.(int)\$trail['id']"));
+    assertTrue(str_contains($routes,'createTrail('));
+    assertTrue(str_contains($form,'name="contracted_item"'));
+    assertTrue(str_contains($form,'Trilhas publicadas'));
+    assertTrue(str_contains($releaser,'prepareForEnrollment'));
+};
+
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000050_create_ava_academic_backfill.php');
     $service=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationBackfillService.php');

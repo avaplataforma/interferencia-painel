@@ -1,6 +1,6 @@
 <?php
 $financeLabels=['awaiting_charge'=>'Aguardando cobrança','awaiting_payment'=>'Aguardando pagamento','payment_confirmed'=>'Pagamento confirmado','payment_waived'=>'Pagamento dispensado','payment_interrupted'=>'Pagamento interrompido'];
-$eventIcons=['enrollment_created'=>'fa-user-graduate','charge_created'=>'fa-wallet','payment_confirmed'=>'fa-circle-check','payment_waived'=>'fa-hand-holding-heart','payment_interrupted'=>'fa-circle-xmark','ava_released'=>'fa-graduation-cap','ava_release_failed'=>'fa-triangle-exclamation','access_sent'=>'fa-paper-plane'];
+$eventIcons=['enrollment_created'=>'fa-user-graduate','trail_selected'=>'fa-route','charge_created'=>'fa-wallet','payment_confirmed'=>'fa-circle-check','payment_waived'=>'fa-hand-holding-heart','payment_interrupted'=>'fa-circle-xmark','ava_released'=>'fa-graduation-cap','ava_release_failed'=>'fa-triangle-exclamation','access_sent'=>'fa-paper-plane'];
 ?>
 <div class="page-heading"><div><p class="eyebrow">Alunos</p><h1>Matrículas</h1><p class="meta">Acompanhe curso, cobrança, pagamento e liberação no AVA em um único fluxo.</p></div><a class="button-primary" href="<?= $escape($basePath) ?>/students/enrollments/create"><i class="fa-solid fa-plus"></i> Nova matrícula</a></div>
 <?php if($message):?><p class="alert alert-success"><?= $escape($message) ?></p><?php endif;?>
