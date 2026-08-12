@@ -149,6 +149,7 @@ final readonly class LearningCatalogRepository
             COALESCE(course_provider.delivery_mode,content_provider.delivery_mode,'shared_ava') delivery_mode,
             COALESCE(course_provider.provider_code,content_provider.provider_code,'') provider_code,
             COALESCE(course_provider.launch_url_template,content_provider.launch_url_template) launch_url_template,
+            CASE item.item_type WHEN 'provider_content' THEN content.content_type WHEN 'provider_course' THEN COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(course.raw_payload,'$.type')),''),'course') ELSE '' END content_type,
             CASE item.item_type WHEN 'finance_product' THEN CAST(product.id AS CHAR) WHEN 'provider_course' THEN COALESCE(course.remote_id,course.external_key) ELSE content.external_key END remote_reference
             FROM catalog_trail_items item
             LEFT JOIN finance_products product ON item.item_type='finance_product' AND product.id=item.item_id

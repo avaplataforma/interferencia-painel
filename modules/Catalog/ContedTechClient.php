@@ -79,6 +79,81 @@ final class ContedTechClient
         return $this->request('student/inactive', ['student' => $student]);
     }
 
+    /**
+     * Retorna a avaliação vinculada ao conteúdo ou null quando o fornecedor
+     * informa explicitamente que aquele batch não possui exame.
+     *
+     * @return array<string,mixed>|null
+     */
+    public function exam(string $type, string $batch): ?array
+    {
+        $type = mb_strtolower(trim($type));
+        $batch = trim($batch);
+        if (!in_array($type, ['discipline', 'unit', 'object'], true) || $batch === '') {
+            throw new RuntimeException('O conteúdo EXPERT não possui tipo e batch válidos para consultar a avaliação.');
+        }
+
+        try {
+            return self::normalizeExamPayload($this->request('exam', [
+                'type' => $type,
+                'batch' => $batch,
+            ]));
+        } catch (RuntimeException $exception) {
+            $message = mb_strtolower($exception->getMessage());
+            $withoutAccents = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $message);
+            $searchable = $withoutAccents === false ? $message : mb_strtolower($withoutAccents);
+            if (str_contains($searchable, 'nao possui exame') || str_contains($searchable, 'nenhum conteudo encontrado')) {
+                return null;
+            }
+            throw $exception;
+        }
+    }
+
+    /** @param array<string,mixed> $response @return array<string,mixed>|null */
+    public static function normalizeExamPayload(array $response): ?array
+    {
+        $data = $response['data'] ?? null;
+        if (!is_array($data)) return null;
+        $questions = $data['questions'] ?? [];
+        if (!is_array($questions) || !array_is_list($questions)) return null;
+
+        $normalized = [];
+        foreach (array_slice($questions, 0, 100) as $question) {
+            if (!is_array($question)) continue;
+            $text = trim((string)($question['question'] ?? ''));
+            $options = $question['options'] ?? [];
+            $correctKey = trim((string)($question['correct_key'] ?? ''));
+            if ($text === '' || $correctKey === '' || !is_array($options)) continue;
+
+            $normalizedOptions = [];
+            $hasCorrect = false;
+            foreach (array_slice($options, 0, 10) as $option) {
+                if (!is_array($option)) continue;
+                $key = trim((string)($option['key'] ?? ''));
+                $optionText = trim((string)($option['option'] ?? ''));
+                if ($key === '' || $optionText === '') continue;
+                $normalizedOptions[] = ['key' => $key, 'text' => $optionText];
+                if ($key === $correctKey) $hasCorrect = true;
+            }
+            if (count($normalizedOptions) < 2 || !$hasCorrect) continue;
+            $normalized[] = [
+                'text' => $text,
+                'options' => $normalizedOptions,
+                'correct_key' => $correctKey,
+            ];
+        }
+        if ($normalized === []) return null;
+
+        $exam = [
+            'title' => trim((string)($data['title'] ?? 'Avaliação')) ?: 'Avaliação',
+            'content' => trim((string)($data['content'] ?? '')),
+            'total_questions' => count($normalized),
+            'questions' => $normalized,
+        ];
+        $exam['signature'] = hash('sha256', json_encode($exam, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+        return $exam;
+    }
+
     /** @param array<string,mixed> $payload @return array<string,mixed> */
     private function request(string $endpoint, array $payload): array
     {

@@ -1156,7 +1156,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.7.2',$metadata['release']);
+    assertSame('0.8.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1176,7 +1176,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.7.2'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.8.0'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($services,"'core_course_get_categories'"));
@@ -1719,6 +1719,8 @@ $tests['homologa o conector oficial JWT do Catalogo EXPERT'] = static function (
     assertTrue(str_contains($client,'CURLOPT_HTTPGET => true'));
     assertTrue(str_contains($client,"['discipline', 'unit', 'object']"));
     assertTrue(str_contains($client,"'student/inactive'"));
+    assertTrue(str_contains($client,"'exam'"));
+    assertTrue(str_contains($client,"'correct_key'"));
     assertTrue(str_contains($client,'CURLOPT_PROTOCOLS => CURLPROTO_HTTPS'));
     assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));
     assertTrue(str_contains($migration,"delivery_mode='sso'"));
@@ -1727,6 +1729,15 @@ $tests['homologa o conector oficial JWT do Catalogo EXPERT'] = static function (
     assertTrue(str_contains($repository,"IN ('escola_avancada','iesde','conted_tech')"));
     assertTrue(str_contains($repository,"\$course['batch']"));
     assertTrue(str_contains($routes,'new ContedTechClient'));
+    $exam=\Interferencia\Modules\Catalog\ContedTechClient::normalizeExamPayload([
+        'data'=>[
+            'title'=>'Exame de Matemática Básica','content'=>'Matemática Básica','total_questions'=>1,
+            'questions'=>[['question'=>'<p>Quanto é 2 + 2?</p>','options'=>[['key'=>1,'option'=>'<p>4</p>'],['key'=>2,'option'=>'<p>5</p>']],'correct_key'=>1]],
+        ],
+    ]);
+    assertSame(1,$exam['total_questions']);
+    assertSame('1',$exam['questions'][0]['correct_key']);
+    assertSame(64,strlen($exam['signature']));
 };
 
 $tests['prepara conector paginado e seguro do Catalogo MASTER'] = static function () use ($rootPath): void {
@@ -2140,7 +2151,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.7.2'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.8.0'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2179,6 +2190,13 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginSections,"'ext_user_username'=>'userid'"));
     assertTrue(str_contains($pluginSections,"'variable_0'=>'userid'"));
     assertTrue(str_contains($pluginSections,"'completionview'=>1"));
+    assertTrue(str_contains($pluginSections,"'Avaliação - '.\$name"));
+    assertTrue(str_contains($pluginSections,"'mi-trail-exam-'"));
+    assertTrue(str_contains($pluginSections,"quiz_add_quiz_question"));
+    assertTrue(str_contains($pluginSections,"question_bank::get_qtype('multichoice')"));
+    assertTrue(str_contains($pluginSections,"quiz_attempts"));
+    assertTrue(str_contains($publisher,"->exam("));
+    assertTrue(str_contains($repository,'content.content_type'));
     assertTrue(str_contains($pluginSections,'data-mundointer-trail-item'));
     assertTrue(str_contains($pluginSections,"'name'=>'Módulo '.\$number.' - '.\$name"));
     assertTrue(!str_contains($pluginSections,'Formação:'));

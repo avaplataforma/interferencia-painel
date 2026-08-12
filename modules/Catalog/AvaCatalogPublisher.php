@@ -16,6 +16,7 @@ final readonly class AvaCatalogPublisher
         private LearningCatalogRepository $catalog,
         private AvaConnectionRepository $connections,
         private MoodleRepository $moodle,
+        private CourseProviderRepository $providers,
     ) {}
 
     /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string} */
@@ -49,7 +50,7 @@ final readonly class AvaCatalogPublisher
             $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections)),'url_activities_synced'=>(int)($sectionSync['activities']??0)],$userId);
+            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections)),'url_activities_synced'=>(int)($sectionSync['activities']??0),'quizzes_synced'=>(int)($sectionSync['quizzes']??0),'quiz_questions_synced'=>(int)($sectionSync['quizquestions']??0),'quiz_conflicts'=>(int)($sectionSync['examconflicts']??0)],$userId);
             return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published'];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
@@ -106,6 +107,7 @@ final readonly class AvaCatalogPublisher
     private function sections(array$trail):array
     {
         $sections=[];
+        $conted=null;
         foreach((array)($trail['items']??[])as$position=>$item){
             $name=trim((string)($item['item_name']??''));
             if($name==='')continue;
@@ -118,7 +120,7 @@ final readonly class AvaCatalogPublisher
                 $accessUrl=str_replace(['{curso}','{id}'],rawurlencode($remote),$template);
                 if(filter_var($accessUrl,FILTER_VALIDATE_URL)===false)$accessUrl='';
             }
-            $sections[]=[
+            $section=[
                 'key'=>(string)$item['item_type'].'-'.(int)$item['item_id'],
                 'position'=>$position+1,
                 'name'=>$name,
@@ -126,8 +128,22 @@ final readonly class AvaCatalogPublisher
                 'execution'=>$execution==='shared_ava'?'shared_ava':'provider_ava',
                 'accessurl'=>$accessUrl,
             ];
+            if((string)($item['provider_code']??'')==='conted_tech'&&in_array((string)($item['content_type']??''),['discipline','unit','object'],true)&&$remote!==''){
+                if($conted===null)$conted=$this->contedClient();
+                $exam=$conted->exam((string)$item['content_type'],$remote);
+                if($exam!==null)$section['exam']=$exam;
+            }
+            $sections[]=$section;
         }
         return$sections;
+    }
+
+    private function contedClient():ContedTechClient
+    {
+        $settings=$this->providers->settingsForProvider('conted_tech',true);
+        $client=new ContedTechClient((string)$settings['base_url'],(string)$settings['token'],(string)$settings['password'],(string)$settings['username'],(bool)$settings['is_active']);
+        if(!$client->ready())throw new RuntimeException('A integração EXPERT precisa estar configurada e ativa para consultar as avaliações antes da publicação.');
+        return$client;
     }
 
     /** @param array<string,mixed> $trail */
