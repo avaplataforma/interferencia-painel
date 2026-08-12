@@ -736,17 +736,21 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const picker = grid.closest('.item-picker');
     const search = picker?.querySelector('[data-trail-item-search]');
     const catalog = picker?.querySelector('[data-trail-catalog-filter]');
+    const modeButtons = Array.from(picker?.querySelectorAll('[data-trail-filter-mode]') || []);
     const packageFilter = picker?.querySelector('[data-trail-package-filter]');
+    const packageField = picker?.querySelector('[data-trail-package-field]');
+    const packageNote = picker?.querySelector('[data-trail-package-note]');
     const selectedOnly = picker?.querySelector('[data-trail-selected-only]');
     const selectedCount = picker?.querySelector('[data-trail-selection-count]');
     const visibleCount = picker?.querySelector('[data-trail-visible-count]');
     const items = Array.from(grid.querySelectorAll('[data-trail-item]'));
     const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    let filterMode = 'items';
 
     const apply = () => {
       const term = normalize(search instanceof HTMLInputElement ? search.value : '');
       const selectedCatalog = catalog instanceof HTMLSelectElement ? catalog.value : '';
-      const selectedPackage = packageFilter instanceof HTMLSelectElement ? packageFilter.value : '';
+      const selectedPackage = filterMode === 'packages' && packageFilter instanceof HTMLSelectElement ? packageFilter.value : '';
       const onlySelected = selectedOnly instanceof HTMLInputElement && selectedOnly.checked;
       let visible = 0;
       let selected = 0;
@@ -758,7 +762,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
         if (checked) selected += 1;
         const matchesText = term === '' || normalize(item.dataset.trailItem).includes(term);
         const matchesCatalog = selectedCatalog === '' || item.dataset.trailCatalog === selectedCatalog;
-        const matchesPackage = selectedPackage === '' || String(item.dataset.trailPackages || '').includes(`,${selectedPackage},`);
+        const matchesPackage = filterMode !== 'packages' || (selectedPackage !== '' && String(item.dataset.trailPackages || '').includes(`,${selectedPackage},`));
         item.hidden = !(matchesText && matchesCatalog && matchesPackage && (!onlySelected || checked));
         if (!item.hidden) visible += 1;
       });
@@ -767,12 +771,26 @@ document.querySelectorAll('.color-field').forEach((group) => {
       if (visibleCount instanceof HTMLElement) visibleCount.textContent = String(visible);
     };
 
+    const setFilterMode = (mode) => {
+      filterMode = mode === 'packages' ? 'packages' : 'items';
+      modeButtons.forEach((button) => {
+        if (!(button instanceof HTMLButtonElement)) return;
+        const active = button.dataset.trailFilterMode === filterMode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
+      if (packageField instanceof HTMLElement) packageField.hidden = filterMode !== 'packages';
+      if (packageNote instanceof HTMLElement) packageNote.hidden = filterMode !== 'packages';
+      apply();
+    };
+
     search?.addEventListener('input', apply);
     catalog?.addEventListener('change', apply);
     packageFilter?.addEventListener('change', apply);
+    modeButtons.forEach((button) => button.addEventListener('click', () => setFilterMode(button.dataset.trailFilterMode)));
     selectedOnly?.addEventListener('change', apply);
     items.forEach((item) => item.querySelector('input[type="checkbox"]')?.addEventListener('change', apply));
-    apply();
+    setFilterMode('items');
   });
 })();
 

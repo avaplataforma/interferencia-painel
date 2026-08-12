@@ -2143,13 +2143,17 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
 
     assertTrue(str_contains($view,'is-trail-editing'));
     assertTrue(str_contains($view,'data-trail-catalog-filter'));
+    assertTrue(str_contains($view,'data-trail-filter-mode="items"'));
+    assertTrue(str_contains($view,'data-trail-filter-mode="packages"'));
     assertTrue(str_contains($view,'data-trail-package-filter'));
-    assertTrue(str_contains($view,'Pacote original do fornecedor'));
+    assertTrue(str_contains($view,'Trilhas do fornecedor'));
+    assertTrue(str_contains($view,'Cursos individuais'));
     assertTrue(str_contains($view,'data-trail-selected-only'));
     assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
     assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
     assertTrue(str_contains($javascript,"packageFilter?.addEventListener('change', apply)"));
+    assertTrue(str_contains($javascript,"setFilterMode('items')"));
     assertTrue(str_contains($view,'Gerar textos e capa com IA'));
     assertTrue(str_contains($view,'Gerar e visualizar textos'));
     assertTrue(str_contains($view,'Gerar e visualizar capa'));
