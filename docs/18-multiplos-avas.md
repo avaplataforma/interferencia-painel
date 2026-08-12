@@ -175,6 +175,14 @@ O AVA Cursos atende várias franquias sem duplicar os cursos. O plugin Mundo Int
 
 No cadastro de cada franquia, a aba **AVA** concentra o **Título do login** e a comunicação de suporte. A aba **Polos** mantém um ou vários polos, cada um com código permanente e vínculo opcional com uma Unidade. A matrícula grava automaticamente os campos personalizados **Franquia Mundo Inter** e **Polo Mundo Inter** no usuário do Moodle.
 
+### Organização acadêmica no Moodle compartilhado
+
+- Cada franquia possui exatamente **uma coorte**, reunindo todos os seus alunos independentemente do polo ou do curso.
+- A **turma** é uma entidade lógica do Mundo Inter formada por franquia, polo, Curso individual ou Trilha e período letivo.
+- Como os grupos do Moodle pertencem a um curso específico, a mesma turma lógica é criada como **grupo** em cada curso necessário.
+- Em uma Trilha, o mesmo código de turma é preservado e replicado nos vários cursos que compõem o pacote.
+- Uma nova matrícula reutiliza a coorte e os grupos existentes; o processo não cria duplicidades para o mesmo aluno.
+
 - Antes da autenticação, cada franquia divulga seu endereço exclusivo no AVA Cursos: `/franquia.php?slug={codigo}`. O endereço interno do plugin continua disponível como alternativa.
 - O endereço grava a marca na sessão e encaminha o visitante ao login padrão do Moodle.
 - Depois da autenticação, o campo **Franquia Mundo Inter** prevalece sobre a sessão e confirma a identidade em todas as páginas internas.

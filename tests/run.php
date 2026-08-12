@@ -2052,8 +2052,9 @@ $tests['padroniza nomenclaturas oficiais do Mundo Inter'] = static function () u
     assertTrue(str_contains($franchise,'Formações disponíveis'));
 };
 
-$tests['organiza novas matriculas em coortes e turmas no AVA'] = static function () use ($rootPath): void {
+$tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000030_create_ava_academic_organization.php');
+    $consolidation=(string)file_get_contents($rootPath.'/database/migrations/20260812_000040_consolidate_ava_cohorts_by_franchise.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationRepository.php');
     $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
     $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
@@ -2066,8 +2067,13 @@ $tests['organiza novas matriculas em coortes e turmas no AVA'] = static function
     assertTrue(str_contains($migration,'CREATE TABLE ava_academic_cohorts'));
     assertTrue(str_contains($migration,'CREATE TABLE ava_academic_groups'));
     assertTrue(str_contains($migration,'academic_period_code'));
+    assertTrue(str_contains($consolidation,'ava_academic_cohort_org_unique'));
+    assertTrue(str_contains($consolidation,"scope_type='organization'"));
+    assertTrue(str_contains($consolidation,'class_reference'));
     assertTrue(str_contains($repository,'public function prepareForEnrollment'));
+    assertTrue(str_contains($repository,"'mi-franquia-'.$franchiseCode"));
     assertTrue(str_contains($repository,"'trail':'course'"));
+    assertTrue(str_contains($repository,'classReference'));
     assertTrue(str_contains($repository,"date('Y',\$time).'-'"));
     assertTrue(str_contains($enrollments,'recordAcademicOrganizationFailure'));
     assertTrue(str_contains($releaser,'organizeEnrollment'));
@@ -2081,6 +2087,8 @@ $tests['organiza novas matriculas em coortes e turmas no AVA'] = static function
     assertTrue(str_contains($pluginVersion,"release = '0.5.0'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
+    assertTrue(str_contains($view,'Coortes de franquia'));
+    assertTrue(str_contains($view,'Turmas lógicas'));
 };
 
 $failures = 0;

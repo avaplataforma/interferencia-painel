@@ -58,13 +58,13 @@ final readonly class OrganizationPoleRepository
         $statement=$this->database->prepare('SELECT * FROM organization_poles WHERE id=:id AND organization_id=:organization');$statement->execute(['id'=>$id,'organization'=>$organizationId]);$row=$statement->fetch();return is_array($row)?$row:null;
     }
 
-    /** @return array{pole_id:int,organization_id:int,franchise_code:string,pole_code:string,pole_name:string,legacy_value:string}|null */
+    /** @return array{pole_id:int,organization_id:int,franchise_code:string,franchise_name:string,pole_code:string,pole_name:string,legacy_value:string}|null */
     public function identityForEnrollment(int $unitId,?int $poleId=null): ?array
     {
         $where=$poleId===null?'(p.unit_id=u.id OR p.is_primary=1)':'p.id=:pole';
         $order=$poleId===null?'(p.unit_id=u.id) DESC,p.is_primary DESC':'p.id DESC';
-        $sql="SELECT p.id pole_id,p.organization_id,o.code franchise_code,p.code pole_code,p.name pole_name,COALESCE(NULLIF(p.legacy_value,''),p.name) legacy_value FROM units u INNER JOIN organizations o ON o.id=u.organization_id INNER JOIN organization_poles p ON p.organization_id=o.id AND p.is_active=1 WHERE u.id=:unit AND {$where} ORDER BY {$order} LIMIT 1";
-        $statement=$this->database->prepare($sql);$statement->bindValue(':unit',$unitId,PDO::PARAM_INT);if($poleId!==null)$statement->bindValue(':pole',$poleId,PDO::PARAM_INT);$statement->execute();$row=$statement->fetch();return is_array($row)?['pole_id'=>(int)$row['pole_id'],'organization_id'=>(int)$row['organization_id'],'franchise_code'=>(string)$row['franchise_code'],'pole_code'=>(string)$row['pole_code'],'pole_name'=>(string)$row['pole_name'],'legacy_value'=>(string)$row['legacy_value']]:null;
+        $sql="SELECT p.id pole_id,p.organization_id,o.code franchise_code,o.display_name franchise_name,p.code pole_code,p.name pole_name,COALESCE(NULLIF(p.legacy_value,''),p.name) legacy_value FROM units u INNER JOIN organizations o ON o.id=u.organization_id INNER JOIN organization_poles p ON p.organization_id=o.id AND p.is_active=1 WHERE u.id=:unit AND {$where} ORDER BY {$order} LIMIT 1";
+        $statement=$this->database->prepare($sql);$statement->bindValue(':unit',$unitId,PDO::PARAM_INT);if($poleId!==null)$statement->bindValue(':pole',$poleId,PDO::PARAM_INT);$statement->execute();$row=$statement->fetch();return is_array($row)?['pole_id'=>(int)$row['pole_id'],'organization_id'=>(int)$row['organization_id'],'franchise_code'=>(string)$row['franchise_code'],'franchise_name'=>(string)$row['franchise_name'],'pole_code'=>(string)$row['pole_code'],'pole_name'=>(string)$row['pole_name'],'legacy_value'=>(string)$row['legacy_value']]:null;
     }
 
     private function hasPrimary(int $organizationId): bool
