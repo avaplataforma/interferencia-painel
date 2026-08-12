@@ -1983,6 +1983,8 @@ $tests['homologa catalogo em amostra assistida sem gerar cobranca'] = static fun
     assertTrue(str_contains($repository,'public function prepareCatalogHomologation'));
     assertTrue(str_contains($repository,"in_array(\$itemType, ['course', 'content'], true)"));
     assertTrue(str_contains($repository,"is_visible=1"));
+    assertTrue(!str_contains($repository,':user,:user'));
+    assertTrue(str_contains($repository,':created_by,:updated_by'));
     assertTrue(str_contains($routes,"/homologation'"));
     assertTrue(str_contains($routes,'confirm_no_charge'));
     assertTrue(str_contains($view,'data-catalog-subtab="homologation"'));
