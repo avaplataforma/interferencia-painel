@@ -1621,6 +1621,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($siteRepository,'external_products'));
     assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/catalogo-pro/{offer:\\d+}/interesse'"));
+    assertTrue(!str_contains($routes,'$sites->publicUnits($organizationId)'));
     assertTrue(str_contains($admin,'data-catalog-tab'));
     assertTrue(str_contains($admin,'Conexão e API'));
     assertTrue(!str_contains($admin,'Liberação por franquia'));
