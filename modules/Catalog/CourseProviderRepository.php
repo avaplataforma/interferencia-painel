@@ -413,8 +413,151 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function organizations(): array
     {
-        $statement = $this->database->query("SELECT id,display_name,legal_name FROM organizations WHERE status='active' ORDER BY display_name,legal_name");
+        $statement = $this->database->query("SELECT id,display_name,legal_name,panel_slug FROM organizations WHERE status='active' ORDER BY display_name,legal_name");
         return $statement->fetchAll() ?: [];
+    }
+
+    /** @return array<string,mixed> */
+    public function catalogHomologationStatus(string $providerCode, int $organizationId = 0): array
+    {
+        $settings = $this->settingsForProvider($providerCode);
+        $catalogId = (int)($settings['catalog_id'] ?? 0);
+        if ($catalogId < 1) throw new RuntimeException('Catálogo do fornecedor não encontrado.');
+
+        $organization = null;
+        if ($organizationId > 0) {
+            $statement = $this->database->prepare("SELECT id,display_name,legal_name,panel_slug FROM organizations WHERE id=:id AND status='active' LIMIT 1");
+            $statement->execute(['id' => $organizationId]);
+            $row = $statement->fetch();
+            if (is_array($row)) $organization = $row;
+        }
+
+        $course = $this->database->prepare("SELECT
+            COUNT(*) imported,
+            SUM(is_available=1 AND is_globally_enabled=1) available,
+            SUM(review_status='approved' AND release_status IN ('released','published')) released,
+            SUM((COALESCE(NULLIF(commercial_cover_url,''),NULLIF(cover_url,'')) IS NOT NULL) OR EXISTS(SELECT 1 FROM catalog_media_assets media WHERE media.entity_type='course' AND media.entity_id=provider_courses.id AND media.purpose='cover' AND media.generation_status='ready')) with_cover
+            FROM provider_courses WHERE catalog_id=:catalog");
+        $course->execute(['catalog' => $catalogId]);
+        $courseTotals = $course->fetch() ?: [];
+
+        $content = $this->database->prepare("SELECT
+            COUNT(*) imported,
+            SUM(is_available=1 AND is_globally_enabled=1) available,
+            SUM(review_status='approved' AND release_status IN ('released','published')) released,
+            SUM((NULLIF(commercial_cover_url,'') IS NOT NULL) OR EXISTS(SELECT 1 FROM catalog_media_assets media WHERE media.entity_type='content' AND media.entity_id=provider_catalog_contents.id AND media.purpose='cover' AND media.generation_status='ready') OR EXISTS(SELECT 1 FROM provider_course_content_links link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE link.provider_content_id=provider_catalog_contents.id)) with_cover
+            FROM provider_catalog_contents WHERE catalog_id=:catalog");
+        $content->execute(['catalog' => $catalogId]);
+        $contentTotals = $content->fetch() ?: [];
+
+        $publishedCourses = 0;
+        $publishedContents = 0;
+        $catalogEnabled = false;
+        if ($organization !== null) {
+            $access = $this->database->prepare("SELECT COALESCE(access.is_enabled,1) FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization WHERE catalog.id=:catalog");
+            $access->execute(['organization' => (int)$organization['id'], 'catalog' => $catalogId]);
+            $catalogEnabled = (int)$access->fetchColumn() === 1;
+            $published = $this->database->prepare("SELECT
+                (SELECT COUNT(*) FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id WHERE offer.organization_id=:course_organization AND course.catalog_id=:course_catalog AND offer.is_active=1 AND offer.is_visible=1) courses,
+                (SELECT COUNT(*) FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id WHERE offer.organization_id=:content_organization AND content.catalog_id=:content_catalog AND offer.is_active=1 AND offer.is_visible=1) contents");
+            $published->execute(['course_organization' => (int)$organization['id'], 'course_catalog' => $catalogId, 'content_organization' => (int)$organization['id'], 'content_catalog' => $catalogId]);
+            $publishedTotals = $published->fetch() ?: [];
+            $publishedCourses = (int)($publishedTotals['courses'] ?? 0);
+            $publishedContents = (int)($publishedTotals['contents'] ?? 0);
+        }
+
+        return [
+            'provider' => $settings,
+            'organization' => $organization,
+            'catalog_id' => $catalogId,
+            'catalog_enabled' => $catalogEnabled,
+            'courses' => array_map('intval', $courseTotals),
+            'contents' => array_map('intval', $contentTotals),
+            'published_courses' => $publishedCourses,
+            'published_contents' => $publishedContents,
+        ];
+    }
+
+    /** @return array{prepared:int,type:string,organization_id:int} */
+    public function prepareCatalogHomologation(string $providerCode, int $organizationId, string $itemType, int $sampleSize, float $price, int $installments, ?int $userId): array
+    {
+        if (!in_array($itemType, ['course', 'content'], true)) throw new RuntimeException('Escolha cursos ou conteúdos individuais para a amostra.');
+        $sampleSize = max(1, min(10, $sampleSize));
+        $price = round($price, 2);
+        $installments = max(1, min(60, $installments));
+        if ($price < 5) throw new RuntimeException('Informe um preço de homologação de pelo menos R$ 5,00.');
+
+        $settings = $this->settingsForProvider($providerCode);
+        if (!(bool)($settings['configured'] ?? false) || !(bool)($settings['is_active'] ?? false)) throw new RuntimeException('Ative e teste a integração antes de preparar o piloto.');
+        $catalogId = (int)($settings['catalog_id'] ?? 0);
+        $organization = $this->database->prepare("SELECT id FROM organizations WHERE id=:id AND status='active'");
+        $organization->execute(['id' => $organizationId]);
+        if ($organization->fetchColumn() === false) throw new RuntimeException('Selecione uma franquia ativa para o piloto.');
+
+        if ($itemType === 'course') {
+            $statement = $this->database->prepare("SELECT course.*,
+                COALESCE(NULLIF(course.commercial_name,''),course.name) effective_name,
+                COALESCE(NULLIF(course.commercial_description,''),NULLIF(course.description,''),'') effective_description,
+                COALESCE(NULLIF(course.commercial_category,''),NULLIF(course.category,''),'Curso livre') effective_category,
+                COALESCE(NULLIF(course.commercial_workload,''),NULLIF(course.workload,''),'Carga horária informada no atendimento') effective_workload,
+                COALESCE(NULLIF(course.commercial_certificate,''),NULLIF(course.certificate,''),'') effective_certificate,
+                COALESCE(NULLIF(course.commercial_cover_url,''),NULLIF(course.cover_url,''),'') effective_cover_url,
+                EXISTS(SELECT 1 FROM catalog_media_assets media WHERE media.entity_type='course' AND media.entity_id=course.id AND media.purpose='cover' AND media.generation_status='ready') has_media
+                FROM provider_courses course WHERE course.catalog_id=:catalog AND course.is_available=1 ORDER BY (course.review_status='approved') DESC,(course.release_status IN ('released','published')) DESC,has_media DESC,course.id LIMIT 50");
+        } else {
+            $statement = $this->database->prepare("SELECT content.*,
+                COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
+                COALESCE(NULLIF(content.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'') effective_description,
+                COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'Conteúdo individual') effective_category,
+                COALESCE(NULLIF(content.commercial_workload,''),(SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'Carga horária informada no atendimento') effective_workload,
+                COALESCE(NULLIF(content.commercial_cover_url,''),(SELECT COALESCE(NULLIF(parent.commercial_cover_url,''),NULLIF(parent.cover_url,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'') effective_cover_url,
+                (EXISTS(SELECT 1 FROM catalog_media_assets media WHERE media.entity_type='content' AND media.entity_id=content.id AND media.purpose='cover' AND media.generation_status='ready') OR EXISTS(SELECT 1 FROM provider_course_content_links link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE link.provider_content_id=content.id)) has_media
+                FROM provider_catalog_contents content WHERE content.catalog_id=:catalog AND content.is_available=1 ORDER BY (content.review_status='approved') DESC,(content.release_status IN ('released','published')) DESC,has_media DESC,content.id LIMIT 50");
+        }
+        $statement->execute(['catalog' => $catalogId]);
+        $candidates = array_values(array_filter($statement->fetchAll() ?: [], static fn(array $row): bool => trim((string)($row['effective_cover_url'] ?? '')) !== '' || (int)($row['has_media'] ?? 0) === 1));
+        $candidates = array_slice($candidates, 0, $sampleSize);
+        if ($candidates === []) throw new RuntimeException('Ainda não há item com capa pronta para publicar. Conclua a curadoria ou a geração de imagens primeiro.');
+
+        $prepared = 0;
+        $this->database->beginTransaction();
+        try {
+            $this->database->prepare('UPDATE course_catalogs SET is_globally_enabled=1 WHERE id=:catalog')->execute(['catalog' => $catalogId]);
+            $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,updated_by) VALUES(:organization,:catalog,1,:user) ON DUPLICATE KEY UPDATE is_enabled=1,updated_by=VALUES(updated_by)')->execute(['organization' => $organizationId, 'catalog' => $catalogId, 'user' => $userId]);
+            foreach ($candidates as $item) {
+                $id = (int)$item['id'];
+                $name = trim((string)$item['effective_name']);
+                $description = trim((string)$item['effective_description']);
+                if ($description === '') $description = 'Conheça o conteúdo, a metodologia e as condições desta formação com nossa equipe.';
+                if ($itemType === 'course') {
+                    $this->review($id, 'approved', $name, $description, 'Amostra preparada pela homologação assistida.', $userId, [
+                        'commercial_cover_url' => (string)$item['effective_cover_url'],
+                        'commercial_category' => (string)$item['effective_category'],
+                        'commercial_workload' => (string)$item['effective_workload'],
+                        'commercial_certificate' => (string)($item['effective_certificate'] ?? ''),
+                    ], 'released');
+                    $this->database->prepare("UPDATE provider_courses SET is_globally_enabled=1 WHERE id=:id")->execute(['id' => $id]);
+                    $this->saveOffer($id, $organizationId, $name, $description, $price, $installments, true, true, $userId);
+                } else {
+                    $this->reviewContent($id, 'approved', 'released', [
+                        'commercial_name' => $name,
+                        'commercial_description' => $description,
+                        'commercial_category' => (string)$item['effective_category'],
+                        'commercial_workload' => (string)$item['effective_workload'],
+                        'commercial_cover_url' => (string)$item['effective_cover_url'],
+                        'review_notes' => 'Amostra preparada pela homologação assistida.',
+                    ], $userId);
+                    $this->database->prepare("UPDATE provider_catalog_contents SET is_globally_enabled=1 WHERE id=:id")->execute(['id' => $id]);
+                    $this->saveContentOffer($id, $organizationId, $name, $description, $price, $installments, true, true, $userId);
+                }
+                $prepared++;
+            }
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+        return ['prepared' => $prepared, 'type' => $itemType, 'organization_id' => $organizationId];
     }
 
     /** @return list<array<string,mixed>> */
@@ -737,6 +880,12 @@ final readonly class CourseProviderRepository
         $content->execute(['organization' => $organizationId, 'item_organization' => $organizationId, 'id' => $contentId]);
         $row = $content->fetch();
         if (!is_array($row)) throw new RuntimeException('Conteúdo externo não encontrado.');
+        $hasMediaCover = $this->entityMediaAsset('content', $contentId) !== null;
+        if (!$hasMediaCover) {
+            $inheritedMedia = $this->database->prepare("SELECT 1 FROM provider_course_content_links link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE link.provider_content_id=:content LIMIT 1");
+            $inheritedMedia->execute(['content' => $contentId]);
+            $hasMediaCover = $inheritedMedia->fetchColumn() !== false;
+        }
         if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released', 'published'], true) || (int)($row['is_available'] ?? 0) !== 1) {
             throw new RuntimeException('Apenas conteúdos disponíveis, aprovados e liberados podem ser vendidos individualmente.');
         }
@@ -754,7 +903,7 @@ final readonly class CourseProviderRepository
         if ($visible && $price < 5) throw new RuntimeException('Informe um preço de pelo menos R$ 5,00 antes de publicar o conteúdo.');
 
         if ($visible && $description === '' && trim((string)($row['effective_description'] ?? '')) === '') throw new RuntimeException('Complete a descrição comercial antes de exibir este conteúdo no site.');
-        if ($visible && trim((string)($row['effective_cover_url'] ?? '')) === '') throw new RuntimeException('Cadastre uma capa comercial antes de exibir este conteúdo no site.');
+        if ($visible && trim((string)($row['effective_cover_url'] ?? '')) === '' && !$hasMediaCover) throw new RuntimeException('Cadastre uma capa comercial antes de exibir este conteúdo no site.');
         if ($visible && trim((string)($row['effective_workload'] ?? '')) === '') throw new RuntimeException('Informe a carga horária na curadoria antes de exibir este conteúdo no site.');
 
         $statement = $this->database->prepare("INSERT INTO organization_provider_content_offers(organization_id,provider_content_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by) VALUES(:organization,:content,:name,:description,:price,:installments,'assisted',:visible,:active,:user,:user) ON DUPLICATE KEY UPDATE commercial_name=VALUES(commercial_name),commercial_description=VALUES(commercial_description),price=VALUES(price),max_installments=VALUES(max_installments),sale_mode='assisted',is_visible=VALUES(is_visible),is_active=VALUES(is_active),updated_by=VALUES(updated_by)");
@@ -1155,6 +1304,7 @@ final readonly class CourseProviderRepository
         $course->execute(['organization' => $organizationId, 'item_organization' => $organizationId, 'id' => $courseId]);
         $row = $course->fetch();
         if (!is_array($row)) throw new RuntimeException('Curso externo não encontrado.');
+        $hasMediaCover = $this->entityMediaAsset('course', $courseId) !== null;
         if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released','published'], true) || (int)($row['is_available'] ?? 0) !== 1) throw new RuntimeException('Apenas cursos disponíveis, aprovados e liberados pelo ADM Central podem ser ofertados.');
         if ((int)($row['catalog_globally_enabled'] ?? 0) !== 1 || (int)($row['is_globally_enabled'] ?? 0) !== 1 || (int)($row['organization_catalog_enabled'] ?? 0) !== 1 || (int)($row['organization_item_enabled'] ?? 0) !== 1) throw new RuntimeException('Este curso está bloqueado globalmente ou para esta franquia.');
 
@@ -1172,7 +1322,7 @@ final readonly class CourseProviderRepository
 
         $sourceDescription = (string)(($row['commercial_description'] ?? '') ?: ($row['description'] ?? ''));
         if ($visible && $description === '' && trim($sourceDescription) === '') throw new RuntimeException('Complete a descrição comercial antes de exibir este curso no site.');
-        if ($visible && trim((string)($row['effective_cover_url'] ?? '')) === '') throw new RuntimeException('Cadastre uma capa comercial antes de exibir este curso no site.');
+        if ($visible && trim((string)($row['effective_cover_url'] ?? '')) === '' && !$hasMediaCover) throw new RuntimeException('Cadastre uma capa comercial antes de exibir este curso no site.');
         if ($visible && trim((string)($row['effective_workload'] ?? '')) === '') throw new RuntimeException('Informe a carga horária na curadoria antes de exibir este curso no site.');
 
         $statement = $this->database->prepare("INSERT INTO organization_provider_course_offers(organization_id,provider_course_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by) VALUES(:organization,:course,:name,:description,:price,:installments,'assisted',:visible,:active,:user,:user) ON DUPLICATE KEY UPDATE commercial_name=VALUES(commercial_name),commercial_description=VALUES(commercial_description),price=VALUES(price),max_installments=VALUES(max_installments),sale_mode='assisted',is_visible=VALUES(is_visible),is_active=VALUES(is_active),updated_by=VALUES(updated_by)");

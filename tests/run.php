@@ -1973,6 +1973,23 @@ $tests['unifica ofertas comerciais e trilhas na vitrine publica'] = static funct
     assertTrue(str_contains($javascript,'card.dataset.courseTrail'));
 };
 
+$tests['homologa catalogo em amostra assistida sem gerar cobranca'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $homologation=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-homologation.php');
+
+    assertTrue(str_contains($repository,'public function catalogHomologationStatus'));
+    assertTrue(str_contains($repository,'public function prepareCatalogHomologation'));
+    assertTrue(str_contains($repository,"in_array(\$itemType, ['course', 'content'], true)"));
+    assertTrue(str_contains($repository,"is_visible=1"));
+    assertTrue(str_contains($routes,"/homologation'"));
+    assertTrue(str_contains($routes,'confirm_no_charge'));
+    assertTrue(str_contains($view,'data-catalog-subtab="homologation"'));
+    assertTrue(str_contains($homologation,'Sem cobrança real'));
+    assertTrue(str_contains($homologation,'não chama o Asaas'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
