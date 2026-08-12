@@ -729,6 +729,36 @@ document.querySelectorAll('.color-field').forEach((group) => {
 })();
 
 (() => {
+  const form = document.querySelector('[data-trail-editor-form]');
+  if (!(form instanceof HTMLFormElement)) return;
+  const name = form.elements.namedItem('name');
+  const slug = form.elements.namedItem('slug');
+  if (!(name instanceof HTMLInputElement) || !(slug instanceof HTMLInputElement)) return;
+
+  const slugify = (value) => String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  let generated = slug.value.trim() === '';
+  let lastGenerated = generated ? '' : slug.value.trim();
+
+  name.addEventListener('input', () => {
+    if (!generated && slug.value.trim() !== lastGenerated) return;
+    lastGenerated = slugify(name.value);
+    slug.value = lastGenerated;
+    generated = true;
+  });
+  slug.addEventListener('input', () => {
+    generated = slug.value.trim() === '' || slug.value.trim() === lastGenerated;
+  });
+  form.addEventListener('submit', () => {
+    if (slug.value.trim() === '') slug.value = slugify(name.value);
+  });
+})();
+
+(() => {
   document.querySelectorAll('[data-trail-item-grid]').forEach((grid) => {
     if (!(grid instanceof HTMLElement) || grid.dataset.trailPickerReady === '1') return;
     grid.dataset.trailPickerReady = '1';

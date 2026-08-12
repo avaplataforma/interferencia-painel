@@ -89,10 +89,12 @@ final readonly class AvaCatalogPublisher
     private function summary(array$trail):string
     {
         $description=trim((string)($trail['description']??$trail['short_description']??''));
+        $workload=(float)($trail['workload_hours']??0);
+        $workloadLabel=$workload>0?'<p><strong>Carga horária total:</strong> '.rtrim(rtrim(number_format($workload,2,',','.'),'0'),',').' horas</p>':'';
         $names=[];
         foreach((array)($trail['items']??[])as$item){$name=trim((string)($item['item_name']??''));if($name!=='')$names[]=$name;}
         $list=$names===[]?'':'<h3>Cursos individuais desta Trilha</h3><ol><li>'.implode('</li><li>',array_map(static fn(string$name):string=>htmlspecialchars($name,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$names)).'</li></ol>';
-        return'<p>'.nl2br(htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')).'</p>'.$list.'<p><small>Publicação gerenciada pelo Mundo Inter.</small></p>';
+        return'<p>'.nl2br(htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')).'</p>'.$workloadLabel.$list.'<p><small>Publicação gerenciada pelo Mundo Inter.</small></p>';
     }
 
     /** @param array<string,mixed> $trail @return list<array<string,mixed>> */
@@ -126,7 +128,7 @@ final readonly class AvaCatalogPublisher
     /** @param array<string,mixed> $trail */
     private function signature(array$trail):string
     {
-        return hash('sha256',json_encode(['name'=>$trail['name'],'slug'=>$trail['slug'],'category'=>$trail['category_id'],'description'=>$trail['description'],'items'=>array_map(static fn(array$item):array=>[$item['item_type'],$item['item_id'],$item['sort_order']],(array)$trail['items'])],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        return hash('sha256',json_encode(['name'=>$trail['name'],'slug'=>$trail['slug'],'category'=>$trail['category_id'],'workload_hours'=>$trail['workload_hours'],'description'=>$trail['description'],'items'=>array_map(static fn(array$item):array=>[$item['item_type'],$item['item_id'],$item['sort_order']],(array)$trail['items'])],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
     }
 
     private function limitedCode(string$value,int$length):string

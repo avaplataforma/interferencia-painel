@@ -2030,27 +2030,35 @@ $tests['libera matricula externa EXPERT sem criar cobranca'] = static function (
 
 $tests['organiza trilhas comerciais em categorias hierarquicas'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000020_create_catalog_categories_and_trails.php');
+    $workloadMigration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000070_add_workload_to_catalog_trails.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
     $integrations=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
     assertTrue(str_contains($migration,'CREATE TABLE catalog_categories'));
     assertTrue(str_contains($migration,'CREATE TABLE catalog_trails'));
     assertTrue(str_contains($migration,'category_id BIGINT UNSIGNED NOT NULL'));
     assertTrue(str_contains($migration,'CREATE TABLE catalog_trail_items'));
+    assertTrue(str_contains($workloadMigration,'workload_hours DECIMAL(8,2)'));
     assertTrue(str_contains($repository,'Escolha uma categoria ativa para a Trilha.'));
     assertTrue(str_contains($repository,'count($items) < 2'));
+    assertTrue(str_contains($repository,"if (\$slug === '') \$slug = \$this->slug(\$name);"));
+    assertTrue(str_contains($repository,'workload_hours=:workload'));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails'"));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/categories'"));
     assertTrue(str_contains($view,'name="category_id"'));
+    assertTrue(str_contains($view,'name="workload_hours"'));
     assertTrue(str_contains($view,'Categoria *'));
     assertTrue(str_contains($view,'Selecionar todos desta Trilha'));
     assertTrue(str_contains($view,'data-trail-select-visible'));
     assertTrue(str_contains($view,'data-trail-package-results'));
     assertTrue(str_contains($view,'class="span-6">Endereço amigável'));
     assertTrue(str_contains($view,'mínimo 2'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'setVisibleSelection'));
+    assertTrue(str_contains($javascript,'setVisibleSelection'));
+    assertTrue(str_contains($javascript,"form.elements.namedItem('slug')"));
+    assertTrue(str_contains($routes,"'workload_hours'=>\$request->input('workload_hours','')"));
     assertTrue(str_contains($routes,"'learning_catalog.draft'"));
     assertTrue(str_contains($view,'$trailForm'));
     assertTrue(str_contains($integrations,'Cursos individuais e Trilhas'));

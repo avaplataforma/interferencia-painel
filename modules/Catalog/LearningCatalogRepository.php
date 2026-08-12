@@ -255,8 +255,10 @@ final readonly class LearningCatalogRepository
         if ($category->fetchColumn() === false) throw new RuntimeException('Escolha uma categoria ativa para a Trilha.');
         $items = $this->normalizeItems($itemKeys);
         if (count($items) < 2) throw new RuntimeException('Uma Trilha precisa reunir pelo menos dois cursos ou conteúdos.');
-        $slug = $this->slug((string)($data['slug'] ?? $name));
+        $slug = $this->slug((string)($data['slug'] ?? ''));
+        if ($slug === '') $slug = $this->slug($name);
         if ($slug === '') throw new RuntimeException('Informe um endereço válido para a Trilha.');
+        $workload = $this->positiveDecimal((string)($data['workload_hours'] ?? ''), 'Informe a carga horária total da Trilha.');
         $rawPrice = trim((string)($data['default_price'] ?? ''));
         $price = $rawPrice === '' ? null : $this->money($rawPrice);
         if ($price !== null && $price < 0) throw new RuntimeException('O preço não pode ser negativo.');
@@ -266,6 +268,7 @@ final readonly class LearningCatalogRepository
             'slug' => $slug,
             'short_description' => trim((string)($data['short_description'] ?? '')) ?: null,
             'description' => trim((string)($data['description'] ?? '')) ?: null,
+            'workload' => $workload,
             'price' => $price,
             'installments' => max(1, min(60, (int)($data['max_installments'] ?? 1))),
             'cover' => trim((string)($data['cover_url'] ?? '')) ?: null,
@@ -275,12 +278,12 @@ final readonly class LearningCatalogRepository
         $this->database->beginTransaction();
         try {
             if ($id === null) {
-                $statement = $this->database->prepare('INSERT INTO catalog_trails(category_id,name,slug,short_description,description,default_price,max_installments,cover_url,is_active,created_by,updated_by) VALUES(:category,:name,:slug,:short_description,:description,:price,:installments,:cover,:active,:user,:user)');
+                $statement = $this->database->prepare('INSERT INTO catalog_trails(category_id,name,slug,short_description,description,workload_hours,default_price,max_installments,cover_url,is_active,created_by,updated_by) VALUES(:category,:name,:slug,:short_description,:description,:workload,:price,:installments,:cover,:active,:user,:user)');
                 $statement->execute($values);
                 $id = (int)$this->database->lastInsertId();
             } else {
                 $values['id'] = $id;
-                $statement = $this->database->prepare('UPDATE catalog_trails SET category_id=:category,name=:name,slug=:slug,short_description=:short_description,description=:description,default_price=:price,max_installments=:installments,cover_url=:cover,is_active=:active,updated_by=:user WHERE id=:id');
+                $statement = $this->database->prepare('UPDATE catalog_trails SET category_id=:category,name=:name,slug=:slug,short_description=:short_description,description=:description,workload_hours=:workload,default_price=:price,max_installments=:installments,cover_url=:cover,is_active=:active,updated_by=:user WHERE id=:id');
                 $statement->execute($values);
                 if ($statement->rowCount() < 1 && !$this->exists('catalog_trails', $id)) throw new RuntimeException('Trilha não encontrada.');
             }
@@ -347,6 +350,13 @@ final readonly class LearningCatalogRepository
     {
         $normalized = str_contains($value, ',') ? str_replace(',', '.', str_replace('.', '', $value)) : $value;
         if (!is_numeric($normalized)) throw new RuntimeException('Informe um preço válido.');
+        return round((float)$normalized, 2);
+    }
+
+    private function positiveDecimal(string $value, string $message): float
+    {
+        $normalized = str_contains($value, ',') ? str_replace(',', '.', str_replace('.', '', trim($value))) : trim($value);
+        if ($normalized === '' || !is_numeric($normalized) || (float)$normalized <= 0 || (float)$normalized > 999999.99) throw new RuntimeException($message);
         return round((float)$normalized, 2);
     }
 }
