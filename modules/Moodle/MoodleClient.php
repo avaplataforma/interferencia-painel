@@ -67,6 +67,44 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_organize_enrollment',['userid'=>$userId,'courseid'=>$courseId]+$organization);
     }
 
+    /** @return list<array<string,mixed>> */
+    public function courseCategories():array
+    {
+        $data=$this->call('core_course_get_categories');
+        return array_values(array_filter($data,'is_array'));
+    }
+
+    /** @return array<string,mixed> */
+    public function createCourseCategory(string$name,string$idNumber,int$parent=0):array
+    {
+        $name=trim($name);$idNumber=trim($idNumber);
+        if($name===''||$idNumber==='')throw new RuntimeException('Nome ou código inválido para a categoria do AVA.');
+        $data=$this->call('core_course_create_categories',['categories'=>[['name'=>$name,'idnumber'=>$idNumber,'parent'=>max(0,$parent)]]]);
+        $category=$data[0]??null;
+        if(!is_array($category)||(int)($category['id']??0)<1)throw new RuntimeException('O AVA não confirmou a criação da categoria.');
+        return$category;
+    }
+
+    /** @return array<string,mixed> */
+    public function publishCourse(array$course):array
+    {
+        $idNumber=trim((string)($course['idnumber']??''));
+        if($idNumber==='')throw new RuntimeException('O curso precisa de um código permanente antes da publicação.');
+        $existing=null;
+        foreach($this->courses()as$candidate)if(trim((string)($candidate['idnumber']??''))===$idNumber){$existing=$candidate;break;}
+        $payload=['fullname'=>trim((string)($course['fullname']??'')),'shortname'=>trim((string)($course['shortname']??'')),'categoryid'=>(int)($course['categoryid']??0),'idnumber'=>$idNumber,'summary'=>(string)($course['summary']??''),'summaryformat'=>1,'format'=>'topics','visible'=>1];
+        if($payload['fullname']===''||$payload['shortname']===''||$payload['categoryid']<1)throw new RuntimeException('A publicação está sem nome, código curto ou categoria do AVA.');
+        if(is_array($existing)){
+            $payload['id']=(int)$existing['id'];
+            $this->call('core_course_update_courses',['courses'=>[$payload]]);
+            return$payload+$existing;
+        }
+        $created=$this->call('core_course_create_courses',['courses'=>[$payload]]);
+        $remote=$created[0]??null;
+        if(!is_array($remote)||(int)($remote['id']??0)<1)throw new RuntimeException('O AVA não confirmou a criação do curso.');
+        return$remote+$payload;
+    }
+
     /** @param list<array{type:string,value:string}> $customFields */
     public function updateUserCustomFields(int$userId,array$customFields):void
     {

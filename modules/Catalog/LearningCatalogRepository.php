@@ -87,10 +87,12 @@ final readonly class LearningCatalogRepository
     {
         $statement = $this->database->query("SELECT trail.*,category.name category_name,parent.name parent_category_name,
             (SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count,
-            (SELECT COUNT(*) FROM organization_catalog_trail_access access WHERE access.catalog_trail_id=trail.id AND access.is_enabled=0) blocked_organizations
+            (SELECT COUNT(*) FROM organization_catalog_trail_access access WHERE access.catalog_trail_id=trail.id AND access.is_enabled=0) blocked_organizations,
+            COALESCE(publication.publication_status,CASE WHEN trail.is_active=1 THEN 'ready' ELSE 'draft' END) publication_status,publication.remote_course_id,publication.published_at,publication.last_error publication_error
             FROM catalog_trails trail
             INNER JOIN catalog_categories category ON category.id=trail.category_id
             LEFT JOIN catalog_categories parent ON parent.id=category.parent_id
+            LEFT JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id
             ORDER BY trail.is_active DESC,COALESCE(parent.name,category.name),category.name,trail.name");
         return $statement->fetchAll() ?: [];
     }
@@ -99,7 +101,7 @@ final readonly class LearningCatalogRepository
     public function trail(int $id): ?array
     {
         if ($id < 1) return null;
-        $statement = $this->database->prepare('SELECT * FROM catalog_trails WHERE id=:id');
+        $statement = $this->database->prepare("SELECT trail.*,COALESCE(publication.publication_status,CASE WHEN trail.is_active=1 THEN 'ready' ELSE 'draft' END) publication_status,publication.remote_course_id,publication.remote_category_id,publication.published_at,publication.last_error publication_error FROM catalog_trails trail LEFT JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id WHERE trail.id=:id LIMIT 1");
         $statement->execute(['id' => $id]);
         $trail = $statement->fetch();
         if (!is_array($trail)) return null;
@@ -107,6 +109,53 @@ final readonly class LearningCatalogRepository
         $items->execute(['id' => $id]);
         $trail['item_keys'] = array_map(static fn(array $item): string => $item['item_type'].':'.$item['item_id'], $items->fetchAll() ?: []);
         return $trail;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function trailPublicationContext(int $id): ?array
+    {
+        $statement=$this->database->prepare("SELECT trail.*,category.name category_name,category.code category_code,parent.name parent_category_name,parent.code parent_category_code,(SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count FROM catalog_trails trail INNER JOIN catalog_categories category ON category.id=trail.category_id LEFT JOIN catalog_categories parent ON parent.id=category.parent_id WHERE trail.id=:id LIMIT 1");
+        $statement->execute(['id'=>$id]);$trail=$statement->fetch();
+        if(!is_array($trail))return null;
+        $items=$this->database->prepare("SELECT item.item_type,item.item_id,item.sort_order,CASE item.item_type WHEN 'finance_product' THEN product.name WHEN 'provider_course' THEN COALESCE(NULLIF(course.commercial_name,''),course.name) ELSE COALESCE(NULLIF(content.commercial_name,''),content.name) END item_name FROM catalog_trail_items item LEFT JOIN finance_products product ON item.item_type='finance_product' AND product.id=item.item_id LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id WHERE item.catalog_trail_id=:id ORDER BY item.sort_order,item.id");
+        $items->execute(['id'=>$id]);$trail['items']=$items->fetchAll()?:[];
+        return$trail;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function publicationHistory(int $trailId,int $limit=12):array
+    {
+        $limit=max(1,min(50,$limit));
+        $statement=$this->database->prepare("SELECT event.*,user.name user_name FROM catalog_ava_publication_events event INNER JOIN catalog_ava_publications publication ON publication.id=event.publication_id LEFT JOIN platform_users user ON user.id=event.created_by WHERE publication.entity_type='trail' AND publication.entity_id=:trail ORDER BY event.created_at DESC,event.id DESC LIMIT {$limit}");
+        $statement->execute(['trail'=>$trailId]);return$statement->fetchAll()?:[];
+    }
+
+    public function markPublicationReady(int$trailId,int$connectionId,string$signature,?int$userId):int
+    {
+        $sql="INSERT INTO catalog_ava_publications(entity_type,entity_id,ava_connection_id,publication_status,source_signature,prepared_at,created_by,updated_by) VALUES('trail',:entity,:connection,'ready',:signature,NOW(),:user,:user) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),publication_status='ready',source_signature=VALUES(source_signature),prepared_at=NOW(),last_error=NULL,updated_by=VALUES(updated_by)";
+        $this->database->prepare($sql)->execute(['entity'=>$trailId,'connection'=>$connectionId,'signature'=>$signature,'user'=>$userId]);
+        return(int)$this->database->lastInsertId();
+    }
+
+    public function markPublicationSuccess(int$publicationId,int$localCourseId,int$remoteCategoryId,int$remoteCourseId,string$signature,array$details,?int$userId):void
+    {
+        $this->database->beginTransaction();
+        try{
+            $this->database->prepare("UPDATE catalog_ava_publications SET publication_status='published',moodle_course_id=:local_course,remote_category_id=:remote_category,remote_course_id=:remote_course,source_signature=:signature,last_error=NULL,published_at=NOW(),updated_by=:user WHERE id=:id")->execute(['local_course'=>$localCourseId>0?$localCourseId:null,'remote_category'=>$remoteCategoryId,'remote_course'=>$remoteCourseId,'signature'=>$signature,'user'=>$userId,'id'=>$publicationId]);
+            $this->publicationEvent($publicationId,'publish','success',$remoteCategoryId,$remoteCourseId,'Trilha publicada ou atualizada no AVA Cursos.',$details,$userId);
+            $this->database->commit();
+        }catch(\Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+    }
+
+    public function markPublicationFailed(int$publicationId,string$message,?int$userId):void
+    {
+        $message=mb_substr(trim($message),0,1000);
+        $this->database->beginTransaction();
+        try{
+            $this->database->prepare("UPDATE catalog_ava_publications SET publication_status='failed',last_error=:error,updated_by=:user WHERE id=:id")->execute(['error'=>$message,'user'=>$userId,'id'=>$publicationId]);
+            $this->publicationEvent($publicationId,'publish','failed',null,null,$message,[],$userId);
+            $this->database->commit();
+        }catch(\Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
     }
 
     /** @return list<array<string,mixed>> */
@@ -172,6 +221,7 @@ final readonly class LearningCatalogRepository
             $this->database->prepare('DELETE FROM catalog_trail_items WHERE catalog_trail_id=:id')->execute(['id' => $id]);
             $insert = $this->database->prepare('INSERT INTO catalog_trail_items(catalog_trail_id,item_type,item_id,sort_order) VALUES(:trail,:type,:item,:sort_order)');
             foreach ($items as $position => $item) $insert->execute(['trail' => $id, 'type' => $item['type'], 'item' => $item['id'], 'sort_order' => ($position + 1) * 10]);
+            $this->database->prepare("UPDATE catalog_ava_publications SET publication_status='ready',last_error=NULL,updated_by=:user WHERE entity_type='trail' AND entity_id=:id")->execute(['user'=>$userId,'id'=>$id]);
             $this->database->commit();
             return $id;
         } catch (\Throwable $exception) {
@@ -212,6 +262,12 @@ final readonly class LearningCatalogRepository
         $statement = $this->database->prepare("SELECT 1 FROM {$table} WHERE id=:id");
         $statement->execute(['id' => $id]);
         return $statement->fetchColumn() !== false;
+    }
+
+    private function publicationEvent(int$publicationId,string$type,string$status,?int$remoteCategoryId,?int$remoteCourseId,string$message,array$details,?int$userId):void
+    {
+        $statement=$this->database->prepare('INSERT INTO catalog_ava_publication_events(publication_id,event_type,event_status,remote_category_id,remote_course_id,message,details_json,created_by) VALUES(:publication,:type,:status,:category,:course,:message,:details,:user)');
+        $statement->execute(['publication'=>$publicationId,'type'=>$type,'status'=>$status,'category'=>$remoteCategoryId,'course'=>$remoteCourseId,'message'=>$message!==''?$message:null,'details'=>$details!==[]?json_encode($details,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR):null,'user'=>$userId]);
     }
 
     private function slug(string $value): string

@@ -17,6 +17,14 @@ final readonly class MoodleRepository
         $this->database->prepare($sql)->execute(['id'=>(int)($course['id']??0),'short'=>(string)($course['shortname']??''),'full'=>(string)($course['fullname']??''),'number'=>$this->nullable($course['idnumber']??null),'category'=>(int)($course['categoryid']??0),'visible'=>(int)(bool)($course['visible']??true),'start'=>$this->timestamp($course['startdate']??null),'end'=>$this->timestamp($course['enddate']??null),'raw'=>json_encode($course,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
     }
 
+    public function localCourseIdByRemote(int$remoteCourseId):int
+    {
+        if($remoteCourseId<1)return 0;
+        $statement=$this->database->prepare('SELECT id FROM moodle_courses WHERE moodle_course_id=:remote LIMIT 1');
+        $statement->execute(['remote'=>$remoteCourseId]);
+        return(int)$statement->fetchColumn();
+    }
+
     /** @param array<string,mixed> $user */
     public function upsertUser(array$user):void
     {

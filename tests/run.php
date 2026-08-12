@@ -2096,6 +2096,29 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($view,'Turmas lógicas'));
 };
 
+$tests['publica trilhas no AVA com curso unico e historico'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000060_create_catalog_ava_publications.php');
+    $publisher=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCatalogPublisher.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_ava_publications'));
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_ava_publication_events'));
+    assertTrue(str_contains($migration,"'draft','ready','published','failed'"));
+    assertTrue(str_contains($publisher,'public function publishTrail'));
+    assertTrue(str_contains($publisher,"'mi-trilha-'.\$trailId"));
+    assertTrue(str_contains($publisher,"'mi-mundo-inter'"));
+    assertTrue(str_contains($repository,'markPublicationSuccess'));
+    assertTrue(str_contains($repository,'publicationHistory'));
+    assertTrue(str_contains($client,'core_course_create_courses'));
+    assertTrue(str_contains($client,'core_course_update_courses'));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/publish'"));
+    assertTrue(str_contains($view,'Publicar no AVA'));
+    assertTrue(str_contains($view,'Histórico de publicação'));
+};
+
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000050_create_ava_academic_backfill.php');
     $service=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationBackfillService.php');
