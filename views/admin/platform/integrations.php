@@ -8,6 +8,7 @@
 </div>
 <div class="row">
   <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><span class="quick-icon"><i class="fa-solid fa-book-open-reader"></i></span><strong>Fornecedores de cursos</strong><small>Catálogos externos para ampliar a loja, sem importar o financeiro do fornecedor.</small><span class="connection-badge <?= $courseProviderConfigured&&$courseProviderActive?'connection-approved':'connection-pending' ?>"><?= $courseProviderConfigured&&$courseProviderActive?((int)$courseProviderCourses.' curso(s) ativos'):'Configuração pendente' ?></span></a></div>
+  <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails"><span class="quick-icon"><i class="fa-solid fa-route"></i></span><strong>Produtos e Trilhas</strong><small>Organize categorias, subcategorias e pacotes formados por dois ou mais cursos.</small><span class="connection-badge connection-approved">Gestão central</span></a></div>
 </div>
 <div class="row">
   <div class="col-sm-6"><a class="quick-link" href="<?= $escape($basePath) ?>/admin/platform/integrations/ava-cursos"><span class="quick-icon"><i class="fa-solid fa-graduation-cap"></i></span><strong>AVA Cursos</strong><small>Moodle compartilhado, catálogo central e matrículas das franquias autorizadas.</small><span class="connection-badge <?= $avaConfigured&&$avaActive?'connection-approved':'connection-pending' ?>"><?= $avaConfigured&&$avaActive?'Ativa':'Configuração pendente' ?></span></a></div>

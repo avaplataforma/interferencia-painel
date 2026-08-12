@@ -2021,6 +2021,27 @@ $tests['libera matricula externa EXPERT sem criar cobranca'] = static function (
     assertTrue(str_contains($view,'não será gerada nenhuma cobrança'));
 };
 
+$tests['organiza trilhas comerciais em categorias hierarquicas'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000020_create_catalog_categories_and_trails.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+    $integrations=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_categories'));
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_trails'));
+    assertTrue(str_contains($migration,'category_id BIGINT UNSIGNED NOT NULL'));
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_trail_items'));
+    assertTrue(str_contains($repository,'Escolha uma categoria ativa para a Trilha.'));
+    assertTrue(str_contains($repository,'count($items) < 2'));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails'"));
+    assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/categories'"));
+    assertTrue(str_contains($view,'name="category_id"'));
+    assertTrue(str_contains($view,'Categoria *'));
+    assertTrue(str_contains($view,'mínimo 2'));
+    assertTrue(str_contains($integrations,'Produtos e Trilhas'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
