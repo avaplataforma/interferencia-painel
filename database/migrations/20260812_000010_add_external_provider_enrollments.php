@@ -26,7 +26,7 @@ return new class implements Migration {
             ADD KEY student_enrollments_provider_course_offer_idx(provider_course_offer_id),
             ADD KEY student_enrollments_provider_content_offer_idx(provider_content_offer_id),
             ADD KEY student_enrollments_provider_idx(academic_provider_code),
-            ADD CONSTRAINT student_enrollments_course_fk FOREIGN KEY(moodle_course_id) REFERENCES moodle_courses(id),
+            ADD CONSTRAINT student_enrollments_moodle_course_fk FOREIGN KEY(moodle_course_id) REFERENCES moodle_courses(id),
             ADD CONSTRAINT student_enrollments_provider_course_offer_fk FOREIGN KEY(provider_course_offer_id) REFERENCES organization_provider_course_offers(id) ON DELETE SET NULL,
             ADD CONSTRAINT student_enrollments_provider_content_offer_fk FOREIGN KEY(provider_content_offer_id) REFERENCES organization_provider_content_offers(id) ON DELETE SET NULL");
     }
@@ -36,7 +36,7 @@ return new class implements Migration {
         $database->exec("ALTER TABLE student_enrollments
             DROP FOREIGN KEY student_enrollments_provider_content_offer_fk,
             DROP FOREIGN KEY student_enrollments_provider_course_offer_fk,
-            DROP FOREIGN KEY student_enrollments_course_fk,
+            DROP FOREIGN KEY student_enrollments_moodle_course_fk,
             DROP KEY student_enrollments_provider_idx,
             DROP KEY student_enrollments_provider_content_offer_idx,
             DROP KEY student_enrollments_provider_course_offer_idx,
