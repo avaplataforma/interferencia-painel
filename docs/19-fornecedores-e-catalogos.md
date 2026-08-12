@@ -274,7 +274,8 @@ O conector segue a documentação OpenAPI V2 publicada pelo fornecedor:
    `offset`;
 4. preserva o `batch` como identificador remoto estável e mantém a estrutura de
    semestres ou disciplinas para a curadoria;
-5. gera o acesso temporário do aluno em `POST /api/v2/content/link`;
+5. gera o acesso temporário do aluno em `GET /api/v2/content/link`, somente para
+   `discipline`, `unit` ou `object`;
 6. suspende o acesso em `POST /api/v2/student/inactive`.
 
 A Integration Key continua armazenada e criptografada, mas não é enviada em
@@ -293,7 +294,7 @@ Os cursos EXPERT são decompostos sem duplicar o material do fornecedor:
 5. cada franquia recebe seu próprio nome comercial, preço, parcelamento e estado
    de publicação para o conteúdo;
 6. a loja apresenta o item como produto individual, mas o acesso continua sendo
-   gerado pelo `POST /api/v2/content/link` exatamente para o `type` e `batch`
+   gerado pelo `GET /api/v2/content/link` exatamente para o `type` e `batch`
    adquiridos.
 
 A sincronização atualiza nome, estrutura e disponibilidade sem apagar curadoria,

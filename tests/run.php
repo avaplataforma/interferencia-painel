@@ -1705,6 +1705,8 @@ $tests['homologa o conector oficial JWT do Catalogo EXPERT'] = static function (
     assertTrue(str_contains($client,"'limit' => \$pageSize"));
     assertTrue(str_contains($client,"'offset' => \$page * \$pageSize"));
     assertTrue(str_contains($client,"'content/link'"));
+    assertTrue(str_contains($client,'CURLOPT_HTTPGET => true'));
+    assertTrue(str_contains($client,"['discipline', 'unit', 'object']"));
     assertTrue(str_contains($client,"'student/inactive'"));
     assertTrue(str_contains($client,'CURLOPT_PROTOCOLS => CURLPROTO_HTTPS'));
     assertTrue(!str_contains($client,'CURLOPT_SSL_VERIFYPEER'));

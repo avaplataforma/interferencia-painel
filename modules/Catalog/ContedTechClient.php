@@ -53,14 +53,22 @@ final class ContedTechClient
     /** @return array<string,mixed> */
     public function contentLink(string $type, string $batch, string $student): array
     {
-        $type = trim($type);
+        $type = mb_strtolower(trim($type));
         $batch = trim($batch);
         $student = trim($student);
         if ($type === '' || $batch === '' || $student === '') {
             throw new RuntimeException('Informe o conteúdo, o lote e o aluno para gerar o acesso EXPERT.');
         }
+        if (!in_array($type, ['discipline', 'unit', 'object'], true)) {
+            throw new RuntimeException('A CONTED TECH libera somente disciplina, unidade ou objeto individual. Selecione um conteúdo individual do Catálogo EXPERT.');
+        }
 
-        return $this->request('content/link', ['type' => $type, 'batch' => $batch, 'student' => $student]);
+        if (!$this->ready()) throw new RuntimeException('Configure e ative a conexão com a CONTED TECH antes de consultar o Catálogo EXPERT.');
+        return $this->getRequest('content/link', [
+            'type' => $type,
+            'batch' => $batch,
+            'student' => $student,
+        ], ['Authorization: Bearer ' . $this->jwt()]);
     }
 
     /** @return array<string,mixed> */
@@ -127,6 +135,48 @@ final class ContedTechClient
             throw new RuntimeException('A CONTED TECH respondeu em formato diferente de JSON' . $detail . '.');
         }
 
+        if ($status < 200 || $status >= 300) {
+            $message = $this->errorMessage($data);
+            throw new RuntimeException($message !== '' ? $message : 'A CONTED TECH respondeu com HTTP ' . $status . '.');
+        }
+
+        return $data;
+    }
+
+    /** @param array<string,scalar> $query @param list<string> $extraHeaders @return array<string,mixed> */
+    private function getRequest(string $endpoint, array $query, array $extraHeaders = []): array
+    {
+        $url = $this->apiBase() . '/' . ltrim($endpoint, '/') . '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+        $curl = curl_init($url);
+        if ($curl === false) throw new RuntimeException('Não foi possível iniciar a conexão com a CONTED TECH.');
+
+        $headers = array_merge([
+            'Accept: application/json',
+            'User-Agent: MUNDO-INTER/1.0',
+        ], $extraHeaders);
+        curl_setopt_array($curl, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPGET => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => 60,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_HTTPHEADER => $headers,
+        ]);
+
+        $body = curl_exec($curl);
+        $status = (int)curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+        $contentType = strtolower(trim((string)curl_getinfo($curl, CURLINFO_CONTENT_TYPE)));
+        $error = curl_error($curl);
+        curl_close($curl);
+
+        if (!is_string($body)) throw new RuntimeException('Falha de comunicação com a CONTED TECH' . ($error !== '' ? ': ' . $error : '') . '.');
+        $data = json_decode($body, true);
+        if (!is_array($data)) {
+            $detail = $status > 0 ? ' (HTTP ' . $status . ')' : '';
+            if (str_contains($contentType, 'text/html')) $detail .= ' A resposta recebida foi uma página HTML.';
+            throw new RuntimeException('A CONTED TECH respondeu em formato diferente de JSON' . $detail . '.');
+        }
         if ($status < 200 || $status >= 300) {
             $message = $this->errorMessage($data);
             throw new RuntimeException($message !== '' ? $message : 'A CONTED TECH respondeu com HTTP ' . $status . '.');
