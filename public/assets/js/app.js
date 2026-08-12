@@ -704,3 +704,26 @@ document.querySelectorAll('.color-field').forEach((group) => {
   product.addEventListener('change', refresh);
   refresh();
 })();
+
+(() => {
+  document.querySelectorAll('[data-waiver-unit]').forEach((unit) => {
+    if (!(unit instanceof HTMLSelectElement)) return;
+    const form = unit.closest('form');
+    const student = form?.querySelector('[data-waiver-student]');
+    if (!(student instanceof HTMLSelectElement)) return;
+
+    const refresh = () => {
+      const unitId = unit.value;
+      student.value = '';
+      student.disabled = unitId === '';
+      Array.from(student.options).forEach((option) => {
+        if (!option.dataset.unitId) return;
+        option.hidden = option.dataset.unitId !== unitId;
+      });
+      student.options[0].textContent = unitId === '' ? 'Escolha primeiro a unidade' : 'Selecione o aluno';
+    };
+
+    unit.addEventListener('change', refresh);
+    refresh();
+  });
+})();
