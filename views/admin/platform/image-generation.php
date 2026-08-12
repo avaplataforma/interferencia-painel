@@ -1,4 +1,4 @@
-<div class="page-header"><div><p class="eyebrow">ADM Central · Integrações</p><h1>IA para capas dos cursos</h1><p>Gere imagens coerentes com cada formação, otimize e armazene a versão definitiva no Spaces.</p></div><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
+<div class="page-header"><div><p class="eyebrow">ADM Central · Integrações</p><h1>IA - OpenAI</h1><p>Gere imagens coerentes com cada formação, otimize e armazene a versão definitiva no Spaces.</p></div><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
 <?php if($message):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
 <?php if($error):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 <style>

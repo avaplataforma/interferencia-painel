@@ -1076,7 +1076,12 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($ava,'AVA Cursos compartilhado'));
     assertTrue(str_contains($ava,'AVA Cursos + Moodle exclusivo'));
     assertTrue(!str_contains($navigation,'/admin/platform/painel-inter'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/platform/integrations.php'),'/admin/platform/painel-inter'));
+    $integrationHub=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
+    assertTrue(str_contains($integrationHub,'/admin/platform/painel-inter'));
+    assertTrue(str_contains($integrationHub,'IA - OpenAI'));
+    assertTrue(str_contains($integrationHub,'Fornecedores/Catálogos'));
+    assertTrue(!str_contains($integrationHub,'>Painel Inter<'));
+    assertTrue(substr_count($integrationHub,'integration-card ')===5);
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/version.php'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php'));
     $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');

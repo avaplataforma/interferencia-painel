@@ -55,7 +55,7 @@ $tabLabel=static function(string $name):string{
 };
 ?>
 <div class="page-header">
- <div><p class="eyebrow">ADM Central · Integrações</p><h1>Catálogos de cursos</h1><p>Configure cada fornecedor separadamente. Credenciais, testes, sincronização e curadoria permanecem no catálogo correspondente.</p></div>
+ <div><p class="eyebrow">ADM Central · Integrações</p><h1>Fornecedores/Catálogos</h1><p>Configure cada fornecedor separadamente. Credenciais, testes, sincronização e curadoria permanecem no Catálogo correspondente.</p></div>
  <a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
 </div>
 <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
