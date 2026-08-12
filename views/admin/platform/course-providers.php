@@ -55,8 +55,8 @@ $tabLabel=static function(string $name):string{
 };
 ?>
 <div class="page-header">
- <div><p class="eyebrow">ADM Central · Integrações</p><h1>Fornecedores/Catálogos</h1><p>Configure cada fornecedor separadamente. Credenciais, testes, sincronização e curadoria permanecem no Catálogo correspondente.</p></div>
- <a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a>
+ <div><p class="eyebrow">ADM Central · Integrações</p><h1>Fornecedores/Catálogos</h1><p>Cada fornecedor concentra suas credenciais, Cursos individuais e Trilhas de origem. Pacotes próprios que combinam fornecedores ficam separados nas Trilhas Mundo Inter.</p></div>
+ <div class="page-actions"><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails"><i class="fa-solid fa-route"></i> Trilhas Mundo Inter</a><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
 </div>
 <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
@@ -183,7 +183,7 @@ $tabLabel=static function(string $name):string{
   <?php else:?>
     <div class="catalog-subtabs" role="tablist">
      <button class="catalog-subtab is-active" type="button" data-catalog-subtab="connection" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-plug"></i> <?= $provider==='iesde'?'Configuração LTI 1.3':'Conexão e API' ?></button>
-     <button class="catalog-subtab" type="button" data-catalog-subtab="courses" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-list-check"></i> Cursos e curadoria <span>(<?= count($catalogCourses) ?>)</span></button>
+     <button class="catalog-subtab" type="button" data-catalog-subtab="courses" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-list-check"></i> <?= $isConted?'Trilhas do fornecedor':'Cursos do fornecedor' ?> <span>(<?= count($catalogCourses) ?>)</span></button>
      <button class="catalog-subtab" type="button" data-catalog-subtab="contents" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-puzzle-piece"></i> Cursos individuais <span>(<?= (int)($catalog['content_count']??0) ?>)</span></button>
      <button class="catalog-subtab" type="button" data-catalog-subtab="policy" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-tags"></i> Política comercial</button>
      <button class="catalog-subtab" type="button" data-catalog-subtab="homologation" data-provider="<?= $escape($provider) ?>"><i class="fa-solid fa-flask-vial"></i> Homologação</button>

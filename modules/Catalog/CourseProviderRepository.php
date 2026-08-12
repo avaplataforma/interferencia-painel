@@ -563,7 +563,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function providerCatalogRegistry(): array
     {
-        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
+        $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.is_shared_ava_enabled,catalog.shared_ava_updated_at,
             catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,
             catalog.allow_franchise_commercial_override,catalog.commercial_policy_updated_at,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
@@ -661,6 +661,27 @@ final readonly class CourseProviderRepository
         if (!$enabled) {
             $this->database->prepare('UPDATE organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id SET offer.is_visible=0,offer.updated_by=:user WHERE course.catalog_id=:catalog')->execute(['user' => $userId, 'catalog' => $catalogId]);
             $this->database->prepare('UPDATE organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id SET offer.is_visible=0,offer.updated_by=:user WHERE content.catalog_id=:catalog')->execute(['user' => $userId, 'catalog' => $catalogId]);
+        }
+    }
+
+    /** @param list<int|string> $enabledCatalogIds */
+    public function saveSharedAvaCatalogs(array $enabledCatalogIds, ?int $userId): void
+    {
+        $enabled = array_values(array_unique(array_filter(array_map('intval', $enabledCatalogIds), static fn(int $id): bool => $id > 0)));
+        $catalogs = $this->database->query("SELECT id FROM course_catalogs WHERE is_active=1 AND execution_environment='shared_ava' ORDER BY id")->fetchAll() ?: [];
+        if ($catalogs === []) throw new RuntimeException('Nenhuma Formação está configurada para rodar no AVA Cursos.');
+
+        $statement = $this->database->prepare('UPDATE course_catalogs SET is_shared_ava_enabled=:enabled,shared_ava_updated_by=:user,shared_ava_updated_at=NOW() WHERE id=:id AND execution_environment=\'shared_ava\'');
+        $this->database->beginTransaction();
+        try {
+            foreach ($catalogs as $catalog) {
+                $id = (int)$catalog['id'];
+                $statement->execute(['enabled' => in_array($id, $enabled, true) ? 1 : 0, 'user' => $userId, 'id' => $id]);
+            }
+            $this->database->commit();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
         }
     }
 
@@ -1075,7 +1096,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function catalogsForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,
+        $statement = $this->database->prepare("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.is_shared_ava_enabled,
             COALESCE(access.is_enabled,1) is_enabled,
             catalog.allow_franchise_commercial_override,
             CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.markup_percent,catalog.central_markup_percent,0) ELSE catalog.central_markup_percent END markup_percent,
@@ -1108,7 +1129,7 @@ final readonly class CourseProviderRepository
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
-            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.allow_franchise_commercial_override,catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,access.is_enabled,access.markup_percent,access.default_price,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
+            GROUP BY catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.is_shared_ava_enabled,catalog.allow_franchise_commercial_override,catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,access.is_enabled,access.markup_percent,access.default_price,access.default_max_installments,access.valid_from,access.valid_until,provider.name,provider.provider_code,provider.launch_url_template,provider.is_active,capability.automatic_enrollment,capability.single_sign_on,capability.progress_tracking,capability.grade_tracking,capability.certificate_access
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
         $statement->execute(['organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];

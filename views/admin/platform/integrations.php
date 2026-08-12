@@ -35,14 +35,14 @@
 
   <a class="integration-card catalogs" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers">
    <span class="integration-icon"><i class="fa-solid fa-boxes-stacked"></i></span>
-   <span class="integration-copy"><span class="integration-kicker">Conteúdo acadêmico</span><strong>Fornecedores/Catálogos</strong><small>Conectores, credenciais, curadoria e políticas dos Catálogos que abastecem as Formações.</small></span>
+   <span class="integration-copy"><span class="integration-kicker">Conteúdo acadêmico</span><strong>Fornecedores/Catálogos</strong><small>Cada fornecedor concentra suas credenciais, Cursos individuais, Trilhas de origem, curadoria e política comercial.</small></span>
    <span class="integration-state <?= $courseProviderConfigured&&$courseProviderActive?'is-ready':'is-pending' ?>"><i class="fa-solid <?= $courseProviderConfigured&&$courseProviderActive?'fa-circle-check':'fa-clock' ?>"></i><?= $courseProviderConfigured&&$courseProviderActive?((int)$courseProviderCourses.' curso(s) ativos'):'Configuração pendente' ?></span>
    <span class="integration-arrow"><i class="fa-solid fa-arrow-right"></i></span>
   </a>
 
   <a class="integration-card ava is-wide" href="<?= $escape($basePath) ?>/admin/platform/painel-inter">
    <span class="integration-icon"><i class="fa-solid fa-graduation-cap"></i></span>
-   <span class="integration-copy"><span class="integration-kicker">Ambiente acadêmico</span><strong>AVA Cursos</strong><small>Conexões Moodle, plugin oficial, identidades das franquias, saúde dos ambientes e a gestão de Cursos individuais e Trilhas.</small></span>
+   <span class="integration-copy"><span class="integration-kicker">Ambiente acadêmico</span><strong>AVA Cursos</strong><small>Conexão Moodle, plugin oficial, identidades, saúde dos ambientes e Formações publicadas no AVA compartilhado.</small></span>
    <span class="integration-state <?= $avaConfigured&&$avaActive?'is-ready':'is-pending' ?>"><i class="fa-solid <?= $avaConfigured&&$avaActive?'fa-circle-check':'fa-clock' ?>"></i><?= $avaConfigured&&$avaActive?'Ativa':'Configuração pendente' ?></span>
    <span class="integration-arrow"><i class="fa-solid fa-arrow-right"></i></span>
   </a>

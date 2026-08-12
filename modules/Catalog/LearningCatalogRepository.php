@@ -145,6 +145,7 @@ final readonly class LearningCatalogRepository
             CASE item.item_type WHEN 'finance_product' THEN product.name WHEN 'provider_course' THEN COALESCE(NULLIF(course.commercial_name,''),course.name) ELSE COALESCE(NULLIF(content.commercial_name,''),content.name) END item_name,
             CASE item.item_type WHEN 'finance_product' THEN 'INTER' ELSE COALESCE(course_catalog.name,content_catalog.name,'Formação externa') END item_catalog,
             CASE item.item_type WHEN 'finance_product' THEN 'shared_ava' ELSE COALESCE(course_catalog.execution_environment,content_catalog.execution_environment,'provider_ava') END execution_environment,
+            CASE item.item_type WHEN 'finance_product' THEN 1 ELSE COALESCE(course_catalog.is_shared_ava_enabled,content_catalog.is_shared_ava_enabled,0) END shared_ava_enabled,
             COALESCE(course_provider.delivery_mode,content_provider.delivery_mode,'shared_ava') delivery_mode,
             COALESCE(course_provider.launch_url_template,content_provider.launch_url_template) launch_url_template,
             CASE item.item_type WHEN 'finance_product' THEN CAST(product.id AS CHAR) WHEN 'provider_course' THEN COALESCE(course.remote_id,course.external_key) ELSE content.external_key END remote_reference

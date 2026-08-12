@@ -1603,7 +1603,7 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(str_contains($javascript,"params.get('section') || 'connection'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/app.php'),'.btn-primary { border-color: var(--inter-accent);'));
     assertTrue(str_contains($view,'Conexão e API'));
-    assertTrue(str_contains($view,'Cursos e curadoria'));
+    assertTrue(str_contains($view,'Trilhas do fornecedor'));
     assertTrue(str_contains($view,'Conexão central'));
     assertTrue(str_contains($view,'Acesso do aluno'));
     assertTrue(str_contains($view,'/admin/platform/integrations/ava-cursos/access-policy'));
@@ -2063,7 +2063,31 @@ $tests['organiza trilhas comerciais em categorias hierarquicas'] = static functi
     assertTrue(str_contains($routes,"'workload_hours'=>\$request->input('workload_hours','')"));
     assertTrue(str_contains($routes,"'learning_catalog.draft'"));
     assertTrue(str_contains($view,'$trailForm'));
-    assertTrue(str_contains($integrations,'Cursos individuais e Trilhas'));
+    assertTrue(str_contains($integrations,'Formações publicadas no AVA compartilhado'));
+};
+
+$tests['separa catalogos trilhas mundo inter e publicacao no AVA'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000080_separate_shared_ava_catalog_publication.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $learning=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $publisher=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCatalogPublisher.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $providers=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $trails=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+    $ava=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
+
+    assertTrue(str_contains($migration,'is_shared_ava_enabled'));
+    assertTrue(str_contains($repository,'saveSharedAvaCatalogs'));
+    assertTrue(str_contains($repository,'execution_environment=\'shared_ava\''));
+    assertTrue(str_contains($learning,'shared_ava_enabled'));
+    assertTrue(str_contains($publisher,'está pausada no AVA Cursos'));
+    assertTrue(str_contains($routes,"'/admin/platform/painel-inter/formations'"));
+    assertTrue(str_contains($providers,'Trilhas do fornecedor'));
+    assertTrue(str_contains($providers,'Trilhas Mundo Inter'));
+    assertTrue(str_contains($trails,'Trilhas Mundo Inter'));
+    assertTrue(!str_contains($trails,'aria-label="Áreas do AVA Cursos"'));
+    assertTrue(str_contains($ava,'Formações publicadas no AVA Cursos'));
+    assertTrue(str_contains($ava,'name="catalogs[]"'));
 };
 
 $tests['padroniza nomenclaturas oficiais do Mundo Inter'] = static function () use ($rootPath): void {

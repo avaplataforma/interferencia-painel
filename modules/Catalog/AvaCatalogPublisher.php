@@ -25,6 +25,11 @@ final readonly class AvaCatalogPublisher
         if($trail===null)throw new RuntimeException('Trilha não encontrada.');
         if((int)($trail['is_active']??0)!==1)throw new RuntimeException('Ative a Trilha antes de publicá-la no AVA.');
         if((int)($trail['item_count']??0)<2)throw new RuntimeException('A Trilha precisa ter pelo menos dois Cursos individuais.');
+        foreach((array)($trail['items']??[])as$item){
+            if((string)($item['execution_environment']??'provider_ava')==='shared_ava'&&(int)($item['shared_ava_enabled']??0)!==1){
+                throw new RuntimeException('A Formação '.trim((string)($item['item_catalog']??'selecionada')).' está pausada no AVA Cursos. Ative-a antes de publicar esta Trilha.');
+            }
+        }
         $connection=$this->connections->shared();
         if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)throw new RuntimeException('Configure e ative primeiro a integração AVA Cursos.');
 
