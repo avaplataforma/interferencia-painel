@@ -62,6 +62,7 @@ use Interferencia\Modules\Moodle\MoodleClient;
 use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleSynchronizer;
 use Interferencia\Modules\Moodle\EnrollmentRepository;
+use Interferencia\Modules\Moodle\AcademicOrganizationRepository;
 use Interferencia\Modules\Moodle\AvaEnrollmentReleaser;
 use Interferencia\Modules\Moodle\AvaAccessNotifier;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
@@ -186,7 +187,8 @@ $moodleSettings=$moodleIntegrations->settings();
 $moodleClient=new MoodleClient((string)$moodleSettings['base_url'],(string)$moodleSettings['token'],$moodleSettings['is_active']);
 $moodleRepository=new MoodleRepository($database);
 $studentEnrollments=new EnrollmentRepository($database,$organizationId);
-$avaEnrollmentReleaser=new AvaEnrollmentReleaser($avaConnections,$moodleIntegrations,$moodleRepository,$studentEnrollments,$organizationPoles,$courseProviders,(string)$config->get('app.ava_auto_release_from'));
+$academicOrganization=new AcademicOrganizationRepository($database);
+$avaEnrollmentReleaser=new AvaEnrollmentReleaser($avaConnections,$moodleIntegrations,$moodleRepository,$studentEnrollments,$organizationPoles,$courseProviders,$academicOrganization,(string)$config->get('app.ava_auto_release_from'));
 $avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations);
 $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $pedagogicalSynchronizer=new PedagogicalSynchronizer($moodleClient,$moodleRepository);
@@ -273,6 +275,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$courseProviders,$learningCatalog,$catalogMedia,$catalogImages,$catalogCoverGenerator,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$courseProviders,$learningCatalog,$catalogMedia,$catalogImages,$catalogCoverGenerator,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$academicOrganization,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
 
 return new Application($router, $request);

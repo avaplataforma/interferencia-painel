@@ -23,14 +23,14 @@ $homologationActive=(int)($catalog['integration_active']??0)===1;
   <div class="homologation-status">
    <article><small>Integração</small><strong><?= $homologationConfigured&&$homologationActive?'Pronta':'Pendente' ?></strong><span class="catalog-badge <?= $homologationConfigured&&$homologationActive?'ok':'' ?>"><?= $homologationConfigured?'Credencial salva':'Configuração incompleta' ?></span></article>
    <article><small>Cursos importados</small><strong><?= (int)($homologationCourses['imported']??0) ?></strong><span><?= (int)($homologationCourses['with_cover']??0) ?> com capa pronta</span></article>
-   <article><small>Conteúdos individuais</small><strong><?= (int)($homologationContents['imported']??0) ?></strong><span><?= (int)($homologationContents['with_cover']??0) ?> com capa pronta</span></article>
+   <article><small>Cursos individuais</small><strong><?= (int)($homologationContents['imported']??0) ?></strong><span><?= (int)($homologationContents['with_cover']??0) ?> com capa pronta</span></article>
    <article><small>Publicados no piloto</small><strong><?= $homologationPublishedTotal ?></strong><span><?= $homologationPublishedCourses ?> curso(s) · <?= $homologationPublishedContents ?> conteúdo(s)</span></article>
   </div>
 
   <form class="homologation-form" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/catalog/<?= $escape($provider) ?>/homologation">
    <?= $csrfField ?>
    <label><span>Franquia do piloto *</span><select required name="organization_id"><option value="">Selecione</option><?php foreach($organizationRows as$organization):$organizationId=(int)$organization['id'];?><option value="<?= $organizationId ?>" <?= $organizationId===$homologationOrganizationId?'selected':'' ?>><?= $escape((string)($organization['display_name']?:$organization['legal_name'])) ?></option><?php endforeach;?></select><small>Somente esta franquia receberá a amostra.</small></label>
-   <label><span>Tipo da amostra *</span><select required name="item_type"><option value="course">Cursos completos</option><option value="content">Conteúdos individuais</option></select><small>Comece pelos cursos completos.</small></label>
+   <label><span>Tipo da amostra *</span><select required name="item_type"><option value="course">Cursos individuais</option><option value="content">Cursos individuais por conteúdo</option></select><small>Comece pelos títulos completos.</small></label>
    <label><span>Quantidade *</span><input required type="number" min="1" max="10" name="sample_size" value="3"><small>De 1 a 10 itens.</small></label>
    <label><span>Preço de teste (R$) *</span><input required inputmode="decimal" name="price" value="<?= number_format($homologationPrice,2,',','.') ?>"><small>É exibido na vitrine, sem cobrança.</small></label>
    <label><span>Parcelas *</span><input required type="number" min="1" max="60" name="installments" value="<?= $homologationInstallments ?>"><small>Condição comercial simulada.</small></label>

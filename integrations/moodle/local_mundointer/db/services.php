@@ -24,6 +24,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_organize_enrollment' => [
+        'classname' => 'local_mundointer\\external\\organize_enrollment',
+        'description' => 'Cria ou reutiliza a coorte da franquia e o grupo do polo no curso, incluindo o aluno sem duplicidades.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -32,6 +39,7 @@ $services = [
             'local_mundointer_ping',
             'local_mundointer_sync_brands',
             'local_mundointer_diagnose_poles',
+            'local_mundointer_organize_enrollment',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_enrol_get_enrolled_users',

@@ -5,7 +5,7 @@ $activeTab = in_array(($activeTab ?? 'trails'), ['trails','categories'], true) ?
 $categoryEdit = is_array($categoryEdit ?? null) ? $categoryEdit : null;
 $trailEdit = is_array($trailEdit ?? null) ? $trailEdit : null;
 $selectedItems = array_fill_keys(array_map('strval', $trailEdit['item_keys'] ?? []), true);
-$typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso','provider_content'=>'Conteúdo individual'];
+$typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso individual','provider_content'=>'Curso individual'];
 ?>
 <style>
 .learning-tabs{display:flex;gap:.65rem;margin-bottom:1.2rem;padding:.5rem;border:1px solid #dfe5e9;border-radius:1rem;background:#fff}.learning-tabs a{display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:3rem;padding:.65rem 1rem;border-radius:.7rem;color:#536170;font-weight:800;text-decoration:none}.learning-tabs a.is-active{color:#fff;background:var(--inter-accent);box-shadow:0 .4rem 1rem rgb(237 28 36 / 20%)}
@@ -16,11 +16,11 @@ $typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso','provider_c
 @media(max-width:900px){.learning-layout{grid-template-columns:1fr}.category-form,.trail-fields,.item-grid{grid-template-columns:1fr}.field-wide,.learning-actions{grid-column:auto}.learning-tabs{overflow:auto;justify-content:flex-start}.learning-tabs a{white-space:nowrap}}
 </style>
 
-<div class="page-header"><div><p class="eyebrow">ADM Central · Catálogos</p><h1>Produtos e Trilhas</h1><p>Organize cursos individuais e pacotes comerciais em categorias hierárquicas.</p></div><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><i class="fa-solid fa-arrow-left"></i> Catálogos</a></div>
+<div class="page-header"><div><p class="eyebrow">ADM Central · Catálogos</p><h1>Cursos individuais e Trilhas</h1><p>Organize Cursos individuais e pacotes comerciais em Categorias hierárquicas.</p></div><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><i class="fa-solid fa-arrow-left"></i> Catálogos</a></div>
 <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 
-<nav class="learning-tabs" aria-label="Produtos e Trilhas">
+<nav class="learning-tabs" aria-label="Cursos individuais e Trilhas">
  <a class="<?= $activeTab==='trails'?'is-active':'' ?>" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails?tab=trails"><i class="fa-solid fa-route"></i> Trilhas <span><?= count($trails) ?></span></a>
  <a class="<?= $activeTab==='categories'?'is-active':'' ?>" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails?tab=categories"><i class="fa-solid fa-layer-group"></i> Categorias <span><?= count($categories) ?></span></a>
 </nav>
@@ -58,7 +58,7 @@ $typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso','provider_c
   <div class="learning-card-head"><div><h2><?= $trailEdit?'Editar Trilha':'Montar nova Trilha' ?></h2><p>A categoria é obrigatória e acompanha a Trilha na vitrine.</p></div><?php if($trailEdit||isset($_GET['trail_new'])):?><a class="btn btn-secondary btn-sm" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails?tab=trails"><i class="fa-solid fa-xmark"></i></a><?php endif;?></div>
   <?php if(!$trailEdit&&!isset($_GET['trail_new'])):?><div class="empty-note"><i class="fa-solid fa-arrow-left"></i><br>Selecione uma Trilha para editar ou clique em <strong>Nova Trilha</strong>.</div><?php else:?>
   <form class="trail-fields" method="post" action="<?= $escape($basePath) ?>/admin/platform/catalog-trails<?= $trailEdit?'/'.(int)$trailEdit['id']:'' ?>"><?= $csrfField ?>
-   <label class="field-wide">Nome da Trilha *<input required name="name" maxlength="190" value="<?= $escape($trailEdit['name']??'') ?>" placeholder="Ex.: Formação completa em Gestão"></label>
+   <label class="field-wide">Nome da Trilha *<input required name="name" maxlength="190" value="<?= $escape($trailEdit['name']??'') ?>" placeholder="Ex.: Trilha Assistente Administrativo"></label>
    <label>Categoria *<select required name="category_id"><option value="">Selecione</option><?php foreach($categoryOptions as$option):?><option value="<?= (int)$option['id'] ?>" <?= (int)($trailEdit['category_id']??0)===(int)$option['id']?'selected':'' ?>><?= $option['parent_name']?$escape($option['parent_name']).' › ':'' ?><?= $escape($option['name']) ?></option><?php endforeach;?></select></label>
    <label>Endereço amigável<input name="slug" maxlength="160" value="<?= $escape($trailEdit['slug']??'') ?>" placeholder="Gerado pelo nome"></label>
    <label>Preço padrão (R$)<input inputmode="decimal" name="default_price" value="<?= $trailEdit&&$trailEdit['default_price']!==null?number_format((float)$trailEdit['default_price'],2,',',''):'' ?>" placeholder="Ex.: 299,90"></label>
@@ -67,7 +67,7 @@ $typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso','provider_c
    <label class="field-wide">Descrição completa<textarea name="description"><?= $escape($trailEdit['description']??'') ?></textarea></label>
    <label class="field-wide">Capa por URL<input type="url" name="cover_url" maxlength="1000" value="<?= $escape($trailEdit['cover_url']??'') ?>"></label>
    <label class="form-check-line field-wide"><input type="checkbox" name="is_active" value="1" <?= !isset($trailEdit['is_active'])||(int)$trailEdit['is_active']===1?'checked':'' ?>> Trilha ativa</label>
-   <section class="item-picker"><div class="item-picker-head"><label>Localizar cursos e conteúdos<input type="search" placeholder="Nome, catálogo ou tipo" data-trail-item-search></label><small><span class="selection-count" data-trail-selection-count><?= count($selectedItems) ?></span> selecionado(s) · mínimo 2</small></div><?php if($availableItems===[]):?><div class="empty-note">Aprove e libere cursos na curadoria central antes de montar uma Trilha.</div><?php else:?><div class="item-grid" data-trail-item-grid><?php foreach($availableItems as$item):$key=$item['item_type'].':'.$item['id'];?><label class="item-option" data-trail-item="<?= $escape(mb_strtolower($item['name'].' '.$item['catalog_name'].' '.$typeLabels[$item['item_type']])) ?>"><input type="checkbox" name="items[]" value="<?= $escape($key) ?>" <?= isset($selectedItems[$key])?'checked':'' ?>><span><strong><?= $escape($item['name']) ?></strong><small><?= $escape($item['catalog_name']) ?> · <?= $escape($typeLabels[$item['item_type']]) ?></small></span></label><?php endforeach;?></div><?php endif;?></section>
+   <section class="item-picker"><div class="item-picker-head"><label>Localizar Cursos individuais<input type="search" placeholder="Nome, Formação, Catálogo interno ou tipo" data-trail-item-search></label><small><span class="selection-count" data-trail-selection-count><?= count($selectedItems) ?></span> selecionado(s) · mínimo 2</small></div><?php if($availableItems===[]):?><div class="empty-note">Aprove e libere Cursos individuais na curadoria central antes de montar uma Trilha.</div><?php else:?><div class="item-grid" data-trail-item-grid><?php foreach($availableItems as$item):$key=$item['item_type'].':'.$item['id'];?><label class="item-option" data-trail-item="<?= $escape(mb_strtolower($item['name'].' '.$item['catalog_name'].' '.$typeLabels[$item['item_type']])) ?>"><input type="checkbox" name="items[]" value="<?= $escape($key) ?>" <?= isset($selectedItems[$key])?'checked':'' ?>><span><strong><?= $escape($item['name']) ?></strong><small>Catálogo interno: <?= $escape($item['catalog_name']) ?> · <?= $escape($typeLabels[$item['item_type']]) ?></small></span></label><?php endforeach;?></div><?php endif;?></section>
    <div class="learning-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-route"></i> Salvar Trilha</button></div>
   </form>
   <?php endif;?>

@@ -29,7 +29,7 @@ require dirname(__DIR__,2).'/site/orders-panel.php';
   </form>
   </section>
   <?php if(($providerTargets??[])!==[]):?>
-  <section class="special-release-option"><header><i class="fa-solid fa-arrow-up-right-from-square"></i><div><h3>Catálogo EXPERT</h3><p class="meta">Piloto controlado pela integração direta com a CONTED TECH, sem cobrança.</p></div></header>
+  <section class="special-release-option"><header><i class="fa-solid fa-arrow-up-right-from-square"></i><div><h3>Formação EXPERT</h3><p class="meta">Piloto controlado pela integração direta com a CONTED TECH, sem cobrança.</p></div></header>
   <form class="special-release-form" method="post" action="<?= $escape($basePath) ?>/students/enrollments/provider-waivers" data-confirm-submit="Autorizar este acesso EXPERT sem pagamento?"><?= $csrfField ?>
    <div class="form-field"><label for="provider-waiver-unit">Unidade <span class="required">*</span></label><select id="provider-waiver-unit" name="unit_id" required data-waiver-unit><option value="">Selecione</option><?php foreach($units as$unit):?><option value="<?= (int)$unit['id'] ?>"><?= $escape($unit['name']) ?></option><?php endforeach;?></select></div>
    <div class="form-field"><label for="provider-waiver-student">Aluno <span class="required">*</span></label><select id="provider-waiver-student" name="finance_customer_id" required disabled data-waiver-student><option value="">Escolha primeiro a unidade</option><?php foreach($students as$student):?><option value="<?= (int)$student['id'] ?>" data-unit-id="<?= (int)$student['unit_id'] ?>" hidden><?= $escape($student['name'].' · '.$student['unit_name'].' · '.($student['cpf_cnpj']?:'sem CPF')) ?></option><?php endforeach;?></select></div>

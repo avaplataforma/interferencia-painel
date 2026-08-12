@@ -460,7 +460,7 @@ final readonly class SiteRepository
     /** @return list<array<string,mixed>> */
     public function externalContentProducts(int $organizationId):array
     {
-        $statement=$this->database->prepare("SELECT offer.id,offer.organization_id,offer.price value,offer.max_installments,offer.sale_mode,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,COALESCE(NULLIF(offer.commercial_description,''),NULLIF(content.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Conteúdo individual disponível para matrícula.') description,COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Conteúdo individual') category,COALESCE(NULLIF(content.commercial_workload,''),(SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') workload_text,COALESCE(NULLIF(content.commercial_cover_url,''),(SELECT COALESCE(NULLIF(parent.commercial_cover_url,''),NULLIF(parent.cover_url,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') cover_url,COALESCE(own_asset.id,(SELECT inherited_asset.id FROM provider_course_content_links inherited_link INNER JOIN catalog_media_assets inherited_asset ON inherited_asset.entity_type='course' AND inherited_asset.entity_id=inherited_link.provider_course_id AND inherited_asset.purpose='cover' AND inherited_asset.generation_status='ready' WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1)) media_asset_id,catalog.name catalog_name,catalog.code catalog_code,catalog.execution_environment,provider.name provider_name,provider.delivery_mode,provider.launch_url_template,content.external_key,content.content_type FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=offer.organization_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='content' AND item_access.item_id=content.id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN catalog_media_assets own_asset ON own_asset.entity_type='content' AND own_asset.entity_id=content.id AND own_asset.purpose='cover' AND own_asset.generation_status='ready' WHERE offer.organization_id=:organization AND offer.is_active=1 AND offer.is_visible=1 AND offer.price>=5 AND content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND (CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_from,catalog.central_valid_from) ELSE catalog.central_valid_from END IS NULL OR CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_from,catalog.central_valid_from) ELSE catalog.central_valid_from END<=CURRENT_DATE) AND (CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_until,catalog.central_valid_until) ELSE catalog.central_valid_until END IS NULL OR CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_until,catalog.central_valid_until) ELSE catalog.central_valid_until END>=CURRENT_DATE) AND provider.is_active=1 ORDER BY catalog.name,name");
+        $statement=$this->database->prepare("SELECT offer.id,offer.organization_id,offer.price value,offer.max_installments,offer.sale_mode,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(content.commercial_name,''),content.name) name,COALESCE(NULLIF(offer.commercial_description,''),NULLIF(content.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Curso individual disponível para matrícula.') description,COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Curso individual') category,COALESCE(NULLIF(content.commercial_workload,''),(SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') workload_text,COALESCE(NULLIF(content.commercial_cover_url,''),(SELECT COALESCE(NULLIF(parent.commercial_cover_url,''),NULLIF(parent.cover_url,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') cover_url,COALESCE(own_asset.id,(SELECT inherited_asset.id FROM provider_course_content_links inherited_link INNER JOIN catalog_media_assets inherited_asset ON inherited_asset.entity_type='course' AND inherited_asset.entity_id=inherited_link.provider_course_id AND inherited_asset.purpose='cover' AND inherited_asset.generation_status='ready' WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1)) media_asset_id,catalog.name catalog_name,catalog.code catalog_code,catalog.execution_environment,provider.name provider_name,provider.delivery_mode,provider.launch_url_template,content.external_key,content.content_type FROM organization_provider_content_offers offer INNER JOIN provider_catalog_contents content ON content.id=offer.provider_content_id INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=offer.organization_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='content' AND item_access.item_id=content.id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN catalog_media_assets own_asset ON own_asset.entity_type='content' AND own_asset.entity_id=content.id AND own_asset.purpose='cover' AND own_asset.generation_status='ready' WHERE offer.organization_id=:organization AND offer.is_active=1 AND offer.is_visible=1 AND offer.price>=5 AND content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND (CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_from,catalog.central_valid_from) ELSE catalog.central_valid_from END IS NULL OR CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_from,catalog.central_valid_from) ELSE catalog.central_valid_from END<=CURRENT_DATE) AND (CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_until,catalog.central_valid_until) ELSE catalog.central_valid_until END IS NULL OR CASE WHEN catalog.allow_franchise_commercial_override=1 THEN COALESCE(access.valid_until,catalog.central_valid_until) ELSE catalog.central_valid_until END>=CURRENT_DATE) AND provider.is_active=1 ORDER BY catalog.name,name");
         $statement->execute(['organization'=>$organizationId]);$products=$statement->fetchAll()?:[];
         foreach($products as&$product){$product['is_external']=1;$product['product_kind']='provider_content';$product['modality']='AVA Cursos';$product['lesson_count']=1;$product['workload_hours']=(int)(preg_replace('/\D+/','',(string)($product['workload_text']??''))?:0);$product['billing_types']='[]';$product['minutes_to_expire']=0;$product['seo_title']=$product['name'];$product['seo_description']=$product['description'];}
         unset($product);return$products;
@@ -482,7 +482,7 @@ final readonly class SiteRepository
 
     /**
      * Builds the public commercial inventory with one stable shape for every source.
-     * Catalogs remain an administrative concept; on the public site they are presented as trails.
+     * Catalogs remain an administrative concept; on the public site their commercial lines are formations.
      *
      * @param list<array<string,mixed>> $products
      * @param list<array<string,mixed>> $externalProducts
@@ -496,19 +496,19 @@ final readonly class SiteRepository
             $product['is_external']=0;
             $product['catalog_code']='ava-cursos';
             $product['catalog_name']='INTER';
-            $product['trail_code']='inter';
-            $product['trail_name']='INTER';
+            $product['formation_code']='inter';
+            $product['formation_name']='INTER';
             $product['offer_key']='finance-product-'.(int)$product['id'];
             $product['detail_path']='/curso/'.(int)$product['id'];
             $offers[]=$product;
         }
         foreach($externalProducts as$product){
-            $trailName=preg_replace('/^\s*Cat[aá]logo\s+/iu','',(string)($product['catalog_name']??''));
-            $trailName=trim((string)$trailName);
-            if($trailName==='')$trailName='Parceiros';
+            $formationName=preg_replace('/^\s*(?:Cat[aá]logo|Forma[cç][aã]o)\s+/iu','',(string)($product['catalog_name']??''));
+            $formationName=trim((string)$formationName);
+            if($formationName==='')$formationName='Parceiros';
             $kind=(string)($product['product_kind']??'provider_course');
-            $product['trail_code']=$this->publicTrailCode((string)($product['catalog_code']??$trailName));
-            $product['trail_name']=mb_strtoupper($trailName);
+            $product['formation_code']=$this->publicFormationCode((string)($product['catalog_code']??$formationName));
+            $product['formation_name']=mb_strtoupper($formationName);
             $product['offer_key']=$kind.'-'.(int)$product['id'];
             $product['detail_path']=($kind==='provider_content'?'/conteudo/':'/catalogo-pro/').(int)$product['id'];
             $offers[]=$product;
@@ -517,19 +517,19 @@ final readonly class SiteRepository
     }
 
     /** @return list<array{code:string,name:string,count:int}> */
-    private function publicTrails(array $offers):array
+    private function publicFormations(array $offers):array
     {
-        $trails=[];
+        $formations=[];
         foreach($offers as$offer){
-            $code=(string)($offer['trail_code']??'');
+            $code=(string)($offer['formation_code']??'');
             if($code==='')continue;
-            if(!isset($trails[$code]))$trails[$code]=['code'=>$code,'name'=>(string)($offer['trail_name']??$code),'count'=>0];
-            $trails[$code]['count']++;
+            if(!isset($formations[$code]))$formations[$code]=['code'=>$code,'name'=>(string)($offer['formation_name']??$code),'count'=>0];
+            $formations[$code]['count']++;
         }
-        return array_values($trails);
+        return array_values($formations);
     }
 
-    private function publicTrailCode(string$value):string
+    private function publicFormationCode(string$value):string
     {
         $value=preg_replace('/^catalogo-/','',$value)??$value;
         $ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',$value);
@@ -555,7 +555,7 @@ final readonly class SiteRepository
         $site['products']=$products;
         $site['external_products']=$externalProducts;
         $site['offers']=$offers;
-        $site['trails']=$this->publicTrails($offers);
+        $site['formations']=$this->publicFormations($offers);
         $site['banners']=$live!==null&&isset($live['banners'])&&is_array($live['banners'])?$live['banners']:$this->banners($organizationId,!$preview);
         $site['pages']=$live!==null&&isset($live['pages'])&&is_array($live['pages'])?$live['pages']:$this->pages($organizationId,!$preview);
         $site['blocks']=$live!==null&&isset($live['blocks'])&&is_array($live['blocks'])?$live['blocks']:$this->blocks($organizationId,!$preview);

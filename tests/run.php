@@ -1627,7 +1627,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(!str_contains($admin,'Liberação por franquia'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos e preços da franquia'));
     assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
-    assertTrue(str_contains($public,'Acesso pelo ambiente acadêmico definido para esta trilha'));
+    assertTrue(str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {
@@ -1642,7 +1642,7 @@ $tests['controla catalogos comerciais pela aba AVA da franquia'] = static functi
     assertTrue(str_contains($repository,'saveCatalogAccess'));
     assertTrue(str_contains($site,'COALESCE(access.is_enabled,1)=1'));
     assertTrue(str_contains($financeCatalog,'catalog_enabled'));
-    assertTrue(str_contains($view,'Catálogos e exceções da franquia'));
+    assertTrue(str_contains($view,'Formações disponíveis'));
     assertTrue(str_contains($view,'catalog_ids[]'));
 };
 
@@ -1865,7 +1865,7 @@ $tests['decompoe cursos EXPERT em conteudos individuais vendaveis'] = static fun
     assertTrue(str_contains($repository,':first_seen,:last_seen,:changed_at'));
     assertTrue(str_contains($siteRepository,'externalContentProducts'));
     assertTrue(str_contains($routes,"'/site/conteudo/{offer:\\d+}'"));
-    assertTrue(str_contains($view,'Conteúdos individuais'));
+    assertTrue(str_contains($view,'Cursos individuais'));
 };
 
 $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = static function () use ($rootPath): void {
@@ -1913,10 +1913,10 @@ $tests['libera catalogos por padrao e registra bloqueios como excecoes'] = stati
     assertTrue(str_contains($repository,'COALESCE(item_access.is_enabled,1)'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalogs/{id:\\d+}/availability'"));
     assertTrue(str_contains($routes,"'/admin/organizations/{organizationId:\\d+}/catalog-items/{type:course|content}/{itemId:\\d+}/availability'"));
-    assertTrue(str_contains($catalogView,'Conteúdos liberados por padrão'));
+    assertTrue(str_contains($catalogView,'Cursos individuais liberados por padrão'));
     assertTrue(str_contains($catalogView,'content-curation-row'));
-    assertTrue(str_contains($organizationView,'Todos os catálogos são liberados por padrão'));
-    assertTrue(str_contains($organizationView,'Conteúdos individuais'));
+    assertTrue(str_contains($organizationView,'Todas as Formações são liberadas por padrão'));
+    assertTrue(str_contains($organizationView,'Cursos individuais'));
     assertTrue(str_contains($javascript,'data-content-curation-toggle'));
 };
 
@@ -1957,23 +1957,23 @@ $tests['gera capas contextuais em fila e publica a versao final no Spaces'] = st
     assertTrue(str_contains($javascript,'data-course-curation-toggle'));
 };
 
-$tests['unifica ofertas comerciais e trilhas na vitrine publica'] = static function () use ($rootPath): void {
+$tests['apresenta formacoes cursos individuais e trilhas na vitrine publica'] = static function () use ($rootPath): void {
     $repository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
     $view=(string)file_get_contents($rootPath.'/views/site/public.php');
     $javascript=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
 
     assertTrue(str_contains($repository,'private function publicOffers'));
     assertTrue(str_contains($repository,"\$site['offers']=\$offers"));
-    assertTrue(str_contains($repository,"\$site['trails']=\$this->publicTrails(\$offers)"));
+    assertTrue(str_contains($repository,"\$site['formations']=\$this->publicFormations(\$offers)"));
     assertTrue(str_contains($repository,'offer.price>=5'));
     assertTrue(str_contains($repository,'catalog.central_valid_from'));
     assertTrue(str_contains($repository,'catalog.central_valid_until'));
     assertTrue(str_contains($view,"\$site['offers']"));
-    assertTrue(str_contains($view,'data-catalog-trail'));
-    assertTrue(str_contains($view,'Escolha uma Trilha'));
+    assertTrue(str_contains($view,'data-catalog-formation'));
+    assertTrue(str_contains($view,'Escolha uma Formação'));
     assertTrue(str_contains($view,'data-site-offer'));
-    assertTrue(str_contains($javascript,'catalogTrail'));
-    assertTrue(str_contains($javascript,'card.dataset.courseTrail'));
+    assertTrue(str_contains($javascript,'catalogFormation'));
+    assertTrue(str_contains($javascript,'card.dataset.courseFormation'));
 };
 
 $tests['homologa catalogo em amostra assistida sem gerar cobranca'] = static function () use ($rootPath): void {
@@ -2017,7 +2017,7 @@ $tests['libera matricula externa EXPERT sem criar cobranca'] = static function (
     assertTrue(str_contains($notifier,'Link pessoal de acesso:'));
     assertTrue(str_contains($routes,"'/students/enrollments/provider-waivers'"));
     assertTrue(str_contains($routes,'createProviderWaived'));
-    assertTrue(str_contains($view,'Catálogo EXPERT'));
+    assertTrue(str_contains($view,'Formação EXPERT'));
     assertTrue(str_contains($view,'não será gerada nenhuma cobrança'));
 };
 
@@ -2039,7 +2039,46 @@ $tests['organiza trilhas comerciais em categorias hierarquicas'] = static functi
     assertTrue(str_contains($view,'name="category_id"'));
     assertTrue(str_contains($view,'Categoria *'));
     assertTrue(str_contains($view,'mínimo 2'));
-    assertTrue(str_contains($integrations,'Produtos e Trilhas'));
+    assertTrue(str_contains($integrations,'Cursos individuais e Trilhas'));
+};
+
+$tests['padroniza nomenclaturas oficiais do Mundo Inter'] = static function () use ($rootPath): void {
+    $standard=(string)file_get_contents($rootPath.'/docs/30-nomenclaturas-mundo-inter.md');
+    $public=(string)file_get_contents($rootPath.'/views/site/public.php');
+    $franchise=(string)file_get_contents($rootPath.'/views/admin/organizations/ava.php');
+    foreach(['Formações','Cursos individuais','Trilhas','Categorias','Catálogos'] as$term) assertTrue(str_contains($standard,$term));
+    assertTrue(str_contains($standard,'uso interno e exclusivo do ADM Central'));
+    assertTrue(str_contains($public,'Cursos individuais e Trilhas'));
+    assertTrue(str_contains($franchise,'Formações disponíveis'));
+};
+
+$tests['organiza novas matriculas em coortes e turmas no AVA'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000030_create_ava_academic_organization.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationRepository.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $pluginService=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/organize_enrollment.php');
+    $pluginVersion=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE ava_academic_cohorts'));
+    assertTrue(str_contains($migration,'CREATE TABLE ava_academic_groups'));
+    assertTrue(str_contains($migration,'academic_period_code'));
+    assertTrue(str_contains($repository,'public function prepareForEnrollment'));
+    assertTrue(str_contains($repository,"'trail':'course'"));
+    assertTrue(str_contains($repository,"date('Y',\$time).'-'"));
+    assertTrue(str_contains($enrollments,'recordAcademicOrganizationFailure'));
+    assertTrue(str_contains($releaser,'organizeEnrollment'));
+    assertTrue(str_contains($releaser,"academic_organization"));
+    assertTrue(str_contains($client,'local_mundointer_organize_enrollment'));
+    assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
+    assertTrue(str_contains($pluginExternal,'cohort_add_member'));
+    assertTrue(str_contains($pluginExternal,'groups_add_member'));
+    assertTrue(str_contains($pluginVersion,"release = '0.5.0'"));
+    assertTrue(str_contains($view,'Coortes e turmas'));
+    assertTrue(str_contains($view,'Organização acadêmica automática'));
 };
 
 $failures = 0;

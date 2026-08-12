@@ -82,7 +82,7 @@
   document.querySelectorAll('a[href*="/site/checkout/"]').forEach((link) => link.addEventListener('click', () => track('checkout_start', { entityType: 'course' })));
 
   const catalogSearch = document.querySelector('[data-catalog-search]');
-  const catalogTrail = document.querySelector('[data-catalog-trail]');
+  const catalogFormation = document.querySelector('[data-catalog-formation]');
   const catalogCategory = document.querySelector('[data-catalog-category]');
   const catalogSort = document.querySelector('[data-catalog-sort]');
   const catalogGrid = document.querySelector('[data-course-grid]');
@@ -96,12 +96,12 @@
   const filterCatalog = () => {
     if (!(catalogGrid instanceof HTMLElement)) return;
     const term = normalizeCatalog(catalogSearch?.value || '');
-    const trail = normalizeCatalog(catalogTrail?.value || '');
+    const formation = normalizeCatalog(catalogFormation?.value || '');
     const category = normalizeCatalog(catalogCategory?.value || '');
     const sort = catalogSort?.value || 'featured';
     const matching = catalogCards.filter((card) => {
       const searchable = normalizeCatalog(card.textContent || '');
-      const visible = (!term || searchable.includes(term)) && (!trail || normalizeCatalog(card.dataset.courseTrail) === trail) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
+      const visible = (!term || searchable.includes(term)) && (!formation || normalizeCatalog(card.dataset.courseFormation) === formation) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
       card.hidden = !visible;
       return visible;
     });
@@ -114,7 +114,7 @@
     if (catalogEmpty instanceof HTMLElement) catalogEmpty.hidden = matching.length !== 0;
   };
   catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
-  [catalogSearch, catalogTrail, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
+  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
   syncFavoriteButtons();
   filterCatalog();
 

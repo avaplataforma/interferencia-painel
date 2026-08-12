@@ -60,6 +60,13 @@ final readonly class MoodleClient
         $this->call('enrol_manual_enrol_users',['enrolments'=>[['roleid'=>5,'userid'=>$userId,'courseid'=>$courseId]]]);
     }
 
+    /** @param array<string,mixed> $organization @return array<string,mixed> */
+    public function organizeEnrollment(int$userId,int$courseId,array$organization):array
+    {
+        if($userId<1||$courseId<1)throw new RuntimeException('Aluno ou curso inválido para organizar a turma no AVA.');
+        return$this->call('local_mundointer_organize_enrollment',['userid'=>$userId,'courseid'=>$courseId]+$organization);
+    }
+
     /** @param list<array{type:string,value:string}> $customFields */
     public function updateUserCustomFields(int$userId,array$customFields):void
     {

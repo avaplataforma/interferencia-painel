@@ -7,7 +7,7 @@ $publicBase = rtrim((string) $basePath, '/') . '/site';
 $messages = [
  'success' => ['Pedido recebido', 'O checkout foi concluído. A confirmação financeira será atualizada automaticamente e nossa equipe dará sequência à matrícula.', '✓'],
  'cancel' => ['Pagamento não concluído', 'Você cancelou o checkout. Nenhuma nova tentativa será feita automaticamente.', '←'],
- 'expired' => ['Checkout expirado', 'O prazo deste checkout terminou. Volte ao catálogo para iniciar uma nova solicitação.', '!'],
+ 'expired' => ['Checkout expirado', 'O prazo deste checkout terminou. Volte à vitrine para iniciar uma nova solicitação.', '!'],
 ];
 $result = $messages[$status] ?? $messages['cancel'];
 ?>

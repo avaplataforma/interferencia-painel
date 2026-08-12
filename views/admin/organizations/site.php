@@ -34,7 +34,7 @@ $domainReady=($siteDomain['status']??'pending')==='active';
   </div>
   <div class="site-capabilities">
    <label class="site-capability"><input type="checkbox" name="is_enabled" value="1" <?= $siteEnabled?'checked':'' ?>><span><i class="fa-solid fa-toggle-on"></i><strong>Liberar Site Institucional</strong><small>Habilita o módulo no ADM da franquia e o endereço público.</small></span></label>
-   <label class="site-capability"><input type="checkbox" name="allow_catalog" value="1" <?= (int)($siteSettings['allow_catalog']??1)===1?'checked':'' ?>><span><i class="fa-solid fa-table-cells-large"></i><strong>Formato catálogo</strong><small>Apresentação dos cursos com contato comercial.</small></span></label>
+   <label class="site-capability"><input type="checkbox" name="allow_catalog" value="1" <?= (int)($siteSettings['allow_catalog']??1)===1?'checked':'' ?>><span><i class="fa-solid fa-table-cells-large"></i><strong>Vitrine de cursos</strong><small>Apresentação das Formações, Cursos individuais e Trilhas com contato comercial.</small></span></label>
    <label class="site-capability"><input type="checkbox" name="allow_store" value="1" <?= (int)($siteSettings['allow_store']??0)===1?'checked':'' ?>><span><i class="fa-solid fa-cart-shopping"></i><strong>Formato loja</strong><small>Prepara venda e checkout direto no site.</small></span></label>
    <label class="site-capability"><input type="checkbox" name="allow_custom_pages" value="1" <?= (int)($siteSettings['allow_custom_pages']??0)===1?'checked':'' ?>><span><i class="fa-solid fa-file-lines"></i><strong>Páginas personalizadas</strong><small>Permite páginas extras além da estrutura padrão.</small></span></label>
   </div>

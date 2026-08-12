@@ -508,7 +508,7 @@ final readonly class CourseProviderRepository
             $statement = $this->database->prepare("SELECT content.*,
                 COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
                 COALESCE(NULLIF(content.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'') effective_description,
-                COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'Conteúdo individual') effective_category,
+                COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'Curso individual') effective_category,
                 COALESCE(NULLIF(content.commercial_workload,''),(SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'Carga horária informada no atendimento') effective_workload,
                 COALESCE(NULLIF(content.commercial_cover_url,''),(SELECT COALESCE(NULLIF(parent.commercial_cover_url,''),NULLIF(parent.cover_url,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1),'') effective_cover_url,
                 (EXISTS(SELECT 1 FROM catalog_media_assets media WHERE media.entity_type='content' AND media.entity_id=content.id AND media.purpose='cover' AND media.generation_status='ready') OR EXISTS(SELECT 1 FROM provider_course_content_links link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE link.provider_content_id=content.id)) has_media
@@ -640,7 +640,7 @@ final readonly class CourseProviderRepository
         else$sql="SELECT entity.id,catalog.code catalog_code,
             COALESCE(NULLIF(entity.commercial_name,''),entity.name) name,
             COALESCE(NULLIF(entity.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') description,
-            COALESCE(NULLIF(entity.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,''),NULLIF(inherited_link.discipline_name,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Conteúdo individual') category
+            COALESCE(NULLIF(entity.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,''),NULLIF(inherited_link.discipline_name,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=entity.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Curso individual') category
             FROM provider_catalog_contents entity INNER JOIN course_catalogs catalog ON catalog.id=entity.catalog_id WHERE entity.id=:id LIMIT 1";
         $statement = $this->database->prepare($sql);
         $statement->execute(['id' => $entityId]);
@@ -798,7 +798,7 @@ final readonly class CourseProviderRepository
         $sql = "SELECT content.*,
             COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
             COALESCE(NULLIF(content.commercial_description,''),NULLIF(MAX(course.commercial_description),''),NULLIF(MAX(course.description),''),'') effective_description,
-            COALESCE(NULLIF(content.commercial_category,''),NULLIF(MAX(course.commercial_category),''),NULLIF(MAX(course.category),''),MIN(link.discipline_name),'Conteúdo individual') effective_category,
+            COALESCE(NULLIF(content.commercial_category,''),NULLIF(MAX(course.commercial_category),''),NULLIF(MAX(course.category),''),MIN(link.discipline_name),'Curso individual') effective_category,
             COALESCE(NULLIF(content.commercial_workload,''),NULLIF(MAX(course.commercial_workload),''),NULLIF(MAX(course.workload),''),'') effective_workload,
             COALESCE(NULLIF(content.commercial_cover_url,''),NULLIF(MAX(course.commercial_cover_url),''),NULLIF(MAX(course.cover_url),''),'') effective_cover_url,
             COALESCE(
@@ -835,8 +835,8 @@ final readonly class CourseProviderRepository
     /** @param array<string,mixed> $metadata */
     public function reviewContent(int $contentId, string $status, string $releaseStatus, array $metadata, ?int $userId): void
     {
-        if (!in_array($status, ['imported', 'reviewing', 'approved', 'rejected'], true)) throw new RuntimeException('Situação da curadoria do conteúdo inválida.');
-        if (!in_array($releaseStatus, ['private', 'released', 'published'], true)) throw new RuntimeException('Liberação comercial do conteúdo inválida.');
+        if (!in_array($status, ['imported', 'reviewing', 'approved', 'rejected'], true)) throw new RuntimeException('Situação da curadoria do Curso individual inválida.');
+        if (!in_array($releaseStatus, ['private', 'released', 'published'], true)) throw new RuntimeException('Liberação comercial do Curso individual inválida.');
         if ($status !== 'approved') $releaseStatus = 'private';
         $name = trim((string)($metadata['commercial_name'] ?? ''));
         if ($status === 'approved' && $name === '') throw new RuntimeException('Informe o nome comercial antes de aprovar o conteúdo.');
@@ -862,7 +862,7 @@ final readonly class CourseProviderRepository
         if ($statement->rowCount() !== 1) {
             $exists = $this->database->prepare('SELECT 1 FROM provider_catalog_contents WHERE id=:id');
             $exists->execute(['id' => $contentId]);
-            if ($exists->fetchColumn() === false) throw new RuntimeException('Conteúdo externo não encontrado.');
+            if ($exists->fetchColumn() === false) throw new RuntimeException('Curso individual externo não encontrado.');
         }
         if ($status !== 'approved' || $releaseStatus === 'private') {
             $this->database->prepare('UPDATE organization_provider_content_offers SET is_visible=0,updated_by=:user WHERE provider_content_id=:content')->execute(['user' => $userId, 'content' => $contentId]);
@@ -879,7 +879,7 @@ final readonly class CourseProviderRepository
             content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.is_globally_enabled catalog_globally_enabled,COALESCE(catalog_access.is_enabled,1) organization_catalog_enabled,COALESCE(item_access.is_enabled,1) organization_item_enabled FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=:organization AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id WHERE content.id=:id LIMIT 1");
         $content->execute(['organization' => $organizationId, 'item_organization' => $organizationId, 'id' => $contentId]);
         $row = $content->fetch();
-        if (!is_array($row)) throw new RuntimeException('Conteúdo externo não encontrado.');
+        if (!is_array($row)) throw new RuntimeException('Curso individual externo não encontrado.');
         $hasMediaCover = $this->entityMediaAsset('content', $contentId) !== null;
         if (!$hasMediaCover) {
             $inheritedMedia = $this->database->prepare("SELECT 1 FROM provider_course_content_links link INNER JOIN catalog_media_assets media ON media.entity_type='course' AND media.entity_id=link.provider_course_id AND media.purpose='cover' AND media.generation_status='ready' WHERE link.provider_content_id=:content LIMIT 1");
@@ -889,7 +889,7 @@ final readonly class CourseProviderRepository
         if (($row['review_status'] ?? '') !== 'approved' || !in_array((string)($row['release_status'] ?? ''), ['released', 'published'], true) || (int)($row['is_available'] ?? 0) !== 1) {
             throw new RuntimeException('Apenas conteúdos disponíveis, aprovados e liberados podem ser vendidos individualmente.');
         }
-        if ((int)($row['catalog_globally_enabled'] ?? 0) !== 1 || (int)($row['is_globally_enabled'] ?? 0) !== 1 || (int)($row['organization_catalog_enabled'] ?? 0) !== 1 || (int)($row['organization_item_enabled'] ?? 0) !== 1) throw new RuntimeException('Este conteúdo está bloqueado globalmente ou para esta franquia.');
+        if ((int)($row['catalog_globally_enabled'] ?? 0) !== 1 || (int)($row['is_globally_enabled'] ?? 0) !== 1 || (int)($row['organization_catalog_enabled'] ?? 0) !== 1 || (int)($row['organization_item_enabled'] ?? 0) !== 1) throw new RuntimeException('Este Curso individual está bloqueado globalmente ou para esta franquia.');
         $organization = $this->database->prepare("SELECT 1 FROM organizations WHERE id=:id AND status='active'");
         $organization->execute(['id' => $organizationId]);
         if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia ativa não encontrada.');
@@ -947,7 +947,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function catalogContentOffersForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT content.id content_id,content.catalog_id,content.name source_name,content.commercial_name approved_name,content.commercial_description approved_description,COALESCE(NULLIF(content.commercial_category,''),'Conteúdo individual') category,content.commercial_workload workload,content.commercial_cover_url cover_url,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.code catalog_code,catalog.name catalog_name,catalog.is_globally_enabled catalog_globally_enabled,provider.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,offer.id offer_id,offer.commercial_name offer_name,offer.commercial_description offer_description,offer.price,offer.max_installments,offer.is_visible,offer.is_active FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id LEFT JOIN organization_provider_content_offers offer ON offer.provider_content_id=content.id AND offer.organization_id=:offer_organization WHERE content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 ORDER BY catalog.name,COALESCE(NULLIF(content.commercial_name,''),content.name)");
+        $statement = $this->database->prepare("SELECT content.id content_id,content.catalog_id,content.name source_name,content.commercial_name approved_name,content.commercial_description approved_description,COALESCE(NULLIF(content.commercial_category,''),'Curso individual') category,content.commercial_workload workload,content.commercial_cover_url cover_url,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.code catalog_code,catalog.name catalog_name,catalog.is_globally_enabled catalog_globally_enabled,provider.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,offer.id offer_id,offer.commercial_name offer_name,offer.commercial_description offer_description,offer.price,offer.max_installments,offer.is_visible,offer.is_active FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id LEFT JOIN organization_provider_content_offers offer ON offer.provider_content_id=content.id AND offer.organization_id=:offer_organization WHERE content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 ORDER BY catalog.name,COALESCE(NULLIF(content.commercial_name,''),content.name)");
         $statement->execute(['item_organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }
@@ -1025,7 +1025,7 @@ final readonly class CourseProviderRepository
                     (SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1)) effective_description,
                 COALESCE(NULLIF(content.commercial_cover_url,''),
                     (SELECT COALESCE(NULLIF(parent.commercial_cover_url,''),NULLIF(parent.cover_url,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1)) effective_cover_url,
-                COALESCE(NULLIF(content.commercial_category,''),'Conteúdo individual') category,
+                COALESCE(NULLIF(content.commercial_category,''),'Curso individual') category,
                 COALESCE(NULLIF(content.commercial_workload,''),
                     (SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links link INNER JOIN provider_courses parent ON parent.id=link.provider_course_id WHERE link.provider_content_id=content.id ORDER BY link.position,parent.id LIMIT 1)) workload,
                 content.review_status,content.release_status,content.is_globally_enabled,

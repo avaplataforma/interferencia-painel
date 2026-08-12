@@ -12,7 +12,7 @@ $manualCount=count($products)-$avaCount;
 </style>
 <div class="catalog-admin">
  <header class="catalog-header">
-  <div><p class="eyebrow">ADM · Catálogo</p><h1>Cursos e preços</h1><p class="meta">Gerencie preços e decida quais cursos ficam disponíveis nesta franquia.</p></div>
+  <div><p class="eyebrow">ADM · Formação INTER</p><h1>Cursos e preços</h1><p class="meta">Gerencie preços e decida quais Cursos individuais ficam disponíveis nesta franquia.</p></div>
   <div class="catalog-actions">
    <a class="button-secondary" href="<?= $escape($basePath) ?>/admin/finance/products/create"><i class="fa-solid fa-plus"></i> Curso manual</a>
    <form method="post" action="<?= $escape($basePath) ?>/admin/finance/products/sync"><?= $csrfField ?><button class="button-primary" type="submit"><i class="fa-solid fa-rotate"></i> Sincronizar com o AVA</button></form>
@@ -29,7 +29,7 @@ $manualCount=count($products)-$avaCount;
 
  <div class="alert alert-warning"><strong>Regra segura:</strong> cursos do AVA não podem ser excluídos. Cursos manuais sem histórico podem ser removidos; qualquer curso pode ser ocultado somente desta franquia.</div>
  <section class="card"><div class="table-responsive"><table><thead><tr><th>Curso</th><th>Origem</th><th>Unidade</th><th>Valor</th><th>Parcelas</th><th>Disponibilidade</th><th>Ações</th></tr></thead><tbody>
- <?php if($products===[]):?><tr><td colspan="7"><div class="catalog-empty"><i class="fa-solid fa-book-open"></i><strong>Catálogo vazio</strong><span>Sincronize os cursos do AVA ou cadastre um curso manual.</span></div></td></tr><?php endif;?>
+ <?php if($products===[]):?><tr><td colspan="7"><div class="catalog-empty"><i class="fa-solid fa-book-open"></i><strong>Nenhum Curso individual disponível</strong><span>Sincronize os cursos do AVA ou cadastre um curso manual.</span></div></td></tr><?php endif;?>
  <?php foreach($products as$product):$pending=(float)$product['value']<5;$source=(string)($product['catalog_source']??($product['moodle_course_id']===null?'manual':'ava'));$visible=(int)($product['catalog_visible']??1)===1;?>
   <tr class="<?= $visible?'':'catalog-row-hidden' ?>">
    <td><span class="catalog-course"><strong><?= $escape($product['name']) ?></strong><?php if($product['moodle_shortname']):?><small><?= $escape($product['moodle_shortname']) ?></small><?php endif;?></span></td>

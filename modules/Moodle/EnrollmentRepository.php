@@ -126,13 +126,13 @@ final readonly class EnrollmentRepository
     public function releaseContext(int$id,array$allowedUnits):?array
     {
         if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
-        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
     }
 
     public function releaseContextForAutomation(int$id):?array
     {
-        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.moodle_course_id FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id WHERE e.id=:id LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
@@ -161,6 +161,12 @@ final readonly class EnrollmentRepository
     public function recordReleaseFailure(int$id,string$message,?int$userId):void
     {
         $message=mb_substr(trim($message),0,500);$s=$this->database->prepare('UPDATE student_enrollments SET ava_last_error=:error WHERE id=:id');$s->execute(['error'=>$message,'id'=>$id]);if($s->rowCount()===1)$this->recordEvent($id,'ava-release-failed:'.$id.':'.hash('sha256',$message),'ava_release_failed','Falha ao liberar no AVA: '.$message,$userId);
+    }
+
+    public function recordAcademicOrganizationFailure(int$id,string$message,?int$userId):void
+    {
+        $message=mb_substr(trim($message),0,500);
+        $this->recordEvent($id,'ava-academic-organization-failed:'.$id.':'.hash('sha256',$message),'ava_academic_organization_failed','Acesso liberado, mas a organização em coorte e grupo ficou pendente: '.$message,$userId);
     }
 
     /** @return array{ready:int,failed:int} */

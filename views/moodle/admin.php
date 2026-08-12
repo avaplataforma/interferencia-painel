@@ -3,7 +3,7 @@
 <section class="admin-links integrations-grid mb-4">
 <a class="admin-link" href="<?= $escape($basePath) ?>/admin/integrations/moodle"><span class="quick-icon"><i class="fa-solid fa-plug"></i></span><span><strong>Integração AVA</strong><small>Conexão, sincronização e campos acadêmicos</small></span><i class="fa-solid fa-chevron-right"></i></a>
 <a class="admin-link" href="<?= $escape($basePath) ?>/students/moodle-reconciliation"><span class="quick-icon"><i class="fa-solid fa-link"></i></span><span><strong>Conciliação</strong><small>Vincular usuários existentes aos alunos do Painel</small></span><i class="fa-solid fa-chevron-right"></i></a>
-<a class="admin-link" href="<?= $escape($basePath) ?>/admin/finance/products"><span class="quick-icon"><i class="fa-solid fa-book-open"></i></span><span><strong>Cursos e preços</strong><small>Catálogo sincronizado e condições comerciais</small></span><i class="fa-solid fa-chevron-right"></i></a>
+<a class="admin-link" href="<?= $escape($basePath) ?>/admin/finance/products"><span class="quick-icon"><i class="fa-solid fa-book-open"></i></span><span><strong>Cursos e preços</strong><small>Cursos sincronizados e condições comerciais</small></span><i class="fa-solid fa-chevron-right"></i></a>
 </section>
 <section class="card"><div class="card-body"><div class="page-heading"><div><p class="eyebrow">Bolsa ou cortesia</p><h2>Nova liberação especial</h2><p class="meta">Dispense a cobrança com justificativa e prepare o acesso ao curso. A operação ficará registrada no histórico.</p></div></div>
 <form method="post" action="<?= $escape($basePath) ?>/admin/ava/waivers" data-confirm-submit="Autorizar a liberação deste curso sem pagamento?"><?= $csrfField ?>

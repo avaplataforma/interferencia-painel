@@ -23,7 +23,7 @@ $application=$application??null;$contracts=$contracts??[];
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="polos"><i class="fa-solid fa-location-crosshairs"></i> Polos</button><?php endif;?>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="contrato"><i class="fa-solid fa-file-signature"></i> Contrato</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="painel"><i class="fa-solid fa-window-maximize"></i> Painel</button>
-   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-book-open-reader"></i> Catálogo/AVA</button><?php endif;?>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-book-open-reader"></i> Formações/AVA</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="site"><i class="fa-solid fa-store"></i> Site</button>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="integracoes"><i class="fa-solid fa-plug-circle-bolt"></i> Integrações</button><?php endif;?>
   </nav>
@@ -78,10 +78,10 @@ $application=$application??null;$contracts=$contracts??[];
     </section>
 
     <?php if(!$editing):?><section class="card organization-section" id="site" data-organization-panel="site" hidden>
-      <header class="organization-section-header"><span class="organization-section-icon"><i class="fa-solid fa-store"></i></span><div><h2>Site institucional</h2><p class="meta">Acompanhe a base do site público, catálogo ou loja virtual desta franquia.</p></div></header>
+      <header class="organization-section-header"><span class="organization-section-icon"><i class="fa-solid fa-store"></i></span><div><h2>Site institucional</h2><p class="meta">Acompanhe a base do site público, vitrine de cursos ou loja virtual desta franquia.</p></div></header>
       <div class="organization-site-grid">
         <article class="organization-site-card"><i class="fa-solid fa-globe"></i><div><strong><?= $escape((string)($siteDomain['host']??'Domínio ainda não informado')) ?></strong><small><?= ($siteDomain['status']??'pending')==='active'?'Domínio validado e ativo':'Configuração de domínio pendente' ?></small></div></article>
-        <article class="organization-site-card"><i class="fa-solid fa-bag-shopping"></i><div><strong>Catálogo e loja virtual</strong><small>A estrutura de conteúdo e vendas será administrada nesta área.</small></div></article>
+        <article class="organization-site-card"><i class="fa-solid fa-bag-shopping"></i><div><strong>Vitrine e loja virtual</strong><small>A estrutura de conteúdo e vendas será administrada nesta área.</small></div></article>
       </div>
       <div class="alert alert-info mt-4"><i class="fa-solid fa-circle-info"></i> O domínio e a identidade visual são salvos na aba <strong>Painel</strong>. Os recursos editoriais do site serão adicionados aqui sem aumentar o cadastro principal.</div>
     </section><?php endif;?>

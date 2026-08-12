@@ -19,10 +19,11 @@ final readonly class AvaEnrollmentReleaser
         private EnrollmentRepository $enrollments,
         private OrganizationPoleRepository $poles,
         private CourseProviderRepository $courseProviders,
+        private AcademicOrganizationRepository $academicOrganization,
         private string $automaticFrom,
     ) {}
 
-    /** @return array{status:string,ava_user_id?:int,course_id?:int,connection?:string} */
+    /** @return array{status:string,ava_user_id?:int,course_id?:int,connection?:string,academic_organization?:string} */
     public function release(int $enrollmentId, ?int $operatorId = null): array
     {
         try {
@@ -127,6 +128,18 @@ final readonly class AvaEnrollmentReleaser
             $avaUserId = (int) $avaUser['id'];
             $client->updateUserCustomFields($avaUserId, $customFields);
             $client->enrolStudent($avaUserId, $courseId);
+            $academicStatus='pending';
+            $placement=null;
+            try{
+                $placement=$this->academicOrganization->prepareForEnrollment($context,$connection,$identity,$courseId);
+                $remoteOrganization=$client->organizeEnrollment($avaUserId,$courseId,$placement['payload']);
+                $this->academicOrganization->markSynced($placement['cohort_id'],$placement['group_id'],$remoteOrganization);
+                $academicStatus='synced';
+            }catch(Throwable $academicException){
+                if(is_array($placement))$this->academicOrganization->markFailed($placement['cohort_id'],$placement['group_id'],$academicException->getMessage());
+                $this->enrollments->recordAcademicOrganizationFailure($enrollmentId,$academicException->getMessage(),$operatorId);
+                $academicStatus='failed';
+            }
             $avaUser['customfields']=[
                 ['shortname'=>OrganizationPoleRepository::FRANCHISE_FIELD,'name'=>'Franquia Mundo Inter','value'=>$identity['franchise_code']],
                 ['shortname'=>OrganizationPoleRepository::POLE_FIELD,'name'=>'Polo Mundo Inter','value'=>$identity['pole_code']],
@@ -135,7 +148,7 @@ final readonly class AvaEnrollmentReleaser
             if((string)$connection['connection_type']==='shared')$this->moodle->upsertUser($avaUser);
             $this->enrollments->markReleased($enrollmentId,$avaUserId,$courseId,(int)$context['finance_customer_id'],$operatorId,$avaUser,(int)$connection['id'],(string)$connection['name'],(string)$connection['connection_type']);
 
-            return ['status'=>'released','ava_user_id'=>$avaUserId,'course_id'=>$courseId,'connection'=>(string)$connection['name']];
+            return ['status'=>'released','ava_user_id'=>$avaUserId,'course_id'=>$courseId,'connection'=>(string)$connection['name'],'academic_organization'=>$academicStatus];
         } catch (Throwable $exception) {
             $this->enrollments->recordReleaseFailure($enrollmentId, $exception->getMessage(), $operatorId);
             throw $exception;
