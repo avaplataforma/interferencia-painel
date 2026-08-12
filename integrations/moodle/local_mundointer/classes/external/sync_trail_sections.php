@@ -49,21 +49,16 @@ final class sync_trail_sections extends external_api
             $number=$offset+1;
             $name=trim(clean_param((string)($item['name']??''),PARAM_TEXT));
             if($name==='')throw new \invalid_parameter_exception('Todos os blocos da Trilha precisam de nome.');
-            $catalog=trim(clean_param((string)($item['catalog']??'Formação'),PARAM_TEXT));
-            $execution=(string)($item['execution']??'provider_ava')==='shared_ava'?'shared_ava':'provider_ava';
             $key=trim(clean_param((string)($item['key']??('item-'.$number)),PARAM_ALPHANUMEXT));
             $accessurl=clean_param((string)($item['accessurl']??''),PARAM_URL);
             $section=$DB->get_record('course_sections',['course'=>$parameters['courseid'],'section'=>$number]);
             if(!$section)$section=course_create_section($parameters['courseid'],$number);
-            $delivery=$execution==='shared_ava'
-                ?'<span class="badge badge-success">Conteúdo no AVA Cursos</span>'
-                :'<span class="badge badge-warning">Acesso no AVA do fornecedor</span>';
-            $summary='<!-- data-mundointer-trail-item="'.s($key).'" -->'
-                .'<div class="mundointer-trail-block"><p><strong>Formação:</strong> '.s($catalog).'</p><p>'.$delivery.'</p>'
-                .'<p><small>Bloco sincronizado automaticamente pelo Mundo Inter.</small></p></div>';
+            // Keep the management marker invisible. The learner only needs the
+            // sequential module title and the activity that opens the lesson.
+            $summary='<!-- data-mundointer-trail-item="'.s($key).'" -->';
             $DB->update_record('course_sections',(object)[
                 'id'=>$section->id,
-                'name'=>$name,
+                'name'=>'Módulo '.$number.' - '.$name,
                 'summary'=>$summary,
                 'summaryformat'=>FORMAT_HTML,
                 'visible'=>1,
