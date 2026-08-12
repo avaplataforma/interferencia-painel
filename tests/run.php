@@ -1359,7 +1359,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($tenantAdmin,'site-section-nav'));
     assertTrue(str_contains($tenantAdmin,"'geral'=>['fa-palette','Geral e identidade'"));
     assertTrue(str_contains($tenantAdmin,'data-site-targets'));
-    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=27'));
+    assertTrue(str_contains((string) file_get_contents($rootPath.'/views/layouts/app.php'),'app.js?v=28'));
     assertTrue(str_contains($tenantAdmin,'scholarship_form_enabled'));
     assertTrue(str_contains($tenantAdmin,'Contato e canais'));
     assertTrue(str_contains($tenantAdmin,'Conteúdo visual'));
@@ -2121,6 +2121,7 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
 
 $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $textClient=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiCatalogTextClient.php');
     $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
@@ -2129,6 +2130,9 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($view,'is-trail-editing'));
     assertTrue(str_contains($view,'data-trail-catalog-filter'));
     assertTrue(str_contains($view,'data-trail-selected-only'));
+    assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
+    assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
+    assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
     assertTrue(str_contains($view,'Gerar resumo e descrição'));
     assertTrue(str_contains($view,'Gerar capa com IA'));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-text'"));

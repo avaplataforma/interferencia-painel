@@ -727,3 +727,47 @@ document.querySelectorAll('.color-field').forEach((group) => {
     refresh();
   });
 })();
+
+(() => {
+  document.querySelectorAll('[data-trail-item-grid]').forEach((grid) => {
+    if (!(grid instanceof HTMLElement) || grid.dataset.trailPickerReady === '1') return;
+    grid.dataset.trailPickerReady = '1';
+
+    const picker = grid.closest('.item-picker');
+    const search = picker?.querySelector('[data-trail-item-search]');
+    const catalog = picker?.querySelector('[data-trail-catalog-filter]');
+    const selectedOnly = picker?.querySelector('[data-trail-selected-only]');
+    const selectedCount = picker?.querySelector('[data-trail-selection-count]');
+    const visibleCount = picker?.querySelector('[data-trail-visible-count]');
+    const items = Array.from(grid.querySelectorAll('[data-trail-item]'));
+    const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const apply = () => {
+      const term = normalize(search instanceof HTMLInputElement ? search.value : '');
+      const selectedCatalog = catalog instanceof HTMLSelectElement ? catalog.value : '';
+      const onlySelected = selectedOnly instanceof HTMLInputElement && selectedOnly.checked;
+      let visible = 0;
+      let selected = 0;
+
+      items.forEach((item) => {
+        if (!(item instanceof HTMLElement)) return;
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const checked = checkbox instanceof HTMLInputElement && checkbox.checked;
+        if (checked) selected += 1;
+        const matchesText = term === '' || normalize(item.dataset.trailItem).includes(term);
+        const matchesCatalog = selectedCatalog === '' || item.dataset.trailCatalog === selectedCatalog;
+        item.hidden = !(matchesText && matchesCatalog && (!onlySelected || checked));
+        if (!item.hidden) visible += 1;
+      });
+
+      if (selectedCount instanceof HTMLElement) selectedCount.textContent = String(selected);
+      if (visibleCount instanceof HTMLElement) visibleCount.textContent = String(visible);
+    };
+
+    search?.addEventListener('input', apply);
+    catalog?.addEventListener('change', apply);
+    selectedOnly?.addEventListener('change', apply);
+    items.forEach((item) => item.querySelector('input[type="checkbox"]')?.addEventListener('change', apply));
+    apply();
+  });
+})();
