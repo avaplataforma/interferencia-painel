@@ -21,4 +21,6 @@ O serviço `local_mundointer_diagnose_poles` entrega ao ADM Central somente tota
 
 No tema Trema, a identidade substitui o logotipo global dentro do cartão de login, o favicon e o título da aba, além de usar o espaço nativo da barra superior. Nenhum arquivo do tema é alterado, preservando atualizações futuras do Trema. Em outros temas, o plugin mantém uma apresentação compatível de reserva.
 
-Nesta primeira versão, o plugin expõe somente um diagnóstico autenticado de disponibilidade e versão. Os dados acadêmicos continuam usando as APIs oficiais do Moodle.
+Na publicação de Trilhas, cada Curso individual ocupa um bloco próprio e recebe uma atividade Moodle do tipo **URL**. A atividade é incorporada no AVA, envia o identificador do usuário pelo parâmetro `ext_user_username`, exige visualização para conclusão e é atualizada de forma idempotente nas republicações.
+
+Os demais dados acadêmicos continuam usando as APIs oficiais do Moodle.

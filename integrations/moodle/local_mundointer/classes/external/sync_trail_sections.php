@@ -27,7 +27,7 @@ final class sync_trail_sections extends external_api
         self::validate_context($context);
         require_capability('local/mundointer:manage',$context);
 
-        $course=$DB->get_record('course',['id'=>$parameters['courseid']],'id,idnumber',MUST_EXIST);
+        $course=$DB->get_record('course',['id'=>$parameters['courseid']],'*',MUST_EXIST);
         if(!str_starts_with((string)$course->idnumber,'mi-trilha-'))throw new \invalid_parameter_exception('Somente Trilhas gerenciadas pelo Mundo Inter podem ter os blocos sincronizados.');
         $decoded=json_decode($parameters['sections'],true);
         if(!is_array($decoded))throw new \invalid_parameter_exception('A composição da Trilha não contém um JSON válido.');
@@ -35,7 +35,16 @@ final class sync_trail_sections extends external_api
         if(count($decoded)<2||count($decoded)>100)throw new \invalid_parameter_exception('A Trilha deve conter entre 2 e 100 Cursos individuais.');
 
         require_once($CFG->dirroot.'/course/lib.php');
+        require_once($CFG->dirroot.'/course/modlib.php');
+        require_once($CFG->dirroot.'/mod/url/lib.php');
+        require_once($CFG->dirroot.'/mod/url/locallib.php');
+        if((int)$course->enablecompletion!==1){
+            $DB->set_field('course','enablecompletion',1,['id'=>$course->id]);
+            $course->enablecompletion=1;
+        }
         $updated=0;
+        $activities=0;
+        $hiddenactivities=0;
         foreach($decoded as$offset=>$item){
             $number=$offset+1;
             $name=trim(clean_param((string)($item['name']??''),PARAM_TEXT));
@@ -49,11 +58,8 @@ final class sync_trail_sections extends external_api
             $delivery=$execution==='shared_ava'
                 ?'<span class="badge badge-success">Conteúdo no AVA Cursos</span>'
                 :'<span class="badge badge-warning">Acesso no AVA do fornecedor</span>';
-            $link=$execution!=='shared_ava'&&$accessurl!==''
-                ?'<p><a class="btn btn-primary" href="'.s($accessurl).'" target="_blank" rel="noopener">Abrir ambiente do fornecedor</a></p>'
-                :'';
             $summary='<!-- data-mundointer-trail-item="'.s($key).'" -->'
-                .'<div class="mundointer-trail-block"><p><strong>Formação:</strong> '.s($catalog).'</p><p>'.$delivery.'</p>'.$link
+                .'<div class="mundointer-trail-block"><p><strong>Formação:</strong> '.s($catalog).'</p><p>'.$delivery.'</p>'
                 .'<p><small>Bloco sincronizado automaticamente pelo Mundo Inter.</small></p></div>';
             $DB->update_record('course_sections',(object)[
                 'id'=>$section->id,
@@ -62,6 +68,9 @@ final class sync_trail_sections extends external_api
                 'summaryformat'=>FORMAT_HTML,
                 'visible'=>1,
             ]);
+            $activity=self::sync_url_activity($course,$section,$number,$key,$name,$accessurl);
+            if($activity>0)$activities++;
+            if($activity<0)$hiddenactivities++;
             $updated++;
         }
 
@@ -70,9 +79,74 @@ final class sync_trail_sections extends external_api
         foreach($existing as$section){
             if(!str_contains((string)$section->summary,'data-mundointer-trail-item='))continue;
             if((int)$section->visible!==0){$DB->set_field('course_sections','visible',0,['id'=>$section->id]);$hidden++;}
+            $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>'mi-trail-url-%']);
+            foreach($managed as$cm){
+                set_coursemodule_visible((int)$cm->id,0);
+                $hiddenactivities++;
+            }
         }
         rebuild_course_cache($parameters['courseid'],true);
-        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden];
+        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities];
+    }
+
+    private static function sync_url_activity(object$course,object$section,int$sectionnumber,string$key,string$name,string$accessurl):int
+    {
+        global$DB;
+        $module=$DB->get_record('modules',['name'=>'url'],'id',MUST_EXIST);
+        $idnumber=\core_text::substr('mi-trail-url-'.$key,0,100);
+        $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$module->id,'idnumber'=>$idnumber]);
+        if($accessurl===''){
+            if($existing){set_coursemodule_visible((int)$existing->id,0);return-1;}
+            return 0;
+        }
+
+        $activityname=\core_text::substr('Aula - '.$name,0,255);
+        if($existing){
+            $url=$DB->get_record('url',['id'=>$existing->instance],'*',MUST_EXIST);
+            $url->name=$activityname;
+            $url->externalurl=url_fix_submitted_url($accessurl);
+            $url->display=RESOURCELIB_DISPLAY_EMBED;
+            $url->displayoptions=serialize(['printintro'=>0]);
+            $url->parameters=serialize(['ext_user_username'=>'id']);
+            $url->timemodified=time();
+            $DB->update_record('url',$url);
+            $DB->update_record('course_modules',(object)[
+                'id'=>$existing->id,
+                'visible'=>1,
+                'visibleold'=>1,
+                'visibleoncoursepage'=>1,
+                'completion'=>COMPLETION_TRACKING_AUTOMATIC,
+                'completionview'=>1,
+                'completionexpected'=>0,
+                'showdescription'=>0,
+            ]);
+            if((int)$existing->section!==(int)$section->id){
+                $cm=get_fast_modinfo($course,0,true)->get_cm((int)$existing->id);
+                moveto_module($cm,$section);
+            }
+            return(int)$existing->id;
+        }
+
+        $created=add_moduleinfo((object)[
+            'modulename'=>'url',
+            'module'=>(int)$module->id,
+            'section'=>$sectionnumber,
+            'name'=>$activityname,
+            'intro'=>'',
+            'introformat'=>FORMAT_HTML,
+            'externalurl'=>$accessurl,
+            'display'=>RESOURCELIB_DISPLAY_EMBED,
+            'printintro'=>0,
+            'parameter_0'=>'ext_user_username',
+            'variable_0'=>'id',
+            'cmidnumber'=>$idnumber,
+            'visible'=>1,
+            'completion'=>COMPLETION_TRACKING_AUTOMATIC,
+            'completionview'=>1,
+            'completionexpected'=>0,
+            'showdescription'=>0,
+        ],$course);
+        return(int)$created->coursemodule;
     }
 
     public static function execute_returns(): external_single_structure
@@ -82,6 +156,8 @@ final class sync_trail_sections extends external_api
             'courseid'=>new external_value(PARAM_INT,'Curso atualizado.'),
             'sections'=>new external_value(PARAM_INT,'Quantidade de blocos sincronizados.'),
             'hidden'=>new external_value(PARAM_INT,'Blocos antigos ocultados.'),
+            'activities'=>new external_value(PARAM_INT,'Atividades URL criadas ou atualizadas.'),
+            'hiddenactivities'=>new external_value(PARAM_INT,'Atividades URL antigas ocultadas.'),
         ]);
     }
 }

@@ -49,7 +49,7 @@ final readonly class AvaCatalogPublisher
             $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections))],$userId);
+            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections)),'url_activities_synced'=>(int)($sectionSync['activities']??0)],$userId);
             return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published'];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
@@ -114,7 +114,7 @@ final readonly class AvaCatalogPublisher
             $remote=trim((string)($item['remote_reference']??''));
             $template=trim((string)($item['launch_url_template']??''));
             $accessUrl='';
-            if($execution!=='shared_ava'&&$template!==''&&!str_contains($template,'{franquia}')){
+            if($template!==''&&!str_contains($template,'{franquia}')){
                 $accessUrl=str_replace(['{curso}','{id}'],rawurlencode($remote),$template);
                 if(filter_var($accessUrl,FILTER_VALIDATE_URL)===false)$accessUrl='';
             }

@@ -147,6 +147,7 @@ final readonly class LearningCatalogRepository
             CASE item.item_type WHEN 'finance_product' THEN 'shared_ava' ELSE COALESCE(course_catalog.execution_environment,content_catalog.execution_environment,'provider_ava') END execution_environment,
             CASE item.item_type WHEN 'finance_product' THEN 1 ELSE COALESCE(course_catalog.is_shared_ava_enabled,content_catalog.is_shared_ava_enabled,0) END shared_ava_enabled,
             COALESCE(course_provider.delivery_mode,content_provider.delivery_mode,'shared_ava') delivery_mode,
+            COALESCE(course_provider.provider_code,content_provider.provider_code,'') provider_code,
             COALESCE(course_provider.launch_url_template,content_provider.launch_url_template) launch_url_template,
             CASE item.item_type WHEN 'finance_product' THEN CAST(product.id AS CHAR) WHEN 'provider_course' THEN COALESCE(course.remote_id,course.external_key) ELSE content.external_key END remote_reference
             FROM catalog_trail_items item
