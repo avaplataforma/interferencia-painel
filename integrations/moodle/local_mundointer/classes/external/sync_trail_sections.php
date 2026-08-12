@@ -107,7 +107,9 @@ final class sync_trail_sections extends external_api
             $url->externalurl=url_fix_submitted_url($accessurl);
             $url->display=RESOURCELIB_DISPLAY_EMBED;
             $url->displayoptions=serialize(['printintro'=>0]);
-            $url->parameters=serialize(['ext_user_username'=>'id']);
+            // The form labels this variable as "id", but Moodle stores and
+            // resolves it internally by the canonical key "userid".
+            $url->parameters=serialize(['ext_user_username'=>'userid']);
             $url->timemodified=time();
             $DB->update_record('url',$url);
             $DB->update_record('course_modules',(object)[
@@ -138,7 +140,7 @@ final class sync_trail_sections extends external_api
             'display'=>RESOURCELIB_DISPLAY_EMBED,
             'printintro'=>0,
             'parameter_0'=>'ext_user_username',
-            'variable_0'=>'id',
+            'variable_0'=>'userid',
             'cmidnumber'=>$idnumber,
             'visible'=>1,
             'completion'=>COMPLETION_TRACKING_AUTOMATIC,
