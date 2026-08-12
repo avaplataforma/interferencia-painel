@@ -736,6 +736,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const picker = grid.closest('.item-picker');
     const search = picker?.querySelector('[data-trail-item-search]');
     const catalog = picker?.querySelector('[data-trail-catalog-filter]');
+    const packageFilter = picker?.querySelector('[data-trail-package-filter]');
     const selectedOnly = picker?.querySelector('[data-trail-selected-only]');
     const selectedCount = picker?.querySelector('[data-trail-selection-count]');
     const visibleCount = picker?.querySelector('[data-trail-visible-count]');
@@ -745,6 +746,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const apply = () => {
       const term = normalize(search instanceof HTMLInputElement ? search.value : '');
       const selectedCatalog = catalog instanceof HTMLSelectElement ? catalog.value : '';
+      const selectedPackage = packageFilter instanceof HTMLSelectElement ? packageFilter.value : '';
       const onlySelected = selectedOnly instanceof HTMLInputElement && selectedOnly.checked;
       let visible = 0;
       let selected = 0;
@@ -756,7 +758,8 @@ document.querySelectorAll('.color-field').forEach((group) => {
         if (checked) selected += 1;
         const matchesText = term === '' || normalize(item.dataset.trailItem).includes(term);
         const matchesCatalog = selectedCatalog === '' || item.dataset.trailCatalog === selectedCatalog;
-        item.hidden = !(matchesText && matchesCatalog && (!onlySelected || checked));
+        const matchesPackage = selectedPackage === '' || String(item.dataset.trailPackages || '').includes(`,${selectedPackage},`);
+        item.hidden = !(matchesText && matchesCatalog && matchesPackage && (!onlySelected || checked));
         if (!item.hidden) visible += 1;
       });
 
@@ -766,6 +769,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
     search?.addEventListener('input', apply);
     catalog?.addEventListener('change', apply);
+    packageFilter?.addEventListener('change', apply);
     selectedOnly?.addEventListener('change', apply);
     items.forEach((item) => item.querySelector('input[type="checkbox"]')?.addEventListener('change', apply));
     apply();

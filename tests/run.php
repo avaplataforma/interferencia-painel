@@ -2141,10 +2141,13 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
 
     assertTrue(str_contains($view,'is-trail-editing'));
     assertTrue(str_contains($view,'data-trail-catalog-filter'));
+    assertTrue(str_contains($view,'data-trail-package-filter'));
+    assertTrue(str_contains($view,'Pacote original do fornecedor'));
     assertTrue(str_contains($view,'data-trail-selected-only'));
     assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
     assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
+    assertTrue(str_contains($javascript,"packageFilter?.addEventListener('change', apply)"));
     assertTrue(str_contains($view,'Gerar textos e capa com IA'));
     assertTrue(str_contains($view,'Gerar e visualizar textos'));
     assertTrue(str_contains($view,'Gerar e visualizar capa'));
@@ -2161,6 +2164,10 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($coverGenerator,'public function previewTrail'));
     assertTrue(str_contains($coverGenerator,'public function attachPreview'));
     assertTrue(!str_contains($learningCatalog,"course.review_status='approved' AND course.release_status"));
+    assertTrue(str_contains($learningCatalog,'public function availablePackages'));
+    assertTrue(str_contains($learningCatalog,'NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link'));
+    assertTrue(str_contains($learningCatalog,"content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1"));
+    assertTrue(str_contains($routes,"'availablePackages'=>\$learningCatalog->availablePackages()"));
     assertTrue(str_contains($images,"['course','content','trail']"));
     assertTrue(str_contains($view,'Identificação e condição comercial'));
     assertTrue(str_contains($view,'Cursos individuais da Trilha'));
