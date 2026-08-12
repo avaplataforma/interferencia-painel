@@ -97,7 +97,12 @@ final readonly class MoodleClient
         $response=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);$error=curl_error($curl);curl_close($curl);
         if(!is_string($response))throw new RuntimeException('Falha de comunicação com o Moodle'.($error!==''?': '.$error:'').'.');
         $data=json_decode($response,true);
-        if($status<200||$status>=300||!is_array($data))throw new RuntimeException('O Moodle retornou uma resposta inválida.');
+        $voidResponse=trim($response)==='null'||trim($response)==='';
+        if($status<200||$status>=300||(!is_array($data)&&!$voidResponse)){
+            $format=json_last_error()===JSON_ERROR_NONE?get_debug_type($data):'JSON inválido';
+            throw new RuntimeException('O Moodle retornou uma resposta inválida. (Função Moodle: '.$function.' | HTTP '.$status.' | Formato: '.$format.')');
+        }
+        if($voidResponse)return[];
         if(isset($data['exception'])){
             $message=trim((string)($data['message']??'O Moodle recusou a operação.'));
             $errorCode=trim((string)($data['errorcode']??''));

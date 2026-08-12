@@ -2073,6 +2073,8 @@ $tests['organiza novas matriculas em coortes e turmas no AVA'] = static function
     assertTrue(str_contains($releaser,'organizeEnrollment'));
     assertTrue(str_contains($releaser,"academic_organization"));
     assertTrue(str_contains($client,'local_mundointer_organize_enrollment'));
+    assertTrue(str_contains($client,"trim(\$response)==='null'"));
+    assertTrue(str_contains($client,"Função Moodle: '.\$function"));
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
