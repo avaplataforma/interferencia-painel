@@ -31,6 +31,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_sync_trail_sections' => [
+        'classname' => 'local_mundointer\\external\\sync_trail_sections',
+        'description' => 'Organiza cada Curso individual da Trilha em uma seção separada do curso no Moodle.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -40,6 +47,7 @@ $services = [
             'local_mundointer_sync_brands',
             'local_mundointer_diagnose_poles',
             'local_mundointer_organize_enrollment',
+            'local_mundointer_sync_trail_sections',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_enrol_get_enrolled_users',

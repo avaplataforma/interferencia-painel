@@ -67,6 +67,14 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_organize_enrollment',['userid'=>$userId,'courseid'=>$courseId]+$organization);
     }
 
+    /** @param list<array<string,mixed>> $sections @return array<string,mixed> */
+    public function syncTrailSections(int$courseId,array$sections):array
+    {
+        if($courseId<1)throw new RuntimeException('Curso inválido para organizar os blocos da Trilha no AVA.');
+        $json=json_encode($sections,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        return$this->call('local_mundointer_sync_trail_sections',['courseid'=>$courseId,'sections'=>$json]);
+    }
+
     /** @return list<array<string,mixed>> */
     public function courseCategories():array
     {

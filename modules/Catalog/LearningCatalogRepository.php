@@ -143,7 +143,22 @@ final readonly class LearningCatalogRepository
         $statement=$this->database->prepare("SELECT trail.*,category.name category_name,category.code category_code,parent.name parent_category_name,parent.code parent_category_code,(SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count FROM catalog_trails trail INNER JOIN catalog_categories category ON category.id=trail.category_id LEFT JOIN catalog_categories parent ON parent.id=category.parent_id WHERE trail.id=:id LIMIT 1");
         $statement->execute(['id'=>$id]);$trail=$statement->fetch();
         if(!is_array($trail))return null;
-        $items=$this->database->prepare("SELECT item.item_type,item.item_id,item.sort_order,CASE item.item_type WHEN 'finance_product' THEN product.name WHEN 'provider_course' THEN COALESCE(NULLIF(course.commercial_name,''),course.name) ELSE COALESCE(NULLIF(content.commercial_name,''),content.name) END item_name FROM catalog_trail_items item LEFT JOIN finance_products product ON item.item_type='finance_product' AND product.id=item.item_id LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id WHERE item.catalog_trail_id=:id ORDER BY item.sort_order,item.id");
+        $items=$this->database->prepare("SELECT item.item_type,item.item_id,item.sort_order,
+            CASE item.item_type WHEN 'finance_product' THEN product.name WHEN 'provider_course' THEN COALESCE(NULLIF(course.commercial_name,''),course.name) ELSE COALESCE(NULLIF(content.commercial_name,''),content.name) END item_name,
+            CASE item.item_type WHEN 'finance_product' THEN 'INTER' ELSE COALESCE(course_catalog.name,content_catalog.name,'Formação externa') END item_catalog,
+            CASE item.item_type WHEN 'finance_product' THEN 'shared_ava' ELSE COALESCE(course_catalog.execution_environment,content_catalog.execution_environment,'provider_ava') END execution_environment,
+            COALESCE(course_provider.delivery_mode,content_provider.delivery_mode,'shared_ava') delivery_mode,
+            COALESCE(course_provider.launch_url_template,content_provider.launch_url_template) launch_url_template,
+            CASE item.item_type WHEN 'finance_product' THEN CAST(product.id AS CHAR) WHEN 'provider_course' THEN COALESCE(course.remote_id,course.external_key) ELSE content.external_key END remote_reference
+            FROM catalog_trail_items item
+            LEFT JOIN finance_products product ON item.item_type='finance_product' AND product.id=item.item_id
+            LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+            LEFT JOIN course_catalogs course_catalog ON course_catalog.id=course.catalog_id
+            LEFT JOIN course_provider_integrations course_provider ON course_provider.id=course.provider_id
+            LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+            LEFT JOIN course_catalogs content_catalog ON content_catalog.id=content.catalog_id
+            LEFT JOIN course_provider_integrations content_provider ON content_provider.id=content.provider_id
+            WHERE item.catalog_trail_id=:id ORDER BY item.sort_order,item.id");
         $items->execute(['id'=>$id]);$trail['items']=$items->fetchAll()?:[];
         return$trail;
     }
@@ -197,15 +212,15 @@ final readonly class LearningCatalogRepository
     public function availableItems(): array
     {
         $items = [];
-        $finance = $this->database->query("SELECT product.id,product.name,product.description,product.value price,'INTER' catalog_name,'finance_product' item_type
+        $finance = $this->database->query("SELECT product.id,product.name,product.description,product.value price,'INTER' catalog_name,'shared_ava' execution_environment,'finance_product' item_type
             FROM finance_products product WHERE product.is_active=1 ORDER BY product.name")->fetchAll() ?: [];
         foreach ($finance as $item) $items[] = $item;
-        $courses = $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,'provider_course' item_type
+        $courses = $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,catalog.execution_environment,'provider_course' item_type
             FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
             WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
             ORDER BY catalog.name,name LIMIT 2000")->fetchAll() ?: [];
         foreach ($courses as $item) $items[] = $item;
-        $contents = $this->database->query("SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,'provider_content' item_type
+        $contents = $this->database->query("SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,catalog.execution_environment,'provider_content' item_type
             FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id
             WHERE content.is_available=1 AND content.is_globally_enabled=1 AND content.review_status='approved' AND content.release_status IN ('released','published') AND catalog.is_active=1 AND catalog.is_globally_enabled=1
             ORDER BY catalog.name,name LIMIT 2000")->fetchAll() ?: [];

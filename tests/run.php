@@ -1156,7 +1156,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.5.0',$metadata['release']);
+    assertSame('0.6.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1176,7 +1176,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.5.0'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.6.0'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));
@@ -2089,7 +2089,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.5.0'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.6.0'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2103,6 +2103,8 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
+    $pluginService=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $pluginSections=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_trail_sections.php');
 
     assertTrue(str_contains($migration,'CREATE TABLE catalog_ava_publications'));
     assertTrue(str_contains($migration,'CREATE TABLE catalog_ava_publication_events'));
@@ -2114,9 +2116,17 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($repository,'publicationHistory'));
     assertTrue(str_contains($client,'core_course_create_courses'));
     assertTrue(str_contains($client,'core_course_update_courses'));
+    assertTrue(str_contains($client,'local_mundointer_sync_trail_sections'));
+    assertTrue(str_contains($publisher,'syncTrailSections'));
+    assertTrue(str_contains($repository,'execution_environment'));
+    assertTrue(str_contains($pluginService,"'local_mundointer_sync_trail_sections'"));
+    assertTrue(str_contains($pluginSections,'course_create_section'));
+    assertTrue(str_contains($pluginSections,'data-mundointer-trail-item'));
+    assertTrue(str_contains($pluginSections,'rebuild_course_cache'));
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/publish'"));
     assertTrue(str_contains($view,'Publicar no AVA'));
     assertTrue(str_contains($view,'Histórico de publicação'));
+    assertTrue(str_contains($view,'cada Curso Individual em um bloco separado'));
 };
 
 $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {
@@ -2135,7 +2145,7 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
     assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
-    assertTrue(str_contains($view,'Prévia com IA antes de salvar'));
+    assertTrue(str_contains($view,'Gerar textos e capa com IA'));
     assertTrue(str_contains($view,'Gerar e visualizar textos'));
     assertTrue(str_contains($view,'Gerar e visualizar capa'));
     assertTrue(str_contains($view,'data-trail-ai-cover-data'));
@@ -2152,6 +2162,12 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($coverGenerator,'public function attachPreview'));
     assertTrue(!str_contains($learningCatalog,"course.review_status='approved' AND course.release_status"));
     assertTrue(str_contains($images,"['course','content','trail']"));
+    assertTrue(str_contains($view,'Identificação e condição comercial'));
+    assertTrue(str_contains($view,'Cursos individuais da Trilha'));
+    assertTrue(str_contains($view,'Gerar textos e capa com IA'));
+    assertTrue(strpos($view,'Identificação e condição comercial')<strpos($view,'Gerar textos e capa com IA'));
+    assertTrue(str_contains($view,'No AVA Cursos'));
+    assertTrue(str_contains($view,'AVA do fornecedor'));
 };
 
 $tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = static function () use ($rootPath): void {

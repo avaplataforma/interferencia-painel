@@ -39,10 +39,12 @@ final readonly class AvaCatalogPublisher
             $course=$client->publishCourse(['fullname'=>(string)$trail['name'],'shortname'=>$shortName,'idnumber'=>$idNumber,'categoryid'=>$categoryId,'summary'=>$summary]);
             $remoteCourseId=(int)($course['id']??0);
             if($remoteCourseId<1)throw new RuntimeException('O AVA não devolveu o identificador do curso publicado.');
+            $sections=$this->sections($trail);
+            $sectionSync=$client->syncTrailSections($remoteCourseId,$sections);
             $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count']],$userId);
+            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections))],$userId);
             return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published'];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
@@ -93,6 +95,34 @@ final readonly class AvaCatalogPublisher
         return'<p>'.nl2br(htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')).'</p>'.$list.'<p><small>Publicação gerenciada pelo Mundo Inter.</small></p>';
     }
 
+    /** @param array<string,mixed> $trail @return list<array<string,mixed>> */
+    private function sections(array$trail):array
+    {
+        $sections=[];
+        foreach((array)($trail['items']??[])as$position=>$item){
+            $name=trim((string)($item['item_name']??''));
+            if($name==='')continue;
+            $execution=(string)($item['execution_environment']??'provider_ava');
+            $catalog=trim((string)($item['item_catalog']??'Formação'));
+            $remote=trim((string)($item['remote_reference']??''));
+            $template=trim((string)($item['launch_url_template']??''));
+            $accessUrl='';
+            if($execution!=='shared_ava'&&$template!==''&&!str_contains($template,'{franquia}')){
+                $accessUrl=str_replace(['{curso}','{id}'],rawurlencode($remote),$template);
+                if(filter_var($accessUrl,FILTER_VALIDATE_URL)===false)$accessUrl='';
+            }
+            $sections[]=[
+                'key'=>(string)$item['item_type'].'-'.(int)$item['item_id'],
+                'position'=>$position+1,
+                'name'=>$name,
+                'catalog'=>$catalog,
+                'execution'=>$execution==='shared_ava'?'shared_ava':'provider_ava',
+                'accessurl'=>$accessUrl,
+            ];
+        }
+        return$sections;
+    }
+
     /** @param array<string,mixed> $trail */
     private function signature(array$trail):string
     {
@@ -108,6 +138,7 @@ final readonly class AvaCatalogPublisher
     private function friendlyError(Throwable$exception):string
     {
         $message=trim($exception->getMessage());
+        if(str_contains($message,'local_mundointer_sync_trail_sections'))return'O plugin Mundo Inter do AVA precisa ser atualizado para organizar os Cursos individuais em blocos separados.';
         if(str_contains($message,'core_course_create_courses')||str_contains($message,'core_course_update_courses')||str_contains($message,'core_course_create_categories'))return'O serviço web do AVA ainda não permite publicar cursos e categorias. Libere as funções acadêmicas no token do AVA Cursos e tente novamente.';
         return$message!==''?$message:'Não foi possível publicar a Trilha no AVA Cursos.';
     }
