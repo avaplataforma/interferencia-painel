@@ -2047,9 +2047,12 @@ $tests['organiza trilhas comerciais em categorias hierarquicas'] = static functi
     assertTrue(str_contains($view,'Categoria *'));
     assertTrue(str_contains($view,'Selecionar todos desta Trilha'));
     assertTrue(str_contains($view,'data-trail-select-visible'));
+    assertTrue(str_contains($view,'data-trail-package-results'));
     assertTrue(str_contains($view,'class="span-6">Endereço amigável'));
     assertTrue(str_contains($view,'mínimo 2'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'setVisibleSelection'));
+    assertTrue(str_contains($routes,"'learning_catalog.draft'"));
+    assertTrue(str_contains($view,'$trailForm'));
     assertTrue(str_contains($integrations,'Cursos individuais e Trilhas'));
 };
 
@@ -2155,8 +2158,10 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($view,'data-trail-selected-only'));
     assertTrue(str_contains($view,'.item-option[hidden]{display:none}'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-trail-item-grid]')"));
-    assertTrue(str_contains($javascript,"catalog?.addEventListener('change', apply)"));
-    assertTrue(str_contains($javascript,"packageFilter?.addEventListener('change', apply)"));
+    assertTrue(str_contains($javascript,'renderPackageResults'));
+    assertTrue(str_contains($javascript,'Pesquisar Trilha do fornecedor'));
+    assertTrue(str_contains($javascript,"packageFilter?.addEventListener('change'"));
+    assertTrue(str_contains($javascript,'trailPickerValidation'));
     assertTrue(str_contains($javascript,"setFilterMode('items')"));
     assertTrue(str_contains($view,'Gerar textos e capa com IA'));
     assertTrue(str_contains($view,'Gerar e visualizar textos'));

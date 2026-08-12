@@ -739,6 +739,8 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const modeButtons = Array.from(picker?.querySelectorAll('[data-trail-filter-mode]') || []);
     const packageFilter = picker?.querySelector('[data-trail-package-filter]');
     const packageField = picker?.querySelector('[data-trail-package-field]');
+    const packageResults = picker?.querySelector('[data-trail-package-results]');
+    const searchLabel = picker?.querySelector('[data-trail-search-label]');
     const packageNote = picker?.querySelector('[data-trail-package-note]');
     const packageActions = picker?.querySelector('[data-trail-package-actions]');
     const selectVisible = picker?.querySelector('[data-trail-select-visible]');
@@ -748,10 +750,17 @@ document.querySelectorAll('.color-field').forEach((group) => {
     const visibleCount = picker?.querySelector('[data-trail-visible-count]');
     const items = Array.from(grid.querySelectorAll('[data-trail-item]'));
     const normalize = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const packages = packageFilter instanceof HTMLSelectElement
+      ? Array.from(packageFilter.options).filter((option) => option.value !== '').map((option) => ({
+        value: option.value,
+        label: option.textContent?.trim() || '',
+        catalog: option.parentElement instanceof HTMLOptGroupElement ? option.parentElement.label : ''
+      }))
+      : [];
     let filterMode = 'items';
 
     const apply = () => {
-      const term = normalize(search instanceof HTMLInputElement ? search.value : '');
+      const term = filterMode === 'items' ? normalize(search instanceof HTMLInputElement ? search.value : '') : '';
       const selectedCatalog = catalog instanceof HTMLSelectElement ? catalog.value : '';
       const selectedPackage = filterMode === 'packages' && packageFilter instanceof HTMLSelectElement ? packageFilter.value : '';
       const onlySelected = selectedOnly instanceof HTMLInputElement && selectedOnly.checked;
@@ -774,8 +783,56 @@ document.querySelectorAll('.color-field').forEach((group) => {
       if (visibleCount instanceof HTMLElement) visibleCount.textContent = String(visible);
     };
 
+    const renderPackageResults = () => {
+      if (!(packageResults instanceof HTMLElement)) return;
+      const query = filterMode === 'packages' && search instanceof HTMLInputElement ? normalize(search.value.trim()) : '';
+      if (query === '') {
+        packageResults.hidden = true;
+        packageResults.replaceChildren();
+        return;
+      }
+
+      const selectedCatalog = catalog instanceof HTMLSelectElement ? catalog.value : '';
+      const matches = packages.filter((item) => normalize(item.label).includes(query) && (selectedCatalog === '' || item.catalog === selectedCatalog));
+      const heading = document.createElement('strong');
+      heading.textContent = matches.length === 1 ? '1 Trilha encontrada' : `${matches.length} Trilhas encontradas`;
+      const options = document.createElement('div');
+      options.className = 'package-search-options';
+
+      matches.slice(0, 12).forEach((item) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'package-search-option';
+        button.classList.toggle('is-active', packageFilter instanceof HTMLSelectElement && packageFilter.value === item.value);
+        const name = document.createElement('span');
+        name.textContent = item.label;
+        const source = document.createElement('small');
+        source.textContent = item.catalog;
+        button.append(name, source);
+        button.addEventListener('click', () => {
+          if (packageFilter instanceof HTMLSelectElement) packageFilter.value = item.value;
+          apply();
+          renderPackageResults();
+        });
+        options.append(button);
+      });
+
+      packageResults.replaceChildren(heading);
+      if (matches.length === 0) {
+        const empty = document.createElement('p');
+        empty.className = 'package-search-empty';
+        empty.textContent = 'Nenhuma Trilha do fornecedor corresponde à pesquisa.';
+        packageResults.append(empty);
+      } else {
+        packageResults.append(options);
+      }
+      packageResults.hidden = false;
+    };
+
     const setFilterMode = (mode) => {
-      filterMode = mode === 'packages' ? 'packages' : 'items';
+      const nextMode = mode === 'packages' ? 'packages' : 'items';
+      if (filterMode !== nextMode && search instanceof HTMLInputElement) search.value = '';
+      filterMode = nextMode;
       modeButtons.forEach((button) => {
         if (!(button instanceof HTMLButtonElement)) return;
         const active = button.dataset.trailFilterMode === filterMode;
@@ -785,6 +842,9 @@ document.querySelectorAll('.color-field').forEach((group) => {
       if (packageField instanceof HTMLElement) packageField.hidden = filterMode !== 'packages';
       if (packageNote instanceof HTMLElement) packageNote.hidden = filterMode !== 'packages';
       if (packageActions instanceof HTMLElement) packageActions.hidden = filterMode !== 'packages';
+      if (searchLabel instanceof HTMLElement) searchLabel.textContent = filterMode === 'packages' ? 'Pesquisar Trilha do fornecedor' : 'Pesquisar Curso individual';
+      if (search instanceof HTMLInputElement) search.placeholder = filterMode === 'packages' ? 'Digite parte do nome da Trilha' : 'Digite parte do nome do curso';
+      renderPackageResults();
       apply();
     };
 
@@ -799,14 +859,29 @@ document.querySelectorAll('.color-field').forEach((group) => {
       apply();
     };
 
-    search?.addEventListener('input', apply);
-    catalog?.addEventListener('change', apply);
-    packageFilter?.addEventListener('change', apply);
+    search?.addEventListener('input', () => { renderPackageResults(); apply(); });
+    catalog?.addEventListener('change', () => { renderPackageResults(); apply(); });
+    packageFilter?.addEventListener('change', () => { renderPackageResults(); apply(); });
     modeButtons.forEach((button) => button.addEventListener('click', () => setFilterMode(button.dataset.trailFilterMode)));
     selectVisible?.addEventListener('click', () => setVisibleSelection(true));
     clearVisible?.addEventListener('click', () => setVisibleSelection(false));
     selectedOnly?.addEventListener('change', apply);
     items.forEach((item) => item.querySelector('input[type="checkbox"]')?.addEventListener('change', apply));
+    const form = grid.closest('form');
+    form?.addEventListener('submit', (event) => {
+      const selected = items.filter((item) => item.querySelector('input[type="checkbox"]:checked')).length;
+      if (selected >= 2) return;
+      event.preventDefault();
+      let feedback = picker?.querySelector('[data-trail-picker-validation]');
+      if (!(feedback instanceof HTMLElement)) {
+        feedback = document.createElement('div');
+        feedback.className = 'alert alert-danger';
+        feedback.dataset.trailPickerValidation = '1';
+        picker?.prepend(feedback);
+      }
+      feedback.textContent = 'Selecione pelo menos dois Cursos individuais. Tudo o que você já preencheu foi mantido.';
+      feedback.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
     setFilterMode('items');
   });
 })();
