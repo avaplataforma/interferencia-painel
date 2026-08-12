@@ -2071,7 +2071,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($consolidation,"scope_type='organization'"));
     assertTrue(str_contains($consolidation,'class_reference'));
     assertTrue(str_contains($repository,'public function prepareForEnrollment'));
-    assertTrue(str_contains($repository,"'mi-franquia-'.$franchiseCode"));
+    assertTrue(str_contains($repository,"'mi-franquia-'.\$franchiseCode"));
     assertTrue(str_contains($repository,"'trail':'course'"));
     assertTrue(str_contains($repository,'classReference'));
     assertTrue(str_contains($repository,"date('Y',\$time).'-'"));
