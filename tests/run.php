@@ -1151,7 +1151,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.4.0',$metadata['release']);
+    assertSame('0.5.0',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1171,7 +1171,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.4.0'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.5.0'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($ping,"get_plugin_info('local_mundointer')"));
@@ -1588,7 +1588,7 @@ $tests['prepara fornecedores externos e o Catalogo PRO sem misturar o financeiro
     assertTrue(!str_contains($client,'financeiro/parcelas'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers'"));
     assertTrue(str_contains($view,'data-catalog-tab'));
-    assertTrue(str_contains($view,"preg_replace('/^Catálogo\\s+/u'"));
+    assertTrue(str_contains($view,"preg_replace('/^(?:Catálogo|Formação)\\s+/u'"));
     assertTrue(str_contains($view,'.catalog-subtab{margin:0'));
     assertTrue(!str_contains($view,'<script>'));
     assertTrue(str_contains($javascript,"document.querySelectorAll('[data-catalog-tab]')"));
@@ -1625,7 +1625,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($admin,'data-catalog-tab'));
     assertTrue(str_contains($admin,'Conexão e API'));
     assertTrue(!str_contains($admin,'Liberação por franquia'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos e preços da franquia'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos individuais e preços da franquia'));
     assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
     assertTrue(str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
 };
