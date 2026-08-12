@@ -132,7 +132,7 @@ final readonly class EnrollmentRepository
 
     public function releaseContextForAutomation(int$id):?array
     {
-        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname,ct.name trail_name FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN catalog_trails ct ON ct.id=e.catalog_trail_id WHERE e.id=:id LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.ava_user_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname,ct.name trail_name FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN catalog_trails ct ON ct.id=e.catalog_trail_id WHERE e.id=:id LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;
     }
 

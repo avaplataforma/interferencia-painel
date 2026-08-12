@@ -25,7 +25,7 @@ final readonly class AcademicOrganizationRepository
         $connectionId=(int)($connection['id']??0);
         $localCourseId=(int)($context['moodle_course_local_id']??0);
         $trailId=(int)($context['catalog_trail_id']??0);
-        if($enrollmentId<1||$organizationId<1||$connectionId<1||$remoteCourseId<1||$identity['pole_id']<1){
+        if($organizationId<1||$connectionId<1||$remoteCourseId<1||$identity['pole_id']<1){
             throw new RuntimeException('Dados insuficientes para organizar a turma no AVA.');
         }
 
@@ -51,8 +51,10 @@ final readonly class AcademicOrganizationRepository
         try{
             $cohort=$this->upsertCohort($connectionId,$organizationId,$cohortCode,$cohortName);
             $group=$this->upsertGroup($cohort,$connectionId,$organizationId,$identity['pole_id'],$localCourseId,$remoteCourseId,$period,$classType,$classReference,$classCode,$className,$groupCode,$groupName);
-            $statement=$this->database->prepare('UPDATE student_enrollments SET catalog_trail_id=:trail,ava_academic_cohort_id=:cohort,ava_academic_group_id=:group,academic_period_code=:period WHERE id=:id');
-            $statement->execute(['trail'=>$trailId>0?$trailId:null,'cohort'=>$cohort,'group'=>$group,'period'=>$period,'id'=>$enrollmentId]);
+            if($enrollmentId>0){
+                $statement=$this->database->prepare('UPDATE student_enrollments SET catalog_trail_id=:trail,ava_academic_cohort_id=:cohort,ava_academic_group_id=:group,academic_period_code=:period WHERE id=:id');
+                $statement->execute(['trail'=>$trailId>0?$trailId:null,'cohort'=>$cohort,'group'=>$group,'period'=>$period,'id'=>$enrollmentId]);
+            }
             $this->database->commit();
         }catch(Throwable $exception){
             if($this->database->inTransaction())$this->database->rollBack();

@@ -2091,6 +2091,28 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($view,'Turmas lógicas'));
 };
 
+$tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000050_create_ava_academic_backfill.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationBackfillService.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE ava_academic_backfill_runs'));
+    assertTrue(str_contains($migration,'CREATE TABLE ava_academic_backfill_items'));
+    assertTrue(str_contains($migration,'REFERENCES platform_users(id)'));
+    assertTrue(str_contains($service,"'panel_enrollment'"));
+    assertTrue(str_contains($service,"'moodle_mirror'"));
+    assertTrue(str_contains($service,'processNextBatch'));
+    assertTrue(str_contains($service,'Retomado após interrupção do lote.'));
+    assertTrue(!str_contains($service,'createUser('));
+    assertTrue(!str_contains($service,'enrolStudent('));
+    assertTrue(str_contains($routes,'academic-backfill/start'));
+    assertTrue(str_contains($routes,'academic-backfill/{id:\\d+}/process'));
+    assertTrue(str_contains($view,'Sincronização dos alunos atuais'));
+    assertTrue(str_contains($view,'Processar próximo lote'));
+    assertTrue(str_contains($view,'Pendências recentes'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
