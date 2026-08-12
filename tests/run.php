@@ -2075,8 +2075,12 @@ $tests['separa catalogos trilhas mundo inter e publicacao no AVA'] = static func
     $providers=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     $trails=(string)file_get_contents($rootPath.'/views/admin/platform/catalog-trails.php');
     $ava=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
+    $navigation=(string)file_get_contents($rootPath.'/views/layouts/navigation.php');
 
     assertTrue(str_contains($migration,'is_shared_ava_enabled'));
+    assertTrue(str_contains($navigation,'CURADORIA ACADÊMICA'));
+    assertTrue(str_contains($navigation,'Trilhas Mundo Inter'));
+    assertTrue(str_contains($navigation,'catalog-trails?tab=categories'));
     assertTrue(str_contains($repository,'saveSharedAvaCatalogs'));
     assertTrue(str_contains($repository,'execution_environment=\'shared_ava\''));
     assertTrue(str_contains($learning,'shared_ava_enabled'));

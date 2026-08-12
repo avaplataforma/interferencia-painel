@@ -10,6 +10,13 @@
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/franchise-billing"><i class="fa-solid fa-money-bill-transfer fa-fw" aria-hidden="true"></i>Financeiro</a>
     </div>
   </details>
+  <details class="nav-group" <?= $curationOpen ? 'open' : '' ?>>
+    <summary><span><i class="fa-solid fa-layer-group fa-fw" aria-hidden="true"></i>CURADORIA ACADÊMICA</span></summary>
+    <div class="nav-submenu">
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails?tab=trails"><i class="fa-solid fa-route fa-fw" aria-hidden="true"></i>Trilhas Mundo Inter</a>
+      <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails?tab=categories"><i class="fa-solid fa-folder-tree fa-fw" aria-hidden="true"></i>Categorias</a>
+    </div>
+  </details>
   <a class="nav-link" href="<?= $escape($basePath) ?>/admin/tickets"><i class="fa-solid fa-ticket fa-fw" aria-hidden="true"></i>TICKETS</a>
   <details class="nav-group" <?= $admOpen ? 'open' : '' ?>>
     <summary><span><i class="fa-solid fa-gear fa-fw" aria-hidden="true"></i>ADM</span></summary>
