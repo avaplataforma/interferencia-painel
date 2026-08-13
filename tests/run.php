@@ -2402,7 +2402,10 @@ $tests['carrega cadastro unificado do aluno com documentos vinculados'] = static
     assertTrue(str_contains($view,'Cadastro unificado'));
     assertTrue(str_contains($view,'Jornada do aluno'));
     assertTrue(str_contains($view,'Situação atual'));
+    assertTrue(str_contains($view,'Próxima ação recomendada'));
     assertTrue(str_contains($routes,'StudentJourneyBuilder'));
+    assertTrue(str_contains($routes,"'/students/actions'"));
+    assertTrue(is_file($rootPath.'/views/students/actions.php'));
     assertTrue(str_contains($view,'Acesso AVA'));
     assertTrue(str_contains($documents,'public function allForEntity'));
     assertTrue(str_contains($documents,"'Alunos/'"));
@@ -2427,6 +2430,25 @@ $tests['calcula automaticamente a etapa atual da jornada do aluno'] = static fun
     assertSame('done',$journey['steps'][0]['status']);
     assertSame('current',$journey['steps'][2]['status']);
     assertSame(2,count($journey['events']));
+    assertSame('finance',$journey['next_action']['action']);
+};
+
+$tests['prioriza a próxima ação operacional de cada aluno'] = static function (): void {
+    $builder=new \Interferencia\Modules\Students\StudentActionQueueBuilder();
+    $queue=$builder->build(
+        [
+            ['id'=>1,'name'=>'Aluno incompleto','cpf_cnpj'=>'','email'=>'aluno1@example.com','mobile_phone'=>'48999999999','unit_id'=>1,'unit_name'=>'Tijucas'],
+            ['id'=>2,'name'=>'Aluno financeiro','cpf_cnpj'=>'12345678901','email'=>'aluno2@example.com','mobile_phone'=>'48988888888','unit_id'=>1,'unit_name'=>'Tijucas'],
+        ],
+        [['id'=>20,'finance_customer_id'=>2,'status'=>'awaiting_charge','course_name'=>'Curso teste','attendant_name'=>'Atendente']],
+        [],
+    );
+
+    assertSame(2,$queue['total']);
+    assertSame(1,$queue['summary']['incomplete_registration']);
+    assertSame(1,$queue['summary']['pending_payment']);
+    assertSame('incomplete_registration',$queue['items'][0]['type']);
+    assertSame('charge',$queue['items'][1]['action']);
 };
 
 $failures = 0;

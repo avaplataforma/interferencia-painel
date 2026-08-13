@@ -75,6 +75,7 @@ final class StudentJourneyBuilder
 
         $events=[];
         $this->addEvent($events,$student['created_at']??null,'Cadastro realizado','O aluno entrou na base unificada.','registration','fa-user-plus');
+        if(!empty($student['updated_at'])&&(string)$student['updated_at']!==(string)($student['created_at']??''))$this->addEvent($events,$student['updated_at'],'Cadastro atualizado','Os dados do aluno foram revisados no Painel.','registration','fa-user-pen');
         foreach($enrollments as$enrollment){
             $course=(string)($enrollment['course_name']??$enrollment['product_name']??'Curso');
             $this->addEvent($events,$enrollment['created_at']??null,'Matrícula criada',$course,'enrollment','fa-graduation-cap');
@@ -102,9 +103,19 @@ final class StudentJourneyBuilder
         }
         usort($events,static fn(array$a,array$b):int=>strcmp((string)$b['occurred_at'],(string)$a['occurred_at']));
 
+        $nextAction=(new StudentActionQueueBuilder())->nextAction($student,$enrollments,$pedagogicalRows);
+        if($nextAction===null){
+            $nextAction=match($state){
+                'ready'=>['type'=>'ready','label'=>'Criar nova matrícula','description'=>'Escolha o curso, a condição comercial e o polo para iniciar uma nova jornada.','icon'=>'fa-graduation-cap','tone'=>'neutral','action'=>'new_enrollment'],
+                'completed'=>['type'=>'completed','label'=>'Consultar conclusão','description'=>'Confira certificados emitidos ou inicie uma nova matrícula para este aluno.','icon'=>'fa-award','tone'=>'success','action'=>'certificate'],
+                default=>['type'=>'in_progress','label'=>'Acompanhar aprendizado','description'=>'Consulte progresso, último acesso, nota e possíveis sinais de atenção.','icon'=>'fa-chart-line','tone'=>'success','action'=>'pedagogical'],
+            };
+        }
+
         return[
             'state'=>$state,
             'status'=>$states[$state],
+            'next_action'=>$nextAction,
             'missing'=>$missing,
             'steps'=>$steps,
             'events'=>array_slice($events,0,80),

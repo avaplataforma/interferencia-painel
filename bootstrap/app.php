@@ -48,6 +48,7 @@ use Interferencia\Modules\Storage\SpacesStorageManager;
 use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
+use Interferencia\Modules\Students\StudentActionQueueBuilder;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 use Interferencia\Modules\Finance\IntegrationRepository;
 use Interferencia\Modules\Finance\CatalogRepository;
@@ -221,7 +222,8 @@ if($currentUser!==null&&$auth->can('crm.contacts.view')){$alertUnit=$unitContext
 $siteRecoveryAlerts=['total'=>0,'initial'=>0,'day'=>0,'critical'=>0];
 if(!$isCentralContext&&$currentUser!==null&&$auth->can('crm.contacts.view')){try{$siteRecoveries->sync($organizationId,100);$siteRecoveryAlerts=$siteRecoveries->notificationSummary($organizationId,$alertUnitIds,$currentUser->id);}catch(Throwable$exception){$logger->error('Falha ao atualizar recuperação comercial do site.',['exception'=>$exception]);}}
 $whatsappAlertLineIds=$currentUser!==null&&$auth->can('whatsapp.inbox.view')?array_map(static fn(array $line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($currentUser->id)):[];
-$avaAlerts=$currentUser!==null&&$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary(array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available())):['ready'=>0,'failed'=>0];
+$studentActionAlerts=['summary'=>['incomplete_registration'=>0,'pending_payment'=>0,'pending_ava'=>0,'inactive'=>0,'certificate_available'=>0],'items'=>[],'total'=>0];
+if(!$isCentralContext&&$currentUser!==null&&$auth->can('finance.manage')){try{$studentAlertUnitIds=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());$studentActionAlerts=(new StudentActionQueueBuilder())->build($finance->activeStudentsForUnits($studentAlertUnitIds),$studentEnrollments->all($studentAlertUnitIds),$moodleRepository->pedagogicalDashboard($studentAlertUnitIds)['students'],8);}catch(Throwable$exception){$logger->error('Falha ao montar fila operacional de alunos.',['exception'=>$exception]);}}
 $centralBillingAlerts=$isCentralContext&&$currentUser!==null&&$auth->can('billing.manage')?$franchiseContracts->billingAlerts():['overdue'=>0,'billing_failures'=>0,'pending_activation'=>0,'split_pending'=>0,'split_failures'=>0];
 $view->share([
     'basePath' => $effectiveBasePath,
@@ -272,7 +274,7 @@ $view->share([
     'siteRecoveryAlerts' => $siteRecoveryAlerts,
     'whatsappAlerts' => $currentUser === null ? ['unread'=>0,'unassigned'=>0] : $whatsappMessages->notificationSummary($whatsappAlertLineIds),
     'ticketAlerts' => $currentUser === null || !$auth->can('tickets.view') ? ['open'=>0,'unread'=>0,'overdue'=>0] : $tickets->notificationSummary($currentUser->id,array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available())),
-    'avaAlerts' => $avaAlerts,
+    'studentActionAlerts' => $studentActionAlerts,
     'centralBillingAlerts' => $centralBillingAlerts,
     'centralSandboxContracts' => $isCentralContext ? $franchiseSandboxTests->eligibleContracts() : [],
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],

@@ -138,6 +138,7 @@ const refreshNotifications = async () => {
     const today = Number(data?.followups?.today || 0);
     const ticketUnread = Number(data?.tickets?.unread || 0);
     const ticketOverdue = Number(data?.tickets?.overdue || 0);
+    const studentActions = Number(data?.student_actions?.total || 0);
     const recoveryInitial = Number(data?.recovery?.initial || 0);
     const recoveryDay = Number(data?.recovery?.day || 0);
     const recoveryCritical = Number(data?.recovery?.critical || 0);
@@ -154,6 +155,7 @@ const refreshNotifications = async () => {
     if (panel) {
       panel.querySelectorAll('.notification-item,.notification-empty').forEach((item) => item.remove());
       const addItem = (href, icon, title, subtitle) => { const link = document.createElement('a'); link.className = 'notification-item'; link.href = href; const image = document.createElement('i'); image.className = `fa-solid ${icon}`; const copy = document.createElement('span'); const strong = document.createElement('strong'); strong.textContent = title; const small = document.createElement('small'); small.textContent = subtitle; copy.append(strong, small); link.append(image, copy); panel.append(link); };
+      if (studentActions > 0) addItem(`${basePath}/students/actions`, 'fa-list-check', `${studentActions} ação(ões) de alunos`, 'Cadastro, financeiro, AVA e pedagógico');
       if (ticketUnread > 0) addItem(`${basePath}/tickets?scope=mine`, 'fa-ticket', `${ticketUnread} ticket(s) atualizado(s)`, 'Abrir demandas recebidas');
       if (ticketOverdue > 0) addItem(`${basePath}/tickets?scope=overdue`, 'fa-clock', `${ticketOverdue} ticket(s) atrasado(s)`, 'Prazo vencido');
       if (unread > 0) addItem(`${basePath}/whatsapp?scope=unread`, 'fa-comments', `${unread} mensagem(ns) não lida(s)`, 'Abrir caixa do WhatsApp');

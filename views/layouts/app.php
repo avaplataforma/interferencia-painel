@@ -408,12 +408,11 @@ $appScriptVersion = is_file($appScriptPath) ? (string) filemtime($appScriptPath)
           $siteRecoveryAlertCount=(int)($siteRecoveryAlerts['total']??0);
           $whatsappAlertCount=(int)($whatsappAlerts['unread']??0);
           $ticketAlertCount=(int)(($ticketAlerts['unread']??0)+($ticketAlerts['overdue']??0));
-          $avaAlertCount=(int)(($avaAlerts['ready']??0)+($avaAlerts['failed']??0));
-          $notificationCount=$followAlertCount+$siteRecoveryAlertCount+$whatsappAlertCount+$ticketAlertCount+$avaAlertCount;
+          $studentActionAlertCount=(int)($studentActionAlerts['total']??0);
+          $notificationCount=$followAlertCount+$siteRecoveryAlertCount+$whatsappAlertCount+$ticketAlertCount+$studentActionAlertCount;
         ?>
         <details class="notification-center"><summary aria-label="Abrir notificações"><i class="fa-solid fa-bell" aria-hidden="true"></i><?php if($notificationCount>0):?><span class="notification-total" data-notification-total><?= $notificationCount ?></span><?php endif;?></summary><div class="notification-panel"><h2>Notificações</h2>
-          <?php if((int)($avaAlerts['failed']??0)>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/students/enrollments"><i class="fa-solid fa-triangle-exclamation"></i><span><strong><?= (int)$avaAlerts['failed'] ?> acesso(s) com falha</strong><small>Revisar liberação ou envio</small></span></a><?php endif;?>
-          <?php if((int)($avaAlerts['ready']??0)>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/students/enrollments"><i class="fa-solid fa-paper-plane"></i><span><strong><?= (int)$avaAlerts['ready'] ?> acesso(s) aguardando envio</strong><small>Abrir matrículas</small></span></a><?php endif;?>
+          <?php if($studentActionAlertCount>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/students/actions"><i class="fa-solid fa-list-check"></i><span><strong><?= $studentActionAlertCount ?> ação(ões) de alunos</strong><small>Cadastro, financeiro, AVA e pedagógico</small></span></a><?php endif;?>
           <?php if((int)($siteRecoveryAlerts['critical']??0)>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/admin/site/funnel#recuperacao"><i class="fa-solid fa-fire"></i><span><strong><?= (int)$siteRecoveryAlerts['critical'] ?> checkout(s) parado(s) há 3 dias</strong><small>Prioridade máxima de recuperação</small></span></a><?php endif;?>
           <?php if((int)($siteRecoveryAlerts['day']??0)>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/admin/site/funnel#recuperacao"><i class="fa-solid fa-clock-rotate-left"></i><span><strong><?= (int)$siteRecoveryAlerts['day'] ?> checkout(s) parado(s) há 24h</strong><small>Retomar contato comercial</small></span></a><?php endif;?>
           <?php if((int)($siteRecoveryAlerts['initial']??0)>0):?><a class="notification-item" href="<?= $escape($basePath) ?>/admin/site/funnel#recuperacao"><i class="fa-solid fa-cart-arrow-down"></i><span><strong><?= (int)$siteRecoveryAlerts['initial'] ?> checkout(s) parado(s) há 30 min</strong><small>Nova oportunidade para recuperar</small></span></a><?php endif;?>

@@ -85,6 +85,7 @@ use Interferencia\Modules\Catalog\OpenAiCatalogTextClient;
 use Interferencia\Modules\Catalog\EscolaAvancadaClient;
 use Interferencia\Modules\Catalog\PortalAvaClient;
 use Interferencia\Modules\Catalog\ContedTechClient;
+use Interferencia\Modules\Students\StudentActionQueueBuilder;
 use Interferencia\Modules\Students\StudentJourneyBuilder;
 
 return static function (
@@ -736,7 +737,7 @@ return static function (
         try{if($payment!==null){$reference=(string)($payment['externalReference']??'');if(str_starts_with($reference,'mundo-inter:sandbox:franchise-test:')){$franchiseSandboxTests->updateFromPayment($payment);}elseif(preg_match('/^mundo-inter:franchise-contract:(\d+)$/',$reference,$contractMatch)===1){$franchiseContracts->syncBilling((int)$contractMatch[1],$payment);}else{$eventFinance->upsertPayment($payment);$siteOrderFulfillment->processPayment($eventType,$payment);$confirmedEnrollment=$eventEnrollments->handlePaymentUpdate((string)($payment['id']??''),(string)($payment['status']??''));if($confirmedEnrollment!==null){try{$release=$avaEnrollmentReleaser->release($confirmedEnrollment);if(($release['status']??'')==='released')$avaAccessNotifier->notify($confirmedEnrollment);}catch(Throwable){}}}}if($subscription!==null)$eventFinance->upsertSubscription($subscription);if($checkout!==null){$financeCatalog->updateFromWebhook($checkout);$siteOrderFulfillment->processCheckout($eventType,$checkout);}$eventFinance->finishWebhook($eventId);}catch(Throwable$e){$eventFinance->finishWebhook($eventId,mb_substr($e->getMessage(),0,500));return Response::text("Falha temporária.\n",500);}
         return Response::text("EVENT_RECEIVED\n");
     });
-    $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages,$tickets,$studentEnrollments,$siteRecoveries,$organizationId):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$availableUnitIds=array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available());$follow=['overdue'=>0,'today'=>0,'future'=>0];$recovery=['total'=>0,'initial'=>0,'day'=>0,'critical'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?$availableUnitIds:[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);try{$siteRecoveries->sync($organizationId,100);$recovery=$siteRecoveries->notificationSummary($organizationId,$unitIds,$user->id);}catch(Throwable){}}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}$ticketAlerts=$auth->can('tickets.view')?$tickets->notificationSummary($user->id,$availableUnitIds):['open'=>0,'unread'=>0,'overdue'=>0];$ava=$auth->can('finance.manage')?$studentEnrollments->avaNotificationSummary($availableUnitIds):['ready'=>0,'failed'=>0];return Response::json(['followups'=>$follow,'recovery'=>$recovery,'whatsapp'=>$whatsapp,'tickets'=>$ticketAlerts,'ava'=>$ava,'total'=>$follow['overdue']+$follow['today']+$recovery['total']+$whatsapp['unread']+$ticketAlerts['unread']+$ticketAlerts['overdue']+$ava['ready']+$ava['failed']]);},[$requireAuth]);
+    $router->get('/notifications/summary',static function()use($auth,$unitContext,$followUps,$whatsappLines,$whatsappMessages,$tickets,$studentEnrollments,$siteRecoveries,$organizationId,$finance,$moodleRepository):Response{$user=$auth->user();if($user===null)return Response::json(['error'=>'unauthenticated'],401);$availableUnitIds=array_map(static fn(array$item):int=>(int)$item['id'],$unitContext->available());$follow=['overdue'=>0,'today'=>0,'future'=>0];$recovery=['total'=>0,'initial'=>0,'day'=>0,'critical'=>0];if($auth->can('crm.contacts.view')){$unit=$unitContext->current();$unitIds=$unit===null?[]:($unit['id']===null?$availableUnitIds:[(int)$unit['id']]);$follow=$followUps->summary($unitIds,$user->id);try{$siteRecoveries->sync($organizationId,100);$recovery=$siteRecoveries->notificationSummary($organizationId,$unitIds,$user->id);}catch(Throwable){}}$whatsapp=['unread'=>0,'unassigned'=>0];if($auth->can('whatsapp.inbox.view')){$lineIds=array_map(static fn(array$line):int=>(int)$line['id'],$whatsappLines->authorizedForUser($user->id));$whatsapp=$whatsappMessages->notificationSummary($lineIds);}$ticketAlerts=$auth->can('tickets.view')?$tickets->notificationSummary($user->id,$availableUnitIds):['open'=>0,'unread'=>0,'overdue'=>0];$studentActions=['summary'=>[],'items'=>[],'total'=>0];if($auth->can('finance.manage'))try{$studentActions=(new StudentActionQueueBuilder())->build($finance->activeStudentsForUnits($availableUnitIds),$studentEnrollments->all($availableUnitIds),$moodleRepository->pedagogicalDashboard($availableUnitIds)['students'],8);}catch(Throwable){}return Response::json(['followups'=>$follow,'recovery'=>$recovery,'whatsapp'=>$whatsapp,'tickets'=>$ticketAlerts,'student_actions'=>$studentActions,'total'=>$follow['overdue']+$follow['today']+$recovery['total']+$whatsapp['unread']+$ticketAlerts['unread']+$ticketAlerts['overdue']+$studentActions['total']]);},[$requireAuth]);
 
     $ticketUnitIds=static fn():array=>array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());
     $viewTickets=[$requireAuth,new RequirePermission($auth,'tickets.view')];
@@ -787,7 +788,7 @@ return static function (
         return Response::redirect($basePath . '/');
     }, [$requireGuest]);
 
-    $router->get('/', static function (Request $request) use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext, $contacts, $tags, $organizations, $platformAdmin, $sites, $organizationId): Response {
+    $router->get('/', static function (Request $request) use ($auth, $view, $csrf, $session, $browserTitle, $basePath, $followUps, $unitContext, $contacts, $tags, $organizations, $platformAdmin, $sites, $organizationId, $finance, $studentEnrollments, $moodleRepository): Response {
         if ($platformAdmin()) {
             $organizationRows = $organizations->allWithPrimaryDomain();
             $activeOrganizations = array_values(array_filter($organizationRows, static fn (array $organization): bool => ($organization['status'] ?? '') === 'active'));
@@ -812,6 +813,8 @@ return static function (
         if(!in_array($source,['','internal','external_form','whatsapp'],true))$source='';
         $tagId=max(0,(int)$request->queryValue('tag','0'));
         $canViewContacts=$auth->can('crm.contacts.view');
+        $studentActionQueue=['summary'=>['incomplete_registration'=>0,'pending_payment'=>0,'pending_ava'=>0,'inactive'=>0,'certificate_available'=>0],'items'=>[],'total'=>0];
+        if($auth->can('finance.manage'))try{$studentActionQueue=(new StudentActionQueueBuilder())->build($finance->activeStudentsForUnits($dashboardUnitIds),$studentEnrollments->all($dashboardUnitIds),$moodleRepository->pedagogicalDashboard($dashboardUnitIds)['students'],6);}catch(Throwable){}
         return $view->render('dashboard', [
             'title' => $browserTitle,
             'user' => $auth->user(),
@@ -833,6 +836,7 @@ return static function (
             'allUnits' => $dashboardUnit !== null && array_key_exists('id',$dashboardUnit) && $dashboardUnit['id'] === null,
             'siteSettings' => $sites->settings($organizationId),
             'siteOrders' => $sites->recentOrders($organizationId,6),
+            'studentActionQueue' => $studentActionQueue,
             'message' => $session->get('dashboard.message'),
             'error' => $session->get('dashboard.error'),
         ]);
@@ -1138,6 +1142,14 @@ return static function (
 
     $manageEnrollments=[$requireAuth,new RequirePermission($auth,'finance.manage')];
     $manageMoodleSettings=[$requireAuth,new RequirePermission($auth,'moodle.settings.manage')];
+    $router->get('/students/actions',static function(Request$request)use($view,$finance,$studentEnrollments,$moodleRepository,$unitContext,$basePath,$browserTitle):Response{
+        $unitIds=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());
+        $queue=(new StudentActionQueueBuilder())->build($finance->activeStudentsForUnits($unitIds),$studentEnrollments->all($unitIds),$moodleRepository->pedagogicalDashboard($unitIds)['students'],1000);
+        $type=trim((string)$request->queryValue('type',''));$search=mb_strtolower(trim((string)$request->queryValue('q','')));
+        $allowed=['incomplete_registration','pending_payment','pending_ava','inactive','certificate_available'];if(!in_array($type,$allowed,true))$type='';
+        $items=array_values(array_filter($queue['items'],static function(array$item)use($type,$search):bool{if($type!==''&&(string)$item['type']!==$type)return false;if($search==='')return true;$haystack=mb_strtolower(implode(' ',[(string)$item['student_name'],(string)$item['student_document'],(string)$item['course_name'],(string)$item['unit_name']]));return str_contains($haystack,$search);}));
+        return$view->render('students/actions',['title'=>'Pendências dos alunos — '.$browserTitle,'queue'=>$queue,'items'=>$items,'type'=>$type,'search'=>$search,'basePath'=>$basePath]);
+    },$manageEnrollments);
     $router->get('/admin/ava',static fn():Response=>Response::redirect($basePath.'/students/enrollments#special-release'),$manageEnrollments);
     $router->post('/students/enrollments/waivers',static function(Request$request)use($studentEnrollments,$avaConnections,$organizationId,$unitContext,$auth,$session,$basePath):Response{try{$allowed=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());$courseId=(int)$request->input('moodle_course_id','0');$destination=$avaConnections->resolveDestination($organizationId,$courseId,(int)$request->input('ava_connection_id','0'));$studentEnrollments->createWaived((int)$request->input('finance_customer_id','0'),$courseId,(int)$request->input('unit_id','0'),(string)$request->input('reason',''),$auth->user()->id,$allowed,(int)$destination['connection_id'],(int)$destination['remote_course_id']);$session->flash('student_enrollments.message','Liberação especial autorizada para '.$destination['name'].'. Confira os dados e clique em Liberar no AVA.');}catch(Throwable$e){$session->flash('student_enrollments.error',$e->getMessage());}return Response::redirect($basePath.'/students/enrollments#special-release');},$manageEnrollments);
     $router->post('/students/enrollments/provider-waivers',static function(Request$request)use($studentEnrollments,$courseProviders,$unitContext,$auth,$session,$basePath):Response{
