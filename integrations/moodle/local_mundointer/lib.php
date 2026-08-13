@@ -695,11 +695,12 @@ body.mundointer-brand-active #course-index .courseindex-section {
     transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 body.mundointer-brand-active #course-index .courseindex-section:hover {
-    background: var(--mundointer-primary-soft);
+    background: #f8fafc;
 }
 body.mundointer-brand-active #course-index .courseindex-section.mundointer-courseindex-active {
-    border-color: color-mix(in srgb, var(--mundointer-primary) 30%, #dfe6ec);
-    background: color-mix(in srgb, var(--mundointer-primary-soft) 72%, #fff);
+    border-color: color-mix(in srgb, var(--mundointer-primary) 42%, #dfe6ec);
+    border-left: 3px solid var(--mundointer-primary);
+    background: #fff;
     box-shadow: 0 .25rem .75rem rgba(20, 39, 60, .07);
 }
 body.mundointer-brand-active #course-index .courseindex-section-title {
@@ -710,7 +711,7 @@ body.mundointer-brand-active #course-index .courseindex-section-title {
 body.mundointer-brand-active #course-index .courseindex-section-title .courseindex-link,
 body.mundointer-brand-active #course-index .courseindex-section-title a {
     min-width: 0;
-    color: var(--mundointer-secondary);
+    color: #111827 !important;
     font-size: .82rem;
     font-weight: 800;
     line-height: 1.25;
@@ -723,11 +724,16 @@ body.mundointer-brand-active #course-index .courseindex-item-content .courseinde
     margin-top: .15rem;
     border-radius: .55rem;
 }
+body.mundointer-brand-active #course-index .courseindex-item-content .courseindex-item a,
+body.mundointer-brand-active #course-index .courseindex-item-content .courseindex-item .courseindex-link,
+body.mundointer-brand-active #course-index .courseindex-item-content .courseindex-item span:not([data-for="cm_completion"]) {
+    color: #111827 !important;
+}
 body.mundointer-brand-active #course-index .courseindex-item.pageitem {
     border-left: 3px solid var(--mundointer-primary);
     border-radius: .55rem;
-    color: var(--mundointer-secondary);
-    background: var(--mundointer-primary-soft);
+    color: #111827 !important;
+    background: #f8fafc;
 }
 body.mundointer-brand-active #course-index [data-for="cm_completion"].completion_complete {
     color: #149447;
