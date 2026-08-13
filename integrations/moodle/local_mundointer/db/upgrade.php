@@ -28,5 +28,21 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081327, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081328) {
+        global $DB;
+        $services = $DB->get_records('external_services', ['component' => 'local_mundointer'], '', 'id');
+        foreach ($services as $service) {
+            if (!$DB->record_exists('external_services_functions', [
+                'externalserviceid' => (int)$service->id,
+                'functionname' => 'local_mundointer_lti_selections',
+            ])) {
+                $DB->insert_record('external_services_functions', (object)[
+                    'externalserviceid' => (int)$service->id,
+                    'functionname' => 'local_mundointer_lti_selections',
+                ]);
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026081328, 'local', 'mundointer');
+    }
     return true;
 }

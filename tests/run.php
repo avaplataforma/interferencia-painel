@@ -1840,6 +1840,9 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     $verifier=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeLtiVerifier.php');
+    $moodleClient=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $pluginServices=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $pluginVersion=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
     assertTrue(str_contains($migration,'lti_registration_url'));
     assertTrue(str_contains($migration,"integration_mode='lti13'"));
     $deepLinkMigration=(string)file_get_contents($rootPath.'/database/migrations/20260811_000010_add_lti13_deep_link_url.php');
@@ -1858,6 +1861,13 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($view,'Client ID'));
     assertTrue(str_contains($view,'Deployment ID'));
     assertTrue(str_contains($view,'Testar conexão técnica'));
+    assertTrue(str_contains($view,'Sincronizar seleções do Moodle'));
+    assertTrue(str_contains($routes,"ltiSelections('iesde')"));
+    assertTrue(str_contains($repository,'Nenhuma atividade MASTER foi selecionada no AVA Cursos'));
+    assertTrue(str_contains($moodleClient,'local_mundointer_lti_selections'));
+    assertTrue(str_contains($pluginServices,"'local_mundointer_lti_selections'"));
+    assertTrue(str_contains($pluginVersion,'0.9.19'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/lti_selections.php'));
 };
 
 $tests['governa catalogos com curadoria preservada recursos e regra por franquia'] = static function () use ($rootPath): void {

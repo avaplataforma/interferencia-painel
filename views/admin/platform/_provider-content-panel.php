@@ -1,5 +1,5 @@
 <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:contents" hidden>
- <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong>Cursos individuais liberados por padrão.</strong><br>A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.</div></div>
+ <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong><?= $provider==='iesde'?'Atividades MASTER selecionadas no Moodle.':'Cursos individuais liberados por padrão.' ?></strong><br><?= $provider==='iesde'?'Cada atividade LTI escolhida pelo Deep Linking aparece aqui para curadoria comercial, sem expor credenciais do fornecedor.':'A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.' ?></div></div>
  <div class="content-toolbar">
   <form method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers">
    <input type="hidden" name="catalog" value="<?= $escape($provider) ?>">
@@ -11,7 +11,7 @@
   <p><strong><?= (int)($contentPage['total']??0) ?></strong> conteúdo(s)</p>
  </div>
  <?php if($contentRows===[]):?>
-  <div class="catalog-empty"><i class="fa-solid fa-puzzle-piece fa-2x"></i><h3>Nenhum conteúdo individual sincronizado</h3><p>Use “Sincronizar cursos” na aba Conexão e API. A hierarquia será importada automaticamente.</p></div>
+  <div class="catalog-empty"><i class="fa-solid fa-puzzle-piece fa-2x"></i><h3>Nenhum conteúdo individual sincronizado</h3><p><?= $provider==='iesde'?'Selecione atividades com a ferramenta LTI Hub IESDE dentro de um curso no AVA Cursos e use “Sincronizar seleções do Moodle”.':'Use “Sincronizar cursos” na aba Conexão e API. A hierarquia será importada automaticamente.' ?></p></div>
  <?php else:?>
   <div class="table-responsive content-table-wrap"><table class="content-table"><thead><tr><th>Curso individual</th><th>Origem</th><th>Curadoria</th><th>Disponibilidade global</th><th>Ações</th></tr></thead><tbody>
   <?php foreach($contentRows as$content):

@@ -45,6 +45,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_lti_selections' => [
+        'classname' => 'local_mundointer\\external\\lti_selections',
+        'description' => 'Retorna cursos e atividades LTI MASTER selecionados no Moodle por Deep Linking.',
+        'type' => 'read',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -56,6 +63,7 @@ $services = [
             'local_mundointer_organize_enrollment',
             'local_mundointer_sync_trail_sections',
             'local_mundointer_academic_snapshot',
+            'local_mundointer_lti_selections',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_course_get_categories',

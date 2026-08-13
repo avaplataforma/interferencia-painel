@@ -139,6 +139,16 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_academic_snapshot',['userid'=>$userId,'courseid'=>$courseId]);
     }
 
+    /** @return array{provider:string,courses:list<array<string,mixed>>,coursecount:int,contentcount:int,syncedat:int} */
+    public function ltiSelections(string$provider='iesde'):array
+    {
+        $response=$this->call('local_mundointer_lti_selections',['provider'=>$provider]);
+        $payload=json_decode((string)($response['payload']??''),true);
+        if(!is_array($payload)||!is_array($payload['courses']??null))throw new RuntimeException('O AVA Cursos retornou uma seleção LTI inválida.');
+        $payload['courses']=array_values(array_filter($payload['courses'],'is_array'));
+        return$payload;
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {

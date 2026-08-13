@@ -247,6 +247,9 @@ final readonly class CourseProviderRepository
     /** @param list<array<string,mixed>> $courses @return array{received:int,created:int,updated:int,unavailable:int,contents:int,content_created:int,content_updated:int,content_unavailable:int} */
     public function synchronizeProvider(string $providerCode, array $courses): array
     {
+        if ($providerCode === 'iesde' && $courses === []) {
+            throw new RuntimeException('Nenhuma atividade MASTER foi selecionada no AVA Cursos. Adicione a ferramenta LTI Hub IESDE a um curso do Moodle e escolha o conteúdo antes de sincronizar.');
+        }
         $settings = $this->settingsForProvider($providerCode, true);
         if ((int)$settings['id'] < 1) throw new RuntimeException('Integração do fornecedor não encontrada.');
         $catalogId = (int)$settings['catalog_id'];
@@ -306,7 +309,7 @@ final readonly class CourseProviderRepository
                     $created++;
                 }
 
-                if ($providerCode === 'conted_tech') {
+                if (in_array($providerCode, ['conted_tech', 'iesde'], true)) {
                     $contentResult = $this->synchronizeCourseContents(
                         $providerId,
                         $catalogId,
@@ -328,7 +331,7 @@ final readonly class CourseProviderRepository
                 $unavailable = $statement->rowCount();
             }
 
-            if ($providerCode === 'conted_tech') {
+            if (in_array($providerCode, ['conted_tech', 'iesde'], true)) {
                 $contentsRemoved = $this->database->prepare("UPDATE provider_catalog_contents SET is_available=0,sync_state='removed',last_changed_at=NOW() WHERE provider_id=:provider AND last_seen_at<:seen AND is_available=1");
                 $contentsRemoved->execute(['provider' => $providerId, 'seen' => $now]);
                 $contentUnavailable = $contentsRemoved->rowCount();
