@@ -2416,7 +2416,7 @@ $tests['carrega cadastro unificado do aluno com documentos vinculados'] = static
 $tests['calcula automaticamente a etapa atual da jornada do aluno'] = static function (): void {
     $builder=new \Interferencia\Modules\Students\StudentJourneyBuilder();
     $journey=$builder->build(
-        ['cpf_cnpj'=>'12345678901','email'=>'aluno@example.com','mobile_phone'=>'48999999999','unit_id'=>1,'created_at'=>'2026-08-13 10:00:00'],
+        ['name'=>'Aluno Teste','cpf_cnpj'=>'12345678901','email'=>'aluno@example.com','mobile_phone'=>'48999999999','postal_code'=>'88200000','address'=>'Rua Teste','address_number'=>'10','province'=>'Centro','unit_id'=>1,'created_at'=>'2026-08-13 10:00:00'],
         [['id'=>10,'status'=>'awaiting_payment','moodle_enrolment_status'=>'not_released','course_name'=>'Curso teste','created_at'=>'2026-08-13 11:00:00']],
         [10=>[]],
         [],
@@ -2439,7 +2439,7 @@ $tests['prioriza a próxima ação operacional de cada aluno'] = static function
     $queue=$builder->build(
         [
             ['id'=>1,'name'=>'Aluno incompleto','cpf_cnpj'=>'','email'=>'aluno1@example.com','mobile_phone'=>'48999999999','unit_id'=>1,'unit_name'=>'Tijucas'],
-            ['id'=>2,'name'=>'Aluno financeiro','cpf_cnpj'=>'12345678901','email'=>'aluno2@example.com','mobile_phone'=>'48988888888','unit_id'=>1,'unit_name'=>'Tijucas'],
+            ['id'=>2,'name'=>'Aluno financeiro','cpf_cnpj'=>'12345678901','email'=>'aluno2@example.com','mobile_phone'=>'48988888888','postal_code'=>'88200000','address'=>'Rua Teste','address_number'=>'10','province'=>'Centro','unit_id'=>1,'unit_name'=>'Tijucas'],
         ],
         [['id'=>20,'finance_customer_id'=>2,'status'=>'awaiting_charge','course_name'=>'Curso teste','attendant_name'=>'Atendente']],
         [],
@@ -2449,6 +2449,10 @@ $tests['prioriza a próxima ação operacional de cada aluno'] = static function
     assertSame(1,$queue['summary']['incomplete_registration']);
     assertSame(1,$queue['summary']['pending_payment']);
     assertSame('incomplete_registration',$queue['items'][0]['type']);
+    assertTrue(str_contains((string)$queue['items'][0]['description'],'CEP'));
+    assertTrue(str_contains((string)$queue['items'][0]['description'],'endereço'));
+    assertTrue(str_contains((string)$queue['items'][0]['description'],'número'));
+    assertTrue(str_contains((string)$queue['items'][0]['description'],'bairro'));
     assertSame('charge',$queue['items'][1]['action']);
 };
 
@@ -2461,9 +2465,12 @@ $tests['edita aluno no modo seguro e orienta a liberação do AVA'] = static fun
     $enrollments=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
 
     assertTrue(str_contains($repository,'function updateCustomerLocally'));
+    assertTrue(str_contains($repository,'f.postal_code,f.address,f.address_number,f.province'));
     assertTrue(str_contains($routes,'$finance->updateCustomerLocally($id,$localCustomer)'));
     assertTrue(str_contains($routes,'O Asaas permaneceu inalterado porque o modo seguro está ativo.'));
     assertTrue(str_contains($edit,'data-mask="postal"'));
+    assertTrue(str_contains($edit,'Dados pendentes:'));
+    assertTrue(str_contains($routes,"'missingFields'=>StudentActionQueueBuilder::registrationMissingFields($customer)"));
     assertTrue(!str_contains($edit,' disabled'));
     assertTrue(str_contains($masks,"input.dataset.mask === 'postal'"));
     assertTrue(str_contains($actions,"'/students/enrollments?focus='"));

@@ -5,6 +5,7 @@
 </div>
 <?php if($error):?><p class="alert alert-danger"><?= $escape($error) ?></p><?php endif;?>
 <?php if(!$writeEnabled):?><p class="alert alert-warning"><strong>Modo seguro:</strong> as alterações serão salvas no Painel, sem alterar o cadastro no Asaas.</p><?php endif;?>
+<?php if(($missingFields??[])!==[]):?><p class="alert alert-warning"><strong>Dados pendentes:</strong> complete <?= $escape(implode(', ',$missingFields)) ?>.</p><?php endif;?>
 <section class="card"><div class="card-body">
  <form method="post" action="<?= $escape($basePath) ?>/finance/customers/<?= (int)$customer['id'] ?>/edit">
   <?= $csrfField ?>

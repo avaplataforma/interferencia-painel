@@ -19,11 +19,7 @@ final class StudentJourneyBuilder
      */
     public function build(array $student,array $enrollments,array $eventMap,array $pedagogicalRows,array $payments,array $tickets,array $documents,array $academicProfile):array
     {
-        $missing=[];
-        if(trim((string)($student['cpf_cnpj']??''))==='')$missing[]='CPF';
-        if(trim((string)($student['email']??''))==='')$missing[]='e-mail';
-        if(trim((string)($student['mobile_phone']??$student['phone']??''))==='')$missing[]='telefone';
-        if((int)($student['unit_id']??0)<1)$missing[]='unidade';
+        $missing=StudentActionQueueBuilder::registrationMissingFields($student);
 
         $waitingPayment=false;$waitingAccess=false;$released=0;
         foreach($enrollments as$enrollment){

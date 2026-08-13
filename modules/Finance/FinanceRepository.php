@@ -118,7 +118,7 @@ final readonly class FinanceRepository
     public function activeStudentsForUnits(array $unitIds): array
     {
         if($unitIds===[])return[];$marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $s=$this->database->prepare("SELECT f.id,f.unit_id,f.name,f.email,COALESCE(NULLIF(f.mobile_phone,''),f.phone) phone,f.cpf_cnpj,u.name unit_name FROM finance_customers f INNER JOIN units u ON u.id=f.unit_id WHERE f.organization_id=? AND f.unit_id IN ({$marks}) AND f.student_status='active' AND f.is_deleted=0 ORDER BY f.name,f.id");
+        $s=$this->database->prepare("SELECT f.id,f.unit_id,f.name,f.email,f.phone,f.mobile_phone,f.cpf_cnpj,f.postal_code,f.address,f.address_number,f.province,u.name unit_name FROM finance_customers f INNER JOIN units u ON u.id=f.unit_id WHERE f.organization_id=? AND f.unit_id IN ({$marks}) AND f.student_status='active' AND f.is_deleted=0 ORDER BY f.name,f.id");
         $s->execute(array_merge([$this->organizationId],$unitIds));return$s->fetchAll();
     }
 

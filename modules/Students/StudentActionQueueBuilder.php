@@ -41,12 +41,11 @@ final class StudentActionQueueBuilder
      */
     public function nextAction(array $student,array $enrollments,array $pedagogicalRows):?array
     {
-        $missing=[];
-        if(trim((string)($student['cpf_cnpj']??''))==='')$missing[]='CPF';
-        if(trim((string)($student['email']??''))==='')$missing[]='e-mail';
-        if(trim((string)($student['mobile_phone']??$student['phone']??''))==='')$missing[]='telefone';
-        if((int)($student['unit_id']??0)<1)$missing[]='unidade';
-        if($missing!==[])return$this->item($student,'incomplete_registration','Completar cadastro','Falta '.implode(', ',$missing).'.','fa-user-pen','danger',100,null,'edit_profile');
+        $missing=self::registrationMissingFields($student);
+        if($missing!==[]){
+            $prefix=count($missing)===1?'Falta':'Faltam';
+            return$this->item($student,'incomplete_registration','Completar cadastro',$prefix.' '.implode(', ',$missing).'.','fa-user-pen','danger',100,null,'edit_profile');
+        }
 
         foreach($enrollments as$enrollment){
             if(in_array((string)($enrollment['status']??''),['awaiting_charge','awaiting_payment','payment_interrupted'],true)){
@@ -70,6 +69,31 @@ final class StudentActionQueueBuilder
             if((string)($row['academic_certificate_status']??'')==='issued')return$this->item($student,'certificate_available','Certificado disponível','A conclusão já foi registrada e o certificado pode ser consultado ou enviado.','fa-award','success',40,$row,'certificate');
         }
         return null;
+    }
+
+    /** @param array<string,mixed> $student @return list<string> */
+    public static function registrationMissingFields(array $student):array
+    {
+        $missing=[];
+        $digits=static fn(mixed$value):string=>preg_replace('/\D/','',(string)$value)??'';
+        $name=trim((string)($student['name']??''));
+        $document=$digits($student['cpf_cnpj']??'');
+        $email=trim((string)($student['email']??''));
+        $mobile=$digits($student['mobile_phone']??'');
+        $phone=$digits($student['phone']??'');
+        $postal=$digits($student['postal_code']??'');
+
+        if(mb_strlen($name)<2)$missing[]='nome';
+        if(!in_array(strlen($document),[11,14],true))$missing[]='CPF';
+        if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)$missing[]='e-mail';
+        if(!in_array(strlen($mobile),[10,11],true)&&!in_array(strlen($phone),[10,11],true))$missing[]='telefone ou celular';
+        if(strlen($postal)!==8)$missing[]='CEP';
+        if(mb_strlen(trim((string)($student['address']??'')))<2)$missing[]='endereço';
+        if(trim((string)($student['address_number']??''))==='')$missing[]='número';
+        if(mb_strlen(trim((string)($student['province']??'')))<2)$missing[]='bairro';
+        if((int)($student['unit_id']??0)<1)$missing[]='unidade';
+
+        return$missing;
     }
 
     /** @param array<string,mixed> $student @param array<string,mixed>|null $context @return array<string,mixed> */
