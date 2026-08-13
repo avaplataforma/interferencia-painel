@@ -307,6 +307,87 @@ body.mundointer-brand-active #multi_section_tiles .tile-text h3 {
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 4;
 }
+/*
+ * Trema renders an opened Tiles section as another grid item. Without an
+ * explicit span it inherits the width of a single module card, squeezing the
+ * heading and its activities into a narrow vertical strip.
+ */
+body.mundointer-brand-active #multi_section_tiles.tiles > .section.state-visible {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .format_tiles_section_content {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    padding: 1.25rem !important;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 18%, #d9e1e8);
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 .8rem 2rem rgba(25, 45, 65, .14);
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .pagesechead,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitlecontainer,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitle {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitle {
+    padding: 0 3.25rem 1rem 0;
+    border-bottom: 2px solid var(--mundointer-primary);
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitle h2 {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    color: #1d2b38;
+    font-size: clamp(1.2rem, 2vw, 1.65rem) !important;
+    font-weight: 800;
+    line-height: 1.25 !important;
+    overflow-wrap: anywhere;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .format-tiles-cm-list.subtiles {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 1rem;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    margin: 1rem 0 0 !important;
+    padding: 0 !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 7.5rem;
+    margin: 0 !important;
+    padding: 1rem !important;
+    border: 1px solid #e0e7ed;
+    border-radius: .85rem !important;
+    background: #fff !important;
+    box-shadow: 0 .35rem 1rem rgba(25, 45, 65, .09) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.spacer {
+    display: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile h5 {
+    margin: 0 !important;
+    font-size: 1rem !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere;
+}
 body.mundointer-brand-active .mundointer-course-banner {
     overflow: hidden;
     border: 1px solid #e2e8ee;
@@ -340,6 +421,9 @@ body.mundointer-brand-active #course-index .courseindex-item.pageitem {
     }
     body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
         min-height: 9.5rem;
+    }
+    body.mundointer-brand-active #multi_section_tiles .section.state-visible .format-tiles-cm-list.subtiles {
+        grid-template-columns: 1fr;
     }
 }
 @media (max-width: 600px) {
