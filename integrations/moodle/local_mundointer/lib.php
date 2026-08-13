@@ -698,9 +698,9 @@ body.mundointer-brand-active #course-index .courseindex-section:hover {
     background: #f8fafc;
 }
 body.mundointer-brand-active #course-index .courseindex-section.mundointer-courseindex-active {
-    border-color: color-mix(in srgb, var(--mundointer-primary) 42%, #dfe6ec);
-    border-left: 3px solid var(--mundointer-primary);
-    background: #fff;
+    border-color: color-mix(in srgb, var(--mundointer-primary) 42%, #dfe6ec) !important;
+    border-left: 3px solid var(--mundointer-primary) !important;
+    background: #fff !important;
     box-shadow: 0 .25rem .75rem rgba(20, 39, 60, .07);
 }
 body.mundointer-brand-active #course-index .courseindex-section-title {
@@ -734,6 +734,17 @@ body.mundointer-brand-active #course-index .courseindex-item.pageitem {
     border-radius: .55rem;
     color: #111827 !important;
     background: #f8fafc;
+}
+body.mundointer-brand-active #course-index .courseindex-section-title.pageitem,
+body.mundointer-brand-active #course-index .courseindex-section-title.pageitem:hover,
+body.mundointer-brand-active #course-index .courseindex-section-title.pageitem:focus-within {
+    border-left: 3px solid var(--mundointer-primary) !important;
+    color: #111827 !important;
+    background: #f8fafc !important;
+}
+body.mundointer-brand-active #course-index .courseindex-section-title.pageitem a,
+body.mundointer-brand-active #course-index .courseindex-section-title.pageitem .courseindex-link {
+    color: #111827 !important;
 }
 body.mundointer-brand-active #course-index [data-for="cm_completion"].completion_complete {
     color: #149447;
