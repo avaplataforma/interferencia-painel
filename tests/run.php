@@ -752,7 +752,8 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'Dados de acesso do aluno'));
     assertTrue(str_contains($view,"fa-key"));
     assertTrue(str_contains($view,'<th>Nota</th>'));
-    assertTrue(str_contains($view,'<th>Certificado</th>'));
+    assertTrue(str_contains($view,'<th>AVA</th>'));
+    assertTrue(str_contains($view,'pedagogical-certificate'));
     assertTrue(str_contains($view,'Não fornecida'));
     assertTrue(str_contains($synchronizer,'academicSnapshot'));
     assertTrue(str_contains($synchronizer,'AvaConnectionRepository'));
