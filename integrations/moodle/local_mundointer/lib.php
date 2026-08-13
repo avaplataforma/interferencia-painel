@@ -842,10 +842,16 @@ function local_mundointer_before_standard_top_of_body_html(): string
             }
             if (mountedButton) {
                 var mountedNextTitle = (mountedNextLink.textContent || "").trim();
-                mountedButton.textContent = "Continuar estudando";
-                mountedButton.setAttribute("href", mountedNextLink.getAttribute("href") || "#");
-                if (mountedNextTitle) {
-                    mountedButton.setAttribute("title", "Próxima atividade: " + mountedNextTitle);
+                var mountedNextHref = mountedNextLink.getAttribute("href") || "#";
+                var mountedNextTooltip = mountedNextTitle ? "Próxima atividade: " + mountedNextTitle : "";
+                if ((mountedButton.textContent || "").trim() !== "Continuar estudando") {
+                    mountedButton.textContent = "Continuar estudando";
+                }
+                if (mountedButton.getAttribute("href") !== mountedNextHref) {
+                    mountedButton.setAttribute("href", mountedNextHref);
+                }
+                if (mountedNextTooltip && mountedButton.getAttribute("title") !== mountedNextTooltip) {
+                    mountedButton.setAttribute("title", mountedNextTooltip);
                 }
             }
         }
@@ -860,12 +866,26 @@ function local_mundointer_before_standard_top_of_body_html(): string
         document.body.classList.add("mundointer-brand-active");
         enhanceMundoInterCourse();
         window.setTimeout(enhanceMundoInterCourse, 250);
+        var courseEnhanceAttempts = 0;
+        var courseEnhanceTimer = window.setInterval(function() {
+            enhanceMundoInterCourse();
+            courseEnhanceAttempts += 1;
+            if (courseEnhanceAttempts >= 30) {
+                window.clearInterval(courseEnhanceTimer);
+            }
+        }, 500);
         var courseObserver = new MutationObserver(function() {
             enhanceMundoInterCourse();
         });
-        courseObserver.observe(document.body, {childList: true, subtree: true});
+        courseObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ["class", "data-value"]
+        });
         window.setTimeout(function() {
             courseObserver.disconnect();
+            window.clearInterval(courseEnhanceTimer);
         }, 15000);
         var pageTitle = brand.getAttribute("data-page-title");
         if (pageTitle) {
