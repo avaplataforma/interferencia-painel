@@ -745,6 +745,12 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'riskShortLabels'));
     assertTrue(str_contains($view,"'pending'=>'A liberar'"));
     assertTrue(str_contains($view,"'unavailable'=>'Sem dados'"));
+    assertTrue(str_contains($view,'last_access_from'));
+    assertTrue(str_contains($view,'Exportar CSV'));
+    assertTrue(str_contains($view,'gap:.32rem'));
+    assertTrue(str_contains($routes,"'export')==='csv'"));
+    assertTrue(str_contains($routes,"'Content-Type'=>'text/csv; charset=UTF-8'"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleRepository.php'),'$matchesDate'));
     $console=(string)file_get_contents($rootPath.'/bin/console');
     assertTrue(str_contains($console,"moodle:pedagogical:sync"));
     assertTrue(str_contains($console,'pedagogical-sync.lock'));
