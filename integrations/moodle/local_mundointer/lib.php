@@ -393,22 +393,17 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityiconcontainer {
     position: static !important;
-    display: grid !important;
-    place-items: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
     width: 3.25rem !important;
     min-width: 3.25rem !important;
     height: 3.25rem !important;
     margin: 0 !important;
-    padding: .75rem !important;
+    padding: 0 !important;
     border: 0 !important;
     border-radius: .85rem !important;
-    background: color-mix(in srgb, var(--mundointer-primary) 10%, #fff) !important;
-}
-body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.modtype_url .activityiconcontainer {
-    background: #eaf4ff !important;
-}
-body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.modtype_quiz .activityiconcontainer {
-    background: color-mix(in srgb, var(--mundointer-primary) 12%, #fff) !important;
+    box-sizing: border-box !important;
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityiconcontainer img {
     display: block !important;
@@ -416,7 +411,10 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
     max-width: none !important;
     height: 1.75rem !important;
     margin: 0 !important;
+    padding: 0 !important;
     object-fit: contain;
+    line-height: 1 !important;
+    vertical-align: middle !important;
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityname {
     position: static !important;
