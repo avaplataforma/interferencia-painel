@@ -201,12 +201,18 @@ body.mundointer-brand-active #multi_section_tiles.tiles {
     margin: 0 !important;
     padding: .25rem 0 1.5rem !important;
 }
-body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile.spacer {
+    display: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer) {
     counter-increment: mundointer-module;
+    display: flex !important;
+    flex-basis: auto !important;
     width: 100% !important;
+    max-width: none !important;
     min-width: 0 !important;
     height: auto !important;
-    min-height: 12rem;
+    min-height: 15rem;
     margin: 0 !important;
     overflow: hidden !important;
     border: 1px solid color-mix(in srgb, var(--mundointer-primary) 15%, #d9e1e8);
@@ -215,8 +221,8 @@ body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
     box-shadow: 0 .55rem 1.45rem rgba(25, 45, 65, .08) !important;
     transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
-body.mundointer-brand-active #multi_section_tiles.tiles > .tile:hover,
-body.mundointer-brand-active #multi_section_tiles.tiles > .tile:focus-within {
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer):hover,
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer):focus-within {
     z-index: 2;
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--mundointer-primary) 45%, #d9e1e8);
@@ -232,6 +238,9 @@ body.mundointer-brand-active #multi_section_tiles .tile-bg {
         linear-gradient(145deg, #fff 20%, color-mix(in srgb, var(--mundointer-primary) 4%, #fff)) !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-link {
+    position: relative !important;
+    display: flex !important;
+    flex: 1 1 auto;
     inset: 0 !important;
     width: 100% !important;
     height: 100% !important;
@@ -243,6 +252,7 @@ body.mundointer-brand-active #multi_section_tiles .tile-content {
     flex-direction: column;
     width: 100% !important;
     height: 100% !important;
+    min-height: 100% !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-top {
     position: relative !important;
@@ -283,6 +293,8 @@ body.mundointer-brand-active #multi_section_tiles .tile-text {
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
+    flex: 1 1 auto;
+    overflow: hidden !important;
     padding: 1rem 0 0 !important;
     line-height: normal !important;
 }
@@ -299,19 +311,30 @@ body.mundointer-brand-active #multi_section_tiles .tile-text h3 {
     overflow: hidden;
     margin: 0 !important;
     color: #1d2b38;
-    font-size: 1.05rem !important;
+    font-size: .96rem !important;
     font-weight: 800;
-    line-height: 1.32 !important;
+    line-height: 1.25 !important;
     letter-spacing: -.018em;
     text-wrap: balance;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 5;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-medium {
+    font-size: .88rem !important;
+    line-height: 1.22 !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-long {
+    font-size: .79rem !important;
+    line-height: 1.18 !important;
 }
 body.mundointer-brand-active #multi_section_tiles .mundointer-module-foot {
+    position: relative;
+    z-index: 1;
+    flex: 0 0 auto;
     display: grid;
     gap: .45rem;
-    margin-top: auto;
-    padding-top: 1rem;
+    margin-top: .75rem;
+    padding-top: .6rem;
 }
 body.mundointer-brand-active #multi_section_tiles .mundointer-module-state {
     display: flex;
@@ -602,10 +625,30 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
 }
 @media (max-width: 760px) {
     body.mundointer-brand-active #multi_section_tiles.tiles {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
+        gap: .85rem;
     }
-    body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
-        min-height: 9.5rem;
+    body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer) {
+        width: 100% !important;
+        max-width: none !important;
+        min-height: 12.5rem;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-link {
+        padding: 1rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text {
+        padding-top: .7rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3 {
+        font-size: .93rem !important;
+        -webkit-line-clamp: 4;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-medium {
+        font-size: .85rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-long {
+        font-size: .77rem !important;
+        -webkit-line-clamp: 5;
     }
     body.mundointer-brand-active #multi_section_tiles .section.state-visible .format-tiles-cm-list.subtiles {
         grid-template-columns: 1fr;
@@ -622,6 +665,40 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
     body.mundointer-brand-active #multi_section_tiles .mundointer-activity-action {
         grid-column: 1 / -1;
         width: 100%;
+    }
+}
+@media (max-width: 420px) {
+    body.mundointer-brand-active #multi_section_tiles.tiles {
+        gap: .75rem;
+    }
+    body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer) {
+        min-height: 12rem;
+        border-radius: .85rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-link {
+        padding: .85rem .9rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-top {
+        height: 2.75rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-top::before {
+        width: 2.25rem;
+        height: 2.25rem;
+        flex-basis: 2.25rem;
+        border-radius: .7rem;
+        font-size: .78rem;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3 {
+        font-size: .88rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-medium {
+        font-size: .81rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .tile-text h3.mundointer-module-title-long {
+        font-size: .74rem !important;
+    }
+    body.mundointer-brand-active #multi_section_tiles .mundointer-module-state {
+        font-size: .7rem;
     }
 }
 @media (max-width: 600px) {
@@ -673,20 +750,24 @@ function local_mundointer_before_standard_top_of_body_html(): string
             return;
         }
 
-        document.querySelectorAll("#multi_section_tiles .tile-text h3").forEach(function(title) {
-            if (title.dataset.mundointerOriginalTitle) {
-                return;
-            }
-            var original = (title.textContent || "").trim();
+        document.querySelectorAll("#multi_section_tiles.tiles > .tile.spacer .mundointer-module-foot").forEach(function(foot) {
+            foot.remove();
+        });
+
+        document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer) .tile-text h3").forEach(function(title) {
+            var original = title.dataset.mundointerOriginalTitle || (title.textContent || "").trim();
             title.dataset.mundointerOriginalTitle = original;
             var concise = original.replace(/^M[oó]dulo\s+\d+\s*[-–—:]\s*/i, "").trim();
             if (concise) {
                 title.textContent = concise;
                 title.setAttribute("aria-label", original);
             }
+            var titleLength = (concise || original).length;
+            title.classList.toggle("mundointer-module-title-medium", titleLength > 34 && titleLength <= 54);
+            title.classList.toggle("mundointer-module-title-long", titleLength > 54);
         });
 
-        document.querySelectorAll("#multi_section_tiles.tiles > .tile").forEach(function(tile) {
+        document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer)").forEach(function(tile) {
             if (tile.dataset.mundointerCourseTile) {
                 return;
             }
@@ -798,7 +879,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             var activityMeta = document.createElement("span");
             activityMeta.textContent = overallComplete + " de " + overallTotal + " atividades concluídas";
             var moduleMeta = document.createElement("span");
-            moduleMeta.textContent = document.querySelectorAll("#multi_section_tiles.tiles > .tile").length + " módulos";
+            moduleMeta.textContent = document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer)").length + " módulos";
             meta.appendChild(activityMeta);
             meta.appendChild(moduleMeta);
 
