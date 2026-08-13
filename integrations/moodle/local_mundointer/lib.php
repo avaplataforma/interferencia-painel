@@ -500,7 +500,9 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.spacer {
     display: none !important;
 }
-body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label {
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.modtype_label,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.label {
     grid-column: 1 / -1;
     min-height: 0 !important;
     padding: .75rem .9rem !important;
@@ -513,7 +515,13 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .contentwithoutlink,
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .activityinstance,
-body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .description {
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .description,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.modtype_label .contentwithoutlink,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.modtype_label .activityinstance,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.modtype_label .description,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.label .contentwithoutlink,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.label .activityinstance,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.label .description {
     display: block !important;
     width: 100% !important;
     max-width: none !important;
@@ -1374,6 +1382,15 @@ function local_mundointer_before_standard_top_of_body_html(): string
         var tilesRoot = document.querySelector("#multi_section_tiles");
         if (!tilesRoot) {
             return;
+        }
+
+        if (!tilesRoot.dataset.mundointerDynamicSections) {
+            tilesRoot.dataset.mundointerDynamicSections = "1";
+            tilesRoot.addEventListener("click", function(event) {
+                if (event.target.closest(".tile, .sectiontitlecontainer, .sectiontitle")) {
+                    window.setTimeout(enhanceMundoInterCourse, 120);
+                }
+            });
         }
 
         document.querySelectorAll("#multi_section_tiles.tiles > .tile.spacer .mundointer-module-foot").forEach(function(foot) {
