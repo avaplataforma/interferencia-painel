@@ -225,7 +225,7 @@ $tabLabel=static function(string $name):string{
       $masterPending=max(0,$masterPackages-$masterApproved);
       ?>
       <section class="master-import" aria-label="Importação assistida MASTER">
-       <header><div><h3>Importação assistida MASTER</h3><p>Selecione os conteúdos no IESDE pelo Moodle, sincronize uma vez e finalize a curadoria no Mundo Inter.</p></div><span class="master-import-status"><i class="fa-solid fa-shield-check"></i> Sem duplicidades</span></header>
+       <header><div><h3>Importação assistida MASTER</h3><p>Selecione os conteúdos no IESDE pelo Moodle, sincronize uma vez e finalize a curadoria no Mundo Inter.</p></div><span class="master-import-status"><i class="fa-solid fa-circle-check"></i> Sem duplicidades</span></header>
        <div class="master-import-stats">
         <article class="master-import-stat"><small>Pacotes selecionados</small><strong><?= $masterPackages ?></strong></article>
         <article class="master-import-stat"><small>Cursos individuais</small><strong><?= $masterContents ?></strong></article>
