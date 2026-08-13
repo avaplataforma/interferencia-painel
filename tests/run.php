@@ -742,7 +742,7 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'/students/enrollments/create?student='));
     assertTrue(str_contains($view,'Sem acesso há 15 dias'));
     assertTrue(str_contains($view,'riskLabels'));
-    assertTrue(str_contains($view,'?context=pedagogical'));
+    assertTrue(str_contains($view,'?tab=pedagogical'));
     assertTrue(str_contains($view,'padding-left:2.8rem!important'));
     assertTrue(str_contains($routes,"queryValue('context','')"));
     assertTrue(str_contains($view,'riskShortLabels'));
@@ -1063,7 +1063,7 @@ $tests['gerencia documentos privados com versões e isolamento por franquia'] = 
     assertTrue(str_contains($migration,'document_group'));
     assertTrue(str_contains($migration,'version_number'));
     assertTrue(str_contains($manager,'MAX_BYTES = 26214400'));
-    assertTrue(str_contains($manager,"storeFranchise((int)\$organizationId,'Documentos'"));
+    assertTrue(str_contains($manager,'storeFranchise((int)$organizationId,$folder'));
     assertTrue(str_contains($manager,'FILEINFO_MIME_TYPE'));
     assertTrue(str_contains($manager,'deleted_at=NOW()'));
     assertTrue(str_contains($typesMigration,'CREATE TABLE document_types'));
