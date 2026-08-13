@@ -252,8 +252,8 @@ body.mundointer-brand-active #multi_section_tiles .tile-top {
     width: 100% !important;
     height: 3.25rem !important;
 }
-body.mundointer-brand-active #multi_section_tiles .tileiconcontainer,
-body.mundointer-brand-active #multi_section_tiles .tiletopright {
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile > .tile-link .tile-top > .tileiconcontainer,
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile > .tile-link .tile-top > .tiletopright {
     display: none !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-top::before {
@@ -379,6 +379,56 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
     background: #fff !important;
     box-shadow: 0 .35rem 1rem rgba(25, 45, 65, .09) !important;
 }
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .cm-link {
+    display: grid !important;
+    grid-template-columns: 3.25rem minmax(0, 1fr);
+    align-items: center !important;
+    gap: 1rem;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 5.5rem;
+    padding: .25rem .5rem !important;
+    color: #1d2b38;
+    text-decoration: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityiconcontainer {
+    position: static !important;
+    display: grid !important;
+    place-items: center !important;
+    width: 3.25rem !important;
+    min-width: 3.25rem !important;
+    height: 3.25rem !important;
+    margin: 0 !important;
+    padding: .75rem !important;
+    border: 0 !important;
+    border-radius: .85rem !important;
+    background: color-mix(in srgb, var(--mundointer-primary) 10%, #fff) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.modtype_url .activityiconcontainer {
+    background: #eaf4ff !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.modtype_quiz .activityiconcontainer {
+    background: color-mix(in srgb, var(--mundointer-primary) 12%, #fff) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityiconcontainer img {
+    display: block !important;
+    width: 1.75rem !important;
+    max-width: none !important;
+    height: 1.75rem !important;
+    margin: 0 !important;
+    object-fit: contain;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile:not(.spacer) .activityname {
+    position: static !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.spacer {
     display: none !important;
 }
@@ -387,6 +437,7 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
     font-size: 1rem !important;
     line-height: 1.35 !important;
     overflow-wrap: anywhere;
+    text-align: left !important;
 }
 body.mundointer-brand-active .mundointer-course-banner {
     overflow: hidden;
