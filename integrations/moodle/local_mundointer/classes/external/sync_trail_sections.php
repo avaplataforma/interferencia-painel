@@ -132,7 +132,10 @@ final class sync_trail_sections extends external_api
                 'contextid'=>$context->id,'component'=>'course','filearea'=>'overviewfiles','itemid'=>0,
                 'filepath'=>'/','filename'=>$filename,'mimetype'=>$mimetype,'source'=>'Mundo Inter',
             ],$content);
-            $fileurl=\moodle_url::make_pluginfile_url($context->id,'course','overviewfiles',0,'/',$filename)->out(false);
+            // A área course/overviewfiles não expõe o itemid na URL pública.
+            // Manter o zero no registro do arquivo é correto, mas incluí-lo no
+            // endereço faz o Moodle procurar por um arquivo chamado "0".
+            $fileurl=\moodle_url::make_pluginfile_url($context->id,'course','overviewfiles',null,'/',$filename)->out(false);
             $section=$DB->get_record('course_sections',['course'=>$course->id,'section'=>0]);
             if(!$section)$section=course_create_section((int)$course->id,0);
             $summary=(string)($section->summary??'');
