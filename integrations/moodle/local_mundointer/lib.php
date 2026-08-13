@@ -1398,7 +1398,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
         });
 
         document.querySelectorAll("#multi_section_tiles .section.state-visible .activity.subtile:not(.spacer)").forEach(function(activity) {
-            var activityLink = activity.querySelector(".cm-link[href], a[href*='/mod/']");
+            var activityLink = activity.querySelector(".cm-link[href], a[href*=\"/mod/\"]");
             activity.classList.toggle("mundointer-content-label", !activityLink);
         });
 
