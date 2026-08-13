@@ -333,6 +333,17 @@ franquia, que continuam no Mundo Inter. A composição do catálogo para a loja
 será feita separadamente por **Deep Linking** quando oferecido pelo IESDE ou por
 importação/curadoria controlada no ADM Central.
 
+Os endereços oficiais homologados da ferramenta são mantidos no ADM Central:
+
+- lançamento: `https://api-fornecimento.iesde.com.br/api/lti/callback`;
+- login OIDC: `https://api-fornecimento.iesde.com.br/api/lti/login`;
+- seleção de conteúdo: `https://api-fornecimento.iesde.com.br/api/lti/deep-link`;
+- chaves públicas: `https://api-fornecimento.iesde.com.br/.well-known/jwks.json`.
+
+O teste técnico consulta somente o conjunto público de chaves JWKS, exige HTTPS
+e bloqueia hosts diferentes do domínio oficial do IESDE. A senha administrativa
+do portal não é armazenada no Mundo Inter e não participa do lançamento LTI.
+
 Na aba **AVA** de cada franquia, o ADM Central controla a licença geral de cada
 catálogo. Essa licença não substitui a curadoria nem a oferta individual do
 curso. Catálogo, API e curso precisam estar liberados para que uma nova venda

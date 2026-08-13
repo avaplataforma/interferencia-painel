@@ -40,7 +40,13 @@ final readonly class CourseProviderRepository
         $integrationMode = (string)($row['integration_mode'] ?? 'api');
         $configured = trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '';
         if ($providerCode === 'iesde' && $integrationMode === 'lti13') {
-            $configured = trim((string)($row['lti_platform_url'] ?? '')) !== '';
+            $configured = trim((string)($row['lti_platform_url'] ?? '')) !== ''
+                && trim((string)($row['lti_tool_url'] ?? '')) !== ''
+                && trim((string)($row['lti_deep_link_url'] ?? '')) !== ''
+                && trim((string)($row['lti_login_url'] ?? '')) !== ''
+                && trim((string)($row['lti_jwks_url'] ?? '')) !== ''
+                && trim((string)($row['lti_client_id'] ?? '')) !== ''
+                && trim((string)($row['lti_deployment_id'] ?? '')) !== '';
         } elseif (in_array($providerCode, ['iesde', 'conted_tech'], true)) {
             $configured = $configured && (string)($row['username_encrypted'] ?? '') !== '' && (string)($row['password_encrypted'] ?? '') !== '';
         }
