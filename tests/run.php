@@ -1191,6 +1191,8 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'https://wa.me/'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'mundointer-support-whatsapp-icon'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'querySelector("[role=\\"main\\"]")'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'#multi_section_tiles.tiles'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'counter(mundointer-module, decimal-leading-zero)'));
     $resolver=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/local/brand_resolver.php');
     assertTrue(str_contains($resolver,"private const COOKIE_NAME = 'MundoInterBrand'"));
     assertTrue(str_contains($resolver,"'httponly'=>true"));

@@ -180,6 +180,166 @@ function local_mundointer_before_standard_html_head(): string
 .mundointer-navbar-brand small {
     display: none;
 }
+
+/* Course format "Tiles/Blocos": modern Mundo Inter presentation layer. */
+body.mundointer-brand-active:has(#format-tiles-multi-section-page) #page {
+    background: linear-gradient(180deg, #f8fafc 0, #eef3f8 100%);
+}
+body.mundointer-brand-active:has(#format-tiles-multi-section-page) #region-main {
+    background: transparent;
+}
+body.mundointer-brand-active #format-tiles-multi-section-page {
+    width: 100%;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles {
+    counter-reset: mundointer-module;
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
+    align-items: stretch;
+    gap: 1rem;
+    width: 100%;
+    margin: 0 !important;
+    padding: .25rem 0 1.5rem !important;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
+    counter-increment: mundointer-module;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 12rem;
+    margin: 0 !important;
+    overflow: hidden !important;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 15%, #d9e1e8);
+    border-radius: 1rem !important;
+    background: #fff !important;
+    box-shadow: 0 .55rem 1.45rem rgba(25, 45, 65, .08) !important;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile:hover,
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile:focus-within {
+    z-index: 2;
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--mundointer-primary) 45%, #d9e1e8);
+    box-shadow: 0 1rem 2.2rem rgba(25, 45, 65, .14) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-bg {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-top: 4px solid var(--mundointer-primary);
+    border-radius: inherit !important;
+    background: radial-gradient(circle at 100% 0, color-mix(in srgb, var(--mundointer-primary) 12%, transparent), transparent 45%),
+        linear-gradient(145deg, #fff 20%, color-mix(in srgb, var(--mundointer-primary) 4%, #fff)) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-link {
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 1.1rem 1.15rem 1rem !important;
+    border-radius: inherit;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-content {
+    display: flex !important;
+    flex-direction: column;
+    width: 100% !important;
+    height: 100% !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-top {
+    position: relative !important;
+    display: flex !important;
+    align-items: center;
+    gap: .65rem;
+    width: 100% !important;
+    height: 3rem !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tileiconcontainer,
+body.mundointer-brand-active #multi_section_tiles .tiletopright {
+    display: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-top::before {
+    content: counter(mundointer-module, decimal-leading-zero);
+    display: grid;
+    place-items: center;
+    width: 2.55rem;
+    height: 2.55rem;
+    flex: 0 0 2.55rem;
+    border-radius: .8rem;
+    color: #fff;
+    background: linear-gradient(145deg, var(--mundointer-primary), color-mix(in srgb, var(--mundointer-primary) 78%, var(--mundointer-secondary)));
+    box-shadow: 0 .35rem .8rem color-mix(in srgb, var(--mundointer-primary) 24%, transparent);
+    font-size: .88rem;
+    font-weight: 900;
+    letter-spacing: .04em;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-top::after {
+    content: "MÓDULO";
+    color: #71808d;
+    font-size: .7rem;
+    font-weight: 900;
+    letter-spacing: .13em;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-text {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: .7rem 0 0 !important;
+    line-height: normal !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-textinner {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile-text h3 {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0 !important;
+    color: #1d2b38;
+    font-size: 1.05rem !important;
+    font-weight: 800;
+    line-height: 1.32 !important;
+    letter-spacing: -.018em;
+    text-wrap: balance;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+}
+body.mundointer-brand-active .mundointer-course-banner {
+    overflow: hidden;
+    border: 1px solid #e2e8ee;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 .6rem 1.6rem rgba(25, 45, 65, .08);
+}
+body.mundointer-brand-active .mundointer-course-banner img {
+    display: block;
+    width: 100%;
+    max-height: 24rem;
+    object-fit: cover;
+    border-radius: 0 !important;
+}
+body.mundointer-brand-active #course-index .courseindex-section {
+    margin: .2rem .4rem;
+    border-radius: .65rem;
+    transition: background-color .15s ease;
+}
+body.mundointer-brand-active #course-index .courseindex-section:hover {
+    background: var(--mundointer-primary-soft);
+}
+body.mundointer-brand-active #course-index .courseindex-item.pageitem {
+    border-radius: .55rem;
+    color: var(--mundointer-secondary);
+    background: var(--mundointer-primary-soft);
+}
+@media (max-width: 760px) {
+    body.mundointer-brand-active #multi_section_tiles.tiles {
+        grid-template-columns: 1fr;
+    }
+    body.mundointer-brand-active #multi_section_tiles.tiles > .tile {
+        min-height: 9.5rem;
+    }
+}
 @media (max-width: 600px) {
     .mundointer-login-brand {
         gap: .75rem;
