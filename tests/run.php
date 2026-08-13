@@ -754,6 +754,10 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'<th>Certificado</th>'));
     assertTrue(str_contains($view,'Não fornecida'));
     assertTrue(str_contains($synchronizer,'academicSnapshot'));
+    assertTrue(str_contains($synchronizer,'AvaConnectionRepository'));
+    assertTrue(str_contains($synchronizer,'$this->connections->find'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleRepository.php'),'e.ava_connection_id'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/bootstrap/app.php'),'new PedagogicalSynchronizer($moodleClient,$moodleRepository,$avaConnections)'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/academic_snapshot.php'));
     $pluginServices=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
     assertTrue(str_contains($pluginServices,"'local_mundointer_academic_snapshot'"));
