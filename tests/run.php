@@ -1210,8 +1210,8 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'Assistir aula'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'Fazer avaliação'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'mountedIncompleteStatus'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'courseEnhanceTimer'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'attributeFilter'));
+    assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'courseEnhanceTimer'));
+    assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'attributeFilter'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'transform: none !important'));
     $resolver=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/local/brand_resolver.php');
     assertTrue(str_contains($resolver,"private const COOKIE_NAME = 'MundoInterBrand'"));
