@@ -413,7 +413,7 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectio
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitle {
     padding: 0 3.25rem 1rem 0;
-    border-bottom: 2px solid var(--mundointer-primary);
+    border-bottom: 0 !important;
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .sectiontitle h2 {
     display: block !important;
@@ -499,6 +499,41 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.spacer {
     display: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label {
+    grid-column: 1 / -1;
+    min-height: 0 !important;
+    padding: .75rem .9rem !important;
+    border: 0 !important;
+    border-left: 3px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dfe6ec) !important;
+    border-radius: .65rem !important;
+    color: #334554;
+    background: #f8fafc !important;
+    box-shadow: none !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .contentwithoutlink,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .activityinstance,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label .description {
+    display: block !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: inherit !important;
+    font-size: .82rem !important;
+    line-height: 1.5 !important;
+    text-align: left !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label h3,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label h4,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label h5,
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label p:last-child {
+    margin-bottom: 0 !important;
+}
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile.mundointer-content-label h5 {
+    color: #334554 !important;
+    font-size: .82rem !important;
+    line-height: 1.4 !important;
 }
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.subtile h5 {
     margin: 0 !important;
@@ -693,6 +728,76 @@ body.mundointer-brand-active #course-index .courseindex-section {
     border: 1px solid transparent;
     border-radius: .75rem;
     transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-tools {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: grid;
+    gap: .55rem;
+    margin: 0 0 .55rem;
+    padding: .65rem .55rem;
+    border-bottom: 1px solid #dfe6ec;
+    background: rgba(255, 255, 255, .96);
+    backdrop-filter: blur(8px);
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-search {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: center;
+    min-height: 2.65rem;
+    overflow: hidden;
+    border: 1px solid #d7e0e7;
+    border-radius: .7rem;
+    color: #647482;
+    background: #fff;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-search span {
+    display: grid;
+    place-items: center;
+    font-size: 1rem;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-search input {
+    width: 100%;
+    min-width: 0;
+    height: 2.55rem;
+    padding: 0 .65rem 0 0;
+    border: 0;
+    outline: 0;
+    color: #111827;
+    background: transparent;
+    font-size: .78rem;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .35rem;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-filter {
+    min-width: 0;
+    min-height: 2.15rem;
+    padding: .4rem .25rem;
+    border: 1px solid #d7e0e7;
+    border-radius: .6rem;
+    color: #405262;
+    background: #fff;
+    font-size: .67rem;
+    font-weight: 800;
+    line-height: 1.15;
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-filter.is-active {
+    border-color: var(--mundointer-primary);
+    color: #fff;
+    background: var(--mundointer-primary);
+}
+body.mundointer-brand-active #course-index .mundointer-courseindex-result {
+    color: #71808d;
+    font-size: .68rem;
+    font-weight: 750;
+    text-align: right;
+}
+body.mundointer-brand-active #course-index .courseindex-section.mundointer-filter-hidden {
+    display: none !important;
 }
 body.mundointer-brand-active #course-index .courseindex-section:hover {
     background: #f8fafc;
@@ -946,6 +1051,107 @@ function local_mundointer_before_standard_top_of_body_html(): string
         return root.querySelector(".courseindex-section[data-number=\"" + number + "\"]");
     }
 
+    function setupMundoInterCourseIndexTools(root, sections) {
+        if (root.querySelector(".mundointer-courseindex-tools")) {
+            return;
+        }
+
+        var tools = document.createElement("div");
+        tools.className = "mundointer-courseindex-tools";
+
+        var searchWrap = document.createElement("label");
+        searchWrap.className = "mundointer-courseindex-search";
+        searchWrap.setAttribute("aria-label", "Buscar módulo ou atividade");
+        var searchIcon = document.createElement("span");
+        searchIcon.setAttribute("aria-hidden", "true");
+        searchIcon.textContent = "\u2315";
+        var search = document.createElement("input");
+        search.type = "search";
+        search.placeholder = "Buscar módulo ou atividade";
+        search.autocomplete = "off";
+        searchWrap.appendChild(searchIcon);
+        searchWrap.appendChild(search);
+
+        var filters = document.createElement("div");
+        filters.className = "mundointer-courseindex-filters";
+        var filterDefinitions = [
+            {key: "all", label: "Todos"},
+            {key: "progress", label: "Em andamento"},
+            {key: "complete", label: "Concluídos"}
+        ];
+        var activeFilter = "all";
+        filterDefinitions.forEach(function(definition) {
+            var button = document.createElement("button");
+            button.type = "button";
+            button.className = "mundointer-courseindex-filter" + (definition.key === "all" ? " is-active" : "");
+            button.dataset.filter = definition.key;
+            button.setAttribute("aria-pressed", definition.key === "all" ? "true" : "false");
+            button.textContent = definition.label;
+            filters.appendChild(button);
+        });
+
+        var result = document.createElement("div");
+        result.className = "mundointer-courseindex-result";
+        result.setAttribute("aria-live", "polite");
+
+        function applyFilters() {
+            var query = (search.value || "").trim().toLocaleLowerCase("pt-BR");
+            var visibleModules = 0;
+            var currentSection = findMundoInterCourseIndexSection(root);
+            sections.forEach(function(section) {
+                var number = section.getAttribute("data-number") || "";
+                var completion = Array.prototype.slice.call(section.querySelectorAll("[data-for=\"cm_completion\"]"));
+                var completeCount = completion.filter(function(item) {
+                    return item.classList.contains("completion_complete");
+                }).length;
+                var isComplete = number !== "0" && completion.length > 0 && completeCount === completion.length;
+                var isProgress = number !== "0" && !isComplete;
+                var haystack = (section.textContent || "").replace(/\s+/g, " ").trim().toLocaleLowerCase("pt-BR");
+                var matchesQuery = query === "" || haystack.indexOf(query) !== -1;
+                var matchesFilter = activeFilter === "all"
+                    || (activeFilter === "complete" && isComplete)
+                    || (activeFilter === "progress" && isProgress);
+                var visible = matchesQuery && matchesFilter;
+
+                section.classList.toggle("mundointer-filter-hidden", !visible);
+                if (visible && number !== "0") {
+                    visibleModules += 1;
+                }
+                if (query !== "" && visible && number !== "0") {
+                    if (!section.classList.contains("mundointer-courseindex-active")) {
+                        section.dataset.mundointerSearchOpened = "1";
+                    }
+                    setMundoInterCourseIndexSection(section, true);
+                } else if (query === "" && section.dataset.mundointerSearchOpened) {
+                    delete section.dataset.mundointerSearchOpened;
+                    setMundoInterCourseIndexSection(section, section === currentSection);
+                }
+            });
+            result.textContent = visibleModules + (visibleModules === 1 ? " módulo" : " módulos");
+        }
+
+        search.addEventListener("input", applyFilters);
+        filters.addEventListener("click", function(event) {
+            var button = event.target.closest(".mundointer-courseindex-filter");
+            if (!button) {
+                return;
+            }
+            activeFilter = button.dataset.filter || "all";
+            filters.querySelectorAll(".mundointer-courseindex-filter").forEach(function(candidate) {
+                var selected = candidate === button;
+                candidate.classList.toggle("is-active", selected);
+                candidate.setAttribute("aria-pressed", selected ? "true" : "false");
+            });
+            applyFilters();
+        });
+
+        tools.appendChild(searchWrap);
+        tools.appendChild(filters);
+        tools.appendChild(result);
+        root.insertBefore(tools, root.firstChild);
+        applyFilters();
+    }
+
     function setupMundoInterCourseIndex() {
         var root = document.querySelector("#course-index");
         if (!root) {
@@ -956,6 +1162,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
         if (!sections.length) {
             return;
         }
+
+        setupMundoInterCourseIndexTools(root, sections);
 
         if (!root.dataset.mundointerCourseIndexMounted) {
             root.dataset.mundointerCourseIndexMounted = "1";
@@ -1170,6 +1378,11 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
         document.querySelectorAll("#multi_section_tiles.tiles > .tile.spacer .mundointer-module-foot").forEach(function(foot) {
             foot.remove();
+        });
+
+        document.querySelectorAll("#multi_section_tiles .section.state-visible .activity.subtile:not(.spacer)").forEach(function(activity) {
+            var activityLink = activity.querySelector(".cm-link[href], a[href*='/mod/']");
+            activity.classList.toggle("mundointer-content-label", !activityLink);
         });
 
         document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer) .tile-text h3").forEach(function(title) {
