@@ -745,6 +745,7 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     $console=(string)file_get_contents($rootPath.'/bin/console');
     assertTrue(str_contains($console,"moodle:pedagogical:sync"));
     assertTrue(str_contains($console,'pedagogical-sync.lock'));
+    assertTrue(str_contains($console,'new PedagogicalSynchronizer($client,$repository,$connections)'));
     $synchronizer=(string)file_get_contents($rootPath.'/modules/Moodle/PedagogicalSynchronizer.php');
     assertTrue(str_contains($synchronizer,'Código: nocriteriaset'));
     assertTrue(str_contains($view,'Sem critérios no AVA'));
