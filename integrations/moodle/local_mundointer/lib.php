@@ -946,28 +946,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
         document.body.classList.add("mundointer-brand-active");
         enhanceMundoInterCourse();
-        window.setTimeout(enhanceMundoInterCourse, 250);
-        var courseEnhanceAttempts = 0;
-        var courseEnhanceTimer = window.setInterval(function() {
-            enhanceMundoInterCourse();
-            courseEnhanceAttempts += 1;
-            if (courseEnhanceAttempts >= 30) {
-                window.clearInterval(courseEnhanceTimer);
-            }
-        }, 500);
-        var courseObserver = new MutationObserver(function() {
-            enhanceMundoInterCourse();
+        // O formato Tiles termina partes da montagem de forma assíncrona. Três
+        // passagens pontuais cobrem essa inicialização sem observar cada mutação
+        // do Moodle, evitando ciclos de renderização e travamentos no navegador.
+        [400, 1200, 3000].forEach(function(delay) {
+            window.setTimeout(enhanceMundoInterCourse, delay);
         });
-        courseObserver.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ["class", "data-value"]
-        });
-        window.setTimeout(function() {
-            courseObserver.disconnect();
-            window.clearInterval(courseEnhanceTimer);
-        }, 15000);
         var pageTitle = brand.getAttribute("data-page-title");
         if (pageTitle) {
             document.title = pageTitle;
