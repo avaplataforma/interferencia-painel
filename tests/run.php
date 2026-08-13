@@ -1861,7 +1861,11 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($view,'Client ID'));
     assertTrue(str_contains($view,'Deployment ID'));
     assertTrue(str_contains($view,'Testar conexão técnica'));
-    assertTrue(str_contains($view,'Sincronizar seleções do Moodle'));
+    assertTrue(str_contains($view,'Importação assistida MASTER'));
+    assertTrue(str_contains($view,'Selecionar no AVA'));
+    assertTrue(str_contains($view,'Sincronizar agora'));
+    assertTrue(str_contains($view,'Revisar e publicar'));
+    assertTrue(str_contains($view,'sem duplicar conteúdos'));
     assertTrue(str_contains($routes,"ltiSelections('iesde')"));
     assertTrue(str_contains($repository,'Nenhuma atividade MASTER foi selecionada no AVA Cursos'));
     assertTrue(str_contains($moodleClient,'local_mundointer_lti_selections'));
