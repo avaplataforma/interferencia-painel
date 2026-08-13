@@ -2198,6 +2198,15 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginSections,"set_field('quiz_slots','maxmark',1.0"));
     assertTrue(str_contains($pluginSections,"question_bank::get_qtype('multichoice')"));
     assertTrue(str_contains($pluginSections,"quiz_attempts"));
+    assertTrue(str_contains($pluginSections,'QUIZ_PASS_GRADE = 6.0'));
+    assertTrue(str_contains($pluginSections,'QUIZ_ATTEMPTS = 3'));
+    assertTrue(str_contains($pluginSections,'apply_quiz_policy'));
+    assertTrue(str_contains($pluginSections,'audit_managed_course'));
+    assertTrue(str_contains($pluginSections,"'completionpassgrade'"));
+    assertTrue(str_contains($pluginSections,"'auditvalidquizzes'"));
+    assertTrue(str_contains($publisher,"'pedagogical_audit'"));
+    assertTrue(str_contains($repository,"event['details']"));
+    assertTrue(str_contains($view,'Auditoria pedagógica do AVA'));
     assertTrue(str_contains($publisher,"->exam("));
     assertTrue(str_contains($repository,'content.content_type'));
     assertTrue(str_contains($pluginSections,'data-mundointer-trail-item'));

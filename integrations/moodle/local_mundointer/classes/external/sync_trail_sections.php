@@ -11,6 +11,10 @@ use core_external\external_value;
 
 final class sync_trail_sections extends external_api
 {
+    private const QUIZ_GRADE = 10.0;
+    private const QUIZ_PASS_GRADE = 6.0;
+    private const QUIZ_ATTEMPTS = 3;
+
     public static function execute_parameters(): external_function_parameters
     {
         return new external_function_parameters([
@@ -96,7 +100,8 @@ final class sync_trail_sections extends external_api
             foreach($managedquizzes as$cm){set_coursemodule_visible((int)$cm->id,0);$hiddenquizzes++;}
         }
         rebuild_course_cache($parameters['courseid'],true);
-        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts];
+        $audit=self::audit_managed_course((int)$course->id);
+        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts]+$audit;
     }
 
     private static function sync_url_activity(object$course,object$section,int$sectionnumber,string$key,string$name,string$accessurl):int
@@ -185,6 +190,7 @@ final class sync_trail_sections extends external_api
             $slotcount=(int)$DB->count_records('quiz_slots',['quizid'=>$quiz->id]);
             if($same&&$slotcount===count($questions)){
                 $quiz=self::repair_quiz_grades($quiz);
+                $quiz=self::apply_quiz_policy($course,$quiz,(int)$existing->id);
                 $quiz->name=\core_text::substr('Avaliação - '.$name,0,255);
                 $quiz->timemodified=time();
                 $DB->update_record('quiz',$quiz);
@@ -196,7 +202,8 @@ final class sync_trail_sections extends external_api
                 return['quiz'=>(int)$existing->id,'questions'=>$slotcount,'conflict'=>0];
             }
             if($DB->record_exists('quiz_attempts',['quiz'=>$quiz->id])){
-                self::repair_quiz_grades($quiz);
+                $quiz=self::repair_quiz_grades($quiz);
+                self::apply_quiz_policy($course,$quiz,(int)$existing->id);
                 set_coursemodule_visible((int)$existing->id,1);
                 return['quiz'=>(int)$existing->id,'questions'=>$slotcount,'conflict'=>1];
             }
@@ -208,7 +215,7 @@ final class sync_trail_sections extends external_api
             'modulename'=>'quiz','module'=>(int)$module->id,'section'=>$sectionnumber,
             'name'=>$activityname,'intro'=>$marker,'introformat'=>FORMAT_HTML,
             'timeopen'=>0,'timeclose'=>0,'timelimit'=>0,'overduehandling'=>'autosubmit','graceperiod'=>0,
-            'preferredbehaviour'=>'deferredfeedback','attempts'=>0,'attemptonlast'=>0,
+            'preferredbehaviour'=>'deferredfeedback','attempts'=>self::QUIZ_ATTEMPTS,'attemptonlast'=>0,
             'grademethod'=>QUIZ_GRADEHIGHEST,'decimalpoints'=>2,'questiondecimalpoints'=>-1,
             'questionsperpage'=>1,'navmethod'=>QUIZ_NAVMETHOD_FREE,'shuffleanswers'=>1,
             'sumgrades'=>0,'grade'=>10,'quizpassword'=>'','subnet'=>'','browsersecurity'=>'',
@@ -233,7 +240,8 @@ final class sync_trail_sections extends external_api
             $createdquestions++;
         }
         $quiz=$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
-        self::repair_quiz_grades($quiz);
+        $quiz=self::repair_quiz_grades($quiz);
+        self::apply_quiz_policy($course,$quiz,(int)$created->coursemodule);
         return['quiz'=>(int)$created->coursemodule,'questions'=>$createdquestions,'conflict'=>0];
     }
 
@@ -271,8 +279,89 @@ final class sync_trail_sections extends external_api
         }
 
         $quiz=$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
-        quiz_set_grade(10.0,$quiz);
+        quiz_set_grade(self::QUIZ_GRADE,$quiz);
         return$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
+    }
+
+    /**
+     * Applies the network pedagogical policy without recreating attempts.
+     *
+     * Every managed assessment is worth 10 points, requires 6 points to pass,
+     * allows three attempts and completes only after a passing grade.
+     */
+    private static function apply_quiz_policy(object$course,object$quiz,int$cmid):object
+    {
+        global$DB;
+        $quiz->grade=self::QUIZ_GRADE;
+        $quiz->attempts=self::QUIZ_ATTEMPTS;
+        $quiz->grademethod=QUIZ_GRADEHIGHEST;
+        if(property_exists($quiz,'completionattemptsexhausted'))$quiz->completionattemptsexhausted=0;
+        if(property_exists($quiz,'completionminattempts'))$quiz->completionminattempts=0;
+        $quiz->timemodified=time();
+        $DB->update_record('quiz',$quiz);
+        quiz_set_grade(self::QUIZ_GRADE,$quiz);
+
+        $gradeitem=$DB->get_record('grade_items',[
+            'courseid'=>$course->id,
+            'itemmodule'=>'quiz',
+            'iteminstance'=>$quiz->id,
+            'itemnumber'=>0,
+        ]);
+        if($gradeitem!==false&&abs((float)$gradeitem->gradepass-self::QUIZ_PASS_GRADE)>0.001){
+            $DB->set_field('grade_items','gradepass',self::QUIZ_PASS_GRADE,['id'=>$gradeitem->id]);
+        }
+
+        $columns=$DB->get_columns('course_modules');
+        $completion=(object)[
+            'id'=>$cmid,
+            'completion'=>COMPLETION_TRACKING_AUTOMATIC,
+            'completionview'=>0,
+            'completiongradeitemnumber'=>0,
+            'completionexpected'=>0,
+        ];
+        if(isset($columns['completionpassgrade']))$completion->completionpassgrade=1;
+        $DB->update_record('course_modules',$completion);
+        return$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
+    }
+
+    /** @return array<string,int|string|float> */
+    private static function audit_managed_course(int$courseid):array
+    {
+        global$DB;
+        $columns=$DB->get_columns('course_modules');
+        $managedurls=$DB->get_records_select('course_modules','course=:course AND idnumber LIKE :prefix AND visible=1',['course'=>$courseid,'prefix'=>'mi-trail-url-%']);
+        $managedquizzes=$DB->get_records_select('course_modules','course=:course AND idnumber LIKE :prefix AND visible=1',['course'=>$courseid,'prefix'=>'mi-trail-exam-%']);
+        $validurls=0;
+        foreach($managedurls as$cm){
+            if((int)$cm->completion===COMPLETION_TRACKING_AUTOMATIC&&(int)$cm->completionview===1)$validurls++;
+        }
+        $validquizzes=0;
+        $questioncount=0;
+        foreach($managedquizzes as$cm){
+            $quiz=$DB->get_record('quiz',['id'=>$cm->instance]);
+            if($quiz===false)continue;
+            $questioncount+=(int)$DB->count_records('quiz_slots',['quizid'=>$quiz->id]);
+            $gradeitem=$DB->get_record('grade_items',['courseid'=>$courseid,'itemmodule'=>'quiz','iteminstance'=>$quiz->id,'itemnumber'=>0]);
+            $completionvalid=(int)$cm->completion===COMPLETION_TRACKING_AUTOMATIC&&(int)$cm->completiongradeitemnumber===0;
+            if(isset($columns['completionpassgrade']))$completionvalid=$completionvalid&&(int)$cm->completionpassgrade===1;
+            $gradevalid=(float)$quiz->sumgrades>0.0
+                &&abs((float)$quiz->grade-self::QUIZ_GRADE)<0.001
+                &&(int)$quiz->attempts===self::QUIZ_ATTEMPTS
+                &&$gradeitem!==false
+                &&abs((float)$gradeitem->gradepass-self::QUIZ_PASS_GRADE)<0.001;
+            if($completionvalid&&$gradevalid)$validquizzes++;
+        }
+        $ready=$validurls===count($managedurls)&&$validquizzes===count($managedquizzes)&&count($managedquizzes)>0;
+        return[
+            'auditstatus'=>$ready?'ok':'warning',
+            'auditurls'=>count($managedurls),
+            'auditvalidurls'=>$validurls,
+            'auditquizzes'=>count($managedquizzes),
+            'auditvalidquizzes'=>$validquizzes,
+            'auditquestions'=>$questioncount,
+            'passinggrade'=>self::QUIZ_PASS_GRADE,
+            'maxattempts'=>self::QUIZ_ATTEMPTS,
+        ];
     }
 
     private static function question_category(object$course,string$key,string$signature):object
@@ -335,6 +424,14 @@ final class sync_trail_sections extends external_api
             'quizquestions'=>new external_value(PARAM_INT,'Questões vinculadas às avaliações.'),
             'hiddenquizzes'=>new external_value(PARAM_INT,'Avaliações antigas ocultadas.'),
             'examconflicts'=>new external_value(PARAM_INT,'Avaliações preservadas por possuírem tentativas.'),
+            'auditstatus'=>new external_value(PARAM_ALPHA,'Resultado da auditoria pedagógica.'),
+            'auditurls'=>new external_value(PARAM_INT,'Atividades de aula auditadas.'),
+            'auditvalidurls'=>new external_value(PARAM_INT,'Atividades de aula com conclusão válida.'),
+            'auditquizzes'=>new external_value(PARAM_INT,'Avaliações auditadas.'),
+            'auditvalidquizzes'=>new external_value(PARAM_INT,'Avaliações em conformidade.'),
+            'auditquestions'=>new external_value(PARAM_INT,'Questões auditadas.'),
+            'passinggrade'=>new external_value(PARAM_FLOAT,'Nota mínima para aprovação.'),
+            'maxattempts'=>new external_value(PARAM_INT,'Tentativas permitidas por avaliação.'),
         ]);
     }
 }

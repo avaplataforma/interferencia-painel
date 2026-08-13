@@ -50,7 +50,28 @@ final readonly class AvaCatalogPublisher
             $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,['trail_id'=>$trailId,'shortname'=>$shortName,'idnumber'=>$idNumber,'category_path'=>$this->categoryPath($trail),'item_count'=>(int)$trail['item_count'],'sections_synced'=>(int)($sectionSync['sections']??count($sections)),'url_activities_synced'=>(int)($sectionSync['activities']??0),'quizzes_synced'=>(int)($sectionSync['quizzes']??0),'quiz_questions_synced'=>(int)($sectionSync['quizquestions']??0),'quiz_conflicts'=>(int)($sectionSync['examconflicts']??0)],$userId);
+            $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,[
+                'trail_id'=>$trailId,
+                'shortname'=>$shortName,
+                'idnumber'=>$idNumber,
+                'category_path'=>$this->categoryPath($trail),
+                'item_count'=>(int)$trail['item_count'],
+                'sections_synced'=>(int)($sectionSync['sections']??count($sections)),
+                'url_activities_synced'=>(int)($sectionSync['activities']??0),
+                'quizzes_synced'=>(int)($sectionSync['quizzes']??0),
+                'quiz_questions_synced'=>(int)($sectionSync['quizquestions']??0),
+                'quiz_conflicts'=>(int)($sectionSync['examconflicts']??0),
+                'pedagogical_audit'=>[
+                    'status'=>(string)($sectionSync['auditstatus']??'warning'),
+                    'lesson_activities'=>(int)($sectionSync['auditurls']??0),
+                    'valid_lesson_activities'=>(int)($sectionSync['auditvalidurls']??0),
+                    'quizzes'=>(int)($sectionSync['auditquizzes']??0),
+                    'valid_quizzes'=>(int)($sectionSync['auditvalidquizzes']??0),
+                    'questions'=>(int)($sectionSync['auditquestions']??0),
+                    'passing_grade'=>(float)($sectionSync['passinggrade']??6),
+                    'max_attempts'=>(int)($sectionSync['maxattempts']??3),
+                ],
+            ],$userId);
             return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published'];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);

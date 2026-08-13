@@ -169,7 +169,14 @@ final readonly class LearningCatalogRepository
     {
         $limit=max(1,min(50,$limit));
         $statement=$this->database->prepare("SELECT event.*,user.name user_name FROM catalog_ava_publication_events event INNER JOIN catalog_ava_publications publication ON publication.id=event.publication_id LEFT JOIN platform_users user ON user.id=event.created_by WHERE publication.entity_type='trail' AND publication.entity_id=:trail ORDER BY event.created_at DESC,event.id DESC LIMIT {$limit}");
-        $statement->execute(['trail'=>$trailId]);return$statement->fetchAll()?:[];
+        $statement->execute(['trail'=>$trailId]);
+        $events=$statement->fetchAll()?:[];
+        foreach($events as&$event){
+            $decoded=json_decode((string)($event['details_json']??''),true);
+            $event['details']=is_array($decoded)?$decoded:[];
+        }
+        unset($event);
+        return$events;
     }
 
     public function updateTrailGeneratedText(int $id,string $shortDescription,string $description,?int $userId):void
