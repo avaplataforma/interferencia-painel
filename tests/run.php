@@ -2400,10 +2400,33 @@ $tests['carrega cadastro unificado do aluno com documentos vinculados'] = static
     assertTrue(str_contains($routes,'/students/{id:\\d+}'));
     assertTrue(str_contains($routes,'/students/{id:\\d+}/documents'));
     assertTrue(str_contains($view,'Cadastro unificado'));
+    assertTrue(str_contains($view,'Jornada do aluno'));
+    assertTrue(str_contains($view,'Situação atual'));
+    assertTrue(str_contains($routes,'StudentJourneyBuilder'));
     assertTrue(str_contains($view,'Acesso AVA'));
     assertTrue(str_contains($documents,'public function allForEntity'));
     assertTrue(str_contains($documents,"'Alunos/'"));
     assertTrue(is_file($migration));
+};
+
+$tests['calcula automaticamente a etapa atual da jornada do aluno'] = static function (): void {
+    $builder=new \Interferencia\Modules\Students\StudentJourneyBuilder();
+    $journey=$builder->build(
+        ['cpf_cnpj'=>'12345678901','email'=>'aluno@example.com','mobile_phone'=>'48999999999','unit_id'=>1,'created_at'=>'2026-08-13 10:00:00'],
+        [['id'=>10,'status'=>'awaiting_payment','moodle_enrolment_status'=>'not_released','course_name'=>'Curso teste','created_at'=>'2026-08-13 11:00:00']],
+        [10=>[]],
+        [],
+        [],
+        [],
+        [],
+        [],
+    );
+
+    assertSame('awaiting_payment',$journey['state']);
+    assertSame('Aguardando pagamento',$journey['status']['label']);
+    assertSame('done',$journey['steps'][0]['status']);
+    assertSame('current',$journey['steps'][2]['status']);
+    assertSame(2,count($journey['events']));
 };
 
 $failures = 0;
