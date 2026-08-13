@@ -742,6 +742,9 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'/students/enrollments/create?student='));
     assertTrue(str_contains($view,'Sem acesso há 15 dias'));
     assertTrue(str_contains($view,'riskLabels'));
+    assertTrue(str_contains($view,'?context=pedagogical'));
+    assertTrue(str_contains($view,'padding-left:2.8rem!important'));
+    assertTrue(str_contains($routes,"queryValue('context','')"));
     assertTrue(str_contains($view,'riskShortLabels'));
     assertTrue(str_contains($view,"'pending'=>'A liberar'"));
     assertTrue(str_contains($view,"'unavailable'=>'Sem dados'"));
