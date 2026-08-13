@@ -38,6 +38,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_academic_snapshot' => [
+        'classname' => 'local_mundointer\\external\\academic_snapshot',
+        'description' => 'Retorna progresso, nota, último acesso e certificado em um formato acadêmico comum.',
+        'type' => 'read',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -48,6 +55,7 @@ $services = [
             'local_mundointer_diagnose_poles',
             'local_mundointer_organize_enrollment',
             'local_mundointer_sync_trail_sections',
+            'local_mundointer_academic_snapshot',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_course_get_categories',

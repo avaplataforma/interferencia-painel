@@ -56,7 +56,7 @@ Comandos disponíveis:
   whatsapp:media:sync  Recupera mídias pendentes da Cloud API
   moodle:profiles:rebuild  Organiza campos complementares já sincronizados
 
-  moodle:pedagogical:sync  Atualiza progresso e último acesso dos alunos
+  moodle:pedagogical:sync  Atualiza progresso, notas, acesso e certificados
   site:recoveries:sync  Atualiza alertas e follow-ups de checkouts abandonados
   catalog-images:process  Gera capas pendentes e salva a versão final no Spaces
 

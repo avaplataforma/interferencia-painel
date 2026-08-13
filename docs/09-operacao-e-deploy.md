@@ -71,4 +71,4 @@ diretório com mudanças não investigadas.
 
 ## Sincronização pedagógica diária
 
-Executar `php bin/console moodle:pedagogical:sync` uma vez ao dia como o usuário do domínio. O processo atualiza último acesso, conclusão e alertas do painel Pedagógico. A VPS registra a saída em `storage/logs/pedagogical-sync.log` e impede duas execuções simultâneas.
+Executar `php bin/console moodle:pedagogical:sync` uma vez ao dia como o usuário do domínio. O processo atualiza progresso, nota, último acesso, certificado e alertas do painel Pedagógico. A VPS registra a saída em `storage/logs/pedagogical-sync.log` e impede duas execuções simultâneas.

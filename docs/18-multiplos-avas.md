@@ -137,6 +137,24 @@ da pessoa antes de bloquear a conta.
 - Coortes, categorias, campos institucionais e papéis restritos poderão apoiar a
   segregação no Moodle, mas a autorização principal permanece no Mundo Inter.
 
+### Retorno acadêmico normalizado
+
+O Painel usa um único contrato de dados acadêmicos para todos os AVAs e
+fornecedores. Cada conector traduz a resposta da sua API para os mesmos campos:
+
+- origem acadêmica;
+- percentual e situação do progresso;
+- nota percentual e situação de aprovação;
+- último acesso;
+- situação e endereço do certificado;
+- data da sincronização e eventual erro.
+
+Quando um fornecedor não oferece determinada informação, o conector registra
+`not_available` e a interface mostra **Não fornecido**, sem inventar resultados
+nem quebrar a visão pedagógica. O AVA Cursos é o primeiro conector completo; os
+próximos catálogos passam a reutilizar automaticamente o banco, a tela e as
+regras de privacidade, implementando somente a tradução da API de origem.
+
 ## Sincronização e resiliência
 
 - Cada plataforma possui fila, cursor, limites e estado de saúde próprios.

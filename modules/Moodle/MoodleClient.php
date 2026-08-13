@@ -132,6 +132,13 @@ final readonly class MoodleClient
         return$this->call('core_completion_get_course_completion_status',['userid'=>$userId,'courseid'=>$courseId]);
     }
 
+    /** @return array<string,mixed> */
+    public function academicSnapshot(int$userId,int$courseId):array
+    {
+        if($userId<1||$courseId<1)throw new RuntimeException('Aluno ou curso inválido para consultar o acompanhamento acadêmico.');
+        return$this->call('local_mundointer_academic_snapshot',['userid'=>$userId,'courseid'=>$courseId]);
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {

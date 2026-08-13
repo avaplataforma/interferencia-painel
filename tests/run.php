@@ -727,13 +727,16 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
 $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function () use ($rootPath): void {
     assertTrue(is_file($rootPath.'/database/migrations/20260806_720000_add_moodle_learning_progress.php'));
     assertTrue(is_file($rootPath.'/database/migrations/20260806_730000_track_moodle_progress_changes.php'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260813_000010_add_standard_academic_tracking.php'));
     assertTrue(is_file($rootPath.'/modules/Moodle/PedagogicalSynchronizer.php'));
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/moodle/pedagogical.php');
     assertTrue(str_contains($client,'core_completion_get_course_completion_status'));
+    assertTrue(str_contains($client,'local_mundointer_academic_snapshot'));
     assertTrue(str_contains($client,'setUserSuspended'));
     assertTrue(str_contains($routes,"'/students/pedagogical/sync'"));
+    assertTrue(str_contains($routes,"'unavailable','ok'"));
     assertTrue(str_contains($routes,"'/students/enrollments/{id:\\d+}/ava-status'"));
     assertTrue(str_contains($view,'/tickets/create?student='));
     assertTrue(str_contains($view,'/students/enrollments/create?student='));
@@ -747,6 +750,13 @@ $tests['carrega acompanhamento pedagógico e ações do AVA'] = static function 
     assertTrue(str_contains($view,'Sem critérios no AVA'));
     assertTrue(str_contains($view,'Dados de acesso do aluno'));
     assertTrue(str_contains($view,"fa-key"));
+    assertTrue(str_contains($view,'<th>Nota</th>'));
+    assertTrue(str_contains($view,'<th>Certificado</th>'));
+    assertTrue(str_contains($view,'Não fornecida'));
+    assertTrue(str_contains($synchronizer,'academicSnapshot'));
+    assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/academic_snapshot.php'));
+    $pluginServices=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    assertTrue(str_contains($pluginServices,"'local_mundointer_academic_snapshot'"));
 };
 
 $tests['cria captação pública e análise de novas franquias'] = static function () use ($rootPath): void {
