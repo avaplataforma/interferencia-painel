@@ -32,6 +32,14 @@ final readonly class DocumentManager
         $sql.=' ORDER BY d.created_at DESC,d.version_number DESC';$s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
     }
 
+    /** @return list<array<string,mixed>> */
+    public function allForEntity(string $scope, ?int $organizationId, string $entityType, int $entityId): array
+    {
+        $entityType=$this->entityType($entityType);if($entityId<1)return[];
+        $sql="SELECT d.*,u.name created_by_name FROM managed_documents d LEFT JOIN platform_users u ON u.id=d.created_by WHERE d.scope=:scope AND d.entity_type=:entity_type AND d.entity_id=:entity_id AND d.deleted_at IS NULL AND ".($organizationId===null?'d.organization_id IS NULL':'d.organization_id=:organization').' ORDER BY d.created_at DESC,d.version_number DESC';
+        $params=['scope'=>$scope,'entity_type'=>$entityType,'entity_id'=>$entityId];if($organizationId!==null)$params['organization']=$organizationId;$s=$this->db->prepare($sql);$s->execute($params);return$s->fetchAll();
+    }
+
     /** @return array<string,mixed>|null */
     public function find(int $id, string $scope, ?int $organizationId, bool $includeDeleted = false): ?array
     {
@@ -40,10 +48,16 @@ final readonly class DocumentManager
         $s=$this->db->prepare($sql);$s->execute($params);$row=$s->fetch();return is_array($row)?$row:null;
     }
 
-    public function upload(string $scope, ?int $organizationId, UploadedFile $file, string $title, string $category, string $description, ?int $replaceId, int $userId): int
+    /** @return array<string,mixed>|null */
+    public function findForEntity(int $id,string $scope,?int $organizationId,string $entityType,int $entityId):?array
+    {
+        $document=$this->find($id,$scope,$organizationId);if($document===null)return null;return (string)($document['entity_type']??'')===$this->entityType($entityType)&&(int)($document['entity_id']??0)===$entityId?$document:null;
+    }
+
+    public function upload(string $scope, ?int $organizationId, UploadedFile $file, string $title, string $category, string $description, ?int $replaceId, int $userId, ?string $entityType=null, ?int $entityId=null): int
     {
         if(!$this->storage->active())throw new RuntimeException('Ative e valide primeiro a integração com a DigitalOcean Spaces.');
-        $title=trim($title);$description=trim($description);$categories=$this->categories($scope);
+        $title=trim($title);$description=trim($description);$categories=$this->categories($scope);$entityType=$entityType===null?null:$this->entityType($entityType);if(($entityType===null)!==($entityId===null||$entityId<1))throw new RuntimeException('O vínculo do documento está incompleto.');
         if(mb_strlen($description)>1000)throw new RuntimeException('A observação deve ter no máximo 1.000 caracteres.');
         if(!isset($categories[$category]))throw new RuntimeException('Selecione um tipo de documento válido.');
         if($file->isEmpty())throw new RuntimeException('Selecione um arquivo.');
@@ -54,15 +68,16 @@ final readonly class DocumentManager
         $mime=(new \finfo(FILEINFO_MIME_TYPE))->buffer($content)?:'application/octet-stream';
         if(!in_array($mime,self::MIME_TYPES,true))throw new RuntimeException('Formato não permitido. Envie PDF, imagem, Word, Excel, CSV ou texto.');
         $group=$this->uuid();$version=1;
-        if($replaceId!==null){$previous=$this->find($replaceId,$scope,$organizationId);if($previous===null)throw new RuntimeException('O documento escolhido para versionamento não foi encontrado.');$group=(string)$previous['document_group'];$title=(string)$previous['title'];$category=(string)$previous['category'];$s=$this->db->prepare('SELECT COALESCE(MAX(version_number),0)+1 FROM managed_documents WHERE document_group=:group');$s->execute(['group'=>$group]);$version=(int)$s->fetchColumn();}
+        if($replaceId!==null){$previous=$entityType===null?$this->find($replaceId,$scope,$organizationId):$this->findForEntity($replaceId,$scope,$organizationId,$entityType,(int)$entityId);if($previous===null)throw new RuntimeException('O documento escolhido para versionamento não foi encontrado.');$group=(string)$previous['document_group'];$title=(string)$previous['title'];$category=(string)$previous['category'];$s=$this->db->prepare('SELECT COALESCE(MAX(version_number),0)+1 FROM managed_documents WHERE document_group=:group');$s->execute(['group'=>$group]);$version=(int)$s->fetchColumn();}
         if($title==='')$title=$categories[$category]??'Documento';
         $originalName=mb_substr(trim($file->originalName)?:'documento',0,255);
+        $folder=$entityType==='student'?'Alunos/'.str_pad((string)$entityId,8,'0',STR_PAD_LEFT).'/Documentos':'Documentos';
         $path=$scope==='central'
-            ?$this->storage->storeCentral('Documentos',$content,$originalName,$mime,$userId)
-            :$this->storage->storeFranchise((int)$organizationId,'Documentos',$content,$originalName,$mime,$userId);
+            ?$this->storage->storeCentral($folder,$content,$originalName,$mime,$userId)
+            :$this->storage->storeFranchise((int)$organizationId,$folder,$content,$originalName,$mime,$userId);
         if($path===null)throw new RuntimeException('O armazenamento externo não está disponível.');
-        $sql='INSERT INTO managed_documents(document_group,version_number,organization_id,scope,category,title,description,storage_path,original_name,mime_type,bytes,checksum_sha256,created_by) VALUES(:group,:version,:organization,:scope,:category,:title,:description,:path,:name,:mime,:bytes,:checksum,:user)';
-        $this->db->prepare($sql)->execute(['group'=>$group,'version'=>$version,'organization'=>$organizationId,'scope'=>$scope,'category'=>$category,'title'=>$title,'description'=>$description?:null,'path'=>$path,'name'=>$originalName,'mime'=>$mime,'bytes'=>strlen($content),'checksum'=>hash('sha256',$content),'user'=>$userId]);
+        $sql='INSERT INTO managed_documents(document_group,version_number,organization_id,scope,category,entity_type,entity_id,title,description,storage_path,original_name,mime_type,bytes,checksum_sha256,created_by) VALUES(:group,:version,:organization,:scope,:category,:entity_type,:entity_id,:title,:description,:path,:name,:mime,:bytes,:checksum,:user)';
+        $this->db->prepare($sql)->execute(['group'=>$group,'version'=>$version,'organization'=>$organizationId,'scope'=>$scope,'category'=>$category,'entity_type'=>$entityType,'entity_id'=>$entityId,'title'=>$title,'description'=>$description?:null,'path'=>$path,'name'=>$originalName,'mime'=>$mime,'bytes'=>strlen($content),'checksum'=>hash('sha256',$content),'user'=>$userId]);
         return(int)$this->db->lastInsertId();
     }
 
@@ -72,10 +87,20 @@ final readonly class DocumentManager
         $s=$this->db->prepare('UPDATE managed_documents SET deleted_at=NOW(),deleted_by=:user WHERE id=:id');$s->execute(['user'=>$userId,'id'=>$id]);
     }
 
+    public function archiveForEntity(int$id,string$scope,?int$organizationId,string$entityType,int$entityId,int$userId):void
+    {
+        if($this->findForEntity($id,$scope,$organizationId,$entityType,$entityId)===null)throw new RuntimeException('Documento não encontrado.');$s=$this->db->prepare('UPDATE managed_documents SET deleted_at=NOW(),deleted_by=:user WHERE id=:id');$s->execute(['user'=>$userId,'id'=>$id]);
+    }
+
     public function read(array $document): string { return $this->storage->read((string)$document['storage_path']); }
 
     private function uuid(): string
     {
         $b=random_bytes(16);$b[6]=chr((ord($b[6])&0x0f)|0x40);$b[8]=chr((ord($b[8])&0x3f)|0x80);$h=bin2hex($b);return substr($h,0,8).'-'.substr($h,8,4).'-'.substr($h,12,4).'-'.substr($h,16,4).'-'.substr($h,20);
+    }
+
+    private function entityType(string$type):string
+    {
+        $type=strtolower(trim($type));if(!in_array($type,['student'],true))throw new RuntimeException('Tipo de vínculo documental inválido.');return$type;
     }
 }

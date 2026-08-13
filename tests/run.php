@@ -2391,6 +2391,21 @@ $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static 
     assertTrue(str_contains($view,'Pendências recentes'));
 };
 
+$tests['carrega cadastro unificado do aluno com documentos vinculados'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/students/show.php');
+    $documents=(string)file_get_contents($rootPath.'/modules/Storage/DocumentManager.php');
+    $migration=$rootPath.'/database/migrations/20260813_000020_link_documents_to_entities.php';
+
+    assertTrue(str_contains($routes,'/students/{id:\\d+}'));
+    assertTrue(str_contains($routes,'/students/{id:\\d+}/documents'));
+    assertTrue(str_contains($view,'Cadastro unificado'));
+    assertTrue(str_contains($view,'Acesso AVA'));
+    assertTrue(str_contains($documents,'public function allForEntity'));
+    assertTrue(str_contains($documents,"'Alunos/'"));
+    assertTrue(is_file($migration));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
