@@ -827,6 +827,28 @@ function local_mundointer_before_standard_top_of_body_html(): string
             }
             document.body.classList.add("mundointer-course-experience-mounted");
         }
+
+        var mountedOverview = document.querySelector(".mundointer-course-overview");
+        var mountedIncompleteStatus = document.querySelector("#course-index [data-for=\"cm\"] [data-for=\"cm_completion\"].completion_incomplete");
+        var mountedIncompleteItem = mountedIncompleteStatus ? mountedIncompleteStatus.closest("[data-for=\"cm\"]") : null;
+        var mountedNextLink = mountedIncompleteItem ? mountedIncompleteItem.querySelector("a[data-for=\"cm_name\"]") : null;
+        if (mountedOverview && mountedNextLink) {
+            var mountedButton = mountedOverview.querySelector(".mundointer-continue-button");
+            if (mountedButton && mountedButton.tagName !== "A") {
+                var replacementButton = document.createElement("a");
+                replacementButton.className = mountedButton.className;
+                mountedButton.replaceWith(replacementButton);
+                mountedButton = replacementButton;
+            }
+            if (mountedButton) {
+                var mountedNextTitle = (mountedNextLink.textContent || "").trim();
+                mountedButton.textContent = "Continuar estudando";
+                mountedButton.setAttribute("href", mountedNextLink.getAttribute("href") || "#");
+                if (mountedNextTitle) {
+                    mountedButton.setAttribute("title", "Próxima atividade: " + mountedNextTitle);
+                }
+            }
+        }
     }
 
     function mountMundoInterBrand() {
