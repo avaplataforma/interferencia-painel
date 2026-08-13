@@ -288,6 +288,8 @@ body.mundointer-brand-active #multi_section_tiles .tile-text {
 }
 body.mundointer-brand-active #multi_section_tiles .tile-textinner {
     position: static !important;
+    top: auto !important;
+    transform: none !important;
     display: block !important;
     width: 100% !important;
     height: auto !important;
