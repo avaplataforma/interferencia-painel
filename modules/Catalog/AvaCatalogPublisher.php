@@ -17,6 +17,7 @@ final readonly class AvaCatalogPublisher
         private AvaConnectionRepository $connections,
         private MoodleRepository $moodle,
         private CourseProviderRepository $providers,
+        private string $publicBaseUrl,
     ) {}
 
     /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string} */
@@ -46,7 +47,8 @@ final readonly class AvaCatalogPublisher
             $remoteCourseId=(int)($course['id']??0);
             if($remoteCourseId<1)throw new RuntimeException('O AVA não devolveu o identificador do curso publicado.');
             $sections=$this->sections($trail);
-            $sectionSync=$client->syncTrailSections($remoteCourseId,$sections);
+            $coverUrl=$this->coverUrl($trail);
+            $sectionSync=$client->syncTrailSections($remoteCourseId,$sections,$coverUrl,(string)$trail['name']);
             $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
@@ -61,6 +63,12 @@ final readonly class AvaCatalogPublisher
                 'quizzes_synced'=>(int)($sectionSync['quizzes']??0),
                 'quiz_questions_synced'=>(int)($sectionSync['quizquestions']??0),
                 'quiz_conflicts'=>(int)($sectionSync['examconflicts']??0),
+                'course_cover'=>[
+                    'status'=>(string)($sectionSync['coverstatus']??($coverUrl===''?'missing':'failed')),
+                    'filename'=>(string)($sectionSync['coverfilename']??''),
+                    'official_image'=>(int)($sectionSync['courseimage']??0)===1,
+                    'course_banner'=>(int)($sectionSync['coursebanner']??0)===1,
+                ],
                 'pedagogical_audit'=>[
                     'status'=>(string)($sectionSync['auditstatus']??'warning'),
                     'lesson_activities'=>(int)($sectionSync['auditurls']??0),
@@ -170,7 +178,15 @@ final readonly class AvaCatalogPublisher
     /** @param array<string,mixed> $trail */
     private function signature(array$trail):string
     {
-        return hash('sha256',json_encode(['name'=>$trail['name'],'slug'=>$trail['slug'],'category'=>$trail['category_id'],'workload_hours'=>$trail['workload_hours'],'description'=>$trail['description'],'items'=>array_map(static fn(array$item):array=>[$item['item_type'],$item['item_id'],$item['sort_order']],(array)$trail['items'])],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        return hash('sha256',json_encode(['name'=>$trail['name'],'slug'=>$trail['slug'],'category'=>$trail['category_id'],'workload_hours'=>$trail['workload_hours'],'description'=>$trail['description'],'media_asset_id'=>(int)($trail['media_asset_id']??0),'items'=>array_map(static fn(array$item):array=>[$item['item_type'],$item['item_id'],$item['sort_order']],(array)$trail['items'])],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+    }
+
+    /** @param array<string,mixed> $trail */
+    private function coverUrl(array$trail):string
+    {
+        $assetId=(int)($trail['media_asset_id']??0);
+        if($assetId<1)return'';
+        return rtrim($this->publicBaseUrl,'/').'/catalog-media/'.$assetId;
     }
 
     private function limitedCode(string$value,int$length):string

@@ -20,13 +20,15 @@ final class sync_trail_sections extends external_api
         return new external_function_parameters([
             'courseid'=>new external_value(PARAM_INT,'Curso de Trilha gerenciado pelo Mundo Inter.'),
             'sections'=>new external_value(PARAM_RAW,'Lista JSON dos Cursos individuais na ordem comercial.'),
+            'coverurl'=>new external_value(PARAM_URL,'Capa comercial gerada e armazenada pelo Mundo Inter.',VALUE_DEFAULT,''),
+            'coveralt'=>new external_value(PARAM_TEXT,'Texto alternativo da capa.',VALUE_DEFAULT,''),
         ]);
     }
 
-    public static function execute(int$courseid,string$sections):array
+    public static function execute(int$courseid,string$sections,string$coverurl='',string$coveralt=''):array
     {
         global$CFG,$DB;
-        $parameters=self::validate_parameters(self::execute_parameters(),compact('courseid','sections'));
+        $parameters=self::validate_parameters(self::execute_parameters(),compact('courseid','sections','coverurl','coveralt'));
         $context=\context_system::instance();
         self::validate_context($context);
         require_capability('local/mundointer:manage',$context);
@@ -45,6 +47,7 @@ final class sync_trail_sections extends external_api
         require_once($CFG->dirroot.'/mod/quiz/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/locallib.php');
         require_once($CFG->dirroot.'/question/editlib.php');
+        require_once($CFG->libdir.'/filelib.php');
         if((int)$course->enablecompletion!==1){
             $DB->set_field('course','enablecompletion',1,['id'=>$course->id]);
             $course->enablecompletion=1;
@@ -56,6 +59,7 @@ final class sync_trail_sections extends external_api
         $quizquestions=0;
         $hiddenquizzes=0;
         $examconflicts=0;
+        $cover=self::sync_course_cover($course,(string)$parameters['coverurl'],(string)$parameters['coveralt']);
         foreach($decoded as$offset=>$item){
             $number=$offset+1;
             $name=trim(clean_param((string)($item['name']??''),PARAM_TEXT));
@@ -101,7 +105,45 @@ final class sync_trail_sections extends external_api
         }
         rebuild_course_cache($parameters['courseid'],true);
         $audit=self::audit_managed_course((int)$course->id);
-        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts]+$audit;
+        return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts]+$cover+$audit;
+    }
+
+    /** @return array{coverstatus:string,coverfilename:string,courseimage:int,coursebanner:int} */
+    private static function sync_course_cover(object$course,string$coverurl,string$coveralt):array
+    {
+        global$DB;
+        if($coverurl==='')return['coverstatus'=>'missing','coverfilename'=>'','courseimage'=>0,'coursebanner'=>0];
+        try{
+            $parts=parse_url($coverurl);
+            if(!is_array($parts)||strtolower((string)($parts['scheme']??''))!=='https'||trim((string)($parts['host']??''))==='')throw new \RuntimeException('A capa do curso precisa usar um endereco HTTPS valido.');
+            $content=download_file_content($coverurl,null,null,false,30,10);
+            if(!is_string($content)||$content===''||strlen($content)>8*1024*1024)throw new \RuntimeException('A capa comercial nao pode ser baixada ou excede 8 MB.');
+            $image=@getimagesizefromstring($content);
+            $type=(int)($image[2]??0);
+            $allowed=[IMAGETYPE_JPEG=>['jpg','image/jpeg'],IMAGETYPE_PNG=>['png','image/png']];
+            if(defined('IMAGETYPE_WEBP'))$allowed[IMAGETYPE_WEBP]=['webp','image/webp'];
+            if(!isset($allowed[$type]))throw new \RuntimeException('A capa comercial precisa ser JPG, PNG ou WebP.');
+            [$extension,$mimetype]=$allowed[$type];
+            $filename='mundointer-course-cover.'.$extension;
+            $context=\context_course::instance((int)$course->id);
+            $fs=get_file_storage();
+            $fs->delete_area_files($context->id,'course','overviewfiles',0);
+            $fs->create_file_from_string([
+                'contextid'=>$context->id,'component'=>'course','filearea'=>'overviewfiles','itemid'=>0,
+                'filepath'=>'/','filename'=>$filename,'mimetype'=>$mimetype,'source'=>'Mundo Inter',
+            ],$content);
+            $fileurl=\moodle_url::make_pluginfile_url($context->id,'course','overviewfiles',0,'/',$filename)->out(false);
+            $section=$DB->get_record('course_sections',['course'=>$course->id,'section'=>0]);
+            if(!$section)$section=course_create_section((int)$course->id,0);
+            $summary=(string)($section->summary??'');
+            $summary=(string)preg_replace('~<!-- mundointer-course-banner:start -->.*?<!-- mundointer-course-banner:end -->~s','',$summary);
+            $alt=trim($coveralt)!==''?trim($coveralt):(string)$course->fullname;
+            $banner='<!-- mundointer-course-banner:start --><div class="mundointer-course-banner" style="margin:0 0 1.5rem"><img src="'.s($fileurl).'" alt="'.s($alt).'" style="display:block;width:100%;max-height:360px;object-fit:cover;border-radius:16px"></div><!-- mundointer-course-banner:end -->';
+            $DB->update_record('course_sections',(object)['id'=>$section->id,'summary'=>$banner.trim($summary),'summaryformat'=>FORMAT_HTML]);
+            return['coverstatus'=>'applied','coverfilename'=>$filename,'courseimage'=>1,'coursebanner'=>1];
+        }catch(\Throwable){
+            return['coverstatus'=>'failed','coverfilename'=>'','courseimage'=>0,'coursebanner'=>0];
+        }
     }
 
     private static function sync_url_activity(object$course,object$section,int$sectionnumber,string$key,string$name,string$accessurl):int
@@ -424,6 +466,10 @@ final class sync_trail_sections extends external_api
             'quizquestions'=>new external_value(PARAM_INT,'Questões vinculadas às avaliações.'),
             'hiddenquizzes'=>new external_value(PARAM_INT,'Avaliações antigas ocultadas.'),
             'examconflicts'=>new external_value(PARAM_INT,'Avaliações preservadas por possuírem tentativas.'),
+            'coverstatus'=>new external_value(PARAM_ALPHANUMEXT,'Situação da capa comercial.'),
+            'coverfilename'=>new external_value(PARAM_FILE,'Arquivo aplicado como imagem oficial.',VALUE_DEFAULT,''),
+            'courseimage'=>new external_value(PARAM_INT,'Confirma a imagem oficial do curso.'),
+            'coursebanner'=>new external_value(PARAM_INT,'Confirma a testeira no bloco inicial.'),
             'auditstatus'=>new external_value(PARAM_ALPHA,'Resultado da auditoria pedagógica.'),
             'auditurls'=>new external_value(PARAM_INT,'Atividades de aula auditadas.'),
             'auditvalidurls'=>new external_value(PARAM_INT,'Atividades de aula com conclusão válida.'),

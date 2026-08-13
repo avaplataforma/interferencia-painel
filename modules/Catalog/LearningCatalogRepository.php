@@ -138,7 +138,7 @@ final readonly class LearningCatalogRepository
     /** @return array<string,mixed>|null */
     public function trailPublicationContext(int $id): ?array
     {
-        $statement=$this->database->prepare("SELECT trail.*,category.name category_name,category.code category_code,parent.name parent_category_name,parent.code parent_category_code,(SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count FROM catalog_trails trail INNER JOIN catalog_categories category ON category.id=trail.category_id LEFT JOIN catalog_categories parent ON parent.id=category.parent_id WHERE trail.id=:id LIMIT 1");
+        $statement=$this->database->prepare("SELECT trail.*,category.name category_name,category.code category_code,parent.name parent_category_name,parent.code parent_category_code,asset.id media_asset_id,asset.storage_path media_storage_path,asset.mime_type media_mime_type,(SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count FROM catalog_trails trail INNER JOIN catalog_categories category ON category.id=trail.category_id LEFT JOIN catalog_categories parent ON parent.id=category.parent_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='trail' AND asset.entity_id=trail.id AND asset.purpose='cover' AND asset.generation_status='ready' WHERE trail.id=:id LIMIT 1");
         $statement->execute(['id'=>$id]);$trail=$statement->fetch();
         if(!is_array($trail))return null;
         $items=$this->database->prepare("SELECT item.item_type,item.item_id,item.sort_order,
