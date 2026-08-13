@@ -250,7 +250,7 @@ body.mundointer-brand-active #multi_section_tiles .tile-top {
     align-items: center;
     gap: .65rem;
     width: 100% !important;
-    height: 3rem !important;
+    height: 3.25rem !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tileiconcontainer,
 body.mundointer-brand-active #multi_section_tiles .tiletopright {
@@ -283,7 +283,7 @@ body.mundointer-brand-active #multi_section_tiles .tile-text {
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
-    padding: .7rem 0 0 !important;
+    padding: 1rem 0 0 !important;
     line-height: normal !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-textinner {
@@ -383,6 +383,21 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
     return $html.'<script>
 (function() {
+    function enhanceMundoInterCourse() {
+        document.querySelectorAll("#multi_section_tiles .tile-text h3").forEach(function(title) {
+            if (title.dataset.mundointerOriginalTitle) {
+                return;
+            }
+            var original = (title.textContent || "").trim();
+            title.dataset.mundointerOriginalTitle = original;
+            var concise = original.replace(/^M[oó]dulo\s+\d+\s*[-–—:]\s*/i, "").trim();
+            if (concise) {
+                title.textContent = concise;
+                title.setAttribute("aria-label", original);
+            }
+        });
+    }
+
     function mountMundoInterBrand() {
         var brand = document.querySelector(".mundointer-theme-brand[data-franquia]");
         if (!brand) {
@@ -390,6 +405,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
         }
 
         document.body.classList.add("mundointer-brand-active");
+        enhanceMundoInterCourse();
+        window.setTimeout(enhanceMundoInterCourse, 250);
         var pageTitle = brand.getAttribute("data-page-title");
         if (pageTitle) {
             document.title = pageTitle;
