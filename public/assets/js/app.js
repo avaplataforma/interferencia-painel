@@ -107,9 +107,16 @@ const documentMask = (value) => {
     .replace(/(\/\d{4})(\d)/, '$1-$2');
 };
 
+const postalMask = (value) => {
+  const number = digits(value, 8);
+  return number.replace(/^(\d{5})(\d)/, '$1-$2');
+};
+
 document.querySelectorAll('[data-mask]').forEach((input) => {
   if (!(input instanceof HTMLInputElement)) return;
-  const format = input.dataset.mask === 'phone' ? phoneMask : documentMask;
+  const format = input.dataset.mask === 'phone'
+    ? phoneMask
+    : (input.dataset.mask === 'postal' ? postalMask : documentMask);
   const update = () => { input.value = format(input.value); };
   input.addEventListener('input', update);
   update();

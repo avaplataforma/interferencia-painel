@@ -149,6 +149,26 @@ final readonly class FinanceRepository
     {
         $digits=preg_replace('/\D/','',$document)??'';if($digits==='')return null;$s=$this->database->prepare("SELECT c.*,u.name unit_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id WHERE c.organization_id=:organization AND REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:document AND c.is_deleted=0 LIMIT 1");$s->execute(['organization'=>$this->organizationId,'document'=>$digits]);$row=$s->fetch();return is_array($row)?$row:null;
     }
+
+    /** @param array{name:string,email:string,cpf_cnpj:string,phone:string,mobile_phone:string,address:string,address_number:string,complement:string,province:string,postal_code:string} $customer */
+    public function updateCustomerLocally(int$id,array$customer):void
+    {
+        $s=$this->database->prepare('UPDATE finance_customers SET name=:name,email=:email,cpf_cnpj=:cpf,phone=:phone,mobile_phone=:mobile,address=:address,address_number=:number,complement=:complement,province=:province,postal_code=:postal WHERE id=:id AND organization_id=:organization AND is_deleted=0');
+        $s->execute([
+            'name'=>$customer['name'],
+            'email'=>$customer['email'],
+            'cpf'=>$customer['cpf_cnpj']!==''?$customer['cpf_cnpj']:null,
+            'phone'=>$customer['phone']!==''?$customer['phone']:null,
+            'mobile'=>$customer['mobile_phone']!==''?$customer['mobile_phone']:null,
+            'address'=>$customer['address'],
+            'number'=>$customer['address_number'],
+            'complement'=>$customer['complement']!==''?$customer['complement']:null,
+            'province'=>$customer['province'],
+            'postal'=>$customer['postal_code'],
+            'id'=>$id,
+            'organization'=>$this->organizationId,
+        ]);
+    }
     /** @return array{payments:int,subscriptions:int,checkouts:int} */
     public function customerDependencies(int$id):array
     {

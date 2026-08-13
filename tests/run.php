@@ -2452,6 +2452,25 @@ $tests['prioriza a próxima ação operacional de cada aluno'] = static function
     assertSame('charge',$queue['items'][1]['action']);
 };
 
+$tests['edita aluno no modo seguro e orienta a liberação do AVA'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Finance/FinanceRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $edit=(string)file_get_contents($rootPath.'/views/finance/customers/edit.php');
+    $masks=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+    $actions=(string)file_get_contents($rootPath.'/views/students/actions.php');
+    $enrollments=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
+
+    assertTrue(str_contains($repository,'function updateCustomerLocally'));
+    assertTrue(str_contains($routes,'$finance->updateCustomerLocally($id,$localCustomer)'));
+    assertTrue(str_contains($routes,'O Asaas permaneceu inalterado porque o modo seguro está ativo.'));
+    assertTrue(str_contains($edit,'data-mask="postal"'));
+    assertTrue(!str_contains($edit,' disabled'));
+    assertTrue(str_contains($masks,"input.dataset.mask === 'postal'"));
+    assertTrue(str_contains($actions,"'/students/enrollments?focus='"));
+    assertTrue(str_contains($routes,'Libere esta matrícula no AVA antes de enviar os dados de acesso.'));
+    assertTrue(str_contains($enrollments,'id="enrollment-'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

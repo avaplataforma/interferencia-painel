@@ -13,7 +13,7 @@ $actionHref=static function(array$item)use($basePath):string{
   'edit_profile'=>$basePath.'/finance/customers/'.$studentId.'/edit',
   'charge'=>$basePath.'/finance/customers/'.$studentId.'/payments/create'.($enrollmentId>0?'?enrollment='.$enrollmentId:''),
   'finance'=>$basePath.'/students/'.$studentId.'?tab=finance',
-  'release_ava'=>$enrollmentId>0?$basePath.'/students/enrollments/'.$enrollmentId.'/access':$basePath.'/students/enrollments',
+  'release_ava'=>$enrollmentId>0?$basePath.'/students/enrollments?focus='.$enrollmentId.'#enrollment-'.$enrollmentId:$basePath.'/students/enrollments',
   'pedagogical'=>$basePath.'/students/'.$studentId.'?tab=pedagogical',
   'certificate'=>$basePath.'/students/'.$studentId.'?tab=ava',
   default=>$basePath.'/students/'.$studentId.'?tab=journey',

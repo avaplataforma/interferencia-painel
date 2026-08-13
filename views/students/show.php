@@ -16,7 +16,7 @@ if(is_array($nextAction)){$nextEnrollmentId=(int)($nextAction['enrollment_id']??
  'new_enrollment'=>$basePath.'/students/enrollments/create?student='.$studentId,
  'charge'=>$basePath.'/finance/customers/'.$studentId.'/payments/create'.($nextEnrollmentId>0?'?enrollment='.$nextEnrollmentId:''),
  'finance'=>$basePath.'/students/'.$studentId.'?tab=finance',
- 'release_ava'=>$nextEnrollmentId>0?$basePath.'/students/enrollments/'.$nextEnrollmentId.'/access':$basePath.'/students/enrollments',
+ 'release_ava'=>$nextEnrollmentId>0?$basePath.'/students/enrollments?focus='.$nextEnrollmentId.'#enrollment-'.$nextEnrollmentId:$basePath.'/students/enrollments',
  'pedagogical'=>$basePath.'/students/'.$studentId.'?tab=pedagogical',
  'certificate'=>$basePath.'/students/'.$studentId.'?tab=ava',
  default=>$basePath.'/students/'.$studentId.'?tab=journey',
