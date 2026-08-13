@@ -2151,7 +2151,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.8.0'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.8.1'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2193,6 +2193,9 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginSections,"'Avaliação - '.\$name"));
     assertTrue(str_contains($pluginSections,"'mi-trail-exam-'"));
     assertTrue(str_contains($pluginSections,"quiz_add_quiz_question"));
+    assertTrue(str_contains($pluginSections,'repair_quiz_grades'));
+    assertTrue(str_contains($pluginSections,'recompute_quiz_sumgrades'));
+    assertTrue(str_contains($pluginSections,"set_field('quiz_slots','maxmark',1.0"));
     assertTrue(str_contains($pluginSections,"question_bank::get_qtype('multichoice')"));
     assertTrue(str_contains($pluginSections,"quiz_attempts"));
     assertTrue(str_contains($publisher,"->exam("));

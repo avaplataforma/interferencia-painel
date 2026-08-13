@@ -184,6 +184,7 @@ final class sync_trail_sections extends external_api
             $same=str_contains((string)$quiz->intro,'data-mundointer-exam-signature="'.s($signature).'"');
             $slotcount=(int)$DB->count_records('quiz_slots',['quizid'=>$quiz->id]);
             if($same&&$slotcount===count($questions)){
+                $quiz=self::repair_quiz_grades($quiz);
                 $quiz->name=\core_text::substr('Avaliação - '.$name,0,255);
                 $quiz->timemodified=time();
                 $DB->update_record('quiz',$quiz);
@@ -195,6 +196,7 @@ final class sync_trail_sections extends external_api
                 return['quiz'=>(int)$existing->id,'questions'=>$slotcount,'conflict'=>0];
             }
             if($DB->record_exists('quiz_attempts',['quiz'=>$quiz->id])){
+                self::repair_quiz_grades($quiz);
                 set_coursemodule_visible((int)$existing->id,1);
                 return['quiz'=>(int)$existing->id,'questions'=>$slotcount,'conflict'=>1];
             }
@@ -231,8 +233,46 @@ final class sync_trail_sections extends external_api
             $createdquestions++;
         }
         $quiz=$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
-        quiz_set_grade(10.0,$quiz);
+        self::repair_quiz_grades($quiz);
         return['quiz'=>(int)$created->coursemodule,'questions'=>$createdquestions,'conflict'=>0];
+    }
+
+    /**
+     * Keep question weights and the quiz total in sync across supported Moodle versions.
+     *
+     * Moodle 4.3+ no longer recalculates quiz.sumgrades when a question is added by
+     * quiz_add_quiz_question(). Re-publication also reaches this method, so quizzes
+     * created by older connector builds are repaired without being recreated.
+     */
+    private static function repair_quiz_grades(object$quiz):object
+    {
+        global$DB;
+        $slots=$DB->get_records('quiz_slots',['quizid'=>$quiz->id],'slot ASC','id,maxmark');
+        foreach($slots as$slot){
+            if((float)$slot->maxmark>0)continue;
+            $DB->set_field('quiz_slots','maxmark',1.0,['id'=>$slot->id]);
+        }
+
+        $recomputed=false;
+        if(class_exists('\\mod_quiz\\quiz_settings')&&method_exists('\\mod_quiz\\quiz_settings','create')){
+            $settings=\mod_quiz\quiz_settings::create((int)$quiz->id);
+            $calculator=$settings->get_grade_calculator();
+            if(method_exists($calculator,'recompute_quiz_sumgrades')){
+                $calculator->recompute_quiz_sumgrades();
+                $recomputed=true;
+            }
+        }
+        if(!$recomputed){
+            $sumgrades=(float)$DB->get_field_sql(
+                'SELECT COALESCE(SUM(maxmark),0) FROM {quiz_slots} WHERE quizid = ?',
+                [$quiz->id]
+            );
+            $DB->set_field('quiz','sumgrades',$sumgrades,['id'=>$quiz->id]);
+        }
+
+        $quiz=$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
+        quiz_set_grade(10.0,$quiz);
+        return$DB->get_record('quiz',['id'=>$quiz->id],'*',MUST_EXIST);
     }
 
     private static function question_category(object$course,string$key,string$signature):object
