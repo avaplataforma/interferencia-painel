@@ -407,6 +407,15 @@ function local_mundointer_before_standard_top_of_body_html(): string
         document.body.classList.add("mundointer-brand-active");
         enhanceMundoInterCourse();
         window.setTimeout(enhanceMundoInterCourse, 250);
+        var courseObserver = new MutationObserver(function() {
+            if (document.querySelector("#multi_section_tiles .tile-text h3:not([data-mundointer-original-title])")) {
+                enhanceMundoInterCourse();
+            }
+        });
+        courseObserver.observe(document.body, {childList: true, subtree: true});
+        window.setTimeout(function() {
+            courseObserver.disconnect();
+        }, 15000);
         var pageTitle = brand.getAttribute("data-page-title");
         if (pageTitle) {
             document.title = pageTitle;
