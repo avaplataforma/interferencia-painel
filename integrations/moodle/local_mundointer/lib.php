@@ -604,12 +604,40 @@ body.mundointer-brand-active.mundointer-course-experience-mounted .overall-progr
     display: none !important;
 }
 body.mundointer-brand-active #course-index .courseindex-section {
-    margin: .2rem .4rem;
-    border-radius: .65rem;
-    transition: background-color .15s ease;
+    margin: .3rem .4rem;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: .75rem;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 body.mundointer-brand-active #course-index .courseindex-section:hover {
     background: var(--mundointer-primary-soft);
+}
+body.mundointer-brand-active #course-index .courseindex-section.mundointer-courseindex-active {
+    border-color: color-mix(in srgb, var(--mundointer-primary) 30%, #dfe6ec);
+    background: color-mix(in srgb, var(--mundointer-primary-soft) 72%, #fff);
+    box-shadow: 0 .25rem .75rem rgba(20, 39, 60, .07);
+}
+body.mundointer-brand-active #course-index .courseindex-section-title {
+    min-height: 2.75rem;
+    padding: .35rem .45rem;
+    border-radius: .7rem;
+}
+body.mundointer-brand-active #course-index .courseindex-section-title .courseindex-link,
+body.mundointer-brand-active #course-index .courseindex-section-title a {
+    min-width: 0;
+    color: var(--mundointer-secondary);
+    font-size: .82rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: normal;
+}
+body.mundointer-brand-active #course-index .courseindex-item-content {
+    padding: 0 .3rem .35rem;
+}
+body.mundointer-brand-active #course-index .courseindex-item-content .courseindex-item {
+    margin-top: .15rem;
+    border-radius: .55rem;
 }
 body.mundointer-brand-active #course-index .courseindex-item.pageitem {
     border-left: 3px solid var(--mundointer-primary);
@@ -624,6 +652,13 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
     color: #8b98a3;
 }
 @media (max-width: 760px) {
+    body.mundointer-brand-active #theme_boost-drawers-courseindex {
+        width: min(88vw, 20rem);
+        max-width: 20rem;
+    }
+    body.mundointer-brand-active #course-index .courseindex-section {
+        margin-inline: .25rem;
+    }
     body.mundointer-brand-active #multi_section_tiles.tiles {
         grid-template-columns: minmax(0, 1fr);
         gap: .85rem;
@@ -744,7 +779,111 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
     return $html.'<script>
 (function() {
+    function setMundoInterCourseIndexSection(section, open) {
+        if (!section) {
+            return;
+        }
+        var toggle = section.querySelector(".courseindex-section-title a[data-toggle=\"collapse\"]");
+        var contentId = toggle ? (toggle.getAttribute("aria-controls") || "") : "";
+        var content = contentId ? document.getElementById(contentId) : section.querySelector(".courseindex-item-content.collapse");
+
+        section.classList.toggle("mundointer-courseindex-active", open);
+        if (toggle) {
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+            toggle.classList.toggle("collapsed", !open);
+        }
+        if (content) {
+            content.classList.toggle("show", open);
+        }
+    }
+
+    function findMundoInterCourseIndexSection(root) {
+        var match = (window.location.hash || "").match(/^#section-(\d+)$/);
+        var number = match ? match[1] : "";
+
+        if (!number) {
+            var params = new URLSearchParams(window.location.search || "");
+            number = params.get("section") || "";
+        }
+        if (!number) {
+            var currentItem = root.querySelector(".courseindex-item.pageitem");
+            var currentSection = currentItem ? currentItem.closest(".courseindex-section") : null;
+            number = currentSection ? (currentSection.getAttribute("data-number") || "") : "";
+        }
+        if (!number || number === "0") {
+            var incomplete = root.querySelector("[data-for=\"cm_completion\"].completion_incomplete");
+            var incompleteSection = incomplete ? incomplete.closest(".courseindex-section") : null;
+            number = incompleteSection ? (incompleteSection.getAttribute("data-number") || "") : number;
+        }
+        if (!number || number === "0") {
+            var firstModule = root.querySelector(".courseindex-section[data-number]:not([data-number=\"0\"])");
+            number = firstModule ? (firstModule.getAttribute("data-number") || "1") : "0";
+        }
+
+        return root.querySelector(".courseindex-section[data-number=\"" + number + "\"]");
+    }
+
+    function setupMundoInterCourseIndex() {
+        var root = document.querySelector("#course-index");
+        if (!root) {
+            return;
+        }
+
+        var sections = Array.prototype.slice.call(root.querySelectorAll(".courseindex-section[data-number]"));
+        if (!sections.length) {
+            return;
+        }
+
+        if (!root.dataset.mundointerCourseIndexMounted) {
+            root.dataset.mundointerCourseIndexMounted = "1";
+            var activeSection = findMundoInterCourseIndexSection(root);
+            sections.forEach(function(section) {
+                setMundoInterCourseIndexSection(section, section === activeSection);
+                var toggle = section.querySelector(".courseindex-section-title a[data-toggle=\"collapse\"]");
+                if (!toggle || toggle.dataset.mundointerAccordion) {
+                    return;
+                }
+                toggle.dataset.mundointerAccordion = "1";
+                toggle.addEventListener("click", function() {
+                    window.setTimeout(function() {
+                        var opening = toggle.getAttribute("aria-expanded") === "true";
+                        sections.forEach(function(otherSection) {
+                            if (otherSection !== section && opening) {
+                                setMundoInterCourseIndexSection(otherSection, false);
+                            }
+                        });
+                        section.classList.toggle("mundointer-courseindex-active", opening);
+                    }, 0);
+                });
+            });
+        }
+
+        if (!document.body.dataset.mundointerCourseIndexHash) {
+            document.body.dataset.mundointerCourseIndexHash = "1";
+            window.addEventListener("hashchange", function() {
+                var currentRoot = document.querySelector("#course-index");
+                if (!currentRoot) {
+                    return;
+                }
+                var currentSection = findMundoInterCourseIndexSection(currentRoot);
+                currentRoot.querySelectorAll(".courseindex-section[data-number]").forEach(function(section) {
+                    setMundoInterCourseIndexSection(section, section === currentSection);
+                });
+            });
+        }
+
+        if (window.matchMedia("(max-width: 760px)").matches && !document.body.dataset.mundointerMobileIndexClosed) {
+            document.body.dataset.mundointerMobileIndexClosed = "1";
+            var drawer = document.getElementById("theme_boost-drawers-courseindex");
+            var closeButton = drawer ? drawer.querySelector("[data-action=\"closedrawer\"]") : null;
+            if (drawer && drawer.classList.contains("show") && closeButton) {
+                closeButton.click();
+            }
+        }
+    }
+
     function enhanceMundoInterCourse() {
+        setupMundoInterCourseIndex();
         var tilesRoot = document.querySelector("#multi_section_tiles");
         if (!tilesRoot) {
             return;
