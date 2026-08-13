@@ -1156,7 +1156,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.8.4',$metadata['release']);
+    assertSame('0.8.5',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1176,7 +1176,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.8.4'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.8.5'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
     assertTrue(str_contains($services,"'core_course_get_categories'"));
@@ -2151,7 +2151,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.8.4'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.8.5'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2217,6 +2217,8 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginSections,'rebuild_course_cache'));
     assertTrue(str_contains($pluginSections,"'course','overviewfiles'"));
     assertTrue(str_contains($pluginSections,"'course','overviewfiles',null"));
+    assertTrue(str_contains($pluginSections,'imagejpeg'));
+    assertTrue(str_contains($pluginSections,"\$extension='jpg'"));
     assertTrue(str_contains($pluginSections,'mundointer-course-banner:start'));
     assertTrue(str_contains($publisher,"'course_cover'"));
     assertTrue(str_contains($publisher,"'/catalog-media/'"));

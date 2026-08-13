@@ -124,6 +124,22 @@ final class sync_trail_sections extends external_api
             if(defined('IMAGETYPE_WEBP'))$allowed[IMAGETYPE_WEBP]=['webp','image/webp'];
             if(!isset($allowed[$type]))throw new \RuntimeException('A capa comercial precisa ser JPG, PNG ou WebP.');
             [$extension,$mimetype]=$allowed[$type];
+            // A imagem comercial permanece otimizada em WebP no Spaces, mas a
+            // área oficial de capa dos cursos do Moodle aceita somente os
+            // formatos tradicionais. Convertemos apenas na cópia interna.
+            if(defined('IMAGETYPE_WEBP')&&$type===IMAGETYPE_WEBP){
+                if(!function_exists('imagecreatefromstring')||!function_exists('imagejpeg'))throw new \RuntimeException('O servidor Moodle precisa da extensao GD para converter a capa WebP.');
+                $source=@imagecreatefromstring($content);
+                if($source===false)throw new \RuntimeException('A capa WebP nao pode ser convertida para JPG.');
+                ob_start();
+                $converted=imagejpeg($source,null,88);
+                $jpeg=(string)ob_get_clean();
+                imagedestroy($source);
+                if(!$converted||$jpeg==='')throw new \RuntimeException('A conversao da capa WebP para JPG falhou.');
+                $content=$jpeg;
+                $extension='jpg';
+                $mimetype='image/jpeg';
+            }
             $filename='mundointer-course-cover.'.$extension;
             $context=\context_course::instance((int)$course->id);
             $fs=get_file_storage();
