@@ -524,6 +524,7 @@ $tests['permite atualizar cliente financeiro no Asaas'] = static function (): vo
     $routes = file_get_contents($root.'/routes/web.php');
     assertTrue(is_string($client) && str_contains($client, 'function updateCustomer') && str_contains($client, "'/customers/'"));
     assertTrue(is_string($routes) && str_contains($routes, '/finance/customers/{id:\\d+}/edit'));
+    assertTrue(is_string($routes) && str_contains($routes, '$unitContext->available()') && str_contains($routes, "'/students/'.\$id.'?tab=overview'"));
     assertTrue(is_file($root.'/views/finance/customers/edit.php'));
     assertTrue(is_file($root.'/database/migrations/20260804_490000_add_finance_customer_address.php'));
 };
