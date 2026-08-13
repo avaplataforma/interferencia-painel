@@ -1408,7 +1408,9 @@ function local_mundointer_before_standard_top_of_body_html(): string
             tilesRoot.dataset.mundointerDynamicSections = "1";
             tilesRoot.addEventListener("click", function(event) {
                 if (event.target.closest(".tile, .sectiontitlecontainer, .sectiontitle")) {
-                    window.setTimeout(enhanceMundoInterCourse, 120);
+                    [120, 450, 1000].forEach(function(delay) {
+                        window.setTimeout(enhanceMundoInterCourse, delay);
+                    });
                 }
             });
         }
