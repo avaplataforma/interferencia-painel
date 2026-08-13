@@ -2470,7 +2470,7 @@ $tests['edita aluno no modo seguro e orienta a liberação do AVA'] = static fun
     assertTrue(str_contains($routes,'O Asaas permaneceu inalterado porque o modo seguro está ativo.'));
     assertTrue(str_contains($edit,'data-mask="postal"'));
     assertTrue(str_contains($edit,'Dados pendentes:'));
-    assertTrue(str_contains($routes,"'missingFields'=>StudentActionQueueBuilder::registrationMissingFields($customer)"));
+    assertTrue(str_contains($routes,"'missingFields'=>StudentActionQueueBuilder::registrationMissingFields(\$customer)"));
     assertTrue(!str_contains($edit,' disabled'));
     assertTrue(str_contains($masks,"input.dataset.mask === 'postal'"));
     assertTrue(str_contains($actions,"'/students/enrollments?focus='"));
