@@ -2511,7 +2511,7 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($routes,"'/admin/platform/catalog-trails/{id:\\d+}/generate-cover'"));
     assertTrue(str_contains($routes,'OpenAiCatalogTextClient'));
     assertTrue(str_contains($textClient,'https://api.openai.com/v1/responses'));
-    assertTrue(str_contains($textClient,"'type'=>'json_schema'"));
+    assertTrue(str_contains($textClient,"'type' => 'json_schema'"));
     assertTrue(str_contains($catalog,"['course', 'content', 'trail']"));
     assertTrue(str_contains($coverGenerator,'public function previewTrail'));
     assertTrue(str_contains($coverGenerator,'public function attachPreview'));
