@@ -69,6 +69,7 @@ final class materialize_lti_course extends external_api
         if ($sources === []) {
             throw new \moodle_exception('A seleção MASTER desta disciplina não foi encontrada no curso de importação.');
         }
+        sync_trail_sections::apply_managed_course_format($course);
 
         $groups = self::group_sources($sources);
         $firstcmid = 0;
@@ -83,9 +84,14 @@ final class materialize_lti_course extends external_api
             if (!$section) {
                 $section = course_create_section((int) $course->id, $sectionnumber);
             }
+            $sectionname = !empty($group['assessment'])
+                ? 'Avaliação final'
+                : (self::is_complete_book_group((string)$group['name'], (string)$course->fullname)
+                    ? 'Apostila - ' . (string)$course->fullname
+                    : 'Módulo ' . $sectionnumber . ' - ' . $group['name']);
             $DB->update_record('course_sections', (object) [
                 'id' => $section->id,
-                'name' => !empty($group['assessment']) ? 'Avaliação final' : 'Módulo ' . $sectionnumber . ' - ' . $group['name'],
+                'name' => $sectionname,
                 'visible' => 1,
             ]);
 
@@ -284,6 +290,13 @@ final class materialize_lti_course extends external_api
     private static function is_selection_start_name(string $name): bool
     {
         return preg_match('/apresenta/u', self::fold($name)) === 1;
+    }
+
+    private static function is_complete_book_group(string $groupname, string $coursename): bool
+    {
+        $groupkey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($groupname)));
+        $coursekey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($coursename)));
+        return $groupkey !== '' && $coursekey !== '' && $groupkey === $coursekey;
     }
 
     private static function fold(string $value): string

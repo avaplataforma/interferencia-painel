@@ -100,7 +100,7 @@ final readonly class MoodleClient
         if($idNumber==='')throw new RuntimeException('O curso precisa de um código permanente antes da publicação.');
         $existing=null;
         foreach($this->courses()as$candidate)if(trim((string)($candidate['idnumber']??''))===$idNumber){$existing=$candidate;break;}
-        $payload=['fullname'=>trim((string)($course['fullname']??'')),'shortname'=>trim((string)($course['shortname']??'')),'categoryid'=>(int)($course['categoryid']??0),'idnumber'=>$idNumber,'summary'=>(string)($course['summary']??''),'summaryformat'=>1,'format'=>'topics','visible'=>1];
+        $payload=['fullname'=>trim((string)($course['fullname']??'')),'shortname'=>trim((string)($course['shortname']??'')),'categoryid'=>(int)($course['categoryid']??0),'idnumber'=>$idNumber,'summary'=>(string)($course['summary']??''),'summaryformat'=>1,'format'=>'tiles','visible'=>1];
         if($payload['fullname']===''||$payload['shortname']===''||$payload['categoryid']<1)throw new RuntimeException('A publicação está sem nome, código curto ou categoria do AVA.');
         if(is_array($existing)){
             $payload['id']=(int)$existing['id'];

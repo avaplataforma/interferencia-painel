@@ -35,6 +35,7 @@ final class sync_trail_sections extends external_api
 
         $course=$DB->get_record('course',['id'=>$parameters['courseid']],'*',MUST_EXIST);
         if(!str_starts_with((string)$course->idnumber,'mi-trilha-'))throw new \invalid_parameter_exception('Somente Trilhas gerenciadas pelo Mundo Inter podem ter os blocos sincronizados.');
+        self::apply_managed_course_format($course);
         $decoded=json_decode($parameters['sections'],true);
         if(!is_array($decoded))throw new \invalid_parameter_exception('A composição da Trilha não contém um JSON válido.');
         $decoded=array_values(array_filter($decoded,'is_array'));
@@ -482,6 +483,40 @@ final class sync_trail_sections extends external_api
     public static function apply_managed_assessment(object$course,object$section,int$sectionnumber,string$key,string$name,array$exam):array
     {
         return self::sync_quiz_activity($course,$section,$sectionnumber,$key,$name,$exam);
+    }
+
+    /** Applies the approved Tiles layout to every course managed by Mundo Inter. */
+    public static function apply_managed_course_format(object$course):void
+    {
+        global$DB;
+        if(\core_component::get_plugin_directory('format','tiles')===null)return;
+
+        if((string)($course->format??'')!=='tiles'){
+            $DB->set_field('course','format','tiles',['id'=>(int)$course->id]);
+            $course->format='tiles';
+        }
+
+        $options=[
+            'defaulttileicon'=>'pie-chart',
+            'basecolour'=>'#D13C3C',
+            'courseusesubtiles'=>'0',
+            'usesubtilesseczero'=>'0',
+            'courseshowtileprogress'=>'2',
+            'displayfilterbar'=>'0',
+            'courseusebarforheadings'=>'1',
+        ];
+        foreach($options as$name=>$value){
+            $criteria=['courseid'=>(int)$course->id,'format'=>'tiles','sectionid'=>0,'name'=>$name];
+            $record=$DB->get_record('course_format_options',$criteria);
+            if($record){
+                if((string)$record->value!==$value){
+                    $record->value=$value;
+                    $DB->update_record('course_format_options',$record);
+                }
+                continue;
+            }
+            $DB->insert_record('course_format_options',(object)($criteria+['value'=>$value]));
+        }
     }
 
     public static function execute_returns(): external_single_structure
