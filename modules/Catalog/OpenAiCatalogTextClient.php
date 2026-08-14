@@ -43,6 +43,21 @@ final readonly class OpenAiCatalogTextClient
         return['short_description'=>trim((string)$result['short_description']),'description'=>trim((string)$result['description'])];
     }
 
+    /** @param list<string> $modules @return array{short_description:string,description:string} */
+    public function generateMasterCopy(string$name,string$category,array$modules,string$guidance=''):array
+    {
+        if(trim($this->apiKey)==='')throw new RuntimeException('Configure a chave da API da OpenAI em ADM Central > Integrações > IA - OpenAI.');
+        $moduleList=implode("\n- ",array_slice(array_values(array_filter(array_map('trim',$modules))),0,120));
+        if($moduleList==='')throw new RuntimeException('Sincronize as aulas e recursos MASTER antes de preparar os textos.');
+        $prompt="Crie a apresentação comercial de um Curso Individual da Formação MASTER.\nCurso: {$name}\nCategoria: {$category}\nAulas e recursos do IESDE:\n- {$moduleList}\n";
+        if(trim($guidance)!=='')$prompt.="Orientação adicional: ".mb_substr(trim($guidance),0,1000)."\n";
+        $prompt.='Crie um resumo direto com até 280 caracteres e uma descrição completa em 2 a 4 parágrafos. Não crie perguntas e não invente carga horária, certificado, reconhecimento, legislação, estatísticas ou garantias. A avaliação oficial vem do banco de questões do IESDE.';
+        $schema=['type'=>'object','properties'=>['short_description'=>['type'=>'string'],'description'=>['type'=>'string']],'required'=>['short_description','description'],'additionalProperties'=>false];
+        $result=$this->structured('master_copy',$prompt,$schema);
+        if(trim((string)($result['short_description']??''))===''||trim((string)($result['description']??''))==='')throw new RuntimeException('A OpenAI não retornou os textos esperados.');
+        return['short_description'=>trim((string)$result['short_description']),'description'=>trim((string)$result['description'])];
+    }
+
     /**
      * Produces a reviewable commercial presentation and a ten-question draft.
      * The source supplied to the model is intentionally limited to the course

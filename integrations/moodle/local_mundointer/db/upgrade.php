@@ -70,5 +70,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // assessment and official cover through the existing materializer.
         upgrade_plugin_savepoint(true, 2026081331, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081332) {
+        // No schema change. MASTER now preserves the official IESDE Deep
+        // Linking assessment instead of generating a local AI quiz.
+        upgrade_plugin_savepoint(true, 2026081332, 'local', 'mundointer');
+    }
     return true;
 }

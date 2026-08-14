@@ -82,9 +82,10 @@ final class lti_selections extends external_api
             }
 
             $name = clean_param((string)$record->name, PARAM_TEXT);
+            $isassessment = self::isAssessmentName($name);
             $courses[$courseid]['conteudos'][] = [
                 'batch' => 'moodle-lti-' . (int)$record->ltiid,
-                'type' => 'lti',
+                'type' => $isassessment ? 'assessment' : 'lti',
                 'name' => $name,
                 'discipline' => $name,
                 'semester' => max(1, (int)$record->sectionnumber),
@@ -98,6 +99,7 @@ final class lti_selections extends external_api
                     'tool_name' => clean_param($typeName, PARAM_TEXT),
                     'launch_host' => self::safeHost($toolUrl !== '' ? $toolUrl : $typeUrl),
                     'description' => clean_param(strip_tags((string)$record->intro), PARAM_TEXT),
+                    'is_assessment' => $isassessment,
                 ],
             ];
         }
@@ -127,6 +129,12 @@ final class lti_selections extends external_api
     {
         $host = parse_url(trim($url), PHP_URL_HOST);
         return is_string($host) ? strtolower($host) : '';
+    }
+
+    private static function isAssessmentName(string $name): bool
+    {
+        $folded = \core_text::strtolower(trim($name));
+        return preg_match('/avalia|prova|exame/u', $folded) === 1;
     }
 
     public static function execute_returns(): external_single_structure

@@ -54,9 +54,6 @@ final class materialize_lti_course extends external_api
         require_once($CFG->dirroot . '/course/modlib.php');
         require_once($CFG->dirroot . '/mod/lti/lib.php');
         require_once($CFG->dirroot . '/mod/lti/locallib.php');
-        require_once($CFG->dirroot . '/mod/quiz/lib.php');
-        require_once($CFG->dirroot . '/mod/quiz/locallib.php');
-        require_once($CFG->dirroot . '/question/editlib.php');
         require_once($CFG->libdir . '/filelib.php');
 
         if ((int) $course->enablecompletion !== 1) {
@@ -84,7 +81,7 @@ final class materialize_lti_course extends external_api
             }
             $DB->update_record('course_sections', (object) [
                 'id' => $section->id,
-                'name' => 'Módulo ' . $sectionnumber . ' - ' . $group['name'],
+                'name' => !empty($group['assessment']) ? 'Avaliação final' : 'Módulo ' . $sectionnumber . ' - ' . $group['name'],
                 'visible' => 1,
             ]);
 
@@ -150,15 +147,9 @@ final class materialize_lti_course extends external_api
         }
 
         $cover=sync_trail_sections::apply_managed_cover($course,(string)$parameters['coverurl'],(string)$parameters['coveralt']);
+        // MASTER assessments are Deep Linking LTI activities created from the
+        // official IESDE question bank. Never replace them with AI questions.
         $quiz=['quiz'=>0,'questions'=>0,'conflict'=>0];
-        $assessment=json_decode((string)$parameters['assessmentjson'],true);
-        if(is_array($assessment)&&is_array($assessment['questions']??null)&&count($assessment['questions'])===10){
-            $finalsectionnumber=count($groups)+1;
-            $finalsection=$DB->get_record('course_sections',['course'=>$course->id,'section'=>$finalsectionnumber]);
-            if(!$finalsection)$finalsection=course_create_section((int)$course->id,$finalsectionnumber);
-            $DB->update_record('course_sections',(object)['id'=>$finalsection->id,'name'=>'Avaliação final','visible'=>1]);
-            $quiz=sync_trail_sections::apply_managed_assessment($course,$finalsection,$finalsectionnumber,'master-final-'.(int)$course->id,(string)$course->fullname,$assessment);
-        }
         rebuild_course_cache((int) $course->id, true);
         return self::result((int) $course->id, $firstactivityid, $firstcmid, $reusedactivities > 0, count($groups), $activitycount, $reusedactivities,$cover,$quiz);
     }
@@ -186,13 +177,18 @@ final class materialize_lti_course extends external_api
     }
 
     /** @param array<int,array{cm:object,lti:object}> $sources
-     *  @return array<int,array{name:string,items:array<int,array{cm:object,lti:object,kind:string,number:int}>}>
+     *  @return array<int,array{name:string,assessment?:bool,items:array<int,array{cm:object,lti:object,kind:string,number:int}>}>
      */
     private static function group_sources(array $sources): array
     {
         $groups = [];
         $index = [];
+        $assessments = [];
         foreach ($sources as $source) {
+            if (self::is_assessment_name((string) $source['lti']->name)) {
+                $assessments[] = ['cm' => $source['cm'], 'lti' => $source['lti'], 'kind' => 'assessment', 'number' => 0];
+                continue;
+            }
             $parts = self::lesson_parts((string) $source['lti']->name);
             $key = self::fold($parts['base']);
             if (!isset($index[$key])) {
@@ -205,6 +201,9 @@ final class materialize_lti_course extends external_api
                 'kind' => $parts['kind'],
                 'number' => $parts['number'],
             ];
+        }
+        if ($assessments !== []) {
+            $groups[] = ['name' => 'Avaliação final', 'assessment' => true, 'items' => $assessments];
         }
         return $groups;
     }
@@ -229,8 +228,14 @@ final class materialize_lti_course extends external_api
             'section' => 'Aula - Seção ' . $number,
             'activity' => 'Atividade ' . $number,
             'presentation' => 'Aula - Apresentação',
+            'assessment' => 'Avaliação final',
             default => trim((string) preg_replace('/^aula\s*[-:–—]\s*/iu', '', $original)),
         };
+    }
+
+    private static function is_assessment_name(string $name): bool
+    {
+        return preg_match('/avalia|prova|exame/u', self::fold($name)) === 1;
     }
 
     private static function fold(string $value): string
