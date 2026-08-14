@@ -88,7 +88,7 @@ final readonly class AvaCatalogPublisher
         }
     }
 
-    /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool,sections_synced:int,activities_synced:int,assessment_ready:bool} */
+    /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool,sections_synced:int,activities_synced:int,assessment_ready:bool,book_ready:bool} */
     public function publishMasterCourse(int$courseId,?int$userId):array
     {
         $context=$this->providers->coursePublicationContext($courseId);
@@ -97,6 +97,7 @@ final readonly class AvaCatalogPublisher
         if((int)($context['is_available']??0)!==1)throw new RuntimeException('A disciplina não está mais disponível no fornecedor.');
         if((int)($context['resource_count']??0)<1)throw new RuntimeException('Esta disciplina ainda não possui aulas ou recursos LTI sincronizados.');
         $assessmentReady=(int)($context['assessment_resource_count']??0)>0;
+        $bookReady=(int)($context['book_resource_count']??0)>0;
         $raw=is_array($context['source_raw']??null)?$context['source_raw']:[];
         $sourceCmId=(int)($raw['course_module_id']??0);
         if($sourceCmId<1)throw new RuntimeException('Sincronize novamente as seleções MASTER: a atividade LTI de origem não foi identificada.');
@@ -105,7 +106,7 @@ final readonly class AvaCatalogPublisher
 
         $name=$this->masterCourseName((string)($context['effective_name']??$context['name']??''));
         if($name==='')throw new RuntimeException('Informe o nome da disciplina antes de criar o curso.');
-        $signature=hash('sha256',json_encode(['course_id'=>$courseId,'name'=>$name,'description'=>$context['effective_description']??'','summary'=>$context['commercial_summary']??'','category'=>$context['effective_category']??'','workload'=>$context['effective_workload']??'','source_cmid'=>$sourceCmId,'resource_count'=>(int)$context['resource_count'],'assessment_resource_count'=>(int)$context['assessment_resource_count'],'media_asset_id'=>(int)($context['media_asset_id']??0)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        $signature=hash('sha256',json_encode(['course_id'=>$courseId,'name'=>$name,'description'=>$context['effective_description']??'','summary'=>$context['commercial_summary']??'','category'=>$context['effective_category']??'','workload'=>$context['effective_workload']??'','source_cmid'=>$sourceCmId,'resource_count'=>(int)$context['resource_count'],'assessment_resource_count'=>(int)$context['assessment_resource_count'],'book_resource_count'=>(int)($context['book_resource_count']??0),'media_asset_id'=>(int)($context['media_asset_id']??0)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         $publicationId=$this->catalog->markEntityPublicationReady('provider_course',$courseId,(int)$connection['id'],$signature,$userId);
         try{
             $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
@@ -122,8 +123,8 @@ final readonly class AvaCatalogPublisher
             $course['categoryid']=$categoryId;$course['fullname']=$name;$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['course_id'=>$courseId,'resource_count'=>(int)$context['resource_count'],'provider_assessment_count'=>(int)$context['assessment_resource_count'],'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'activities_reused'=>(int)($activity['reusedactivities']??0),'course_image'=>(int)($activity['courseimage']??0),'idnumber'=>$idNumber],$userId);
-            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'assessment_ready'=>$assessmentReady];
+            $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['course_id'=>$courseId,'resource_count'=>(int)$context['resource_count'],'provider_assessment_count'=>(int)$context['assessment_resource_count'],'provider_book_count'=>(int)($context['book_resource_count']??0),'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'activities_reused'=>(int)($activity['reusedactivities']??0),'course_image'=>(int)($activity['courseimage']??0),'idnumber'=>$idNumber],$userId);
+            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'assessment_ready'=>$assessmentReady,'book_ready'=>$bookReady];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
             throw new RuntimeException($this->friendlyError($exception),0,$exception);

@@ -91,5 +91,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         }
         upgrade_plugin_savepoint(true, 2026081405, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081406) {
+        // No schema change. This release fixes the real Moodle section order
+        // used to group IESDE lessons, books and the official assessment.
+        upgrade_plugin_savepoint(true, 2026081406, 'local', 'mundointer');
+    }
     return true;
 }

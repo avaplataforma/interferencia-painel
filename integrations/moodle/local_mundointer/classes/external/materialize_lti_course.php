@@ -107,7 +107,9 @@ final class materialize_lti_course extends external_api
                 $moduleidnumber = (int) $sourceitemcm->id === (int) $sourcecm->id
                     ? $parameters['idnumber']
                     : 'mi-master-lti-cm-' . (int) $sourceitemcm->id;
-                $displayname = self::activity_display_name((string) $source->name, $item['kind'], $item['number']);
+                $displayname = $isbook
+                    ? self::book_activity_display_name((string)$source->name)
+                    : self::activity_display_name((string) $source->name, $item['kind'], $item['number']);
                 $existing = $DB->get_record('course_modules', [
                     'course' => $course->id,
                     'module' => $ltimodule->id,
@@ -204,9 +206,16 @@ final class materialize_lti_course extends external_api
     {
         $segments = [];
         $current = [];
+        $selectionstarted = false;
         foreach ($sources as $source) {
             $name = (string)$source['lti']->name;
-            if ($current !== [] && self::is_selection_start_name($name) && !self::is_adjacent_selection_header($current, $name)) {
+            $isstart = self::is_selection_start_name($name);
+            if (!$selectionstarted && $isstart) {
+                if ($current !== []) {
+                    $current = [];
+                }
+                $selectionstarted = true;
+            } else if ($selectionstarted && $current !== [] && $isstart && !self::is_adjacent_selection_header($current, $name)) {
                 $segments[] = $current;
                 $current = [];
             }
@@ -214,6 +223,9 @@ final class materialize_lti_course extends external_api
         }
         if ($current !== []) {
             $segments[] = $current;
+        }
+        if (!$selectionstarted && $segments === [] && $sources !== []) {
+            $segments[] = $sources;
         }
         foreach ($segments as $segment) {
             foreach ($segment as $source) {
@@ -285,6 +297,7 @@ final class materialize_lti_course extends external_api
     private static function lesson_parts(string $name): array
     {
         $name = trim((string) preg_replace('/^aula\s*[-:–—]\s*/iu', '', clean_param($name, PARAM_TEXT)));
+        $name = trim((string)preg_replace('/^nome\s+do\s+livro\s*:\s*/iu', '', $name));
         if (preg_match('/^(.*?)\s*[-:–—]\s*(se[cç][aã]o|atividade)\s*(\d+)\s*$/iu', $name, $match)) {
             return [
                 'base' => trim($match[1]),
@@ -304,6 +317,13 @@ final class materialize_lti_course extends external_api
             'assessment' => 'Avaliação final',
             default => trim((string) preg_replace('/^aula\s*[-:–—]\s*/iu', '', $original)),
         };
+    }
+
+    private static function book_activity_display_name(string $original): string
+    {
+        return preg_match('/^nome\s+do\s+livro\s*:/iu', trim($original)) === 1
+            ? 'Apostila em PDF'
+            : 'Apostila interativa';
     }
 
     private static function is_assessment_name(string $name): bool
@@ -341,6 +361,7 @@ final class materialize_lti_course extends external_api
 
     private static function is_complete_book_group(string $groupname, string $coursename): bool
     {
+        $groupname = trim((string)preg_replace('/^nome\s+do\s+livro\s*:\s*/iu', '', $groupname));
         $groupkey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($groupname)));
         $coursekey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($coursename)));
         return $groupkey !== '' && $coursekey !== '' && $groupkey === $coursekey;

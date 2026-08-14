@@ -50,7 +50,7 @@ final class lti_selections extends external_api
                   JOIN {course_modules} cm ON cm.instance=l.id AND cm.module=:moduleid
                   JOIN {course} c ON c.id=l.course
              LEFT JOIN {course_sections} cs ON cs.id=cm.section
-              ORDER BY c.sortorder,cs.section,cm.id";
+              ORDER BY c.sortorder,cs.section,FIND_IN_SET(cm.id,cs.sequence),cm.id";
         $records = $DB->get_records_sql($sql, ['moduleid' => $moduleid]);
         $sourcecourses = [];
 
@@ -150,9 +150,21 @@ final class lti_selections extends external_api
         $current = [];
         $currentsegment = 1;
         $nextsegment = 2;
+        $selectionstarted = false;
         foreach ($items as $item) {
             $name = (string)($item['name'] ?? '');
-            if ($current !== [] && self::isSelectionStartName($name)) {
+            $isstart = self::isSelectionStartName($name);
+            if (!$selectionstarted && $isstart) {
+                if ($current !== []) {
+                    // Ignore loose legacy/test activities before the first
+                    // complete Deep Linking selection while preserving the
+                    // historical ordinal of existing selections.
+                    $current = [];
+                    $currentsegment = $nextsegment;
+                    $nextsegment++;
+                }
+                $selectionstarted = true;
+            } else if ($selectionstarted && $current !== [] && $isstart) {
                 if (self::isAdjacentSelectionHeader($current, $name)) {
                     // Preserve the old ordinal that this second header would
                     // have received before both headers were consolidated.
@@ -168,6 +180,9 @@ final class lti_selections extends external_api
         }
         if ($current !== []) {
             $segments[$currentsegment] = $current;
+        }
+        if (!$selectionstarted && $segments === [] && $items !== []) {
+            $segments[1] = array_values($items);
         }
         return $segments;
     }
