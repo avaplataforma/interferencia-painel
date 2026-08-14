@@ -1,5 +1,5 @@
 <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:contents" hidden>
- <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong><?= $provider==='iesde'?'Atividades MASTER selecionadas no Moodle.':'Cursos individuais liberados por padrão.' ?></strong><br><?= $provider==='iesde'?'Cada atividade LTI escolhida pelo Deep Linking aparece aqui para curadoria comercial, sem expor credenciais do fornecedor.':'A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.' ?></div></div>
+ <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong><?= $provider==='iesde'?'Disciplinas MASTER prontas para homologação.':'Cursos individuais liberados por padrão.' ?></strong><br><?= $provider==='iesde'?'Cada disciplina pode gerar um único Curso Individual reutilizável no AVA Cursos. Apostila, materiais e avaliações permanecem protegidos dentro da atividade LTI do IESDE.':'A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.' ?></div></div>
  <div class="content-toolbar">
   <form method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers">
    <input type="hidden" name="catalog" value="<?= $escape($provider) ?>">
@@ -20,13 +20,35 @@
    $globallyEnabled=(int)($content['is_globally_enabled']??1)===1&&(int)($content['catalog_globally_enabled']??1)===1;
    $courseNames=array_values(array_filter(explode('||',(string)($content['course_names']??''))));
    $editorId='content-curation-'.(int)$content['id'];
+   $avaPublicationStatus=(string)($content['ava_publication_status']??'');
+   $avaRemoteCourseId=(int)($content['ava_remote_course_id']??0);
+   $avaPublished=$avaPublicationStatus==='published'&&$avaRemoteCourseId>0;
+   $avaPublicationError=trim((string)($content['ava_publication_error']??''));
   ?>
    <tr class="content-summary-row <?= $globallyEnabled?'':'is-blocked' ?>">
     <td><div class="catalog-course"><?php $contentCover=!empty($content['media_asset_id'])?$basePath.'/catalog-media/'.(int)$content['media_asset_id']:(string)($content['effective_cover_url']??'');if($contentCover!==''):?><img class="catalog-cover" src="<?= $escape($contentCover) ?>" alt="" loading="lazy"><?php else:?><span class="catalog-cover catalog-icon"><i class="fa-solid fa-play"></i></span><?php endif;?><div><strong><?= $escape((string)($content['effective_name']??$content['name'])) ?></strong><small><?= $escape((string)($content['content_type']??'unit')) ?> · código <?= $escape((string)$content['external_key']) ?></small><div class="catalog-course-state"><span class="catalog-badge <?= (int)$content['is_available']===1?'ok':'' ?>"><?= (int)$content['is_available']===1?'No fornecedor':'Retirado pelo fornecedor' ?></span><?php if((string)($content['sync_state']??'')==='changed'):?><span class="catalog-badge changed">Alterado</span><?php endif;?></div></div></div></td>
     <td><div class="content-origin"><strong><?= $escape((string)($content['discipline_name']?:'Disciplina não informada')) ?></strong><small><?= $content['semester_number']!==null?'Semestre '.(int)$content['semester_number'].' · ':'' ?><?= (int)$content['course_count'] ?> curso(s) relacionado(s)</small><?php if($courseNames!==[]):?><small title="<?= $escape(implode(' · ',$courseNames)) ?>"><?= $escape(implode(' · ',array_slice($courseNames,0,2))) ?><?= count($courseNames)>2?' e mais '.(count($courseNames)-2):'' ?></small><?php endif;?></div></td>
     <td><div class="catalog-course-state"><span class="catalog-badge <?= $contentReview==='approved'?'ok':'' ?>"><?= $escape($reviewLabels[$contentReview]??'Importado') ?></span><span class="catalog-badge <?= $contentRelease==='private'?'private':'ok' ?>"><?= $escape($releaseLabels[$contentRelease]??'Somente ADM Central') ?></span></div></td>
     <td><span class="availability-pill <?= $globallyEnabled?'is-enabled':'is-disabled' ?>"><i class="fa-solid <?= $globallyEnabled?'fa-circle-check':'fa-ban' ?>"></i><?= $globallyEnabled?'Liberado para todas':'Bloqueado globalmente' ?></span><small><?= (int)($content['offer_count']??0) ?> oferta(s) configurada(s)</small></td>
-    <td><div class="content-row-actions"><button class="btn btn-secondary" type="button" data-content-curation-toggle="<?= $escape($editorId) ?>" aria-expanded="false"><i class="fa-solid fa-pen-to-square"></i> Curadoria</button><form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/availability" onsubmit="return confirm('<?= $globallyEnabled?'Bloquear este conteúdo para todas as franquias?':'Liberar este conteúdo para todas as franquias por padrão?' ?>')"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><input type="hidden" name="enabled" value="<?= $globallyEnabled?'0':'1' ?>"><button class="btn <?= $globallyEnabled?'btn-danger':'btn-primary' ?>" type="submit" title="<?= $globallyEnabled?'Bloquear em todas as franquias':'Liberar em todas as franquias' ?>"><i class="fa-solid <?= $globallyEnabled?'fa-ban':'fa-unlock' ?>"></i> <?= $globallyEnabled?'Bloquear':'Liberar' ?></button></form></div></td>
+    <td>
+     <div class="content-row-actions">
+      <button class="btn btn-secondary" type="button" data-content-curation-toggle="<?= $escape($editorId) ?>" aria-expanded="false"><i class="fa-solid fa-pen-to-square"></i> Curadoria</button>
+      <?php if($provider==='iesde'):?>
+       <form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/publish-ava" onsubmit="return confirm('<?= $avaPublished?'Atualizar este Curso Individual no AVA sem criar duplicidade?':'Criar um Curso Individual reutilizável com esta disciplina MASTER?' ?>')">
+        <?= $csrfField ?>
+        <input type="hidden" name="provider" value="iesde">
+        <input type="hidden" name="content_q" value="<?= $escape($contentQuery) ?>">
+        <input type="hidden" name="content_page" value="<?= (int)($contentPage['page']??1) ?>">
+        <button class="btn <?= $avaPublished?'btn-secondary':'btn-primary' ?>" type="submit" title="<?= $escape($avaPublicationError!==''?$avaPublicationError:($avaPublished?'Curso Moodle #'.$avaRemoteCourseId:'Criar curso definitivo no AVA Cursos')) ?>"><i class="fa-solid <?= $avaPublished?'fa-arrows-rotate':'fa-graduation-cap' ?>"></i> <?= $avaPublished?'Atualizar no AVA':'Criar curso no AVA' ?></button>
+       </form>
+       <?php if($avaPublished):?><span class="catalog-badge ok" title="Curso definitivo reutilizável"><i class="fa-solid fa-circle-check"></i> Moodle #<?= $avaRemoteCourseId ?></span><?php elseif($avaPublicationStatus==='failed'):?><span class="catalog-badge changed" title="<?= $escape($avaPublicationError) ?>"><i class="fa-solid fa-triangle-exclamation"></i> Revisar falha</span><?php endif;?>
+      <?php endif;?>
+      <form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/availability" onsubmit="return confirm('<?= $globallyEnabled?'Bloquear este conteúdo para todas as franquias?':'Liberar este conteúdo para todas as franquias por padrão?' ?>')">
+       <?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><input type="hidden" name="enabled" value="<?= $globallyEnabled?'0':'1' ?>">
+       <button class="btn <?= $globallyEnabled?'btn-danger':'btn-primary' ?>" type="submit" title="<?= $globallyEnabled?'Bloquear em todas as franquias':'Liberar em todas as franquias' ?>"><i class="fa-solid <?= $globallyEnabled?'fa-ban':'fa-unlock' ?>"></i> <?= $globallyEnabled?'Bloquear':'Liberar' ?></button>
+      </form>
+     </div>
+    </td>
    </tr>
    <tr class="content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="5">
     <form class="content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/review"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>">

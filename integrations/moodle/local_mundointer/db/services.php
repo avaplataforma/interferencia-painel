@@ -52,6 +52,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_materialize_lti_course' => [
+        'classname' => 'local_mundointer\\external\\materialize_lti_course',
+        'description' => 'Cria ou atualiza um Curso Individual MASTER reutilizando uma atividade LTI homologada.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
 ];
 
 $services = [
@@ -64,6 +71,7 @@ $services = [
             'local_mundointer_sync_trail_sections',
             'local_mundointer_academic_snapshot',
             'local_mundointer_lti_selections',
+            'local_mundointer_materialize_lti_course',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_course_get_categories',

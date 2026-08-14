@@ -841,7 +841,10 @@ final readonly class CourseProviderRepository
             MIN(link.semester_number) semester_number,MIN(link.discipline_name) discipline_name,
             COUNT(DISTINCT link.provider_course_id) course_count,
             GROUP_CONCAT(DISTINCT course.name ORDER BY course.name SEPARATOR '||') course_names,
-            (SELECT COUNT(*) FROM organization_provider_content_offers offer WHERE offer.provider_content_id=content.id AND offer.is_active=1) offer_count
+            (SELECT COUNT(*) FROM organization_provider_content_offers offer WHERE offer.provider_content_id=content.id AND offer.is_active=1) offer_count,
+            (SELECT publication.publication_status FROM catalog_ava_publications publication WHERE publication.entity_type='provider_content' AND publication.entity_id=content.id ORDER BY publication.updated_at DESC LIMIT 1) ava_publication_status,
+            (SELECT publication.remote_course_id FROM catalog_ava_publications publication WHERE publication.entity_type='provider_content' AND publication.entity_id=content.id ORDER BY publication.updated_at DESC LIMIT 1) ava_remote_course_id,
+            (SELECT publication.last_error FROM catalog_ava_publications publication WHERE publication.entity_type='provider_content' AND publication.entity_id=content.id ORDER BY publication.updated_at DESC LIMIT 1) ava_publication_error
             FROM provider_catalog_contents content
             INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
             INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id
@@ -861,6 +864,27 @@ final readonly class CourseProviderRepository
             'pages' => $pages,
             'per_page' => $perPage,
         ];
+    }
+
+    /** @return array<string,mixed>|null */
+    public function contentPublicationContext(int$contentId):?array
+    {
+        if($contentId<1)return null;
+        $sql="SELECT content.*,provider.provider_code,provider.name provider_name,catalog.code catalog_code,catalog.name catalog_name,catalog.execution_environment,
+            COALESCE(NULLIF(content.commercial_name,''),content.name) effective_name,
+            COALESCE(NULLIF(content.commercial_description,''),(SELECT COALESCE(NULLIF(parent.commercial_description,''),NULLIF(parent.description,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') effective_description,
+            COALESCE(NULLIF(content.commercial_category,''),(SELECT COALESCE(NULLIF(parent.commercial_category,''),NULLIF(parent.category,''),NULLIF(inherited_link.discipline_name,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'Curso individual') effective_category,
+            COALESCE(NULLIF(content.commercial_workload,''),(SELECT COALESCE(NULLIF(parent.commercial_workload,''),NULLIF(parent.workload,'')) FROM provider_course_content_links inherited_link INNER JOIN provider_courses parent ON parent.id=inherited_link.provider_course_id WHERE inherited_link.provider_content_id=content.id ORDER BY inherited_link.position,inherited_link.provider_course_id LIMIT 1),'') effective_workload,
+            COALESCE((SELECT media.id FROM catalog_media_assets media WHERE media.entity_type='content' AND media.entity_id=content.id AND media.purpose='cover' AND media.generation_status='ready' ORDER BY media.id DESC LIMIT 1),0) media_asset_id
+            FROM provider_catalog_contents content
+            INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
+            INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id
+            WHERE content.id=:id LIMIT 1";
+        $statement=$this->database->prepare($sql);$statement->execute(['id'=>$contentId]);$row=$statement->fetch();
+        if(!is_array($row))return null;
+        $raw=json_decode((string)($row['raw_payload']??''),true);
+        $row['raw']=is_array($raw)?$raw:[];
+        return$row;
     }
 
     /** @param array<string,mixed> $metadata */

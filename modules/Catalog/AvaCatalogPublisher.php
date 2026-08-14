@@ -87,6 +87,67 @@ final readonly class AvaCatalogPublisher
         }
     }
 
+    /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool} */
+    public function publishMasterContent(int$contentId,?int$userId):array
+    {
+        $content=$this->providers->contentPublicationContext($contentId);
+        if($content===null)throw new RuntimeException('Disciplina MASTER não encontrada.');
+        if((string)($content['provider_code']??'')!=='iesde')throw new RuntimeException('Esta publicação assistida é exclusiva da Formação MASTER.');
+        if((int)($content['is_available']??0)!==1)throw new RuntimeException('A disciplina não está mais disponível no fornecedor.');
+        $raw=is_array($content['raw']??null)?$content['raw']:[];
+        $sourceCmId=(int)($raw['course_module_id']??0);
+        if($sourceCmId<1)throw new RuntimeException('Sincronize novamente as seleções MASTER: a atividade LTI de origem não foi identificada.');
+        $connection=$this->connections->shared();
+        if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)throw new RuntimeException('Configure e ative primeiro a integração AVA Cursos.');
+
+        $name=trim((string)($content['effective_name']??$content['name']??''));
+        if($name==='')throw new RuntimeException('Informe o nome da disciplina antes de criar o curso.');
+        $signature=hash('sha256',json_encode(['content_id'=>$contentId,'name'=>$name,'description'=>$content['effective_description']??'','category'=>$content['effective_category']??'','workload'=>$content['effective_workload']??'','source_cmid'=>$sourceCmId,'media_asset_id'=>(int)($content['media_asset_id']??0)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
+        $publicationId=$this->catalog->markEntityPublicationReady('provider_content',$contentId,(int)$connection['id'],$signature,$userId);
+        try{
+            $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
+            $categoryId=$this->ensureMasterCategory($client);
+            $idNumber='mi-master-content-'.$contentId;
+            $shortName=$this->limitedCode('MI-MASTER-'.$contentId.'-'.$name,100);
+            $summary=$this->masterSummary($content);
+            $course=$client->publishCourse(['fullname'=>$name,'shortname'=>$shortName,'idnumber'=>$idNumber,'categoryid'=>$categoryId,'summary'=>$summary]);
+            $remoteCourseId=(int)($course['id']??0);
+            if($remoteCourseId<1)throw new RuntimeException('O AVA não devolveu o identificador do Curso Individual MASTER.');
+            $activity=$client->materializeLtiCourse($sourceCmId,$remoteCourseId,'Aula - '.$name,'mi-master-lti-'.$contentId);
+            $course['categoryid']=$categoryId;$course['fullname']=$name;$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
+            $this->moodle->upsertCourse($course);
+            $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
+            $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['content_id'=>$contentId,'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'idnumber'=>$idNumber],$userId);
+            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false)];
+        }catch(Throwable$exception){
+            $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
+            throw new RuntimeException($this->friendlyError($exception),0,$exception);
+        }
+    }
+
+    private function ensureMasterCategory(MoodleClient$client):int
+    {
+        $categories=$client->courseCategories();
+        $root=$this->findCategory($categories,'mi-mundo-inter');
+        if($root===null){$root=$client->createCourseCategory('Mundo Inter','mi-mundo-inter');$categories[]=$root;}
+        $master=$this->findCategory($categories,'mi-formacao-master');
+        if($master===null)$master=$client->createCourseCategory('Formação MASTER','mi-formacao-master',(int)$root['id']);
+        return(int)$master['id'];
+    }
+
+    /** @param array<string,mixed> $content */
+    private function masterSummary(array$content):string
+    {
+        $name=trim((string)($content['effective_name']??$content['name']??''));
+        $description=trim((string)($content['effective_description']??''));
+        $category=trim((string)($content['effective_category']??''));
+        $workload=trim((string)($content['effective_workload']??''));
+        $cover=(int)($content['media_asset_id']??0)>0?rtrim($this->publicBaseUrl,'/').'/catalog-media/'.(int)$content['media_asset_id']:'';
+        $image=$cover!==''?'<p><img src="'.htmlspecialchars($cover,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'" alt="'.htmlspecialchars($name,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8').'" style="display:block;width:100%;max-height:360px;object-fit:cover;border-radius:16px"></p>':'';
+        $meta=[];if($category!=='')$meta[]='<strong>Categoria:</strong> '.htmlspecialchars($category,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');if($workload!=='')$meta[]='<strong>Carga horária:</strong> '.htmlspecialchars($workload,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
+        return$image.($description!==''?'<p>'.nl2br(htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')).'</p>':'').($meta!==[]?'<p>'.implode(' &middot; ',$meta).'</p>':'').'<p><small>Conteúdo MASTER disponibilizado por LTI 1.3 e gerenciado pelo Mundo Inter.</small></p>';
+    }
+
     /** @param array<string,mixed> $trail */
     private function ensureCategoryPath(MoodleClient$client,array$trail):int
     {
@@ -199,6 +260,7 @@ final readonly class AvaCatalogPublisher
     {
         $message=trim($exception->getMessage());
         if(str_contains($message,'local_mundointer_sync_trail_sections'))return'O plugin Mundo Inter do AVA precisa ser atualizado para organizar os Cursos individuais em blocos separados.';
+        if(str_contains($message,'local_mundointer_materialize_lti_course'))return'O plugin Mundo Inter do AVA precisa ser atualizado para transformar a disciplina MASTER em Curso Individual.';
         if(str_contains($message,'core_course_create_courses')||str_contains($message,'core_course_update_courses')||str_contains($message,'core_course_create_categories'))return'O serviço web do AVA ainda não permite publicar cursos e categorias. Libere as funções acadêmicas no token do AVA Cursos e tente novamente.';
         return$message!==''?$message:'Não foi possível publicar a Trilha no AVA Cursos.';
     }

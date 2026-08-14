@@ -149,6 +149,13 @@ final readonly class MoodleClient
         return$payload;
     }
 
+    /** @return array<string,mixed> */
+    public function materializeLtiCourse(int$sourceCmId,int$targetCourseId,string$activityName,string$idNumber):array
+    {
+        if($sourceCmId<1||$targetCourseId<1)throw new RuntimeException('A atividade MASTER ou o curso de destino é inválido.');
+        return$this->call('local_mundointer_materialize_lti_course',['sourcecmid'=>$sourceCmId,'targetcourseid'=>$targetCourseId,'activityname'=>$activityName,'idnumber'=>$idNumber]);
+    }
+
     /** @param array<string,mixed> $parameters @return array<mixed> */
     private function call(string$function,array$parameters=[]):array
     {
@@ -156,7 +163,7 @@ final readonly class MoodleClient
         $url=rtrim($this->baseUrl,'/').'/webservice/rest/server.php';
         $payload=['wstoken'=>$this->token,'wsfunction'=>$function,'moodlewsrestformat'=>'json']+$parameters;
         $curl=curl_init($url);if($curl===false)throw new RuntimeException('Não foi possível iniciar a conexão com o Moodle.');
-        curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>http_build_query($payload),CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>$function==='local_mundointer_sync_trail_sections'?180:45,CURLOPT_HTTPHEADER=>['Accept: application/json','User-Agent: PAINEL-INTER/1.0']]);
+        curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>true,CURLOPT_POST=>true,CURLOPT_POSTFIELDS=>http_build_query($payload),CURLOPT_CONNECTTIMEOUT=>10,CURLOPT_TIMEOUT=>in_array($function,['local_mundointer_sync_trail_sections','local_mundointer_materialize_lti_course'],true)?180:45,CURLOPT_HTTPHEADER=>['Accept: application/json','User-Agent: PAINEL-INTER/1.0']]);
         $response=curl_exec($curl);$status=(int)curl_getinfo($curl,CURLINFO_RESPONSE_CODE);$error=curl_error($curl);curl_close($curl);
         if(!is_string($response))throw new RuntimeException('Falha de comunicação com o Moodle'.($error!==''?': '.$error:'').'.');
         $data=json_decode($response,true);

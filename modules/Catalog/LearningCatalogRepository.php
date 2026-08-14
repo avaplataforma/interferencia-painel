@@ -195,12 +195,30 @@ final readonly class LearningCatalogRepository
         return(int)$this->database->lastInsertId();
     }
 
+    public function markEntityPublicationReady(string$entityType,int$entityId,int$connectionId,string$signature,?int$userId):int
+    {
+        if(!in_array($entityType,['finance_product','provider_course','provider_content'],true)||$entityId<1||$connectionId<1)throw new RuntimeException('Item inválido para publicação no AVA.');
+        $sql="INSERT INTO catalog_ava_publications(entity_type,entity_id,ava_connection_id,publication_status,source_signature,prepared_at,created_by,updated_by) VALUES(:type,:entity,:connection,'ready',:signature,NOW(),:created_by,:updated_by) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id),publication_status='ready',source_signature=VALUES(source_signature),prepared_at=NOW(),last_error=NULL,updated_by=VALUES(updated_by)";
+        $this->database->prepare($sql)->execute(['type'=>$entityType,'entity'=>$entityId,'connection'=>$connectionId,'signature'=>$signature,'created_by'=>$userId,'updated_by'=>$userId]);
+        return(int)$this->database->lastInsertId();
+    }
+
     public function markPublicationSuccess(int$publicationId,int$localCourseId,int$remoteCategoryId,int$remoteCourseId,string$signature,array$details,?int$userId):void
     {
         $this->database->beginTransaction();
         try{
             $this->database->prepare("UPDATE catalog_ava_publications SET publication_status='published',moodle_course_id=:local_course,remote_category_id=:remote_category,remote_course_id=:remote_course,source_signature=:signature,last_error=NULL,published_at=NOW(),updated_by=:user WHERE id=:id")->execute(['local_course'=>$localCourseId>0?$localCourseId:null,'remote_category'=>$remoteCategoryId,'remote_course'=>$remoteCourseId,'signature'=>$signature,'user'=>$userId,'id'=>$publicationId]);
             $this->publicationEvent($publicationId,'publish','success',$remoteCategoryId,$remoteCourseId,'Trilha publicada ou atualizada no AVA Cursos.',$details,$userId);
+            $this->database->commit();
+        }catch(\Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+    }
+
+    public function markEntityPublicationSuccess(int$publicationId,int$localCourseId,int$remoteCategoryId,int$remoteCourseId,string$signature,string$message,array$details,?int$userId):void
+    {
+        $this->database->beginTransaction();
+        try{
+            $this->database->prepare("UPDATE catalog_ava_publications SET publication_status='published',moodle_course_id=:local_course,remote_category_id=:remote_category,remote_course_id=:remote_course,source_signature=:signature,last_error=NULL,published_at=NOW(),updated_by=:user WHERE id=:id")->execute(['local_course'=>$localCourseId>0?$localCourseId:null,'remote_category'=>$remoteCategoryId,'remote_course'=>$remoteCourseId,'signature'=>$signature,'user'=>$userId,'id'=>$publicationId]);
+            $this->publicationEvent($publicationId,'publish','success',$remoteCategoryId,$remoteCourseId,$message,$details,$userId);
             $this->database->commit();
         }catch(\Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
     }

@@ -1185,7 +1185,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.9.19',$metadata['release']);
+    assertSame('0.9.20',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1205,7 +1205,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.9.19'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.9.20'"));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),"a[href*='/mod/']"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
@@ -1870,7 +1870,7 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($repository,'Nenhuma atividade MASTER foi selecionada no AVA Cursos'));
     assertTrue(str_contains($moodleClient,'local_mundointer_lti_selections'));
     assertTrue(str_contains($pluginServices,"'local_mundointer_lti_selections'"));
-    assertTrue(str_contains($pluginVersion,'0.9.19'));
+    assertTrue(str_contains($pluginVersion,'0.9.20'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/lti_selections.php'));
 };
 
@@ -2238,7 +2238,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.9.19'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.9.20'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2313,6 +2313,40 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($view,'Publicar no AVA'));
     assertTrue(str_contains($view,'Histórico de publicação'));
     assertTrue(str_contains($view,'cada Curso Individual em um bloco separado'));
+};
+
+$tests['transforma disciplina master em curso individual reutilizavel'] = static function () use ($rootPath): void {
+    $publisher=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCatalogPublisher.php');
+    $providerRepository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $catalogRepository=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+    $pluginService=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
+    $pluginUpgrade=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/upgrade.php');
+    $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
+    $pluginVersion=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
+
+    assertTrue(str_contains($publisher,'public function publishMasterContent'));
+    assertTrue(str_contains($publisher,"'mi-master-content-'.\$contentId"));
+    assertTrue(str_contains($publisher,"'mi-master-lti-'.\$contentId"));
+    assertTrue(str_contains($publisher,"createCourseCategory('Formação MASTER'"));
+    assertTrue(str_contains($providerRepository,'contentPublicationContext'));
+    assertTrue(str_contains($providerRepository,"publication.entity_type='provider_content'"));
+    assertTrue(str_contains($catalogRepository,'markEntityPublicationReady'));
+    assertTrue(str_contains($catalogRepository,'markEntityPublicationSuccess'));
+    assertTrue(str_contains($client,'local_mundointer_materialize_lti_course'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/contents/{id:\\d+}/publish-ava'"));
+    assertTrue(str_contains($view,'Criar curso no AVA'));
+    assertTrue(str_contains($routes,'O mesmo curso será reutilizado'));
+    assertTrue(str_contains($pluginService,"'local_mundointer_materialize_lti_course'"));
+    assertTrue(str_contains($pluginUpgrade,"'functionname' => 'local_mundointer_materialize_lti_course'"));
+    assertTrue(str_contains($pluginUpgrade,"upgrade_plugin_savepoint(true, 2026081329"));
+    assertTrue(str_contains($pluginExternal,'add_moduleinfo'));
+    assertTrue(str_contains($pluginExternal,"str_starts_with((string)\$course->idnumber,'mi-master-content-')"));
+    assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint,'iesde')"));
+    assertTrue(str_contains($pluginExternal,"'completionview'=>1"));
+    assertTrue(str_contains($pluginVersion,"release = '0.9.20'"));
 };
 
 $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {
