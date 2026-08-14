@@ -188,8 +188,8 @@ final class materialize_lti_course extends external_api
 
     /**
      * Keeps only the Deep Linking selection that owns the source activity.
-     * The official assessment closes a selection, so several disciplines may
-     * safely share one hidden Moodle import course.
+     * The next presentation starts a new selection. The official assessment
+     * is not a boundary because IESDE may append the complete book after it.
      *
      * @param array<int,array{cm:object,lti:object}> $sources
      * @return array<int,array{cm:object,lti:object}>
@@ -199,18 +199,12 @@ final class materialize_lti_course extends external_api
         $segments = [];
         $current = [];
         foreach ($sources as $source) {
-            // A presentation starts every IESDE discipline.  Use it as a
-            // boundary as well because legacy selections may not contain a
-            // final assessment to close the previous discipline.
-            if ($current !== [] && self::is_selection_start_name((string)$source['lti']->name)) {
+            $name = (string)$source['lti']->name;
+            if ($current !== [] && self::is_selection_start_name($name) && !self::is_adjacent_selection_header($current, $name)) {
                 $segments[] = $current;
                 $current = [];
             }
             $current[] = $source;
-            if (self::is_assessment_name((string)$source['lti']->name)) {
-                $segments[] = $current;
-                $current = [];
-            }
         }
         if ($current !== []) {
             $segments[] = $current;
@@ -290,6 +284,29 @@ final class materialize_lti_course extends external_api
     private static function is_selection_start_name(string $name): bool
     {
         return preg_match('/apresenta/u', self::fold($name)) === 1;
+    }
+
+    /** @param array<int,array{cm:object,lti:object}> $current */
+    private static function is_adjacent_selection_header(array $current, string $nextname): bool
+    {
+        if (count($current) !== 1 || !self::is_generic_presentation_name($nextname)) {
+            return false;
+        }
+        return self::selection_title_from_header((string)$current[0]['lti']->name) !== null;
+    }
+
+    private static function is_generic_presentation_name(string $name): bool
+    {
+        return preg_match('/^(?:aula\s*[-:–—]\s*)?apresenta[cç][aã]o(?:\s*0)?$/iu', trim($name)) === 1;
+    }
+
+    private static function selection_title_from_header(string $name): ?string
+    {
+        if (preg_match('/^aula\s*[-:–—]\s*(.+?)\s*[-:–—]\s*apresenta[cç][aã]o(?:\s*0)?$/iu', trim($name), $match) !== 1) {
+            return null;
+        }
+        $title = trim((string)$match[1]);
+        return $title !== '' ? $title : null;
     }
 
     private static function is_complete_book_group(string $groupname, string $coursename): bool

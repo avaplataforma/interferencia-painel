@@ -111,8 +111,7 @@ final class lti_selections extends external_api
         $courses = [];
         foreach ($sourcecourses as $courseid => $sourcecourse) {
             $segments = self::selectionSegments((array)$sourcecourse['items']);
-            foreach ($segments as $index => $contents) {
-                $segment = $index + 1;
+            foreach ($segments as $segment => $contents) {
                 $courses[] = [
                     'id' => 'moodle-course-' . $courseid . ($segment > 1 ? '-segment-' . $segment : ''),
                     'nome' => self::selectionName((string)$sourcecourse['name'], $contents),
@@ -132,34 +131,43 @@ final class lti_selections extends external_api
     }
 
     /**
-     * Each Deep Linking confirmation ends with its official assessment. This
-     * lets administrators reuse one hidden import course without mixing the
-     * selected disciplines in the commercial catalog.
+     * A presentation starts each Deep Linking selection. An assessment does
+     * not necessarily finish it because IESDE can append the complete book
+     * after the assessment. Legacy imports can also contain a descriptive
+     * header immediately followed by the provider's generic presentation;
+     * both resources belong to the same discipline.
      *
      * @param list<array<string,mixed>> $items
-     * @return list<list<array<string,mixed>>>
+     * Sparse numeric keys intentionally preserve the legacy segment identity.
+     * This keeps approved courses and publication history attached when two
+     * adjacent presentation headers are consolidated.
+     *
+     * @return array<int,list<array<string,mixed>>>
      */
     private static function selectionSegments(array $items): array
     {
         $segments = [];
         $current = [];
+        $currentsegment = 1;
+        $nextsegment = 2;
         foreach ($items as $item) {
-            // Some older IESDE selections were created without a final
-            // assessment.  The presentation is the first resource of a new
-            // discipline, so it is also a safe boundary between consecutive
-            // Deep Linking confirmations kept in the same import course.
-            if ($current !== [] && self::isSelectionStartName((string)($item['name'] ?? ''))) {
-                $segments[] = $current;
-                $current = [];
+            $name = (string)($item['name'] ?? '');
+            if ($current !== [] && self::isSelectionStartName($name)) {
+                if (self::isAdjacentSelectionHeader($current, $name)) {
+                    // Preserve the old ordinal that this second header would
+                    // have received before both headers were consolidated.
+                    $nextsegment++;
+                } else {
+                    $segments[$currentsegment] = $current;
+                    $current = [];
+                    $currentsegment = $nextsegment;
+                    $nextsegment++;
+                }
             }
             $current[] = $item;
-            if ((bool)($item['raw']['is_assessment'] ?? false)) {
-                $segments[] = $current;
-                $current = [];
-            }
         }
         if ($current !== []) {
-            $segments[] = $current;
+            $segments[$currentsegment] = $current;
         }
         return $segments;
     }
@@ -177,7 +185,36 @@ final class lti_selections extends external_api
                 return clean_param($name, PARAM_TEXT);
             }
         }
+        foreach ($contents as $content) {
+            $title = self::selectionTitleFromHeader((string)($content['name'] ?? ''));
+            if ($title !== null) {
+                return clean_param($title, PARAM_TEXT);
+            }
+        }
         return clean_param($fallback, PARAM_TEXT);
+    }
+
+    /** @param list<array<string,mixed>> $current */
+    private static function isAdjacentSelectionHeader(array $current, string $nextname): bool
+    {
+        if (count($current) !== 1 || !self::isGenericPresentationName($nextname)) {
+            return false;
+        }
+        return self::selectionTitleFromHeader((string)($current[0]['name'] ?? '')) !== null;
+    }
+
+    private static function isGenericPresentationName(string $name): bool
+    {
+        return preg_match('/^(?:aula\s*[-:–—]\s*)?apresenta[cç][aã]o(?:\s*0)?$/iu', trim($name)) === 1;
+    }
+
+    private static function selectionTitleFromHeader(string $name): ?string
+    {
+        if (preg_match('/^aula\s*[-:–—]\s*(.+?)\s*[-:–—]\s*apresenta[cç][aã]o(?:\s*0)?$/iu', trim($name), $match) !== 1) {
+            return null;
+        }
+        $title = trim((string)$match[1]);
+        return $title !== '' ? $title : null;
     }
 
     /** @param list<array<string,mixed>> $contents */
