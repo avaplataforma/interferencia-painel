@@ -575,6 +575,69 @@ document.querySelectorAll('.color-field').forEach((group) => {
   });
 })();
 
+(() => {
+  document.querySelectorAll('[data-master-ai-preview-form]').forEach((assistantForm) => {
+    if (!(assistantForm instanceof HTMLFormElement)) return;
+    const shell = assistantForm.closest('.course-curation-shell');
+    const editor = shell?.querySelector('[data-master-course-curation-form]');
+    if (!(editor instanceof HTMLFormElement)) return;
+
+    const button = assistantForm.querySelector('button[type="submit"]');
+    const feedback = assistantForm.querySelector('[data-master-ai-feedback]');
+    const image = shell.querySelector('[data-master-ai-cover-image]');
+    const placeholder = shell.querySelector('[data-master-ai-cover-placeholder]');
+    const coverData = editor.querySelector('[data-master-ai-cover-data]');
+    const coverPrompt = editor.querySelector('[data-master-ai-cover-prompt]');
+    const originalButton = button?.innerHTML || '';
+    const announce = (message, isError = false) => {
+      if (!(feedback instanceof HTMLElement)) return;
+      feedback.hidden = false;
+      feedback.classList.toggle('is-error', isError);
+      feedback.textContent = message;
+    };
+
+    assistantForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = true;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando prévia...';
+      }
+      announce('Gerando os textos e a capa para sua revisão...');
+      try {
+        const response = await fetch(assistantForm.action, {
+          method: 'POST',
+          body: new FormData(assistantForm),
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        });
+        const payload = await response.json().catch(() => ({ ok: false, error: 'O servidor retornou uma resposta inválida.' }));
+        if (!response.ok || payload.ok !== true) throw new Error(payload.error || 'Não foi possível gerar a prévia.');
+
+        const summary = editor.elements.namedItem('commercial_summary');
+        const description = editor.elements.namedItem('commercial_description');
+        if (summary instanceof HTMLInputElement) summary.value = payload.short_description || '';
+        if (description instanceof HTMLTextAreaElement) description.value = payload.description || '';
+        if (coverData instanceof HTMLInputElement) coverData.value = payload.image_data || '';
+        if (coverPrompt instanceof HTMLInputElement) coverPrompt.value = payload.prompt || '';
+        if (image instanceof HTMLImageElement && payload.image_data) {
+          image.src = payload.image_data;
+          image.hidden = false;
+          if (placeholder instanceof HTMLElement) placeholder.hidden = true;
+        }
+        announce('Prévia preenchida. Revise os textos e a capa; nada foi salvo.');
+        summary?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } catch (error) {
+        announce(error instanceof Error ? error.message : 'Não foi possível gerar a prévia.', true);
+      } finally {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = false;
+          button.innerHTML = originalButton;
+        }
+      }
+    });
+  });
+})();
+
 document.querySelectorAll('[data-master-course-detail]').forEach((detail) => {
   const tabs = Array.from(detail.querySelectorAll('[data-master-course-section]'));
   const panels = Array.from(detail.querySelectorAll('[data-master-course-panel]'));

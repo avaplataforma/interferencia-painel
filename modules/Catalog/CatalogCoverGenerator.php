@@ -44,6 +44,18 @@ final readonly class CatalogCoverGenerator
         return(new OpenAiImageClient((string)$settings['api_key'],(string)$settings['model'],(string)$settings['quality'],(string)$settings['size']))->generate($prompt);
     }
 
+    /** @return array{contents:string,mime_type:string,provider:string,prompt:string} */
+    public function previewCourse(int$entityId,string$description,string$extra=''):array
+    {
+        $entity=$this->catalogs->catalogEntity('course',$entityId);
+        if($entity===null)throw new RuntimeException('Curso não encontrado para gerar a prévia.');
+        $settings=$this->images->settings(true);
+        if(!(bool)$settings['configured']||!(bool)$settings['is_active'])throw new RuntimeException('Ative a integração IA - OpenAI no ADM Central.');
+        if(trim($description)!=='')$entity['description']=trim($description);
+        $prompt=$this->prompt($entity,$extra,(string)$settings['style_prompt']);
+        return(new OpenAiImageClient((string)$settings['api_key'],(string)$settings['model'],(string)$settings['quality'],(string)$settings['size']))->generate($prompt);
+    }
+
     public function attachPreview(string$entityType,int$entityId,string$dataUrl,string$prompt,?int$userId):void
     {
         $entity=$this->catalogs->catalogEntity($entityType,$entityId);if($entity===null)throw new RuntimeException('Trilha não encontrada para salvar a capa.');

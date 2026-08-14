@@ -1,8 +1,9 @@
 <?php $courseCurationIsEmbedded = (bool) ($courseCurationEmbedded ?? false); ?>
 <?php if (!$courseCurationIsEmbedded): ?><tr class="course-curation-row content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="6"><?php endif; ?>
 <div class="course-curation-shell <?= $provider === 'iesde' ? 'is-master-curation' : '' ?>">
- <form class="course-curation-form content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int) $course['id'] ?>/review">
+ <form class="course-curation-form content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int) $course['id'] ?>/review" <?= $provider === 'iesde' ? 'data-master-course-curation-form' : '' ?>>
   <?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>">
+  <?php if ($provider === 'iesde'): ?><input type="hidden" name="ai_cover_preview" value="" data-master-ai-cover-data><input type="hidden" name="ai_cover_prompt" value="" data-master-ai-cover-prompt><?php endif; ?>
   <header>
    <div><span class="eyebrow">Curadoria comercial</span><h3><?= $escape((string) ($course['effective_name'] ?? $course['name'])) ?></h3><p>Edite a apresentação comercial sem alterar os dados recebidos do fornecedor.</p></div>
    <button class="action-icon" type="button" data-course-curation-close="<?= $escape($editorId) ?>" title="Fechar curadoria"><i class="fa-solid fa-xmark"></i></button>
@@ -33,13 +34,15 @@
   <?php if ($provider === 'iesde'): ?>
    <section class="master-pilot-ai master-ai-assistant">
     <div><span class="eyebrow">Assistente de curadoria</span><h3>Resumo, descrição e capa</h3><p>Um único comando prepara a apresentação comercial. Os resultados aparecem nos campos ao lado para sua revisão antes de salvar.</p></div>
-    <?php if ($cover !== ''): ?><img class="course-curation-preview" src="<?= $escape($cover) ?>" alt="Capa comercial atual" loading="lazy"><?php else: ?><div class="course-curation-placeholder"><i class="fa-solid fa-image"></i><span>Nenhuma capa definida</span></div><?php endif; ?>
-    <form class="master-ai-form <?= $imageAiReady ? '' : 'is-disabled' ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int) $course['id'] ?>/prepare-master-pilot">
+    <img class="course-curation-preview" src="<?= $escape($cover) ?>" alt="Prévia da capa comercial" loading="lazy" data-master-ai-cover-image <?= $cover === '' ? 'hidden' : '' ?>>
+    <div class="course-curation-placeholder" data-master-ai-cover-placeholder <?= $cover !== '' ? 'hidden' : '' ?>><i class="fa-solid fa-image"></i><span>Nenhuma capa definida</span></div>
+    <form class="master-ai-form <?= $imageAiReady ? '' : 'is-disabled' ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int) $course['id'] ?>/prepare-master-pilot" data-master-ai-preview-form>
      <?= $csrfField ?>
      <label>Orientação para os textos <span>opcional</span><input name="guidance" maxlength="800" placeholder="Ex.: linguagem objetiva e foco nos conceitos centrais"></label>
      <label>Orientação para a imagem <span>opcional</span><input name="cover_guidance" maxlength="500" placeholder="Ex.: ambiente educacional contemporâneo"></label>
      <button class="btn btn-primary" type="submit" <?= $imageAiReady ? '' : 'disabled' ?>><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar resumo, descrição e capa</button>
-     <small><?= $imageAiReady ? 'A capa será otimizada no Spaces. A IA não cria nem altera questões.' : 'Ative a integração IA - OpenAI no ADM Central.' ?></small>
+     <small><?= $imageAiReady ? 'Nada será salvo agora. Revise os campos e use Salvar curadoria quando aprovar. A IA não cria nem altera questões.' : 'Ative a integração IA - OpenAI no ADM Central.' ?></small>
+     <div class="master-ai-feedback" data-master-ai-feedback hidden></div>
     </form>
    </section>
    <?php $providerAssessmentReady = (int) ($course['assessment_resource_count'] ?? 0) > 0; $providerBookReady = (int) ($course['book_resource_count'] ?? 0) > 0; ?>

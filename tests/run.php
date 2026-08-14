@@ -2430,6 +2430,8 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     $moodleClient=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $curation=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+    $coverGenerator=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogCoverGenerator.php');
     $providerView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
     $pluginShared=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_trail_sections.php');
@@ -2449,7 +2451,15 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(!str_contains($repository,'saveMasterPilot'));
     assertTrue(!str_contains($repository,'reviewMasterAssessment'));
     assertTrue(str_contains($routes,"courses/{id:\\d+}/prepare-master-pilot"));
+    assertTrue(!str_contains($routes,'saveMasterCopy($id'));
+    assertTrue(str_contains($routes,'previewCourse($id'));
     assertTrue(str_contains($curation,'Gerar resumo, descrição e capa'));
+    assertTrue(str_contains($curation,'data-master-ai-preview-form'));
+    assertTrue(str_contains($curation,'data-master-ai-cover-data'));
+    assertTrue(str_contains($curation,'Nada será salvo agora'));
+    assertTrue(str_contains($javascript,"[data-master-ai-preview-form]"));
+    assertTrue(str_contains($javascript,'Prévia preenchida'));
+    assertTrue(str_contains($coverGenerator,'public function previewCourse'));
     assertTrue(str_contains($curation,'Apostila e avaliação oficial'));
     assertTrue(str_contains($curation,'A IA não cria nem altera questões'));
     assertTrue(!str_contains($curation,'Apostila e avaliação do IESDE'));
