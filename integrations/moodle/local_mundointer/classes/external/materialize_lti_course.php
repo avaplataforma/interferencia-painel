@@ -22,14 +22,17 @@ final class materialize_lti_course extends external_api
             'targetcourseid' => new external_value(PARAM_INT, 'Curso Individual definitivo.'),
             'activityname' => new external_value(PARAM_TEXT, 'Nome comercial da atividade inicial.'),
             'idnumber' => new external_value(PARAM_ALPHANUMEXT, 'Código idempotente da atividade inicial.'),
+            'coverurl' => new external_value(PARAM_URL, 'Capa comercial do Curso Individual MASTER.', VALUE_DEFAULT, ''),
+            'coveralt' => new external_value(PARAM_TEXT, 'Texto alternativo da capa.', VALUE_DEFAULT, ''),
+            'assessmentjson' => new external_value(PARAM_RAW, 'Avaliação final revisada em JSON.', VALUE_DEFAULT, ''),
         ]);
     }
 
-    public static function execute(int $sourcecmid, int $targetcourseid, string $activityname, string $idnumber): array
+    public static function execute(int $sourcecmid, int $targetcourseid, string $activityname, string $idnumber, string $coverurl='', string $coveralt='', string $assessmentjson=''): array
     {
         global $CFG, $DB;
 
-        $parameters = self::validate_parameters(self::execute_parameters(), compact('sourcecmid', 'targetcourseid', 'activityname', 'idnumber'));
+        $parameters = self::validate_parameters(self::execute_parameters(), compact('sourcecmid', 'targetcourseid', 'activityname', 'idnumber', 'coverurl', 'coveralt', 'assessmentjson'));
         $system = \context_system::instance();
         self::validate_context($system);
         require_capability('local/mundointer:manage', $system);
@@ -43,7 +46,7 @@ final class materialize_lti_course extends external_api
         $selectedsource = $DB->get_record('lti', ['id' => $sourcecm->instance], '*', MUST_EXIST);
         self::assert_iesde_source($selectedsource);
         $course = $DB->get_record('course', ['id' => $parameters['targetcourseid']], '*', MUST_EXIST);
-        if (!str_starts_with((string) $course->idnumber, 'mi-master-content-')) {
+        if (!str_starts_with((string) $course->idnumber, 'mi-master-content-') && !str_starts_with((string) $course->idnumber, 'mi-master-course-')) {
             throw new \invalid_parameter_exception('Somente Cursos Individuais MASTER gerenciados pelo Mundo Inter podem receber estas atividades.');
         }
 
@@ -51,6 +54,10 @@ final class materialize_lti_course extends external_api
         require_once($CFG->dirroot . '/course/modlib.php');
         require_once($CFG->dirroot . '/mod/lti/lib.php');
         require_once($CFG->dirroot . '/mod/lti/locallib.php');
+        require_once($CFG->dirroot . '/mod/quiz/lib.php');
+        require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+        require_once($CFG->dirroot . '/question/editlib.php');
+        require_once($CFG->libdir . '/filelib.php');
 
         if ((int) $course->enablecompletion !== 1) {
             $DB->set_field('course', 'enablecompletion', 1, ['id' => $course->id]);
@@ -142,8 +149,18 @@ final class materialize_lti_course extends external_api
             }
         }
 
+        $cover=sync_trail_sections::apply_managed_cover($course,(string)$parameters['coverurl'],(string)$parameters['coveralt']);
+        $quiz=['quiz'=>0,'questions'=>0,'conflict'=>0];
+        $assessment=json_decode((string)$parameters['assessmentjson'],true);
+        if(is_array($assessment)&&is_array($assessment['questions']??null)&&count($assessment['questions'])===10){
+            $finalsectionnumber=count($groups)+1;
+            $finalsection=$DB->get_record('course_sections',['course'=>$course->id,'section'=>$finalsectionnumber]);
+            if(!$finalsection)$finalsection=course_create_section((int)$course->id,$finalsectionnumber);
+            $DB->update_record('course_sections',(object)['id'=>$finalsection->id,'name'=>'Avaliação final','visible'=>1]);
+            $quiz=sync_trail_sections::apply_managed_assessment($course,$finalsection,$finalsectionnumber,'master-final-'.(int)$course->id,(string)$course->fullname,$assessment);
+        }
         rebuild_course_cache((int) $course->id, true);
-        return self::result((int) $course->id, $firstactivityid, $firstcmid, $reusedactivities > 0, count($groups), $activitycount, $reusedactivities);
+        return self::result((int) $course->id, $firstactivityid, $firstcmid, $reusedactivities > 0, count($groups), $activitycount, $reusedactivities,$cover,$quiz);
     }
 
     /** @return array<int,array{cm:object,lti:object}> */
@@ -240,7 +257,7 @@ final class materialize_lti_course extends external_api
         return str_contains($fingerprint, 'iesde') || str_contains($fingerprint, 'api-fornecimento');
     }
 
-    private static function result(int $courseid, int $activityid, int $cmid, bool $reused, int $sections, int $activities, int $reusedactivities): array
+    private static function result(int $courseid, int $activityid, int $cmid, bool $reused, int $sections, int $activities, int $reusedactivities,array$cover,array$quiz): array
     {
         return [
             'status' => 'ok',
@@ -251,6 +268,12 @@ final class materialize_lti_course extends external_api
             'sections' => $sections,
             'activities' => $activities,
             'reusedactivities' => $reusedactivities,
+            'coverstatus'=>(string)($cover['coverstatus']??'missing'),
+            'courseimage'=>(int)($cover['courseimage']??0),
+            'coursebanner'=>(int)($cover['coursebanner']??0),
+            'quizcmid'=>(int)($quiz['quiz']??0),
+            'quizquestions'=>(int)($quiz['questions']??0),
+            'quizconflict'=>(int)($quiz['conflict']??0),
         ];
     }
 
@@ -265,6 +288,12 @@ final class materialize_lti_course extends external_api
             'sections' => new external_value(PARAM_INT, 'Blocos pedagógicos sincronizados.'),
             'activities' => new external_value(PARAM_INT, 'Atividades LTI sincronizadas.'),
             'reusedactivities' => new external_value(PARAM_INT, 'Atividades existentes reutilizadas.'),
+            'coverstatus' => new external_value(PARAM_ALPHANUMEXT, 'Situação da capa comercial.'),
+            'courseimage' => new external_value(PARAM_INT, 'Confirma a imagem oficial do curso.'),
+            'coursebanner' => new external_value(PARAM_INT, 'Confirma a testeira do curso.'),
+            'quizcmid' => new external_value(PARAM_INT, 'Questionário final criado ou preservado.'),
+            'quizquestions' => new external_value(PARAM_INT, 'Questões vinculadas ao questionário final.'),
+            'quizconflict' => new external_value(PARAM_INT, 'Questionário preservado por possuir tentativas.'),
         ]);
     }
 }

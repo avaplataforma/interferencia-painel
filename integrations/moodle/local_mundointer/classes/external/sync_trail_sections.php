@@ -472,6 +472,18 @@ final class sync_trail_sections extends external_api
         return(int)$saved->id;
     }
 
+    /** Reuses the same cover policy for MASTER courses. */
+    public static function apply_managed_cover(object$course,string$coverurl,string$coveralt):array
+    {
+        return self::sync_course_cover($course,$coverurl,$coveralt);
+    }
+
+    /** Reuses the same 10-point, 6-pass, three-attempt assessment policy for MASTER courses. */
+    public static function apply_managed_assessment(object$course,object$section,int$sectionnumber,string$key,string$name,array$exam):array
+    {
+        return self::sync_quiz_activity($course,$section,$sectionnumber,$key,$name,$exam);
+    }
+
     public static function execute_returns(): external_single_structure
     {
         return new external_single_structure([

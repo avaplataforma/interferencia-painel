@@ -1205,7 +1205,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '0.9.21'"));
+    assertTrue(str_contains($version,"\$plugin->release = '0.9.22'"));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),"a[href*='/mod/']"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
@@ -2238,7 +2238,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '0.9.21'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.9.22'"));
     assertTrue(str_contains($view,'Coortes e turmas'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2359,11 +2359,47 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginExternal,"(se[cç][aã]o|atividade)"));
     assertTrue(str_contains($pluginExternal,"'sections' => \$sections"));
     assertTrue(str_contains($publisher,"'sections_synced'"));
-    assertTrue(str_contains($routes,"' módulo(s) e '"));
+    assertTrue(str_contains($routes,"' módulo(s), '"));
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
     assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint, 'iesde')"));
     assertTrue(str_contains($pluginExternal,"'completionview' => 1"));
-    assertTrue(str_contains($pluginVersion,"release = '0.9.21'"));
+    assertTrue(str_contains($pluginVersion,"release = '0.9.22'"));
+};
+
+$tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260813_000030_create_provider_course_assessments.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $textClient=(string)file_get_contents($rootPath.'/modules/Catalog/OpenAiCatalogTextClient.php');
+    $publisher=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCatalogPublisher.php');
+    $moodleClient=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $curation=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
+    $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
+    $pluginShared=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_trail_sections.php');
+    $pluginUpgrade=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/upgrade.php');
+    $pluginVersion=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
+
+    assertTrue(str_contains($migration,'commercial_summary'));
+    assertTrue(str_contains($migration,'CREATE TABLE provider_course_assessments'));
+    assertTrue(str_contains($migration,'UNIQUE KEY provider_course_assessments_course_uq'));
+    assertTrue(str_contains($repository,'saveMasterPilot'));
+    assertTrue(str_contains($repository,'reviewMasterAssessment'));
+    assertTrue(str_contains($repository,'count($questions)!==10'));
+    assertTrue(str_contains($textClient,'generateMasterPilot'));
+    assertTrue(str_contains($textClient,"'minItems'=>10,'maxItems'=>10"));
+    assertTrue(str_contains($routes,"courses/{id:\\d+}/prepare-master-pilot"));
+    assertTrue(str_contains($curation,'Gerar rascunho completo'));
+    assertTrue(str_contains($curation,'Revisei as 10 questões'));
+    assertTrue(str_contains($publisher,"assessment_review_status']??'')!=='approved'"));
+    assertTrue(str_contains($publisher,"'assessment_signature'"));
+    assertTrue(str_contains($publisher,'materializeLtiCourse'));
+    assertTrue(str_contains($moodleClient,"'assessmentjson'"));
+    assertTrue(str_contains($pluginExternal,"'assessmentjson' => new external_value"));
+    assertTrue(str_contains($pluginExternal,"'Avaliação final'"));
+    assertTrue(str_contains($pluginExternal,'apply_managed_assessment'));
+    assertTrue(str_contains($pluginShared,'public static function apply_managed_assessment'));
+    assertTrue(str_contains($pluginUpgrade,'upgrade_plugin_savepoint(true, 2026081331'));
+    assertTrue(str_contains($pluginVersion,"release = '0.9.22'"));
 };
 
 $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {

@@ -65,5 +65,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // MASTER materializer while preserving the existing web service.
         upgrade_plugin_savepoint(true, 2026081330, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081331) {
+        // No schema change. MASTER courses now receive the reviewed final
+        // assessment and official cover through the existing materializer.
+        upgrade_plugin_savepoint(true, 2026081331, 'local', 'mundointer');
+    }
     return true;
 }

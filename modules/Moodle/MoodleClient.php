@@ -150,10 +150,10 @@ final readonly class MoodleClient
     }
 
     /** @return array<string,mixed> */
-    public function materializeLtiCourse(int$sourceCmId,int$targetCourseId,string$activityName,string$idNumber):array
+    public function materializeLtiCourse(int$sourceCmId,int$targetCourseId,string$activityName,string$idNumber,string$coverUrl='',string$coverAlt='',array$assessment=[]):array
     {
         if($sourceCmId<1||$targetCourseId<1)throw new RuntimeException('A atividade MASTER ou o curso de destino é inválido.');
-        return$this->call('local_mundointer_materialize_lti_course',['sourcecmid'=>$sourceCmId,'targetcourseid'=>$targetCourseId,'activityname'=>$activityName,'idnumber'=>$idNumber]);
+        return$this->call('local_mundointer_materialize_lti_course',['sourcecmid'=>$sourceCmId,'targetcourseid'=>$targetCourseId,'activityname'=>$activityName,'idnumber'=>$idNumber,'coverurl'=>$coverUrl,'coveralt'=>$coverAlt,'assessmentjson'=>$assessment===[]?'':json_encode($assessment,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)]);
     }
 
     /** @param array<string,mixed> $parameters @return array<mixed> */

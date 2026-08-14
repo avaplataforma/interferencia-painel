@@ -637,8 +637,10 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function allCourses(): array
     {
-        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,c.is_globally_enabled catalog_globally_enabled,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source,(SELECT publication.publication_status FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_status,(SELECT publication.remote_course_id FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_remote_course_id,(SELECT publication.last_error FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_error FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
-        return $statement->fetchAll() ?: [];
+        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,c.is_globally_enabled catalog_globally_enabled,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source,assessment.title assessment_title,assessment.questions_json assessment_questions_json,assessment.review_status assessment_review_status,assessment.signature assessment_signature,(SELECT publication.publication_status FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_status,(SELECT publication.remote_course_id FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_remote_course_id,(SELECT publication.last_error FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_error FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' LEFT JOIN provider_course_assessments assessment ON assessment.provider_course_id=pc.id ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
+        $rows=$statement->fetchAll()?:[];
+        foreach($rows as&$row){$questions=json_decode((string)($row['assessment_questions_json']??''),true);$row['assessment_questions']=is_array($questions)?array_values(array_filter($questions,'is_array')):[];}unset($row);
+        return$rows;
     }
 
     /** @return array<int,list<array<string,mixed>>> */
@@ -657,6 +659,48 @@ final readonly class CourseProviderRepository
             $grouped[(int)$row['provider_course_id']][] = $row;
         }
         return $grouped;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function courseResourcesForCourse(int$courseId):array
+    {
+        if($courseId<1)return[];
+        $statement=$this->database->prepare("SELECT link.position,link.semester_number,link.discipline_name,content.id,content.name,content.external_key,content.content_type,content.raw_payload FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=:course AND content.is_available=1 ORDER BY link.position,content.id");
+        $statement->execute(['course'=>$courseId]);
+        return$statement->fetchAll()?:[];
+    }
+
+    /** @param list<array<string,mixed>> $questions */
+    public function saveMasterPilot(int$courseId,string$summary,string$description,array$questions,?int$userId):void
+    {
+        if($courseId<1||count($questions)!==10)throw new RuntimeException('O piloto MASTER deve conter exatamente 10 questões.');
+        $context=$this->coursePublicationContext($courseId);
+        if($context===null||(string)($context['provider_code']??'')!=='iesde')throw new RuntimeException('Curso Individual MASTER não encontrado.');
+        $summary=trim($summary);$description=trim($description);
+        if($summary===''||$description==='')throw new RuntimeException('A IA não retornou os textos comerciais completos.');
+        $normalized=[];
+        foreach($questions as$question){
+            $text=trim((string)($question['text']??''));$correct=trim((string)($question['correct_key']??''));$options=[];
+            foreach((array)($question['options']??[])as$option){if(!is_array($option))continue;$key=trim((string)($option['key']??''));$optionText=trim((string)($option['text']??''));if(in_array($key,['a','b','c','d'],true)&&$optionText!=='')$options[]=['key'=>$key,'text'=>$optionText];}
+            if($text===''||count($options)!==4||!in_array($correct,['a','b','c','d'],true))throw new RuntimeException('Uma das questões geradas está incompleta. Gere o piloto novamente.');
+            $normalized[]=['text'=>$text,'options'=>$options,'correct_key'=>$correct];
+        }
+        $json=json_encode($normalized,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$signature=hash('sha256',$json);
+        $this->database->beginTransaction();
+        try{
+            $update=$this->database->prepare('UPDATE provider_courses SET commercial_summary=:summary,commercial_description=:description,review_status=CASE WHEN review_status=\'approved\' THEN review_status ELSE \'reviewing\' END,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
+            $update->execute(['summary'=>$summary,'description'=>$description,'user'=>$userId,'id'=>$courseId]);
+            $assessment=$this->database->prepare("INSERT INTO provider_course_assessments(provider_course_id,title,source,questions_json,signature,review_status,generated_by) VALUES(:course,:title,'ai_draft',:questions,:signature,'draft',:user) ON DUPLICATE KEY UPDATE title=VALUES(title),source='ai_draft',questions_json=VALUES(questions_json),signature=VALUES(signature),review_status='draft',generated_by=VALUES(generated_by),reviewed_by=NULL,reviewed_at=NULL");
+            $assessment->execute(['course'=>$courseId,'title'=>'Avaliação final - '.trim((string)$context['effective_name']),'questions'=>$json,'signature'=>$signature,'user'=>$userId]);
+            $this->database->commit();
+        }catch(Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
+    }
+
+    public function reviewMasterAssessment(int$courseId,bool$approved,?int$userId):void
+    {
+        $statement=$this->database->prepare("UPDATE provider_course_assessments SET review_status=:status,reviewed_by=:user,reviewed_at=IF(:approved_at=1,NOW(),NULL) WHERE provider_course_id=:course");
+        $statement->execute(['status'=>$approved?'approved':'draft','user'=>$approved?$userId:null,'approved_at'=>$approved?1:0,'course'=>$courseId]);
+        if($statement->rowCount()!==1){$exists=$this->database->prepare('SELECT 1 FROM provider_course_assessments WHERE provider_course_id=:course');$exists->execute(['course'=>$courseId]);if($exists->fetchColumn()===false&&$approved)throw new RuntimeException('Gere primeiro o rascunho da avaliação com IA.');}
     }
 
     /** @return array<string,mixed>|null */
@@ -918,10 +962,12 @@ final readonly class CourseProviderRepository
             (SELECT link.provider_content_id FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1 ORDER BY link.position,link.provider_content_id LIMIT 1) source_content_id,
             (SELECT content.raw_payload FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1 ORDER BY link.position,link.provider_content_id LIMIT 1) source_raw_payload,
             (SELECT COUNT(*) FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1) resource_count,
-            (SELECT legacy.entity_id FROM provider_course_content_links link INNER JOIN catalog_ava_publications legacy ON legacy.entity_type='provider_content' AND legacy.entity_id=link.provider_content_id AND legacy.publication_status='published' WHERE link.provider_course_id=course.id ORDER BY legacy.id DESC LIMIT 1) legacy_content_id
+            (SELECT legacy.entity_id FROM provider_course_content_links link INNER JOIN catalog_ava_publications legacy ON legacy.entity_type='provider_content' AND legacy.entity_id=link.provider_content_id AND legacy.publication_status='published' WHERE link.provider_course_id=course.id ORDER BY legacy.id DESC LIMIT 1) legacy_content_id,
+            assessment.title assessment_title,assessment.questions_json assessment_questions_json,assessment.signature assessment_signature,assessment.review_status assessment_review_status
             FROM provider_courses course
             INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
             INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
+            LEFT JOIN provider_course_assessments assessment ON assessment.provider_course_id=course.id
             WHERE course.id=:id LIMIT 1";
         $statement = $this->database->prepare($sql);
         $statement->execute(['id' => $courseId]);
@@ -929,6 +975,8 @@ final readonly class CourseProviderRepository
         if (!is_array($row)) return null;
         $raw = json_decode((string)($row['source_raw_payload'] ?? ''), true);
         $row['source_raw'] = is_array($raw) ? $raw : [];
+        $questions=json_decode((string)($row['assessment_questions_json']??''),true);
+        $row['assessment_questions']=is_array($questions)?array_values(array_filter($questions,'is_array')):[];
         return $row;
     }
 
@@ -1377,12 +1425,14 @@ final readonly class CourseProviderRepository
         $category = trim((string)($metadata['commercial_category'] ?? ''));
         $workload = trim((string)($metadata['commercial_workload'] ?? ''));
         $certificate = trim((string)($metadata['commercial_certificate'] ?? ''));
+        $summary = trim((string)($metadata['commercial_summary'] ?? ''));
 
-        $statement = $this->database->prepare('UPDATE provider_courses SET review_status=:status,release_status=:release_status,commercial_name=:name,commercial_description=:description,commercial_cover_url=:cover,commercial_category=:category,commercial_workload=:workload,commercial_certificate=:certificate,review_notes=:notes,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
+        $statement = $this->database->prepare('UPDATE provider_courses SET review_status=:status,release_status=:release_status,commercial_name=:name,commercial_summary=:summary,commercial_description=:description,commercial_cover_url=:cover,commercial_category=:category,commercial_workload=:workload,commercial_certificate=:certificate,review_notes=:notes,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
         $statement->execute([
             'status' => $status,
             'release_status' => $releaseStatus,
             'name' => $commercialName !== '' ? $commercialName : null,
+            'summary' => $summary !== '' ? $summary : null,
             'description' => $commercialDescription !== '' ? $commercialDescription : null,
             'cover' => $cover !== '' ? $cover : null,
             'category' => $category !== '' ? $category : null,
