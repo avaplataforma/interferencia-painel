@@ -2358,7 +2358,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginExternal,'add_moduleinfo'));
     assertTrue(str_contains($pluginExternal,'ordered_iesde_sources'));
     assertTrue(str_contains($pluginExternal,'group_sources'));
-    assertTrue(str_contains($pluginExternal,"'name' => 'Módulo '"));
+    assertTrue(str_contains($pluginExternal,"'Módulo ' . \$sectionnumber"));
     assertTrue(str_contains($pluginExternal,"(se[cç][aã]o|atividade)"));
     assertTrue(str_contains($pluginExternal,"'sections' => \$sections"));
     assertTrue(str_contains($publisher,"'sections_synced'"));
