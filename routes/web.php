@@ -673,7 +673,8 @@ return static function (
             if($provider!=='iesde')throw new RuntimeException('Esta ação está disponível somente para Cursos Individuais da Formação MASTER.');
             $result=$avaCatalogPublisher->publishMasterCourse((int)$params['id'],$auth->user()?->id);
             $message=(bool)($result['reused_activity']??false)?'Curso Individual MASTER atualizado sem duplicar atividades.':'Curso Individual MASTER criado no AVA Cursos.';
-            $message.=' '.(int)($result['sections_synced']??1).' módulo(s), '.(int)($result['activities_synced']??1).' atividade(s) e a avaliação oficial do IESDE foram organizados automaticamente.';
+            $message.=' '.(int)($result['sections_synced']??1).' módulo(s) e '.(int)($result['activities_synced']??1).' atividade(s) foram organizados automaticamente.';
+            $message.=(bool)($result['assessment_ready']??false)?' A avaliação oficial do IESDE também foi sincronizada.':' A estrutura foi atualizada; a avaliação oficial continua pendente e poderá ser incorporada em uma próxima sincronização.';
             $session->flash('course_providers.message',$message.' O mesmo curso será reutilizado nas próximas matrículas (curso Moodle #'.(int)$result['remote_course_id'].').');
         }catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}
         return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=courses');

@@ -88,7 +88,7 @@ final readonly class AvaCatalogPublisher
         }
     }
 
-    /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool,sections_synced:int,activities_synced:int} */
+    /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool,sections_synced:int,activities_synced:int,assessment_ready:bool} */
     public function publishMasterCourse(int$courseId,?int$userId):array
     {
         $context=$this->providers->coursePublicationContext($courseId);
@@ -96,7 +96,7 @@ final readonly class AvaCatalogPublisher
         if((string)($context['provider_code']??'')!=='iesde')throw new RuntimeException('Esta publicação assistida é exclusiva da Formação MASTER.');
         if((int)($context['is_available']??0)!==1)throw new RuntimeException('A disciplina não está mais disponível no fornecedor.');
         if((int)($context['resource_count']??0)<1)throw new RuntimeException('Esta disciplina ainda não possui aulas ou recursos LTI sincronizados.');
-        if((int)($context['assessment_resource_count']??0)<1)throw new RuntimeException('Crie e salve a avaliação oficial no seletor do IESDE e sincronize novamente o Catálogo MASTER.');
+        $assessmentReady=(int)($context['assessment_resource_count']??0)>0;
         $raw=is_array($context['source_raw']??null)?$context['source_raw']:[];
         $sourceCmId=(int)($raw['course_module_id']??0);
         if($sourceCmId<1)throw new RuntimeException('Sincronize novamente as seleções MASTER: a atividade LTI de origem não foi identificada.');
@@ -123,7 +123,7 @@ final readonly class AvaCatalogPublisher
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
             $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['course_id'=>$courseId,'resource_count'=>(int)$context['resource_count'],'provider_assessment_count'=>(int)$context['assessment_resource_count'],'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'activities_reused'=>(int)($activity['reusedactivities']??0),'course_image'=>(int)($activity['courseimage']??0),'idnumber'=>$idNumber],$userId);
-            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1)];
+            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'assessment_ready'=>$assessmentReady];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
             throw new RuntimeException($this->friendlyError($exception),0,$exception);

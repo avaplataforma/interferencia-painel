@@ -2369,7 +2369,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginExternal,"(se[cç][aã]o|atividade)"));
     assertTrue(str_contains($pluginExternal,"'sections' => \$sections"));
     assertTrue(str_contains($publisher,"'sections_synced'"));
-    assertTrue(str_contains($routes,"' módulo(s), '"));
+    assertTrue(str_contains($routes,"' módulo(s) e '"));
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
     assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint, 'iesde')"));
     assertTrue(str_contains($pluginExternal,"'completionview' => 1"));
@@ -2421,6 +2421,7 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     $moodleClient=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $curation=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-course-curation.php');
+    $providerView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
     $pluginShared=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/sync_trail_sections.php');
     $pluginUpgrade=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/upgrade.php');
@@ -2437,8 +2438,13 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(str_contains($curation,'Preparar textos com IA'));
     assertTrue(str_contains($curation,'Banco de questões do IESDE'));
     assertTrue(str_contains($publisher,'assessment_resource_count'));
+    assertTrue(str_contains($publisher,'$assessmentReady='));
+    assertTrue(!str_contains($publisher,'Crie e salve a avaliação oficial no seletor do IESDE'));
     assertTrue(str_contains($publisher,"'provider_assessment_count'"));
     assertTrue(str_contains($publisher,'materializeLtiCourse'));
+    assertTrue(str_contains($routes,'avaliação oficial continua pendente'));
+    assertTrue(str_contains($providerView,'data-master-course-section="sync"'));
+    assertTrue(str_contains($providerView,'Sincronizar com o AVA'));
     assertTrue(str_contains($moodleClient,"'assessmentjson'"));
     assertTrue(str_contains($pluginExternal,"'assessmentjson' => new external_value"));
     assertTrue(str_contains($pluginExternal,"'Avaliação final'"));
