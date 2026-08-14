@@ -71,12 +71,13 @@ final class materialize_lti_course extends external_api
         }
         sync_trail_sections::apply_managed_course_format($course);
 
-        $groups = self::group_sources($sources);
+        $groups = self::order_groups(self::group_sources($sources), (string)$course->fullname);
         $firstcmid = 0;
         $firstactivityid = 0;
         $reusedactivities = 0;
         $activitycount = 0;
         $sectionnumber = 0;
+        $modulenumber = 0;
 
         foreach ($groups as $group) {
             $sectionnumber++;
@@ -84,11 +85,16 @@ final class materialize_lti_course extends external_api
             if (!$section) {
                 $section = course_create_section((int) $course->id, $sectionnumber);
             }
-            $sectionname = !empty($group['assessment'])
+            $isassessment = !empty($group['assessment']);
+            $isbook = !$isassessment && self::is_complete_book_group((string)$group['name'], (string)$course->fullname);
+            if (!$isassessment && !$isbook) {
+                $modulenumber++;
+            }
+            $sectionname = $isassessment
                 ? 'Avaliação final'
-                : (self::is_complete_book_group((string)$group['name'], (string)$course->fullname)
+                : ($isbook
                     ? 'Apostila - ' . (string)$course->fullname
-                    : 'Módulo ' . $sectionnumber . ' - ' . $group['name']);
+                    : 'Módulo ' . $modulenumber . ' - ' . $group['name']);
             $DB->update_record('course_sections', (object) [
                 'id' => $section->id,
                 'name' => $sectionname,
@@ -249,6 +255,30 @@ final class materialize_lti_course extends external_api
             $groups[] = ['name' => 'Avaliação final', 'assessment' => true, 'items' => $assessments];
         }
         return $groups;
+    }
+
+    /**
+     * Keeps the reusable course predictable: complete book first, teaching
+     * modules in their original order and the official assessment last.
+     *
+     * @param array<int,array{name:string,assessment?:bool,items:array}> $groups
+     * @return array<int,array{name:string,assessment?:bool,items:array}>
+     */
+    private static function order_groups(array $groups, string $coursename): array
+    {
+        $books = [];
+        $lessons = [];
+        $assessments = [];
+        foreach ($groups as $group) {
+            if (!empty($group['assessment'])) {
+                $assessments[] = $group;
+            } else if (self::is_complete_book_group((string)$group['name'], $coursename)) {
+                $books[] = $group;
+            } else {
+                $lessons[] = $group;
+            }
+        }
+        return array_merge($books, $lessons, $assessments);
     }
 
     /** @return array{base:string,kind:string,number:int} */

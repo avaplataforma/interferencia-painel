@@ -205,7 +205,6 @@ body.mundointer-brand-active #multi_section_tiles.tiles > .tile.spacer {
     display: none !important;
 }
 body.mundointer-brand-active #multi_section_tiles.tiles > .tile:not(.spacer) {
-    counter-increment: mundointer-module;
     display: flex !important;
     flex-basis: auto !important;
     width: 100% !important;
@@ -267,7 +266,7 @@ body.mundointer-brand-active #multi_section_tiles.tiles > .tile > .tile-link .ti
     display: none !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-top::before {
-    content: counter(mundointer-module, decimal-leading-zero);
+    content: attr(data-mundointer-number);
     display: grid;
     place-items: center;
     width: 2.55rem;
@@ -282,11 +281,43 @@ body.mundointer-brand-active #multi_section_tiles .tile-top::before {
     letter-spacing: .04em;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-top::after {
-    content: "MÓDULO";
+    content: attr(data-mundointer-label);
     color: #71808d;
     font-size: .7rem;
     font-weight: 900;
     letter-spacing: .13em;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile.mundointer-tile-book {
+    border-color: color-mix(in srgb, #2563eb 42%, #d9e1e8);
+    background: #f7fbff !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-book .tile-bg {
+    border-top-color: #2563eb;
+    background: radial-gradient(circle at 100% 0, rgba(37, 99, 235, .14), transparent 45%),
+        linear-gradient(145deg, #fff 20%, #eff6ff) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-book .tile-top::before {
+    background: linear-gradient(145deg, #2563eb, #1d4ed8);
+    box-shadow: 0 .35rem .8rem rgba(37, 99, 235, .24);
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-book .tile-top::after {
+    color: #1d4ed8;
+}
+body.mundointer-brand-active #multi_section_tiles.tiles > .tile.mundointer-tile-assessment {
+    border-color: color-mix(in srgb, #7c3aed 42%, #d9e1e8);
+    background: #fcfaff !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-bg {
+    border-top-color: #7c3aed;
+    background: radial-gradient(circle at 100% 0, rgba(124, 58, 237, .14), transparent 45%),
+        linear-gradient(145deg, #fff 20%, #f5f3ff) !important;
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-top::before {
+    background: linear-gradient(145deg, #7c3aed, #6d28d9);
+    box-shadow: 0 .35rem .8rem rgba(124, 58, 237, .24);
+}
+body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-top::after {
+    color: #6d28d9;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-text {
     position: static !important;
@@ -1430,6 +1461,14 @@ function local_mundointer_before_standard_top_of_body_html(): string
         document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer) .tile-text h3").forEach(function(title) {
             var original = title.dataset.mundointerOriginalTitle || (title.textContent || "").trim();
             title.dataset.mundointerOriginalTitle = original;
+            var normalized = typeof original.normalize === "function"
+                ? original.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+                : original.toLowerCase();
+            var tile = title.closest(".tile");
+            if (tile) {
+                tile.classList.toggle("mundointer-tile-book", normalized.indexOf("apostila") === 0);
+                tile.classList.toggle("mundointer-tile-assessment", normalized.indexOf("avaliacao") === 0);
+            }
             var concise = original.replace(/^M[oó]dulo\s+\d+\s*[-–—:]\s*/i, "").trim();
             if (concise) {
                 title.textContent = concise;
@@ -1440,7 +1479,26 @@ function local_mundointer_before_standard_top_of_body_html(): string
             title.classList.toggle("mundointer-module-title-long", titleLength > 54);
         });
 
+        var moduleSequence = 0;
         document.querySelectorAll("#multi_section_tiles.tiles > .tile:not(.spacer)").forEach(function(tile) {
+            var tileTop = tile.querySelector(".tile-top");
+            if (tile.classList.contains("mundointer-tile-book")) {
+                if (tileTop) {
+                    tileTop.dataset.mundointerNumber = "A";
+                    tileTop.dataset.mundointerLabel = "APOSTILA";
+                }
+            } else if (tile.classList.contains("mundointer-tile-assessment")) {
+                if (tileTop) {
+                    tileTop.dataset.mundointerNumber = "✓";
+                    tileTop.dataset.mundointerLabel = "AVALIAÇÃO";
+                }
+            } else {
+                moduleSequence++;
+                if (tileTop) {
+                    tileTop.dataset.mundointerNumber = String(moduleSequence).padStart(2, "0");
+                    tileTop.dataset.mundointerLabel = "MÓDULO";
+                }
+            }
             if (tile.dataset.mundointerCourseTile) {
                 return;
             }
