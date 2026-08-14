@@ -1466,7 +1466,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
                 : original.toLowerCase();
             var tile = title.closest(".tile");
             if (tile) {
-                tile.classList.toggle("mundointer-tile-book", normalized.indexOf("apostila") === 0);
+                tile.classList.toggle("mundointer-tile-book", normalized.indexOf("apostila") === 0 || normalized.indexOf("livro e materiais interativos") === 0);
                 tile.classList.toggle("mundointer-tile-assessment", normalized.indexOf("avaliacao") === 0);
             }
             var concise = original.replace(/^M[oó]dulo\s+\d+\s*[-–—:]\s*/i, "").trim();
@@ -1484,8 +1484,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
             var tileTop = tile.querySelector(".tile-top");
             if (tile.classList.contains("mundointer-tile-book")) {
                 if (tileTop) {
-                    tileTop.dataset.mundointerNumber = "A";
-                    tileTop.dataset.mundointerLabel = "APOSTILA";
+                    tileTop.dataset.mundointerNumber = "L";
+                    tileTop.dataset.mundointerLabel = "LIVRO";
                 }
             } else if (tile.classList.contains("mundointer-tile-assessment")) {
                 if (tileTop) {

@@ -93,7 +93,7 @@ final class materialize_lti_course extends external_api
             $sectionname = $isassessment
                 ? 'Avaliação final'
                 : ($isbook
-                    ? 'Apostila - ' . (string)$course->fullname
+                    ? 'Livro e Materiais Interativos'
                     : 'Módulo ' . $modulenumber . ' - ' . $group['name']);
             $DB->update_record('course_sections', (object) [
                 'id' => $section->id,
@@ -108,7 +108,7 @@ final class materialize_lti_course extends external_api
                     ? $parameters['idnumber']
                     : 'mi-master-lti-cm-' . (int) $sourceitemcm->id;
                 $displayname = $isbook
-                    ? self::book_activity_display_name((string)$source->name)
+                    ? self::book_activity_display_name((string)$source->name, (string)$course->fullname)
                     : self::activity_display_name((string) $source->name, $item['kind'], $item['number']);
                 $existing = $DB->get_record('course_modules', [
                     'course' => $course->id,
@@ -319,11 +319,11 @@ final class materialize_lti_course extends external_api
         };
     }
 
-    private static function book_activity_display_name(string $original): string
+    private static function book_activity_display_name(string $original, string $coursename): string
     {
         return preg_match('/^nome\s+do\s+livro\s*:/iu', trim($original)) === 1
-            ? 'Apostila em PDF'
-            : 'Apostila interativa';
+            ? 'Livro - ' . trim($coursename)
+            : 'Materiais Interativos';
     }
 
     private static function is_assessment_name(string $name): bool

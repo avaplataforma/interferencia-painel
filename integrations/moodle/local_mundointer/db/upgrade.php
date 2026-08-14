@@ -96,5 +96,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // used to group IESDE lessons, books and the official assessment.
         upgrade_plugin_savepoint(true, 2026081406, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081407) {
+        // No schema change. The MASTER materializer now distinguishes the
+        // complete book from the interactive materials in the same module.
+        upgrade_plugin_savepoint(true, 2026081407, 'local', 'mundointer');
+    }
     return true;
 }
