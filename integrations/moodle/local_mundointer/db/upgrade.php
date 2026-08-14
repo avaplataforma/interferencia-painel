@@ -60,5 +60,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         }
         upgrade_plugin_savepoint(true, 2026081329, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081330) {
+        // No schema change. The version checkpoint publishes the new grouped
+        // MASTER materializer while preserving the existing web service.
+        upgrade_plugin_savepoint(true, 2026081330, 'local', 'mundointer');
+    }
     return true;
 }

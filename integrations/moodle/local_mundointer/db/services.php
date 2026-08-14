@@ -54,7 +54,7 @@ $functions = [
     ],
     'local_mundointer_materialize_lti_course' => [
         'classname' => 'local_mundointer\\external\\materialize_lti_course',
-        'description' => 'Cria ou atualiza um Curso Individual MASTER reutilizando uma atividade LTI homologada.',
+        'description' => 'Cria ou atualiza um Curso Individual MASTER, agrupando as aulas LTI homologadas em módulos pedagógicos.',
         'type' => 'write',
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',

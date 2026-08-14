@@ -117,8 +117,8 @@ final readonly class AvaCatalogPublisher
             $course['categoryid']=$categoryId;$course['fullname']=$name;$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
-            $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['content_id'=>$contentId,'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'idnumber'=>$idNumber],$userId);
-            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false)];
+            $this->catalog->markEntityPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,'Curso Individual MASTER criado ou atualizado no AVA Cursos.',['content_id'=>$contentId,'source_course_module_id'=>$sourceCmId,'target_course_module_id'=>(int)($activity['cmid']??0),'activity_reused'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1),'activities_reused'=>(int)($activity['reusedactivities']??0),'idnumber'=>$idNumber],$userId);
+            return['remote_course_id'=>$remoteCourseId,'remote_category_id'=>$categoryId,'created_or_updated'=>'published','reused_activity'=>(bool)($activity['reused']??false),'sections_synced'=>(int)($activity['sections']??1),'activities_synced'=>(int)($activity['activities']??1)];
         }catch(Throwable$exception){
             $this->catalog->markPublicationFailed($publicationId,$this->friendlyError($exception),$userId);
             throw new RuntimeException($this->friendlyError($exception),0,$exception);
@@ -138,7 +138,8 @@ final readonly class AvaCatalogPublisher
     private function masterCourseName(string$name):string
     {
         $name=trim($name);
-        return trim((string)preg_replace('/^aula\s*[-:–—]\s*/iu','',$name));
+        $name=trim((string)preg_replace('/^aula\s*[-:–—]\s*/iu','',$name));
+        return trim((string)preg_replace('/\s*[-:–—]\s*apresenta[cç][aã]o\s*$/iu','',$name));
     }
 
     /** @param array<string,mixed> $content */
