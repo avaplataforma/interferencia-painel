@@ -1,4 +1,5 @@
-<tr class="course-curation-row content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="6">
+<?php $courseCurationIsEmbedded=(bool)($courseCurationEmbedded??false); ?>
+<?php if(!$courseCurationIsEmbedded):?><tr class="course-curation-row content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="6"><?php endif;?>
  <div class="course-curation-shell">
   <form class="course-curation-form content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int)$course['id'] ?>/review"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>">
    <header><div><span class="eyebrow">Curadoria comercial</span><h3><?= $escape((string)($course['effective_name']??$course['name'])) ?></h3><p>Edite a apresentação comercial sem alterar os dados recebidos do fornecedor.</p></div><button class="action-icon" type="button" data-course-curation-close="<?= $escape($editorId) ?>" title="Fechar curadoria"><i class="fa-solid fa-xmark"></i></button></header>
@@ -23,4 +24,4 @@
    <form class="catalog-ai-form <?= $imageAiReady?'':'is-disabled' ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/courses/<?= (int)$course['id'] ?>/generate-cover"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><label>Orientação opcional para a IA<input name="prompt" maxlength="500" placeholder="Ex.: ambiente profissional, pessoas diversas"></label><button class="btn btn-secondary" type="submit" <?= $imageAiReady?'':'disabled' ?>><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar capa com IA</button><small><?= $imageAiReady?'A tarefa entra na fila e a capa final será otimizada no Spaces.':'Ative a integração de imagens no ADM Central.' ?></small></form>
   </aside>
  </div>
-</td></tr>
+<?php if(!$courseCurationIsEmbedded):?></td></tr><?php endif;?>

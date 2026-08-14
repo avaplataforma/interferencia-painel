@@ -575,6 +575,22 @@ document.querySelectorAll('.color-field').forEach((group) => {
   });
 })();
 
+document.querySelectorAll('[data-master-course-detail]').forEach((detail) => {
+  const tabs = Array.from(detail.querySelectorAll('[data-master-course-section]'));
+  const panels = Array.from(detail.querySelectorAll('[data-master-course-panel]'));
+  const show = (requested) => {
+    const section = tabs.some((tab) => tab.dataset.masterCourseSection === requested) ? requested : 'curation';
+    tabs.forEach((tab) => {
+      const active = tab.dataset.masterCourseSection === section;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    panels.forEach((panel) => { panel.hidden = panel.dataset.masterCoursePanel !== section; });
+  };
+  tabs.forEach((tab) => tab.addEventListener('click', () => show(tab.dataset.masterCourseSection || 'curation')));
+  show('curation');
+});
+
 (() => {
   const tabs = Array.from(document.querySelectorAll('[data-site-tab]'));
   const panels = Array.from(document.querySelectorAll('[data-site-panel]'));

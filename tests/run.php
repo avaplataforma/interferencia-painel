@@ -2341,8 +2341,12 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($client,'local_mundointer_materialize_lti_course'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/contents/{id:\\d+}/publish-ava'"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/courses/{id:\\d+}/publish-ava'"));
-    assertTrue(str_contains($view,'Aulas e recursos internos da Forma'));
-    assertTrue(str_contains($view,'comercializado isoladamente'));
+    assertTrue(str_contains($providerRepository,'courseResourcesByProvider'));
+    assertTrue(str_contains($view,'data-master-course-section="resources"'));
+    assertTrue(str_contains($view,'Aulas e recursos deste Curso Individual'));
+    assertTrue(str_contains($view,'NÃ£o recebem preÃ§o, oferta ou publicaÃ§Ã£o isolada'));
+    assertTrue(str_contains($view,"if(\$provider!=='iesde')"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'data-master-course-detail'));
     assertTrue(str_contains($routes,'O mesmo curso será reutilizado'));
     assertTrue(str_contains($pluginService,"'local_mundointer_materialize_lti_course'"));
     assertTrue(str_contains($pluginUpgrade,"'functionname' => 'local_mundointer_materialize_lti_course'"));

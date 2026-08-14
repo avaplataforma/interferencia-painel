@@ -641,6 +641,24 @@ final readonly class CourseProviderRepository
         return $statement->fetchAll() ?: [];
     }
 
+    /** @return array<int,list<array<string,mixed>>> */
+    public function courseResourcesByProvider(string $providerCode): array
+    {
+        $statement = $this->database->prepare("SELECT link.provider_course_id,link.position,link.semester_number,link.discipline_name,
+            content.id,content.name,content.external_key,content.content_type,content.is_available,content.sync_state
+            FROM provider_course_content_links link
+            INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id
+            INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
+            WHERE provider.provider_code=:provider
+            ORDER BY link.provider_course_id,link.position,content.id");
+        $statement->execute(['provider' => trim($providerCode)]);
+        $grouped = [];
+        foreach ($statement->fetchAll() ?: [] as $row) {
+            $grouped[(int)$row['provider_course_id']][] = $row;
+        }
+        return $grouped;
+    }
+
     /** @return array<string,mixed>|null */
     public function catalogEntity(string $entityType, int $entityId): ?array
     {
