@@ -2529,6 +2529,14 @@ $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static 
     assertTrue(str_contains($view,'Pendências recentes'));
 };
 
+$tests['oculta cursos retirados da lista padrao dos catalogos'] = static function () use ($rootPath): void {
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+
+    assertTrue(str_contains($view,"course_availability']??'active'"));
+    assertTrue(str_contains($view,"courseAvailability==='active'"));
+    assertTrue(str_contains($view,'Todos, incluindo retirados'));
+};
+
 $tests['carrega cadastro unificado do aluno com documentos vinculados'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/students/show.php');

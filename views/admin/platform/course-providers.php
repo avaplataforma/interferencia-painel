@@ -36,7 +36,7 @@ $contentQuery=trim((string)($_GET['content_q']??''));
 $activeProvider=(string)($_GET['catalog']??'');
 $courseQuery=trim((string)($_GET['course_q']??''));
 $courseReview=(string)($_GET['course_review']??'');
-$courseAvailability=(string)($_GET['course_availability']??'');
+$courseAvailability=(string)($_GET['course_availability']??'active');
 $knownProviders=array_map(static fn(array$row):string=>(string)$row['provider_code'],$catalogRows);
 if(!in_array($activeProvider,$knownProviders,true))$activeProvider=(string)($knownProviders[0]??'ava_cursos');
 $coursesByCatalog=[];
@@ -44,8 +44,9 @@ foreach($courseRows as$course){
  $haystack=mb_strtolower(implode(' ',[(string)($course['effective_name']??''),(string)($course['name']??''),(string)($course['effective_category']??''),(string)($course['external_id']??'')]));
  if($courseQuery!==''&&!str_contains($haystack,mb_strtolower($courseQuery)))continue;
  if($courseReview!==''&&(string)($course['review_status']??'')!==$courseReview)continue;
- if($courseAvailability==='enabled'&&(int)($course['is_globally_enabled']??1)!==1)continue;
- if($courseAvailability==='blocked'&&(int)($course['is_globally_enabled']??1)===1)continue;
+ if($courseAvailability==='active'&&(int)($course['is_available']??1)!==1)continue;
+ if($courseAvailability==='enabled'&&((int)($course['is_available']??1)!==1||(int)($course['is_globally_enabled']??1)!==1))continue;
+ if($courseAvailability==='blocked'&&((int)($course['is_available']??1)!==1||(int)($course['is_globally_enabled']??1)===1))continue;
  if($courseAvailability==='removed'&&(int)($course['is_available']??1)===1)continue;
  $coursesByCatalog[(string)$course['catalog_code']][]=$course;
 }
@@ -279,7 +280,7 @@ $tabLabel=static function(string $name):string{
    </div>
     <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:courses" hidden>
      <div class="course-management-toolbar">
-      <form class="course-filter-form" method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><input type="hidden" name="catalog" value="<?= $escape($provider) ?>"><input type="hidden" name="section" value="courses"><label>Localizar curso<input name="course_q" value="<?= $escape($courseQuery) ?>" placeholder="Nome, categoria ou código"></label><label>Curadoria<select name="course_review"><option value="">Todas</option><?php foreach($reviewLabels as$key=>$label):?><option value="<?= $escape($key) ?>" <?= $courseReview===$key?'selected':'' ?>><?= $escape($label) ?></option><?php endforeach;?></select></label><label>Disponibilidade<select name="course_availability"><option value="">Todas</option><option value="enabled" <?= $courseAvailability==='enabled'?'selected':'' ?>>Liberados</option><option value="blocked" <?= $courseAvailability==='blocked'?'selected':'' ?>>Bloqueados</option><option value="removed" <?= $courseAvailability==='removed'?'selected':'' ?>>Retirados</option></select></label><button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> Filtrar</button></form>
+      <form class="course-filter-form" method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers"><input type="hidden" name="catalog" value="<?= $escape($provider) ?>"><input type="hidden" name="section" value="courses"><label>Localizar curso<input name="course_q" value="<?= $escape($courseQuery) ?>" placeholder="Nome, categoria ou código"></label><label>Curadoria<select name="course_review"><option value="">Todas</option><?php foreach($reviewLabels as$key=>$label):?><option value="<?= $escape($key) ?>" <?= $courseReview===$key?'selected':'' ?>><?= $escape($label) ?></option><?php endforeach;?></select></label><label>Disponibilidade<select name="course_availability"><option value="active" <?= $courseAvailability==='active'?'selected':'' ?>>Ativos</option><option value="enabled" <?= $courseAvailability==='enabled'?'selected':'' ?>>Liberados</option><option value="blocked" <?= $courseAvailability==='blocked'?'selected':'' ?>>Bloqueados</option><option value="removed" <?= $courseAvailability==='removed'?'selected':'' ?>>Retirados</option><option value="all" <?= $courseAvailability==='all'?'selected':'' ?>>Todos, incluindo retirados</option></select></label><button class="btn btn-secondary" type="submit"><i class="fa-solid fa-filter"></i> Filtrar</button></form>
       <form class="course-bulk-form" id="course-bulk-<?= $escape($provider) ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/catalog/<?= $escape($provider) ?>/courses/bulk"><?= $csrfField ?><input type="hidden" name="course_q" value="<?= $escape($courseQuery) ?>"><input type="hidden" name="course_review" value="<?= $escape($courseReview) ?>"><input type="hidden" name="course_availability" value="<?= $escape($courseAvailability) ?>"><label>Ação nos selecionados<select required name="bulk_action"><option value="">Selecione</option><option value="approve_release">Aprovar e liberar</option><option value="release">Liberar globalmente</option><option value="block">Bloquear globalmente</option></select></label><button class="btn btn-primary" type="submit" onclick="return confirm('Aplicar esta ação aos cursos selecionados?')"><i class="fa-solid fa-layer-group"></i> Aplicar em lote</button></form>
      </div>
      <?php if($catalogCourses===[]):?>
