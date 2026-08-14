@@ -2498,7 +2498,10 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($learningCatalog,'public function availablePackages'));
     assertTrue(str_contains($learningCatalog,'NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link'));
     assertTrue(str_contains($learningCatalog,"content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1"));
-    assertTrue(str_contains($routes,"'availablePackages'=>\$learningCatalog->availablePackages()"));
+    assertTrue(str_contains($routes,"'availablePackages'=>\$learningCatalog->availablePackages("));
+    assertTrue(str_contains($learningCatalog,'assertItemsBelongToProvider'));
+    assertTrue(str_contains($routes,"'catalogScope'=>\$catalogScope"));
+    assertTrue(str_contains($view,'Trilhas da Formação MASTER'));
     assertTrue(str_contains($images,"['course','content','trail']"));
     assertTrue(str_contains($view,'Identificação e condição comercial'));
     assertTrue(str_contains($view,'Cursos individuais da Trilha'));

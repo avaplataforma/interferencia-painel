@@ -81,7 +81,7 @@ final readonly class LearningCatalogRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function trails(): array
+    public function trails(?string $providerCode = null): array
     {
         $statement = $this->database->query("SELECT trail.*,category.name category_name,parent.name parent_category_name,
             (SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count,
@@ -92,7 +92,10 @@ final readonly class LearningCatalogRepository
             LEFT JOIN catalog_categories parent ON parent.id=category.parent_id
             LEFT JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id
             ORDER BY trail.is_active DESC,COALESCE(parent.name,category.name),category.name,trail.name");
-        return $statement->fetchAll() ?: [];
+        $trails = $statement->fetchAll() ?: [];
+        $providerCode = trim((string)$providerCode);
+        if ($providerCode === '') return $trails;
+        return array_values(array_filter($trails, fn(array $trail): bool => $this->trailBelongsToProvider((int)$trail['id'], $providerCode)));
     }
 
     /** @return list<array<string,mixed>> */
@@ -265,44 +268,62 @@ final readonly class LearningCatalogRepository
     }
 
     /** @return list<array<string,mixed>> */
-    public function availableItems(): array
+    public function availableItems(?string $providerCode = null): array
     {
         $items = [];
-        $finance = $this->database->query("SELECT product.id,product.name,product.description,product.value price,'INTER' catalog_name,'shared_ava' execution_environment,'finance_product' item_type
-            FROM finance_products product WHERE product.is_active=1 ORDER BY product.name")->fetchAll() ?: [];
-        foreach ($finance as $item) $items[] = $item;
-        $courses = $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,catalog.execution_environment,'provider_course' item_type,'' package_ids,0 package_count
+        $providerCode = trim((string)$providerCode);
+        if ($providerCode === '') {
+            $finance = $this->database->query("SELECT product.id,product.name,product.description,product.value price,'INTER' catalog_name,'shared_ava' execution_environment,'finance_product' item_type
+                FROM finance_products product WHERE product.is_active=1 ORDER BY product.name")->fetchAll() ?: [];
+            foreach ($finance as $item) $items[] = $item;
+        }
+        $courseSql = "SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,catalog.execution_environment,'provider_course' item_type,'' package_ids,0 package_count
             FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
             WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
-              AND (provider.provider_code='iesde' OR NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link WHERE package_link.provider_course_id=course.id))
-            ORDER BY catalog.name,name")->fetchAll() ?: [];
+              AND (provider.provider_code='iesde' OR NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link WHERE package_link.provider_course_id=course.id))";
+        if ($providerCode !== '') $courseSql .= ' AND provider.provider_code=:provider';
+        $courseSql .= ' ORDER BY catalog.name,name';
+        $courseStatement = $this->database->prepare($courseSql);
+        $courseStatement->execute($providerCode !== '' ? ['provider' => $providerCode] : []);
+        $courses = $courseStatement->fetchAll() ?: [];
         foreach ($courses as $item) $items[] = $item;
-        $contents = $this->database->query("SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,catalog.execution_environment,'provider_content' item_type,
+        $contentSql = "SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,catalog.execution_environment,'provider_content' item_type,
                 COALESCE((SELECT GROUP_CONCAT(DISTINCT package_link.provider_course_id ORDER BY package_link.provider_course_id SEPARATOR ',') FROM provider_course_content_links package_link WHERE package_link.provider_content_id=content.id),'') package_ids,
                 (SELECT COUNT(DISTINCT package_link.provider_course_id) FROM provider_course_content_links package_link WHERE package_link.provider_content_id=content.id) package_count
             FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
-            WHERE content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'
-            ORDER BY catalog.name,name")->fetchAll() ?: [];
+            WHERE content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'";
+        if ($providerCode !== '') $contentSql .= ' AND provider.provider_code=:provider';
+        $contentSql .= ' ORDER BY catalog.name,name';
+        $contentStatement = $this->database->prepare($contentSql);
+        $contentStatement->execute($providerCode !== '' ? ['provider' => $providerCode] : []);
+        $contents = $contentStatement->fetchAll() ?: [];
         foreach ($contents as $item) $items[] = $item;
         return $items;
     }
 
     /** @return list<array<string,mixed>> */
-    public function availablePackages(): array
+    public function availablePackages(?string $providerCode = null): array
     {
-        return $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,catalog.name catalog_name,COUNT(DISTINCT link.provider_content_id) item_count
+        $providerCode = trim((string)$providerCode);
+        if ($providerCode === 'iesde') return [];
+        $sql = "SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,catalog.name catalog_name,COUNT(DISTINCT link.provider_content_id) item_count
             FROM provider_courses course
             INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
             INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
             INNER JOIN provider_course_content_links link ON link.provider_course_id=course.id
             INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id AND content.is_available=1 AND content.is_globally_enabled=1
-            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'
+            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'";
+        if ($providerCode !== '') $sql .= ' AND provider.provider_code=:provider';
+        $sql .= "
             GROUP BY course.id,course.commercial_name,course.name,catalog.name
-            ORDER BY catalog.name,name")->fetchAll() ?: [];
+            ORDER BY catalog.name,name";
+        $statement = $this->database->prepare($sql);
+        $statement->execute($providerCode !== '' ? ['provider' => $providerCode] : []);
+        return $statement->fetchAll() ?: [];
     }
 
     /** @param list<string> $itemKeys */
-    public function saveTrail(?int $id, array $data, array $itemKeys, ?int $userId): int
+    public function saveTrail(?int $id, array $data, array $itemKeys, ?int $userId, ?string $providerScope = null): int
     {
         $name = trim((string)($data['name'] ?? ''));
         if ($name === '') throw new RuntimeException('Informe o nome da Trilha.');
@@ -311,6 +332,8 @@ final readonly class LearningCatalogRepository
         $category->execute(['id' => $categoryId]);
         if ($category->fetchColumn() === false) throw new RuntimeException('Escolha uma categoria ativa para a Trilha.');
         $items = $this->normalizeItems($itemKeys);
+        $providerScope = trim((string)$providerScope);
+        if ($providerScope !== '') $this->assertItemsBelongToProvider($items, $providerScope);
         if (count($items) < 2) throw new RuntimeException('Uma Trilha precisa reunir pelo menos dois cursos ou conteúdos.');
         $slug = $this->slug((string)($data['slug'] ?? ''));
         if ($slug === '') $slug = $this->slug($name);
@@ -378,6 +401,41 @@ final readonly class LearningCatalogRepository
             $result[] = ['type' => $type, 'id' => $itemId];
         }
         return $result;
+    }
+
+    /** @param list<array{type:string,id:int}> $items */
+    private function assertItemsBelongToProvider(array $items, string $providerCode): void
+    {
+        foreach ($items as $item) {
+            if (!in_array($item['type'], ['provider_course','provider_content'], true)) {
+                throw new RuntimeException('Nesta aba, use somente Cursos individuais da Formação MASTER.');
+            }
+            $table = $item['type'] === 'provider_course' ? 'provider_courses' : 'provider_catalog_contents';
+            $statement = $this->database->prepare("SELECT provider.provider_code FROM {$table} item INNER JOIN course_provider_integrations provider ON provider.id=item.provider_id WHERE item.id=:id LIMIT 1");
+            $statement->execute(['id' => $item['id']]);
+            if ((string)$statement->fetchColumn() !== $providerCode) {
+                throw new RuntimeException('Nesta aba, use somente Cursos individuais da Formação MASTER.');
+            }
+        }
+    }
+
+    private function trailBelongsToProvider(int $trailId, string $providerCode): bool
+    {
+        $statement = $this->database->prepare("SELECT item.item_type,
+            COALESCE(course_provider.provider_code,content_provider.provider_code,'') provider_code
+            FROM catalog_trail_items item
+            LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+            LEFT JOIN course_provider_integrations course_provider ON course_provider.id=course.provider_id
+            LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+            LEFT JOIN course_provider_integrations content_provider ON content_provider.id=content.provider_id
+            WHERE item.catalog_trail_id=:trail");
+        $statement->execute(['trail' => $trailId]);
+        $items = $statement->fetchAll() ?: [];
+        if ($items === []) return false;
+        foreach ($items as $item) {
+            if (!in_array((string)$item['item_type'], ['provider_course','provider_content'], true) || (string)$item['provider_code'] !== $providerCode) return false;
+        }
+        return true;
     }
 
     private function exists(string $table, int $id): bool
