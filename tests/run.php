@@ -2481,15 +2481,19 @@ $tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = sta
     $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
 
     assertTrue(str_contains($catalog,'public function enrollmentTrailsForOrganization'));
+    assertTrue(str_contains($catalog,'public function enrollmentProviderCoursesForOrganization'));
     assertTrue(str_contains($catalog,"publication.publication_status='published'"));
     assertTrue(str_contains($enrollments,'public function createTrail'));
+    assertTrue(str_contains($enrollments,'public function createProviderCourse'));
     assertTrue(str_contains($enrollments,'catalog_trail_id'));
     assertTrue(str_contains($enrollments,"'trail_selected'"));
-    assertTrue(str_contains($enrollments,'COALESCE(p.name,trail.name) product_name'));
+    assertTrue(str_contains($enrollments,'COALESCE(p.name,trail.name,pco.commercial_name'));
     assertTrue(str_contains($routes,"'trail:'.(int)\$trail['id']"));
     assertTrue(str_contains($routes,'createTrail('));
+    assertTrue(str_contains($routes,'createProviderCourse('));
     assertTrue(str_contains($form,'name="contracted_item"'));
     assertTrue(str_contains($form,'Trilhas publicadas'));
+    assertTrue(str_contains($form,'Cursos individuais das Formações'));
     assertTrue(str_contains($releaser,'prepareForEnrollment'));
 };
 
