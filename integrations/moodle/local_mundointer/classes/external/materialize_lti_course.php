@@ -65,6 +65,10 @@ final class materialize_lti_course extends external_api
         if ($sources === []) {
             throw new \moodle_exception('Nenhuma aula MASTER foi encontrada no curso de importação.');
         }
+        $sources = self::selection_for_source($sources, (int)$sourcecm->id);
+        if ($sources === []) {
+            throw new \moodle_exception('A seleção MASTER desta disciplina não foi encontrada no curso de importação.');
+        }
 
         $groups = self::group_sources($sources);
         $firstcmid = 0;
@@ -174,6 +178,38 @@ final class materialize_lti_course extends external_api
             }
         }
         return $ordered;
+    }
+
+    /**
+     * Keeps only the Deep Linking selection that owns the source activity.
+     * The official assessment closes a selection, so several disciplines may
+     * safely share one hidden Moodle import course.
+     *
+     * @param array<int,array{cm:object,lti:object}> $sources
+     * @return array<int,array{cm:object,lti:object}>
+     */
+    private static function selection_for_source(array $sources, int $sourcecmid): array
+    {
+        $segments = [];
+        $current = [];
+        foreach ($sources as $source) {
+            $current[] = $source;
+            if (self::is_assessment_name((string)$source['lti']->name)) {
+                $segments[] = $current;
+                $current = [];
+            }
+        }
+        if ($current !== []) {
+            $segments[] = $current;
+        }
+        foreach ($segments as $segment) {
+            foreach ($segment as $source) {
+                if ((int)$source['cm']->id === $sourcecmid) {
+                    return $segment;
+                }
+            }
+        }
+        return [];
     }
 
     /** @param array<int,array{cm:object,lti:object}> $sources

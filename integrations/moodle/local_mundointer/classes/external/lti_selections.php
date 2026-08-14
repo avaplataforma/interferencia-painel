@@ -52,7 +52,7 @@ final class lti_selections extends external_api
              LEFT JOIN {course_sections} cs ON cs.id=cm.section
               ORDER BY c.sortorder,cs.section,cm.id";
         $records = $DB->get_records_sql($sql, ['moduleid' => $moduleid]);
-        $courses = [];
+        $sourcecourses = [];
 
         foreach ($records as $record) {
             $type = false;
@@ -68,22 +68,25 @@ final class lti_selections extends external_api
             }
 
             $courseid = (int)$record->course;
-            if (!isset($courses[$courseid])) {
-                $courses[$courseid] = [
-                    'id' => 'moodle-course-' . $courseid,
-                    'nome' => clean_param((string)$record->fullname, PARAM_TEXT),
+            $courseidnumber = trim((string)$record->idnumber);
+            if (str_starts_with($courseidnumber, 'mi-master-content-') ||
+                str_starts_with($courseidnumber, 'mi-master-course-') ||
+                str_starts_with($courseidnumber, 'mi-trilha-')) {
+                // Definitive courses are outputs from this connector, never
+                // new import sources. Skipping them prevents recursion.
+                continue;
+            }
+            if (!isset($sourcecourses[$courseid])) {
+                $sourcecourses[$courseid] = [
+                    'name' => clean_param((string)$record->fullname, PARAM_TEXT),
                     'slug' => clean_param((string)($record->idnumber ?: $record->shortname), PARAM_ALPHANUMEXT),
-                    'categoria' => 'MASTER',
-                    'tipo_acesso' => 'LTI 1.3',
-                    'status' => 'available',
-                    'updated_at' => date('c', (int)$record->timemodified),
-                    'conteudos' => [],
+                    'items' => [],
                 ];
             }
 
             $name = clean_param((string)$record->name, PARAM_TEXT);
             $isassessment = self::isAssessmentName($name);
-            $courses[$courseid]['conteudos'][] = [
+            $sourcecourses[$courseid]['items'][] = [
                 'batch' => 'moodle-lti-' . (int)$record->ltiid,
                 'type' => $isassessment ? 'assessment' : 'lti',
                 'name' => $name,
@@ -100,11 +103,83 @@ final class lti_selections extends external_api
                     'launch_host' => self::safeHost($toolUrl !== '' ? $toolUrl : $typeUrl),
                     'description' => clean_param(strip_tags((string)$record->intro), PARAM_TEXT),
                     'is_assessment' => $isassessment,
+                    'timemodified' => (int)$record->timemodified,
                 ],
             ];
         }
 
-        return self::response($provider, array_values($courses));
+        $courses = [];
+        foreach ($sourcecourses as $courseid => $sourcecourse) {
+            $segments = self::selectionSegments((array)$sourcecourse['items']);
+            foreach ($segments as $index => $contents) {
+                $segment = $index + 1;
+                $courses[] = [
+                    'id' => 'moodle-course-' . $courseid . ($segment > 1 ? '-segment-' . $segment : ''),
+                    'nome' => self::selectionName((string)$sourcecourse['name'], $contents),
+                    'slug' => clean_param((string)$sourcecourse['slug'] . ($segment > 1 ? '-segment-' . $segment : ''), PARAM_ALPHANUMEXT),
+                    'categoria' => 'MASTER',
+                    'tipo_acesso' => 'LTI 1.3',
+                    'status' => 'available',
+                    'updated_at' => self::selectionUpdatedAt($contents),
+                    'conteudos' => $contents,
+                    'source_course_id' => $courseid,
+                    'selection_segment' => $segment,
+                ];
+            }
+        }
+
+        return self::response($provider, $courses);
+    }
+
+    /**
+     * Each Deep Linking confirmation ends with its official assessment. This
+     * lets administrators reuse one hidden import course without mixing the
+     * selected disciplines in the commercial catalog.
+     *
+     * @param list<array<string,mixed>> $items
+     * @return list<list<array<string,mixed>>>
+     */
+    private static function selectionSegments(array $items): array
+    {
+        $segments = [];
+        $current = [];
+        foreach ($items as $item) {
+            $current[] = $item;
+            if ((bool)($item['raw']['is_assessment'] ?? false)) {
+                $segments[] = $current;
+                $current = [];
+            }
+        }
+        if ($current !== []) {
+            $segments[] = $current;
+        }
+        return $segments;
+    }
+
+    /** @param list<array<string,mixed>> $contents */
+    private static function selectionName(string $fallback, array $contents): string
+    {
+        foreach (array_reverse($contents) as $content) {
+            if (!(bool)($content['raw']['is_assessment'] ?? false)) {
+                continue;
+            }
+            $name = trim((string)($content['name'] ?? ''));
+            $name = trim((string)preg_replace('/^(avalia[cç][aã]o|prova|exame)(\s+final)?\s*[-:–—]\s*/iu', '', $name));
+            if ($name !== '') {
+                return clean_param($name, PARAM_TEXT);
+            }
+        }
+        return clean_param($fallback, PARAM_TEXT);
+    }
+
+    /** @param list<array<string,mixed>> $contents */
+    private static function selectionUpdatedAt(array $contents): string
+    {
+        $latest = 0;
+        foreach ($contents as $content) {
+            $latest = max($latest, (int)($content['raw']['timemodified'] ?? 0));
+        }
+        return date('c', $latest > 0 ? $latest : time());
     }
 
     /** @param list<array<string,mixed>> $courses */
