@@ -1185,7 +1185,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('0.9.21',$metadata['release']);
+    assertSame('0.9.22',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1870,7 +1870,7 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($repository,'Nenhuma atividade MASTER foi selecionada no AVA Cursos'));
     assertTrue(str_contains($moodleClient,'local_mundointer_lti_selections'));
     assertTrue(str_contains($pluginServices,"'local_mundointer_lti_selections'"));
-    assertTrue(str_contains($pluginVersion,'0.9.21'));
+    assertTrue(str_contains($pluginVersion,'0.9.22'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/lti_selections.php'));
 };
 
