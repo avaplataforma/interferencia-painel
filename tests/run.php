@@ -2322,6 +2322,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/_provider-content-panel.php');
+    $providerView=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
     $pluginService=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
     $pluginUpgrade=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/upgrade.php');
     $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
@@ -2342,10 +2343,10 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/contents/{id:\\d+}/publish-ava'"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/courses/{id:\\d+}/publish-ava'"));
     assertTrue(str_contains($providerRepository,'courseResourcesByProvider'));
-    assertTrue(str_contains($view,'data-master-course-section="resources"'));
-    assertTrue(str_contains($view,'Aulas e recursos deste Curso Individual'));
-    assertTrue(str_contains($view,'NÃ£o recebem preÃ§o, oferta ou publicaÃ§Ã£o isolada'));
-    assertTrue(str_contains($view,"if(\$provider!=='iesde')"));
+    assertTrue(str_contains($providerView,'data-master-course-section="resources"'));
+    assertTrue(str_contains($providerView,'Aulas e recursos deste Curso Individual'));
+    assertTrue(str_contains($providerView,'master-resource-intro'));
+    assertTrue(str_contains($providerView,"if(\$provider!=='iesde')"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'data-master-course-detail'));
     assertTrue(str_contains($routes,'O mesmo curso será reutilizado'));
     assertTrue(str_contains($pluginService,"'local_mundointer_materialize_lti_course'"));
