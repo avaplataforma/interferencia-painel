@@ -101,5 +101,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // complete book from the interactive materials in the same module.
         upgrade_plugin_savepoint(true, 2026081407, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081408) {
+        // No schema change. Duplicate IESDE titles are now separated by the
+        // official Deep Linking resource order (interactive material/book).
+        upgrade_plugin_savepoint(true, 2026081408, 'local', 'mundointer');
+    }
     return true;
 }

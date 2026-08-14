@@ -101,14 +101,22 @@ final class materialize_lti_course extends external_api
                 'visible' => 1,
             ]);
 
+            $bookitemcount = $isbook ? count($group['items']) : 0;
+            $bookhasexplicitname = $isbook && array_reduce($group['items'], static function(bool $found, array $candidate): bool {
+                return $found || preg_match('/^nome\s+do\s+livro\s*:/iu', trim((string)$candidate['lti']->name)) === 1;
+            }, false);
+            $bookitemindex = 0;
             foreach ($group['items'] as $item) {
+                if ($isbook) {
+                    $bookitemindex++;
+                }
                 $sourceitemcm = $item['cm'];
                 $source = $item['lti'];
                 $moduleidnumber = (int) $sourceitemcm->id === (int) $sourcecm->id
                     ? $parameters['idnumber']
                     : 'mi-master-lti-cm-' . (int) $sourceitemcm->id;
                 $displayname = $isbook
-                    ? self::book_activity_display_name((string)$source->name, (string)$course->fullname)
+                    ? self::book_activity_display_name((string)$source->name, (string)$course->fullname, $bookitemindex, $bookitemcount, $bookhasexplicitname)
                     : self::activity_display_name((string) $source->name, $item['kind'], $item['number']);
                 $existing = $DB->get_record('course_modules', [
                     'course' => $course->id,
@@ -319,11 +327,18 @@ final class materialize_lti_course extends external_api
         };
     }
 
-    private static function book_activity_display_name(string $original, string $coursename): string
+    private static function book_activity_display_name(string $original, string $coursename, int $itemindex, int $itemcount, bool $hasexplicitname): string
     {
-        return preg_match('/^nome\s+do\s+livro\s*:/iu', trim($original)) === 1
-            ? 'Livro - ' . trim($coursename)
-            : 'Materiais Interativos';
+        if (preg_match('/^nome\s+do\s+livro\s*:/iu', trim($original)) === 1) {
+            return 'Livro - ' . trim($coursename);
+        }
+        // Some IESDE selections send the HTML and PDF resources with the
+        // exact same title. In that case the final item is the complete book,
+        // matching the order presented by the official Deep Linking picker.
+        if (!$hasexplicitname && ($itemcount === 1 || $itemindex === $itemcount)) {
+            return 'Livro - ' . trim($coursename);
+        }
+        return 'Materiais Interativos';
     }
 
     private static function is_assessment_name(string $name): bool
