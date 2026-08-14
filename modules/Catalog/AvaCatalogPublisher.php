@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Interferencia\Modules\Catalog;
 
 use Interferencia\Modules\Moodle\AvaConnectionRepository;
+use Interferencia\Modules\Moodle\MoodleAcademicCategoryManager;
 use Interferencia\Modules\Moodle\MoodleClient;
 use Interferencia\Modules\Moodle\MoodleRepository;
 use RuntimeException;
@@ -39,7 +40,7 @@ final readonly class AvaCatalogPublisher
         $publicationId=$this->catalog->markPublicationReady($trailId,(int)$connection['id'],$signature,$userId);
         try{
             $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
-            $categoryId=$this->ensureCategoryPath($client,$trail);
+            $categoryId=$this->ensureTrailCategory($client,$trail);
             $idNumber='mi-trilha-'.$trailId;
             $shortName=$this->limitedCode('MI-TRILHA-'.$trailId.'-'.$trail['slug'],100);
             $summary=$this->summary($trail);
@@ -56,7 +57,7 @@ final readonly class AvaCatalogPublisher
                 'trail_id'=>$trailId,
                 'shortname'=>$shortName,
                 'idnumber'=>$idNumber,
-                'category_path'=>$this->categoryPath($trail),
+                'category_path'=>['MUNDO INTER','Formação '.$this->trailFormation($trail),'Trilhas'],
                 'item_count'=>(int)$trail['item_count'],
                 'sections_synced'=>(int)($sectionSync['sections']??count($sections)),
                 'url_activities_synced'=>(int)($sectionSync['activities']??0),
@@ -108,7 +109,7 @@ final readonly class AvaCatalogPublisher
         $publicationId=$this->catalog->markEntityPublicationReady('provider_course',$courseId,(int)$connection['id'],$signature,$userId);
         try{
             $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
-            $categoryId=$this->ensureMasterCategory($client);
+            $categoryId=$this->ensureMasterCategory($client,$name);
             $legacyContentId=(int)($context['legacy_content_id']??0);
             $idNumber=$legacyContentId>0?'mi-master-content-'.$legacyContentId:'mi-master-course-'.$courseId;
             $shortName=$this->limitedCode('MI-MASTER-'.$courseId.'-'.$name,100);
@@ -137,14 +138,10 @@ final readonly class AvaCatalogPublisher
         return$this->publishMasterCourse($courseId,$userId);
     }
 
-    private function ensureMasterCategory(MoodleClient$client):int
+    private function ensureMasterCategory(MoodleClient$client,string$name):int
     {
-        $categories=$client->courseCategories();
-        $root=$this->findCategory($categories,'mi-mundo-inter');
-        if($root===null){$root=$client->createCourseCategory('Mundo Inter','mi-mundo-inter');$categories[]=$root;}
-        $master=$this->findCategory($categories,'mi-formacao-master');
-        if($master===null)$master=$client->createCourseCategory('Formação MASTER','mi-formacao-master',(int)$root['id']);
-        return(int)$master['id'];
+        $tree=(new MoodleAcademicCategoryManager($client))->ensureFormation('MASTER');
+        return preg_match('/\btest(?:e|es)?\b/iu',$name)===1?$tree['formation']:$tree['individuals'];
     }
 
     private function masterCourseName(string$name):string
@@ -169,36 +166,22 @@ final readonly class AvaCatalogPublisher
     }
 
     /** @param array<string,mixed> $trail */
-    private function ensureCategoryPath(MoodleClient$client,array$trail):int
+    private function ensureTrailCategory(MoodleClient$client,array$trail):int
     {
-        $categories=$client->courseCategories();
-        $root=$this->findCategory($categories,'mi-mundo-inter');
-        if($root===null){$root=$client->createCourseCategory('Mundo Inter','mi-mundo-inter');$categories[]=$root;}
-        $parentId=(int)$root['id'];
-        $path=$this->categoryPath($trail);
-        foreach($path as$position=>$category){
-            $idNumber='mi-categoria-'.$category['code'];
-            $existing=$this->findCategory($categories,$idNumber);
-            if($existing===null){$existing=$client->createCourseCategory($category['name'],$idNumber,$parentId);$categories[]=$existing;}
-            $parentId=(int)$existing['id'];
+        $tree=(new MoodleAcademicCategoryManager($client))->ensureFormation($this->trailFormation($trail));
+        return$tree['trails'];
+    }
+
+    /** @param array<string,mixed> $trail */
+    private function trailFormation(array$trail):string
+    {
+        $formations=[];
+        foreach((array)($trail['items']??[])as$item){
+            $name=trim((string)preg_replace('/^(?:Catálogo|Formação)\s+/iu','',(string)($item['item_catalog']??'')));
+            if($name!=='')$formations[mb_strtoupper($name)]=$name;
         }
-        return$parentId;
-    }
-
-    /** @param list<array<string,mixed>> $categories @return array<string,mixed>|null */
-    private function findCategory(array$categories,string$idNumber):?array
-    {
-        foreach($categories as$category)if(trim((string)($category['idnumber']??''))===$idNumber)return$category;
-        return null;
-    }
-
-    /** @param array<string,mixed> $trail @return list<array{name:string,code:string}> */
-    private function categoryPath(array$trail):array
-    {
-        $path=[];
-        if(trim((string)($trail['parent_category_name']??''))!=='')$path[]=['name'=>(string)$trail['parent_category_name'],'code'=>(string)$trail['parent_category_code']];
-        $path[]=['name'=>(string)$trail['category_name'],'code'=>(string)$trail['category_code']];
-        return$path;
+        if(count($formations)===1)return mb_strtoupper((string)array_values($formations)[0]);
+        return'MUNDO INTER';
     }
 
     /** @param array<string,mixed> $trail */

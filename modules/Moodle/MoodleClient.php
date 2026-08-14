@@ -93,6 +93,19 @@ final readonly class MoodleClient
         return$category;
     }
 
+    public function updateCourseCategory(int$id,string$name,string$idNumber,int$parent=0):void
+    {
+        $name=trim($name);$idNumber=trim($idNumber);
+        if($id<1||$name===''||$idNumber==='')throw new RuntimeException('Categoria inválida para reorganização do AVA.');
+        $this->call('core_course_update_categories',['categories'=>[['id'=>$id,'name'=>$name,'idnumber'=>$idNumber,'parent'=>max(0,$parent)]]]);
+    }
+
+    public function moveCourse(int$courseId,int$categoryId):void
+    {
+        if($courseId<1||$categoryId<1)throw new RuntimeException('Curso ou categoria inválida para reorganização do AVA.');
+        $this->call('core_course_update_courses',['courses'=>[['id'=>$courseId,'categoryid'=>$categoryId]]]);
+    }
+
     /** @return array<string,mixed> */
     public function publishCourse(array$course):array
     {

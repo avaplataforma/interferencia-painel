@@ -76,6 +76,7 @@ $services = [
             'core_course_get_courses',
             'core_course_get_categories',
             'core_course_create_categories',
+            'core_course_update_categories',
             'core_course_create_courses',
             'core_course_update_courses',
             'core_enrol_get_enrolled_users',
