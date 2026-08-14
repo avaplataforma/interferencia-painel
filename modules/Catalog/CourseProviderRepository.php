@@ -670,32 +670,6 @@ final readonly class CourseProviderRepository
         return$statement->fetchAll()?:[];
     }
 
-    /** @param list<array<string,mixed>> $questions */
-    public function saveMasterPilot(int$courseId,string$summary,string$description,array$questions,?int$userId):void
-    {
-        if($courseId<1||count($questions)!==10)throw new RuntimeException('O piloto MASTER deve conter exatamente 10 questões.');
-        $context=$this->coursePublicationContext($courseId);
-        if($context===null||(string)($context['provider_code']??'')!=='iesde')throw new RuntimeException('Curso Individual MASTER não encontrado.');
-        $summary=trim($summary);$description=trim($description);
-        if($summary===''||$description==='')throw new RuntimeException('A IA não retornou os textos comerciais completos.');
-        $normalized=[];
-        foreach($questions as$question){
-            $text=trim((string)($question['text']??''));$correct=trim((string)($question['correct_key']??''));$options=[];
-            foreach((array)($question['options']??[])as$option){if(!is_array($option))continue;$key=trim((string)($option['key']??''));$optionText=trim((string)($option['text']??''));if(in_array($key,['a','b','c','d'],true)&&$optionText!=='')$options[]=['key'=>$key,'text'=>$optionText];}
-            if($text===''||count($options)!==4||!in_array($correct,['a','b','c','d'],true))throw new RuntimeException('Uma das questões geradas está incompleta. Gere o piloto novamente.');
-            $normalized[]=['text'=>$text,'options'=>$options,'correct_key'=>$correct];
-        }
-        $json=json_encode($normalized,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$signature=hash('sha256',$json);
-        $this->database->beginTransaction();
-        try{
-            $update=$this->database->prepare('UPDATE provider_courses SET commercial_summary=:summary,commercial_description=:description,review_status=CASE WHEN review_status=\'approved\' THEN review_status ELSE \'reviewing\' END,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id');
-            $update->execute(['summary'=>$summary,'description'=>$description,'user'=>$userId,'id'=>$courseId]);
-            $assessment=$this->database->prepare("INSERT INTO provider_course_assessments(provider_course_id,title,source,questions_json,signature,review_status,generated_by) VALUES(:course,:title,'ai_draft',:questions,:signature,'draft',:user) ON DUPLICATE KEY UPDATE title=VALUES(title),source='ai_draft',questions_json=VALUES(questions_json),signature=VALUES(signature),review_status='draft',generated_by=VALUES(generated_by),reviewed_by=NULL,reviewed_at=NULL");
-            $assessment->execute(['course'=>$courseId,'title'=>'Avaliação final - '.trim((string)$context['effective_name']),'questions'=>$json,'signature'=>$signature,'user'=>$userId]);
-            $this->database->commit();
-        }catch(Throwable$exception){if($this->database->inTransaction())$this->database->rollBack();throw$exception;}
-    }
-
     public function saveMasterCopy(int$courseId,string$summary,string$description,?int$userId):void
     {
         if($courseId<1)throw new RuntimeException('Curso Individual MASTER não encontrado.');
@@ -705,13 +679,6 @@ final readonly class CourseProviderRepository
         if($summary===''||$description==='')throw new RuntimeException('A IA não retornou os textos comerciais completos.');
         $statement=$this->database->prepare("UPDATE provider_courses SET commercial_summary=:summary,commercial_description=:description,review_status=CASE WHEN review_status='approved' THEN review_status ELSE 'reviewing' END,reviewed_by=:user,reviewed_at=NOW() WHERE id=:id");
         $statement->execute(['summary'=>$summary,'description'=>$description,'user'=>$userId,'id'=>$courseId]);
-    }
-
-    public function reviewMasterAssessment(int$courseId,bool$approved,?int$userId):void
-    {
-        $statement=$this->database->prepare("UPDATE provider_course_assessments SET review_status=:status,reviewed_by=:user,reviewed_at=IF(:approved_at=1,NOW(),NULL) WHERE provider_course_id=:course");
-        $statement->execute(['status'=>$approved?'approved':'draft','user'=>$approved?$userId:null,'approved_at'=>$approved?1:0,'course'=>$courseId]);
-        if($statement->rowCount()!==1){$exists=$this->database->prepare('SELECT 1 FROM provider_course_assessments WHERE provider_course_id=:course');$exists->execute(['course'=>$courseId]);if($exists->fetchColumn()===false&&$approved)throw new RuntimeException('Gere primeiro o rascunho da avaliação com IA.');}
     }
 
     /** @return array<string,mixed>|null */

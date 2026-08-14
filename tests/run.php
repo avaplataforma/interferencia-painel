@@ -2443,9 +2443,16 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(str_contains($repository,'assessment_resource_count'));
     assertTrue(str_contains($textClient,'generateMasterCopy'));
     assertTrue(str_contains($textClient,'Não crie perguntas'));
+    assertTrue(str_contains($textClient,'Nunca mencione fornecedores'));
+    assertTrue(str_contains($textClient,"preg_replace('/\\bIESDE\\b/iu'"));
+    assertTrue(!str_contains($textClient,'generateMasterPilot'));
+    assertTrue(!str_contains($repository,'saveMasterPilot'));
+    assertTrue(!str_contains($repository,'reviewMasterAssessment'));
     assertTrue(str_contains($routes,"courses/{id:\\d+}/prepare-master-pilot"));
-    assertTrue(str_contains($curation,'Preparar textos com IA'));
-    assertTrue(str_contains($curation,'Apostila e avaliação do IESDE'));
+    assertTrue(str_contains($curation,'Gerar resumo, descrição e capa'));
+    assertTrue(str_contains($curation,'Apostila e avaliação oficial'));
+    assertTrue(str_contains($curation,'A IA não cria nem altera questões'));
+    assertTrue(!str_contains($curation,'Apostila e avaliação do IESDE'));
     assertTrue(str_contains($publisher,'assessment_resource_count'));
     assertTrue(str_contains($publisher,'$assessmentReady='));
     assertTrue(!str_contains($publisher,'Crie e salve a avaliação oficial no seletor do IESDE'));
