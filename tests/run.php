@@ -2327,18 +2327,22 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     $pluginExternal=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/materialize_lti_course.php');
     $pluginVersion=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/version.php');
 
+    assertTrue(str_contains($publisher,'public function publishMasterCourse'));
     assertTrue(str_contains($publisher,'public function publishMasterContent'));
-    assertTrue(str_contains($publisher,"'mi-master-content-'.\$contentId"));
-    assertTrue(str_contains($publisher,"'mi-master-lti-'.\$contentId"));
+    assertTrue(str_contains($publisher,"'mi-master-course-'.\$courseId"));
+    assertTrue(str_contains($publisher,"'mi-master-course-lti-'.\$courseId"));
     assertTrue(str_contains($publisher,"preg_replace('/^aula\\s*[-:–—]\\s*/iu'"));
     assertTrue(str_contains($publisher,"createCourseCategory('Formação MASTER'"));
-    assertTrue(str_contains($providerRepository,'contentPublicationContext'));
-    assertTrue(str_contains($providerRepository,"publication.entity_type='provider_content'"));
+    assertTrue(str_contains($providerRepository,'coursePublicationContext'));
+    assertTrue(str_contains($providerRepository,"publication.entity_type='provider_course'"));
+    assertTrue(str_contains($providerRepository,"provider.provider_code<>'iesde'"));
     assertTrue(str_contains($catalogRepository,'markEntityPublicationReady'));
     assertTrue(str_contains($catalogRepository,'markEntityPublicationSuccess'));
     assertTrue(str_contains($client,'local_mundointer_materialize_lti_course'));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/contents/{id:\\d+}/publish-ava'"));
-    assertTrue(str_contains($view,'Criar curso no AVA'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/courses/{id:\\d+}/publish-ava'"));
+    assertTrue(str_contains($view,'Aulas e recursos internos da Forma'));
+    assertTrue(str_contains($view,'comercializado isoladamente'));
     assertTrue(str_contains($routes,'O mesmo curso será reutilizado'));
     assertTrue(str_contains($pluginService,"'local_mundointer_materialize_lti_course'"));
     assertTrue(str_contains($pluginUpgrade,"'functionname' => 'local_mundointer_materialize_lti_course'"));

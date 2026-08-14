@@ -637,7 +637,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function allCourses(): array
     {
-        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,c.is_globally_enabled catalog_globally_enabled,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
+        $statement = $this->database->query("SELECT pc.*,COALESCE(NULLIF(pc.commercial_name,''),pc.name) effective_name,COALESCE(NULLIF(pc.commercial_description,''),pc.description) effective_description,COALESCE(NULLIF(pc.commercial_cover_url,''),pc.cover_url) effective_cover_url,COALESCE(NULLIF(pc.commercial_category,''),pc.category) effective_category,COALESCE(NULLIF(pc.commercial_workload,''),pc.workload) effective_workload,COALESCE(NULLIF(pc.commercial_certificate,''),pc.certificate) effective_certificate,c.name catalog_name,c.code catalog_code,c.is_globally_enabled catalog_globally_enabled,p.provider_code,p.name provider_name,asset.id media_asset_id,asset.source media_source,(SELECT publication.publication_status FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_status,(SELECT publication.remote_course_id FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_remote_course_id,(SELECT publication.last_error FROM catalog_ava_publications publication WHERE publication.entity_type='provider_course' AND publication.entity_id=pc.id ORDER BY publication.id DESC LIMIT 1) ava_publication_error FROM provider_courses pc INNER JOIN course_catalogs c ON c.id=pc.catalog_id INNER JOIN course_provider_integrations p ON p.id=pc.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=pc.id AND asset.purpose='cover' AND asset.generation_status='ready' ORDER BY c.name,pc.is_available DESC,pc.category,pc.name");
         return $statement->fetchAll() ?: [];
     }
 
@@ -887,6 +887,42 @@ final readonly class CourseProviderRepository
         return$row;
     }
 
+    /** @return array<string,mixed>|null */
+    public function coursePublicationContext(int $courseId): ?array
+    {
+        if ($courseId < 1) return null;
+        $sql = "SELECT course.*,provider.provider_code,provider.name provider_name,catalog.code catalog_code,catalog.name catalog_name,catalog.execution_environment,
+            COALESCE(NULLIF(course.commercial_name,''),course.name) effective_name,
+            COALESCE(NULLIF(course.commercial_description,''),course.description,'') effective_description,
+            COALESCE(NULLIF(course.commercial_category,''),course.category,'Curso individual') effective_category,
+            COALESCE(NULLIF(course.commercial_workload,''),course.workload,'') effective_workload,
+            COALESCE((SELECT media.id FROM catalog_media_assets media WHERE media.entity_type='course' AND media.entity_id=course.id AND media.purpose='cover' AND media.generation_status='ready' ORDER BY media.id DESC LIMIT 1),0) media_asset_id,
+            (SELECT link.provider_content_id FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1 ORDER BY link.position,link.provider_content_id LIMIT 1) source_content_id,
+            (SELECT content.raw_payload FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1 ORDER BY link.position,link.provider_content_id LIMIT 1) source_raw_payload,
+            (SELECT COUNT(*) FROM provider_course_content_links link INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id WHERE link.provider_course_id=course.id AND content.is_available=1) resource_count,
+            (SELECT legacy.entity_id FROM provider_course_content_links link INNER JOIN catalog_ava_publications legacy ON legacy.entity_type='provider_content' AND legacy.entity_id=link.provider_content_id AND legacy.publication_status='published' WHERE link.provider_course_id=course.id ORDER BY legacy.id DESC LIMIT 1) legacy_content_id
+            FROM provider_courses course
+            INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
+            INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
+            WHERE course.id=:id LIMIT 1";
+        $statement = $this->database->prepare($sql);
+        $statement->execute(['id' => $courseId]);
+        $row = $statement->fetch();
+        if (!is_array($row)) return null;
+        $raw = json_decode((string)($row['source_raw_payload'] ?? ''), true);
+        $row['source_raw'] = is_array($raw) ? $raw : [];
+        return $row;
+    }
+
+    public function parentCourseIdForContent(int $contentId): ?int
+    {
+        if ($contentId < 1) return null;
+        $statement = $this->database->prepare('SELECT provider_course_id FROM provider_course_content_links WHERE provider_content_id=:content ORDER BY position,provider_course_id LIMIT 1');
+        $statement->execute(['content' => $contentId]);
+        $id = (int)($statement->fetchColumn() ?: 0);
+        return $id > 0 ? $id : null;
+    }
+
     /** @param array<string,mixed> $metadata */
     public function reviewContent(int $contentId, string $status, string $releaseStatus, array $metadata, ?int $userId): void
     {
@@ -1002,7 +1038,7 @@ final readonly class CourseProviderRepository
     /** @return list<array<string,mixed>> */
     public function catalogContentOffersForOrganization(int $organizationId): array
     {
-        $statement = $this->database->prepare("SELECT content.id content_id,content.catalog_id,content.name source_name,content.commercial_name approved_name,content.commercial_description approved_description,COALESCE(NULLIF(content.commercial_category,''),'Curso individual') category,content.commercial_workload workload,content.commercial_cover_url cover_url,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.code catalog_code,catalog.name catalog_name,catalog.is_globally_enabled catalog_globally_enabled,provider.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,offer.id offer_id,offer.commercial_name offer_name,offer.commercial_description offer_description,offer.price,offer.max_installments,offer.is_visible,offer.is_active FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id LEFT JOIN organization_provider_content_offers offer ON offer.provider_content_id=content.id AND offer.organization_id=:offer_organization WHERE content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 ORDER BY catalog.name,COALESCE(NULLIF(content.commercial_name,''),content.name)");
+        $statement = $this->database->prepare("SELECT content.id content_id,content.catalog_id,content.name source_name,content.commercial_name approved_name,content.commercial_description approved_description,COALESCE(NULLIF(content.commercial_category,''),'Curso individual') category,content.commercial_workload workload,content.commercial_cover_url cover_url,content.review_status,content.release_status,content.is_available,content.is_globally_enabled,catalog.code catalog_code,catalog.name catalog_name,catalog.is_globally_enabled catalog_globally_enabled,provider.name provider_name,COALESCE(item_access.is_enabled,1) organization_item_enabled,offer.id offer_id,offer.commercial_name offer_name,offer.commercial_description offer_description,offer.price,offer.max_installments,offer.is_visible,offer.is_active FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=:item_organization AND item_access.item_type='content' AND item_access.item_id=content.id LEFT JOIN organization_provider_content_offers offer ON offer.provider_content_id=content.id AND offer.organization_id=:offer_organization WHERE content.review_status='approved' AND content.release_status IN ('released','published') AND content.is_available=1 AND provider.provider_code<>'iesde' ORDER BY catalog.name,COALESCE(NULLIF(content.commercial_name,''),content.name)");
         $statement->execute(['item_organization' => $organizationId, 'offer_organization' => $organizationId]);
         return $statement->fetchAll() ?: [];
     }

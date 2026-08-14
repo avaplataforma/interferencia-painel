@@ -242,16 +242,16 @@ final readonly class LearningCatalogRepository
             FROM finance_products product WHERE product.is_active=1 ORDER BY product.name")->fetchAll() ?: [];
         foreach ($finance as $item) $items[] = $item;
         $courses = $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,COALESCE(NULLIF(course.commercial_description,''),course.description) description,course.remote_reference_price price,catalog.name catalog_name,catalog.execution_environment,'provider_course' item_type,'' package_ids,0 package_count
-            FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
+            FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
             WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
-              AND NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link WHERE package_link.provider_course_id=course.id)
+              AND (provider.provider_code='iesde' OR NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link WHERE package_link.provider_course_id=course.id))
             ORDER BY catalog.name,name")->fetchAll() ?: [];
         foreach ($courses as $item) $items[] = $item;
         $contents = $this->database->query("SELECT content.id,COALESCE(NULLIF(content.commercial_name,''),content.name) name,content.commercial_description description,NULL price,catalog.name catalog_name,catalog.execution_environment,'provider_content' item_type,
                 COALESCE((SELECT GROUP_CONCAT(DISTINCT package_link.provider_course_id ORDER BY package_link.provider_course_id SEPARATOR ',') FROM provider_course_content_links package_link WHERE package_link.provider_content_id=content.id),'') package_ids,
                 (SELECT COUNT(DISTINCT package_link.provider_course_id) FROM provider_course_content_links package_link WHERE package_link.provider_content_id=content.id) package_count
-            FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id
-            WHERE content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
+            FROM provider_catalog_contents content INNER JOIN course_catalogs catalog ON catalog.id=content.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=content.provider_id
+            WHERE content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'
             ORDER BY catalog.name,name")->fetchAll() ?: [];
         foreach ($contents as $item) $items[] = $item;
         return $items;
@@ -263,9 +263,10 @@ final readonly class LearningCatalogRepository
         return $this->database->query("SELECT course.id,COALESCE(NULLIF(course.commercial_name,''),course.name) name,catalog.name catalog_name,COUNT(DISTINCT link.provider_content_id) item_count
             FROM provider_courses course
             INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
+            INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
             INNER JOIN provider_course_content_links link ON link.provider_course_id=course.id
             INNER JOIN provider_catalog_contents content ON content.id=link.provider_content_id AND content.is_available=1 AND content.is_globally_enabled=1
-            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1
+            WHERE course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND provider.provider_code<>'iesde'
             GROUP BY course.id,course.commercial_name,course.name,catalog.name
             ORDER BY catalog.name,name")->fetchAll() ?: [];
     }

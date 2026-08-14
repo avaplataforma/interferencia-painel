@@ -1,10 +1,10 @@
 <div class="catalog-subpanel" data-catalog-subpanel="<?= $escape($provider) ?>:contents" hidden>
- <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong><?= $provider==='iesde'?'Disciplinas MASTER prontas para homologação.':'Cursos individuais liberados por padrão.' ?></strong><br><?= $provider==='iesde'?'Ao publicar, todas as aulas selecionadas no mesmo curso de importação são agrupadas pelo título-base em Módulos. Seções e atividades numeradas permanecem juntas, enquanto apostilas, materiais e avaliações continuam protegidos no LTI do IESDE.':'A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.' ?></div></div>
+ <div class="catalog-note" style="margin:0 0 1rem"><i class="fa-solid fa-diagram-project"></i><div><strong><?= $provider==='iesde'?'Aulas e recursos internos da Formação MASTER.':'Cursos individuais liberados por padrão.' ?></strong><br><?= $provider==='iesde'?'Estas entradas compõem as disciplinas completas da aba Cursos individuais. Não recebem preço, oferta por franquia ou publicação isolada.':'A curadoria organiza nome, capa e descrição. O bloqueio global é uma exceção e interrompe novas vendas em todas as franquias sem excluir históricos.' ?></div></div>
  <div class="content-toolbar">
   <form method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers">
    <input type="hidden" name="catalog" value="<?= $escape($provider) ?>">
    <input type="hidden" name="section" value="contents">
-   <label>Localizar conteúdo, disciplina, curso ou código<input name="content_q" value="<?= $escape($contentQuery) ?>" placeholder="Ex.: Atendimento ao cliente"></label>
+   <label><?= $provider==='iesde'?'Localizar aula, recurso ou disciplina':'Localizar conteúdo, disciplina, curso ou código' ?><input name="content_q" value="<?= $escape($contentQuery) ?>" placeholder="Ex.: Atendimento ao cliente"></label>
    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Pesquisar</button>
    <?php if($contentQuery!==''):?><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers?catalog=<?= $escape($provider) ?>&amp;section=contents">Limpar</a><?php endif;?>
   </form>
@@ -13,7 +13,7 @@
  <?php if($contentRows===[]):?>
   <div class="catalog-empty"><i class="fa-solid fa-puzzle-piece fa-2x"></i><h3>Nenhum conteúdo individual sincronizado</h3><p><?= $provider==='iesde'?'Selecione atividades com a ferramenta LTI Hub IESDE dentro de um curso no AVA Cursos e use “Sincronizar seleções do Moodle”.':'Use “Sincronizar cursos” na aba Conexão e API. A hierarquia será importada automaticamente.' ?></p></div>
  <?php else:?>
-  <div class="table-responsive content-table-wrap"><table class="content-table"><thead><tr><th>Curso individual</th><th>Origem</th><th>Curadoria</th><th>Disponibilidade global</th><th>Ações</th></tr></thead><tbody>
+  <div class="table-responsive content-table-wrap"><table class="content-table"><thead><tr><th><?= $provider==='iesde'?'Aula ou recurso LTI':'Curso individual' ?></th><th>Origem</th><th><?= $provider==='iesde'?'Vínculo acadêmico':'Curadoria' ?></th><th><?= $provider==='iesde'?'Uso':'Disponibilidade global' ?></th><th><?= $provider==='iesde'?'Situação':'Ações' ?></th></tr></thead><tbody>
   <?php foreach($contentRows as$content):
    $contentReview=(string)($content['review_status']??'imported');
    $contentRelease=(string)($content['release_status']??'private');
@@ -26,6 +26,13 @@
    $avaPublicationError=trim((string)($content['ava_publication_error']??''));
   ?>
    <tr class="content-summary-row <?= $globallyEnabled?'':'is-blocked' ?>">
+    <?php if($provider==='iesde'):?>
+    <td><div class="catalog-course"><span class="catalog-cover catalog-icon"><i class="fa-solid fa-link"></i></span><div><strong><?= $escape((string)($content['effective_name']??$content['name'])) ?></strong><small>Recurso LTI · código <?= $escape((string)$content['external_key']) ?></small></div></div></td>
+    <td><div class="content-origin"><strong><?= $escape((string)($content['discipline_name']?:'Disciplina não informada')) ?></strong><small><?= $content['semester_number']!==null?'Semestre '.(int)$content['semester_number'].' · ':'' ?>vinculada a <?= (int)$content['course_count'] ?> disciplina(s)</small></div></td>
+    <td><span class="catalog-badge ok"><i class="fa-solid fa-layer-group"></i> Componente da disciplina</span></td>
+    <td><span class="catalog-badge private"><i class="fa-solid fa-lock"></i> Não comercializado isoladamente</span></td>
+    <td><span class="availability-pill <?= (int)$content['is_available']===1?'is-enabled':'is-disabled' ?>"><i class="fa-solid <?= (int)$content['is_available']===1?'fa-circle-check':'fa-ban' ?>"></i><?= (int)$content['is_available']===1?'Disponível no IESDE':'Retirado no IESDE' ?></span></td>
+    <?php else:?>
     <td><div class="catalog-course"><?php $contentCover=!empty($content['media_asset_id'])?$basePath.'/catalog-media/'.(int)$content['media_asset_id']:(string)($content['effective_cover_url']??'');if($contentCover!==''):?><img class="catalog-cover" src="<?= $escape($contentCover) ?>" alt="" loading="lazy"><?php else:?><span class="catalog-cover catalog-icon"><i class="fa-solid fa-play"></i></span><?php endif;?><div><strong><?= $escape((string)($content['effective_name']??$content['name'])) ?></strong><small><?= $escape((string)($content['content_type']??'unit')) ?> · código <?= $escape((string)$content['external_key']) ?></small><div class="catalog-course-state"><span class="catalog-badge <?= (int)$content['is_available']===1?'ok':'' ?>"><?= (int)$content['is_available']===1?'No fornecedor':'Retirado pelo fornecedor' ?></span><?php if((string)($content['sync_state']??'')==='changed'):?><span class="catalog-badge changed">Alterado</span><?php endif;?></div></div></div></td>
     <td><div class="content-origin"><strong><?= $escape((string)($content['discipline_name']?:'Disciplina não informada')) ?></strong><small><?= $content['semester_number']!==null?'Semestre '.(int)$content['semester_number'].' · ':'' ?><?= (int)$content['course_count'] ?> curso(s) relacionado(s)</small><?php if($courseNames!==[]):?><small title="<?= $escape(implode(' · ',$courseNames)) ?>"><?= $escape(implode(' · ',array_slice($courseNames,0,2))) ?><?= count($courseNames)>2?' e mais '.(count($courseNames)-2):'' ?></small><?php endif;?></div></td>
     <td><div class="catalog-course-state"><span class="catalog-badge <?= $contentReview==='approved'?'ok':'' ?>"><?= $escape($reviewLabels[$contentReview]??'Importado') ?></span><span class="catalog-badge <?= $contentRelease==='private'?'private':'ok' ?>"><?= $escape($releaseLabels[$contentRelease]??'Somente ADM Central') ?></span></div></td>
@@ -49,8 +56,9 @@
       </form>
      </div>
     </td>
+    <?php endif;?>
    </tr>
-   <tr class="content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="5">
+   <?php if($provider!=='iesde'):?><tr class="content-curation-row" id="<?= $escape($editorId) ?>" hidden><td colspan="5">
     <form class="content-curation-form" method="post" enctype="multipart/form-data" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/review"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>">
      <header><div><span class="eyebrow">Curadoria comercial</span><h3><?= $escape((string)($content['effective_name']??$content['name'])) ?></h3><p>Organize a vitrine sem alterar os dados recebidos do fornecedor.</p></div><button class="action-icon" type="button" data-content-curation-close="<?= $escape($editorId) ?>" title="Fechar curadoria"><i class="fa-solid fa-xmark"></i></button></header>
      <div class="content-curation-grid">
@@ -67,7 +75,7 @@
      <footer><span><i class="fa-solid fa-circle-info"></i> A disponibilidade para franquias é controlada por exceções no cadastro de cada franquia.</span><button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar curadoria</button></footer>
     </form>
     <form class="catalog-ai-form content-ai-form <?= $imageAiReady?'':'is-disabled' ?>" method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/generate-cover"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><label><strong><i class="fa-solid fa-wand-magic-sparkles"></i> Capa inteligente para este conteúdo</strong><input name="prompt" maxlength="500" placeholder="Orientação opcional: aula prática, tecnologia e ambiente moderno"></label><button class="btn btn-secondary" type="submit" <?= $imageAiReady?'':'disabled' ?>><i class="fa-solid fa-wand-magic-sparkles"></i> Gerar capa com IA</button><small><?= $imageAiReady?'A tarefa entra na fila; a imagem final será otimizada e salva no Spaces.':'Ative a integração IA para capas no ADM Central.' ?></small></form>
-   </td></tr>
+   </td></tr><?php endif;?>
   <?php endforeach;?>
   </tbody></table></div>
   <?php if((int)($contentPage['pages']??1)>1):$currentPage=(int)$contentPage['page'];$lastPage=(int)$contentPage['pages'];$visiblePages=array_values(array_unique(array_filter([1,$currentPage-2,$currentPage-1,$currentPage,$currentPage+1,$currentPage+2,$lastPage],static fn(int$page):bool=>$page>=1&&$page<=$lastPage)));sort($visiblePages);?><nav class="content-pagination" aria-label="Paginação de conteúdos"><?php $previousPage=0;foreach($visiblePages as$pageNumber):if($previousPage>0&&$pageNumber>$previousPage+1):?><span aria-hidden="true">…</span><?php endif;$pageUrl=$basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=contents&content_page='.$pageNumber.($contentQuery!==''?'&content_q='.rawurlencode($contentQuery):'');?><a class="<?= $pageNumber===$currentPage?'is-current':'' ?>" href="<?= $escape($pageUrl) ?>"><?= $pageNumber ?></a><?php $previousPage=$pageNumber;endforeach;?></nav><?php endif;?>
