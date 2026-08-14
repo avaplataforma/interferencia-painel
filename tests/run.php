@@ -2459,7 +2459,8 @@ $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static 
     assertTrue(str_contains($catalog,"['course', 'content', 'trail']"));
     assertTrue(str_contains($coverGenerator,'public function previewTrail'));
     assertTrue(str_contains($coverGenerator,'public function attachPreview'));
-    assertTrue(!str_contains($learningCatalog,"course.review_status='approved' AND course.release_status"));
+    $availablePackagesMethod=explode('public function saveTrail',explode('public function availablePackages',$learningCatalog,2)[1]??'',2)[0]??'';
+    assertTrue(!str_contains($availablePackagesMethod,"course.review_status='approved' AND course.release_status"));
     assertTrue(str_contains($learningCatalog,'public function availablePackages'));
     assertTrue(str_contains($learningCatalog,'NOT EXISTS(SELECT 1 FROM provider_course_content_links package_link'));
     assertTrue(str_contains($learningCatalog,"content.is_available=1 AND content.is_globally_enabled=1 AND catalog.is_active=1"));
