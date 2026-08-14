@@ -193,6 +193,13 @@ final class materialize_lti_course extends external_api
         $segments = [];
         $current = [];
         foreach ($sources as $source) {
+            // A presentation starts every IESDE discipline.  Use it as a
+            // boundary as well because legacy selections may not contain a
+            // final assessment to close the previous discipline.
+            if ($current !== [] && self::is_selection_start_name((string)$source['lti']->name)) {
+                $segments[] = $current;
+                $current = [];
+            }
             $current[] = $source;
             if (self::is_assessment_name((string)$source['lti']->name)) {
                 $segments[] = $current;
@@ -272,6 +279,11 @@ final class materialize_lti_course extends external_api
     private static function is_assessment_name(string $name): bool
     {
         return preg_match('/avalia|prova|exame/u', self::fold($name)) === 1;
+    }
+
+    private static function is_selection_start_name(string $name): bool
+    {
+        return preg_match('/apresenta/u', self::fold($name)) === 1;
     }
 
     private static function fold(string $value): string

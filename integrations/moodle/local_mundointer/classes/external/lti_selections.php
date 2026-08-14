@@ -144,6 +144,14 @@ final class lti_selections extends external_api
         $segments = [];
         $current = [];
         foreach ($items as $item) {
+            // Some older IESDE selections were created without a final
+            // assessment.  The presentation is the first resource of a new
+            // discipline, so it is also a safe boundary between consecutive
+            // Deep Linking confirmations kept in the same import course.
+            if ($current !== [] && self::isSelectionStartName((string)($item['name'] ?? ''))) {
+                $segments[] = $current;
+                $current = [];
+            }
             $current[] = $item;
             if ((bool)($item['raw']['is_assessment'] ?? false)) {
                 $segments[] = $current;
@@ -210,6 +218,12 @@ final class lti_selections extends external_api
     {
         $folded = \core_text::strtolower(trim($name));
         return preg_match('/avalia|prova|exame/u', $folded) === 1;
+    }
+
+    private static function isSelectionStartName(string $name): bool
+    {
+        $folded = \core_text::strtolower(trim($name));
+        return preg_match('/apresenta/u', $folded) === 1;
     }
 
     public static function execute_returns(): external_single_structure
