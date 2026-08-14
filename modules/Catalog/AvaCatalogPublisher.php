@@ -100,7 +100,7 @@ final readonly class AvaCatalogPublisher
         $connection=$this->connections->shared();
         if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)throw new RuntimeException('Configure e ative primeiro a integração AVA Cursos.');
 
-        $name=trim((string)($content['effective_name']??$content['name']??''));
+        $name=$this->masterCourseName((string)($content['effective_name']??$content['name']??''));
         if($name==='')throw new RuntimeException('Informe o nome da disciplina antes de criar o curso.');
         $signature=hash('sha256',json_encode(['content_id'=>$contentId,'name'=>$name,'description'=>$content['effective_description']??'','category'=>$content['effective_category']??'','workload'=>$content['effective_workload']??'','source_cmid'=>$sourceCmId,'media_asset_id'=>(int)($content['media_asset_id']??0)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         $publicationId=$this->catalog->markEntityPublicationReady('provider_content',$contentId,(int)$connection['id'],$signature,$userId);
@@ -133,6 +133,12 @@ final readonly class AvaCatalogPublisher
         $master=$this->findCategory($categories,'mi-formacao-master');
         if($master===null)$master=$client->createCourseCategory('Formação MASTER','mi-formacao-master',(int)$root['id']);
         return(int)$master['id'];
+    }
+
+    private function masterCourseName(string$name):string
+    {
+        $name=trim($name);
+        return trim((string)preg_replace('/^aula\s*[-:–—]\s*/iu','',$name));
     }
 
     /** @param array<string,mixed> $content */

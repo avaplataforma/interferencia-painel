@@ -2330,6 +2330,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($publisher,'public function publishMasterContent'));
     assertTrue(str_contains($publisher,"'mi-master-content-'.\$contentId"));
     assertTrue(str_contains($publisher,"'mi-master-lti-'.\$contentId"));
+    assertTrue(str_contains($publisher,"preg_replace('/^aula\\s*[-:–—]\\s*/iu'"));
     assertTrue(str_contains($publisher,"createCourseCategory('Formação MASTER'"));
     assertTrue(str_contains($providerRepository,'contentPublicationContext'));
     assertTrue(str_contains($providerRepository,"publication.entity_type='provider_content'"));
