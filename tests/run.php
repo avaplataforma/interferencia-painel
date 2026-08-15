@@ -2597,6 +2597,26 @@ $tests['prepara curso MASTER automaticamente antes da matricula'] = static funct
     assertTrue(str_contains($form,'Preparar matrícula'));
 };
 
+$tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static function () use ($rootPath): void {
+    $tabs=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-standard-tabs.php');
+    $queue=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-provisioning-queue.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCourseProvisioningService.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
+
+    $expected=['Acervo Comercial','Cursos','Módulos','Trilhas','Política Comercial','Conexão e API'];
+    $position=-1;
+    foreach($expected as$label){$next=strpos($tabs,$label);assertTrue($next!==false&&$next>$position);$position=$next;}
+    assertTrue(substr_count($tabs,'data-catalog-subtab=')===6);
+    assertTrue(str_contains($queue,'Fila de publicação'));
+    assertTrue(str_contains($queue,'Tentar novamente'));
+    assertTrue(str_contains($service,'public function dashboard'));
+    assertTrue(str_contains($service,'public function retry'));
+    assertTrue(str_contains($routes,'provisioningQueue'));
+    assertTrue(str_contains($routes,'/provisioning/{id:\\d+}/retry'));
+    assertTrue(str_contains($javascript,"['connection', 'homologation', 'capabilities', 'queue']"));
+};
+
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000050_create_ava_academic_backfill.php');
     $service=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationBackfillService.php');

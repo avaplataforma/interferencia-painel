@@ -460,16 +460,37 @@ document.querySelectorAll('.color-field').forEach((group) => {
   const openSection = (provider, requestedSection) => {
     const providerTabs = subtabs.filter((item) => item.dataset.provider === provider);
     if (providerTabs.length === 0) return;
-    const section = providerTabs.some((item) => item.dataset.catalogSubtab === requestedSection) ? requestedSection : 'connection';
+    const legacySections = {
+      access: 'connection',
+      classes: 'connection',
+      capabilities: 'connection',
+      homologation: 'connection',
+      contents: 'courses',
+    };
+    const normalizedSection = legacySections[requestedSection] || requestedSection;
+    const section = providerTabs.some((item) => item.dataset.catalogSubtab === normalizedSection) ? normalizedSection : 'commercial';
     providerTabs.forEach((item) => {
       const active = item.dataset.catalogSubtab === section;
       item.classList.toggle('is-active', active);
       item.setAttribute('aria-selected', active ? 'true' : 'false');
       item.tabIndex = active ? 0 : -1;
     });
+    const panelSections = (() => {
+      if (section === 'connection') {
+        return provider === 'ava_cursos'
+          ? ['connection', 'access', 'classes', 'capabilities', 'queue']
+          : ['connection', 'homologation', 'capabilities', 'queue'];
+      }
+      if (section === 'commercial' && provider !== 'iesde' && provider !== 'ava_cursos') return ['courses'];
+      if (section === 'courses' && provider !== 'iesde' && provider !== 'ava_cursos') return ['contents'];
+      return [section];
+    })();
     subpanels
       .filter((panel) => (panel.dataset.catalogSubpanel || '').startsWith(`${provider}:`))
-      .forEach((panel) => { panel.hidden = panel.dataset.catalogSubpanel !== `${provider}:${section}`; });
+      .forEach((panel) => {
+        const panelSection = (panel.dataset.catalogSubpanel || '').slice(provider.length + 1);
+        panel.hidden = !panelSections.includes(panelSection);
+      });
   };
 
   const showCatalog = (requestedName, updateUrl = true) => {
@@ -491,14 +512,24 @@ document.querySelectorAll('.color-field').forEach((group) => {
     return name;
   };
 
-  tabs.forEach((tab) => tab.addEventListener('click', () => showCatalog(tab.dataset.catalogTab || '')));
+  tabs.forEach((tab) => tab.addEventListener('click', () => {
+    const provider = showCatalog(tab.dataset.catalogTab || '');
+    openSection(provider, 'commercial');
+  }));
   subtabs.forEach((button) => button.addEventListener('click', () => {
     const provider = button.dataset.provider || '';
     const section = button.dataset.catalogSubtab || 'connection';
-    if (section === 'contents' && provider !== loadedContentProvider) {
+    if (section === 'connection' && provider !== loadedContentProvider) {
       const url = new URL(location.href);
       url.searchParams.set('catalog', provider);
-      url.searchParams.set('section', 'contents');
+      url.searchParams.set('section', 'connection');
+      location.assign(url.toString());
+      return;
+    }
+    if (section === 'courses' && !['iesde', 'ava_cursos'].includes(provider) && provider !== loadedContentProvider) {
+      const url = new URL(location.href);
+      url.searchParams.set('catalog', provider);
+      url.searchParams.set('section', 'courses');
       url.searchParams.delete('content_page');
       location.assign(url.toString());
       return;
@@ -508,7 +539,7 @@ document.querySelectorAll('.color-field').forEach((group) => {
 
   const params = new URL(location.href).searchParams;
   const activeProvider = showCatalog(params.get('catalog') || tabs[0]?.dataset.catalogTab || '', false);
-  openSection(activeProvider, params.get('section') || 'connection');
+  openSection(activeProvider, params.get('section') || 'commercial');
 })();
 
 (() => {

@@ -86,6 +86,57 @@ final readonly class AvaCourseProvisioningService
         }
     }
 
+    /**
+     * @return array{
+     *   summary:array{queued:int,working:int,completed:int,failed:int,total:int},
+     *   jobs:list<array<string,mixed>>
+     * }
+     */
+    public function dashboard(string $providerCode, int $limit = 30): array
+    {
+        $providerCode = trim($providerCode);
+        $summary = ['queued' => 0, 'working' => 0, 'completed' => 0, 'failed' => 0, 'total' => 0];
+        if ($providerCode === '') return ['summary' => $summary, 'jobs' => []];
+
+        $count = $this->database->prepare('SELECT status,COUNT(*) total FROM ava_course_provisioning_jobs WHERE provider_code=:provider GROUP BY status');
+        $count->execute(['provider' => $providerCode]);
+        foreach ($count->fetchAll() as $row) {
+            $status = (string)($row['status'] ?? '');
+            $total = (int)($row['total'] ?? 0);
+            if (array_key_exists($status, $summary)) $summary[$status] = $total;
+            $summary['total'] += $total;
+        }
+
+        $limit = max(5, min(100, $limit));
+        $statement = $this->database->prepare("SELECT job.id,job.provider_course_id,job.organization_id,job.provider_code,job.status,job.attempts,
+                job.started_at,job.completed_at,job.last_error,job.created_at,job.updated_at,
+                COALESCE(NULLIF(course.commercial_name,''),course.name) course_name,
+                COALESCE(NULLIF(organization.display_name,''),organization.legal_name) organization_name
+            FROM ava_course_provisioning_jobs job
+            INNER JOIN provider_courses course ON course.id=job.provider_course_id
+            INNER JOIN organizations organization ON organization.id=job.organization_id
+            WHERE job.provider_code=:provider
+            ORDER BY FIELD(job.status,'working','queued','failed','completed'),job.updated_at DESC
+            LIMIT {$limit}");
+        $statement->execute(['provider' => $providerCode]);
+        return ['summary' => $summary, 'jobs' => $statement->fetchAll() ?: []];
+    }
+
+    /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
+    public function retry(int $jobId, ?int $userId): array
+    {
+        if ($jobId < 1) throw new RuntimeException('Item inválido na fila de publicação.');
+        $statement = $this->database->prepare("SELECT job.organization_id,offer.id offer_id
+            FROM ava_course_provisioning_jobs job
+            INNER JOIN organization_provider_course_offers offer
+              ON offer.organization_id=job.organization_id AND offer.provider_course_id=job.provider_course_id AND offer.is_active=1
+            WHERE job.id=:id LIMIT 1");
+        $statement->execute(['id' => $jobId]);
+        $row = $statement->fetch();
+        if (!is_array($row)) throw new RuntimeException('A oferta vinculada a esta publicação não está mais ativa.');
+        return $this->ensureProviderCourseOffer((int)$row['offer_id'], (int)$row['organization_id'], $userId);
+    }
+
     /** @return array{moodle_course_id:int,ava_connection_id:int,remote_course_id:int}|null */
     private function publishedCourse(int $courseId, int $organizationId): ?array
     {
