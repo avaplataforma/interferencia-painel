@@ -92,13 +92,26 @@ try {
     if (await checkbox.count() && !(await checkbox.isChecked())) await checkbox.check({ force: true });
   }
   await providerFrame.getByRole('button', { name: /^salvar$/i }).last().click();
-  await waitForSelectionCount(review, beforeAssessment + 1, 'a avaliação oficial');
+  const expectedSelectionCount = await waitForSelectionCount(review, beforeAssessment + 1, 'a avaliação oficial');
 
   await review.waitFor({ state: 'visible' });
   await review.click();
   const link = providerFrame.getByRole('button', { name: /vincular ao ava cursos/i }).first();
   await link.waitFor({ state: 'visible', timeout: 30000 });
   await link.click();
+
+  // The Moodle save control already exists behind the provider modal. Do not
+  // click that stale form while Deep Linking is still returning the selected
+  // resources. Wait until Moodle renders its own multi-item confirmation and
+  // verify that every provider item reached the form.
+  const linkedItemsAlert = moodlePage.getByRole('alert').filter({
+    hasText: /os seguintes itens ser[aã]o adicionados ao seu curso/i,
+  }).first();
+  await linkedItemsAlert.waitFor({ state: 'visible', timeout: 45000 });
+  const linkedItemCount = await linkedItemsAlert.locator('li strong').count();
+  if (linkedItemCount < expectedSelectionCount) {
+    throw new Error(`O Moodle recebeu somente ${linkedItemCount} de ${expectedSelectionCount} itens confirmados pelo fornecedor.`);
+  }
 
   // Deep Linking only fills the Moodle activity form. The URL activity does
   // not exist until Moodle receives an explicit final submit, so never close
@@ -112,9 +125,8 @@ try {
   const saveAndReturn = moodlePage.locator([
     '#id_submitbutton2',
     'input[type="submit"][name="submitbutton2"]',
-    'input[type="submit"][name="submitbutton"]',
-    'button[type="submit"]',
-  ].join(', ')).filter({ hasText: /salvar e voltar ao curso/i }).or(page.locator('#id_submitbutton2')).first();
+    'button[type="submit"][name="submitbutton2"]',
+  ].join(', ')).first();
   await saveAndReturn.waitFor({ state: 'attached', timeout: 45000 });
   await moodlePage.waitForTimeout(600);
   const finalNavigation = moodlePage.waitForNavigation({

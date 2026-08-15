@@ -2603,6 +2603,8 @@ $tests['prepara curso MASTER automaticamente antes da matricula'] = static funct
     assertTrue(str_contains($browserRobot,'waitForSelectionCount'));
     assertTrue(str_contains($browserRobot,'lessonResourceCount'));
     assertTrue(str_contains($browserRobot,'beforeAssessment + 1'));
+    assertTrue(str_contains($browserRobot,'os seguintes itens ser[aã]o adicionados ao seu curso'));
+    assertTrue(str_contains($browserRobot,'linkedItemCount < expectedSelectionCount'));
     assertTrue(str_contains($service,"providerCode !== 'iesde'"));
     assertTrue(str_contains($catalog,"provider.provider_code='iesde'"));
     assertTrue(str_contains($catalog,"'automatic'"));
