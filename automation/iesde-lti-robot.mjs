@@ -103,13 +103,10 @@ try {
   });
   await saveAndReturn.evaluate(button => {
     if (!(button instanceof HTMLElement)) throw new Error('Botão final do Moodle inválido.');
-    const form = button.closest('form');
-    if (!(form instanceof HTMLFormElement)) throw new Error('Formulário final do Moodle não encontrado.');
-    if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
-      form.requestSubmit(button);
-      return;
-    }
-    form.requestSubmit();
+    // Moodle and the LTI module attach their own activation behaviour to the
+    // submit control. A DOM click runs that behaviour even when the theme has
+    // left the control outside the viewport; requestSubmit alone skips it.
+    button.click();
   });
   await finalNavigation;
   await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
