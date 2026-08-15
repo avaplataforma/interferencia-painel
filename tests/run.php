@@ -1124,6 +1124,7 @@ $tests['direciona cada matricula ao AVA e curso corretos da franquia'] = static 
     $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
     $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
     $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $emailService=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailService.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
     assertTrue(str_contains($migration,'CREATE TABLE ava_course_mappings'));
@@ -2115,6 +2116,7 @@ $tests['libera matricula externa EXPERT sem criar cobranca'] = static function (
     $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
     $releaser=(string)file_get_contents($rootPath.'/modules/Moodle/AvaEnrollmentReleaser.php');
     $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $emailService=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailService.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php');
 
@@ -2128,7 +2130,8 @@ $tests['libera matricula externa EXPERT sem criar cobranca'] = static function (
     assertTrue(str_contains($enrollments,'public function markProviderReleased'));
     assertTrue(str_contains($releaser,'contentLink($contentType, $batch, $document)'));
     assertTrue(str_contains($releaser,'providerAccessUrl'));
-    assertTrue(str_contains($notifier,'Link pessoal de acesso:'));
+    assertTrue(str_contains($notifier,'sendAvaAccess'));
+    assertTrue(str_contains($emailService,"'provider_access'=>\$providerAccess"));
     assertTrue(str_contains($routes,"'/students/enrollments/provider-waivers'"));
     assertTrue(str_contains($routes,'createProviderWaived'));
     assertTrue(str_contains($view,'Formação EXPERT'));
@@ -2690,28 +2693,42 @@ $tests['configura o E-mail Central e envia acessos pela identidade da franquia']
     $hub=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/central-email.php');
     $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailService.php');
     $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
     $access=(string)file_get_contents($rootPath.'/views/moodle/enrollments/access.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailRepository.php');
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000010_create_central_email_service.php');
     $deliveryMigration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000020_track_sent_ava_access_emails.php');
+    $templateMigration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000030_create_central_email_templates.php');
 
     assertTrue(str_contains($routes,"'/admin/platform/integrations/email'"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/email/test'"));
     assertTrue(str_contains($hub,'E-mail Central'));
     assertTrue(str_contains($view,'Identidade por franquia'));
     assertTrue(str_contains($view,'SPF/DKIM'));
+    assertTrue(str_contains($view,'Modelo · Acesso ao AVA'));
+    assertTrue(str_contains($view,'data-preview-target'));
+    assertTrue(str_contains($view,'Reenviar'));
     assertTrue(str_contains($notifier,'CentralEmailService'));
-    assertTrue(str_contains($notifier,"'ava_access'"));
-    assertTrue(str_contains($notifier,"'sent', \$userId"));
+    assertTrue(str_contains($notifier,'sendAvaAccess'));
+    assertTrue(str_contains($service,"'ava_access'"));
+    assertTrue(str_contains($service,'previewAvaAccess'));
+    assertTrue(str_contains($service,'retryOfId'));
+    assertTrue(str_contains($notifier,"'sent',\$userId,null"));
     assertTrue(str_contains($enrollments,'recordEmailAccessCommunication'));
     assertTrue(str_contains($deliveryMigration,"'opened','sent','failed'"));
     assertTrue(str_contains($routes,'$avaAccessNotifier->notify($id,$auth->user()->id)'));
     assertTrue(str_contains($access,'Enviar por e-mail'));
     assertTrue(!str_contains($access,'Abrir no e-mail'));
     assertTrue(str_contains($repository,"preg_replace('/^www\\./'"));
+    assertTrue(str_contains($repository,'saveTemplate'));
+    assertTrue(str_contains($repository,'retry_of_id'));
     assertTrue(str_contains($migration,'CREATE TABLE email_delivery_logs'));
     assertTrue(str_contains($migration,'REFERENCES platform_users(id)'));
+    assertTrue(str_contains($templateMigration,'CREATE TABLE central_email_templates'));
+    assertTrue(str_contains($templateMigration,'email_delivery_retry_fk'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/email/templates/ava-access'"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/email/deliveries/{id:\\d+}/retry'"));
 };
 
 $failures = 0;

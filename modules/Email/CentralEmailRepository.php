@@ -11,6 +11,18 @@ use Throwable;
 
 final readonly class CentralEmailRepository
 {
+    private const AVA_ACCESS_DEFAULTS = [
+        'template_key' => 'ava_access',
+        'name' => 'Acesso ao AVA',
+        'subject_template' => 'Seu acesso ao AVA — {{curso}}',
+        'eyebrow' => 'ACESSO LIBERADO',
+        'heading' => 'Olá, {{aluno}}!',
+        'intro' => 'Seu acesso ao curso {{curso}} foi liberado. Use os dados abaixo para começar seus estudos.',
+        'button_label' => 'Acessar sala de aula',
+        'footer_text' => 'Esta é uma mensagem automática. Em caso de dúvida, fale com a equipe da {{franquia}}.',
+        'is_active' => true,
+    ];
+
     public function __construct(private PDO $database, private SecretCipher $cipher) {}
 
     /** @return array<string,mixed> */
@@ -82,10 +94,54 @@ final readonly class CentralEmailRepository
         $this->database->prepare($sql)->execute(['organization'=>$organizationId,'name'=>$name,'email'=>$email,'reply'=>$reply!==''?$reply:null,'status'=>$status,'active'=>(int)$active,'verified'=>$status==='verified'?date('Y-m-d H:i:s'):null,'user'=>$userId]);
     }
 
-    public function record(array$data):void
+    /** @return array<string,mixed> */
+    public function template(string $key='ava_access'):array
     {
-        $sql='INSERT INTO email_delivery_logs(organization_id,message_type,recipient_email,sender_email,subject,status,provider_message_id,error_message,related_type,related_id) VALUES(:organization,:type,:recipient,:sender,:subject,:status,:message_id,:error,:related_type,:related_id)';
-        $this->database->prepare($sql)->execute(['organization'=>$data['organization_id']??null,'type'=>$data['message_type']??'transactional','recipient'=>$data['recipient_email'],'sender'=>$data['sender_email'],'subject'=>mb_substr((string)$data['subject'],0,255),'status'=>$data['status'],'message_id'=>isset($data['provider_message_id'])?mb_substr((string)$data['provider_message_id'],0,190):null,'error'=>isset($data['error_message'])?mb_substr((string)$data['error_message'],0,500):null,'related_type'=>$data['related_type']??null,'related_id'=>$data['related_id']??null]);
+        if($key!=='ava_access')throw new RuntimeException('Modelo de e-mail não reconhecido.');
+        try{$statement=$this->database->prepare('SELECT * FROM central_email_templates WHERE template_key=:template LIMIT 1');$statement->execute(['template'=>$key]);$row=$statement->fetch();}
+        catch(Throwable){$row=false;}
+        $template=self::AVA_ACCESS_DEFAULTS;
+        if(is_array($row))foreach(array_keys($template)as$field)if(array_key_exists($field,$row))$template[$field]=$row[$field];
+        $template['is_active']=(bool)($template['is_active']??false);
+        return$template;
+    }
+
+    /** @param array<string,mixed> $data */
+    public function saveTemplate(string$key,array$data,?int$userId):void
+    {
+        if($key!=='ava_access')throw new RuntimeException('Modelo de e-mail não reconhecido.');
+        $subject=$this->templateText($data['subject_template']??'',255,'assunto');
+        $eyebrow=$this->templateText($data['eyebrow']??'',120,'identificação',false);
+        $heading=$this->templateText($data['heading']??'',255,'título');
+        $intro=$this->templateText($data['intro']??'',2000,'mensagem');
+        $button=$this->templateText($data['button_label']??'',80,'texto do botão');
+        $footer=$this->templateText($data['footer_text']??'',500,'rodapé',false);
+        $sql="INSERT INTO central_email_templates(template_key,name,subject_template,eyebrow,heading,intro,button_label,footer_text,is_active,updated_by) VALUES(:template,'Acesso ao AVA',:subject,:eyebrow,:heading,:intro,:button,:footer,:active,:user) ON DUPLICATE KEY UPDATE subject_template=VALUES(subject_template),eyebrow=VALUES(eyebrow),heading=VALUES(heading),intro=VALUES(intro),button_label=VALUES(button_label),footer_text=VALUES(footer_text),is_active=VALUES(is_active),updated_by=VALUES(updated_by)";
+        $this->database->prepare($sql)->execute(['template'=>$key,'subject'=>$subject,'eyebrow'=>$eyebrow!==''?$eyebrow:null,'heading'=>$heading,'intro'=>$intro,'button'=>$button,'footer'=>$footer!==''?$footer:null,'active'=>(int)(($data['is_active']??false)===true),'user'=>$userId]);
+    }
+
+    /** @return array<string,mixed> */
+    public function brand(?int$organizationId):array
+    {
+        if(($organizationId??0)>0){
+            $sql="SELECT o.id organization_id,o.display_name,o.primary_color,o.secondary_color,o.logo_path,o.support_email,o.support_phone,o.manager_email,o.panel_slug,d.host primary_host FROM organizations o LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.is_primary=1 AND d.purpose='site' WHERE o.id=:id LIMIT 1";
+            $statement=$this->database->prepare($sql);$statement->execute(['id'=>$organizationId]);$row=$statement->fetch();
+            if(is_array($row))return$row;
+        }
+        return['organization_id'=>null,'display_name'=>'Mundo Inter','primary_color'=>'#ed1c24','secondary_color'=>'#082d72','logo_path'=>'/assets/media/mundo-inter-logo.png','support_email'=>'','support_phone'=>'','manager_email'=>'','panel_slug'=>'','primary_host'=>'mundointer.com.br'];
+    }
+
+    /** @return array<string,mixed>|null */
+    public function delivery(int$id):?array
+    {
+        $statement=$this->database->prepare('SELECT * FROM email_delivery_logs WHERE id=:id LIMIT 1');$statement->execute(['id'=>$id]);$row=$statement->fetch();return is_array($row)?$row:null;
+    }
+
+    public function record(array$data):int
+    {
+        $sql='INSERT INTO email_delivery_logs(organization_id,message_type,recipient_email,sender_email,subject,status,provider_message_id,error_message,related_type,related_id,retry_of_id) VALUES(:organization,:type,:recipient,:sender,:subject,:status,:message_id,:error,:related_type,:related_id,:retry_of)';
+        $this->database->prepare($sql)->execute(['organization'=>$data['organization_id']??null,'type'=>$data['message_type']??'transactional','recipient'=>$data['recipient_email'],'sender'=>$data['sender_email'],'subject'=>mb_substr((string)$data['subject'],0,255),'status'=>$data['status'],'message_id'=>isset($data['provider_message_id'])?mb_substr((string)$data['provider_message_id'],0,190):null,'error'=>isset($data['error_message'])?mb_substr((string)$data['error_message'],0,500):null,'related_type'=>$data['related_type']??null,'related_id'=>$data['related_id']??null,'retry_of'=>$data['retry_of_id']??null]);
+        return(int)$this->database->lastInsertId();
     }
 
     public function summary():array
@@ -96,5 +152,16 @@ final readonly class CentralEmailRepository
     public function recent(int$limit=15):array
     {
         $limit=max(1,min(50,$limit));try{return$this->database->query("SELECT l.*,o.display_name organization_name FROM email_delivery_logs l LEFT JOIN organizations o ON o.id=l.organization_id ORDER BY l.id DESC LIMIT {$limit}")->fetchAll()?:[];}catch(Throwable){return[];}
+    }
+
+    private function templateText(mixed$value,int$limit,string$label,bool$required=true):string
+    {
+        $value=trim(preg_replace('/\r\n?|\n/u',"\n",(string)$value)??'');
+        if($required&&$value==='')throw new RuntimeException('Informe o '.$label.' do modelo.');
+        if(mb_strlen($value)>$limit)throw new RuntimeException('O '.$label.' do modelo excede '.$limit.' caracteres.');
+        preg_match_all('/{{\s*([^}]+)\s*}}/u',$value,$matches);
+        $allowed=['aluno','curso','franquia','unidade','login','senha','ava_url','suporte_email','suporte_whatsapp'];
+        foreach($matches[1]??[]as$token)if(!in_array(trim((string)$token),$allowed,true))throw new RuntimeException('A variável {{'.trim((string)$token).'}} não é reconhecida.');
+        return$value;
     }
 }
