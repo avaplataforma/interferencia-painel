@@ -127,8 +127,20 @@ try {
         .replace(/\s+/g, ' ').trim();
       return label;
     }).filter(Boolean).slice(0, 8));
+    const serverErrorFields = await page.locator('.invalid-feedback, .form-control-feedback, [id^="id_error_"]').evaluateAll(elements => elements.map(error => {
+      const errorId = error instanceof HTMLElement ? error.id : '';
+      const fieldId = errorId.replace(/^id_error_/, 'id_');
+      const field = fieldId ? document.getElementById(fieldId) : null;
+      const labelled = fieldId ? document.querySelector(`label[for="${CSS.escape(fieldId)}"]`) : null;
+      const group = error instanceof HTMLElement ? error.closest('.form-group, [data-fieldtype]') : null;
+      const groupLabel = group?.querySelector('label, .col-form-label, legend');
+      const fieldName = (labelled?.textContent || groupLabel?.textContent || field?.getAttribute('name') || fieldId || '')
+        .replace(/\s+/g, ' ').trim();
+      const message = (error.textContent || '').replace(/\s+/g, ' ').trim();
+      return fieldName ? `${fieldName}${message ? ` (${message})` : ''}` : '';
+    }).filter(Boolean).slice(0, 8));
     const detail = validationMessages.map(value => value.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 3).join(' ');
-    const fields = [...new Set(invalidFields)].join(', ');
+    const fields = [...new Set([...invalidFields, ...serverErrorFields])].join(', ');
     throw new Error(`O Moodle manteve o formulário aberto após o envio${fields ? `. Campos pendentes: ${fields}` : detail ? `: ${detail}` : '.'}`);
   }
   process.stdout.write(JSON.stringify({ ok: true }));
