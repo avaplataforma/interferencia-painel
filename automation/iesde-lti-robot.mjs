@@ -121,7 +121,7 @@ try {
   // Native requestSubmit preserves the clicked button value and Moodle form
   // validation without depending on screen position or overlay animation.
   const activityName = moodlePage.locator('#id_name, input[name="name"]').first();
-  if (await activityName.count()) await activityName.fill(courseName);
+  if (await activityName.count() && await activityName.isVisible()) await activityName.fill(courseName);
   const saveAndReturn = moodlePage.locator([
     '#id_submitbutton2',
     'input[type="submit"][name="submitbutton2"]',
