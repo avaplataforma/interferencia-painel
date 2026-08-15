@@ -435,6 +435,3 @@ $tabLabel=static function(string $name):string{
  </section>
  <?php endforeach;?>
 </div>
-<script>
-document.querySelector('[data-master-commercial-select-all]')?.addEventListener('change',function(){document.querySelectorAll('[data-master-commercial-item]').forEach((item)=>{item.checked=this.checked;});});
-</script>

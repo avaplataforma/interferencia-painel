@@ -512,6 +512,16 @@ document.querySelectorAll('.color-field').forEach((group) => {
 })();
 
 (() => {
+  const selectAll = document.querySelector('[data-master-commercial-select-all]');
+  if (!(selectAll instanceof HTMLInputElement)) return;
+  selectAll.addEventListener('change', () => {
+    document.querySelectorAll('[data-master-commercial-item]').forEach((item) => {
+      if (item instanceof HTMLInputElement) item.checked = selectAll.checked;
+    });
+  });
+})();
+
+(() => {
   const rows = Array.from(document.querySelectorAll('.content-curation-row'));
   if (rows.length === 0) return;
 
