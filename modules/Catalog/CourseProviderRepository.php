@@ -36,6 +36,15 @@ final readonly class CourseProviderRepository
         $token = $includeSecret ? $this->cipher->decrypt(isset($row['token_encrypted']) ? (string)$row['token_encrypted'] : null) : '';
         $username = $includeSecret ? $this->cipher->decrypt(isset($row['username_encrypted']) ? (string)$row['username_encrypted'] : null) : '';
         $password = $includeSecret ? $this->cipher->decrypt(isset($row['password_encrypted']) ? (string)$row['password_encrypted'] : null) : '';
+        $commercial = ['base_url' => '', 'username_encrypted' => '', 'username_last4' => '', 'password_encrypted' => '', 'password_last4' => '', 'last_sync_status' => 'never', 'last_synced_at' => null, 'last_error' => ''];
+        if ((string)$row['provider_code'] === 'iesde') {
+            $commercialStatement = $this->database->prepare('SELECT * FROM provider_commercial_catalog_connections WHERE provider_id=:provider LIMIT 1');
+            $commercialStatement->execute(['provider' => (int)$row['id']]);
+            $commercialRow = $commercialStatement->fetch();
+            if (is_array($commercialRow)) $commercial = array_merge($commercial, $commercialRow);
+        }
+        $commercialUsername = $includeSecret ? $this->cipher->decrypt((string)($commercial['username_encrypted'] ?? '') ?: null) : '';
+        $commercialPassword = $includeSecret ? $this->cipher->decrypt((string)($commercial['password_encrypted'] ?? '') ?: null) : '';
         $providerCode = (string)$row['provider_code'];
         $integrationMode = (string)($row['integration_mode'] ?? 'api');
         $configured = trim((string)($row['base_url'] ?? '')) !== '' && (string)($row['token_encrypted'] ?? '') !== '';
@@ -81,6 +90,17 @@ final readonly class CourseProviderRepository
             'launch_url_template' => (string)($row['launch_url_template'] ?? ''),
             'is_active' => (int)($row['is_active'] ?? 0) === 1,
             'configured' => $configured,
+            'commercial_catalog_base_url' => (string)($commercial['base_url'] ?? ''),
+            'commercial_catalog_username' => $commercialUsername,
+            'commercial_catalog_username_last4' => (string)($commercial['username_last4'] ?? ''),
+            'commercial_catalog_password' => $commercialPassword,
+            'commercial_catalog_password_last4' => (string)($commercial['password_last4'] ?? ''),
+            'commercial_catalog_configured' => trim((string)($commercial['base_url'] ?? '')) !== ''
+                && (string)($commercial['username_encrypted'] ?? '') !== ''
+                && (string)($commercial['password_encrypted'] ?? '') !== '',
+            'commercial_catalog_last_sync_status' => (string)($commercial['last_sync_status'] ?? 'never'),
+            'commercial_catalog_last_synced_at' => $commercial['last_synced_at'] ?? null,
+            'commercial_catalog_last_error' => (string)($commercial['last_error'] ?? ''),
             'adapter_ready' => in_array($providerCode, self::READY_PROVIDERS, true),
             'last_test_status' => (string)($row['last_test_status'] ?? 'not_tested'),
             'last_tested_at' => $row['last_tested_at'] ?? null,
@@ -182,6 +202,34 @@ final readonly class CourseProviderRepository
                 'deployment' => $deploymentId !== '' ? $deploymentId : null,
                 'status' => $status, 'active' => (int)$active, 'user' => $userId, 'code' => $providerCode,
             ]);
+
+        $catalogBase = rtrim(trim((string)($input['catalog_base_url'] ?? '')), '/');
+        $catalogUsername = trim((string)($input['catalog_username'] ?? ''));
+        $catalogPassword = (string)($input['catalog_password'] ?? '');
+        if ($catalogBase !== '') $this->assertHttpsUrl($catalogBase, 'A URL da API do catálogo comercial deve usar HTTPS.');
+        if (($catalogUsername !== '' || trim($catalogPassword) !== '') && !$this->cipher->ready()) {
+            throw new RuntimeException('A chave-mestra de criptografia ainda não está disponível.');
+        }
+        if ($catalogBase !== '' || $catalogUsername !== '' || trim($catalogPassword) !== '') {
+            $current = $this->settingsForProvider($providerCode);
+            $effectiveBase = $catalogBase !== '' ? $catalogBase : (string)($current['commercial_catalog_base_url'] ?? '');
+            if ($effectiveBase === '') throw new RuntimeException('Informe a URL da API do catálogo comercial.');
+            $this->database->prepare("INSERT INTO provider_commercial_catalog_connections(provider_id,base_url,updated_by) VALUES(:provider,:base,:user) ON DUPLICATE KEY UPDATE base_url=VALUES(base_url),updated_by=VALUES(updated_by)")->execute(['provider' => (int)$current['id'], 'base' => $effectiveBase, 'user' => $userId]);
+            $sql = 'UPDATE provider_commercial_catalog_connections SET updated_by=:user';
+            $params = ['user' => $userId, 'provider' => (int)$current['id']];
+            if ($catalogUsername !== '') {
+                $sql .= ',username_encrypted=:username,username_last4=:username_last4';
+                $params['username'] = $this->cipher->encrypt($catalogUsername);
+                $params['username_last4'] = substr($catalogUsername, -4);
+            }
+            if (trim($catalogPassword) !== '') {
+                $sql .= ',password_encrypted=:password,password_last4=:password_last4';
+                $params['password'] = $this->cipher->encrypt($catalogPassword);
+                $params['password_last4'] = substr($catalogPassword, -4);
+            }
+            $sql .= ' WHERE provider_id=:provider';
+            $this->database->prepare($sql)->execute($params);
+        }
     }
 
     private function assertHttpsUrl(string $url, string $message): void
@@ -321,6 +369,7 @@ final readonly class CourseProviderRepository
                     $contentCreated += $contentResult['created'];
                     $contentUpdated += $contentResult['updated'];
                 }
+                if ($providerCode === 'iesde') $this->linkCommercialCatalogItem($providerId, $id, $normalized['name']);
             }
 
             $unavailable = 0;
@@ -641,6 +690,159 @@ final readonly class CourseProviderRepository
         $rows=$statement->fetchAll()?:[];
         foreach($rows as&$row){$questions=json_decode((string)($row['assessment_questions_json']??''),true);$row['assessment_questions']=is_array($questions)?array_values(array_filter($questions,'is_array')):[];}unset($row);
         return$rows;
+    }
+
+    /** @param list<array<string,mixed>> $items @return array{received:int,created:int,updated:int,retired:int,linked:int} */
+    public function synchronizeCommercialCatalog(string $providerCode, array $items): array
+    {
+        $settings = $this->settingsForProvider($providerCode);
+        $providerId = (int)($settings['id'] ?? 0);
+        if ($providerId < 1) throw new RuntimeException('Integração do fornecedor não encontrada.');
+        $now = date('Y-m-d H:i:s');
+        $created = 0;
+        $updated = 0;
+        $linked = 0;
+        $seen = [];
+
+        $courses = $this->database->prepare("SELECT id,COALESCE(NULLIF(commercial_name,''),name) name FROM provider_courses WHERE provider_id=:provider AND is_available=1");
+        $courses->execute(['provider' => $providerId]);
+        $courseMap = [];
+        foreach ($courses->fetchAll() ?: [] as $course) {
+            $key = $this->catalogTitleKey((string)$course['name']);
+            if ($key !== '' && !isset($courseMap[$key])) $courseMap[$key] = (int)$course['id'];
+        }
+
+        $this->database->beginTransaction();
+        try {
+            foreach ($items as $item) {
+                if (!is_array($item)) continue;
+                $external = trim((string)($item['external_id'] ?? ''));
+                $title = trim((string)($item['title'] ?? ''));
+                if ($external === '' || $title === '' || isset($seen[$external])) continue;
+                $seen[$external] = true;
+                $courseId = $courseMap[$this->catalogTitleKey($title)] ?? null;
+                $raw = json_encode(is_array($item['raw'] ?? null) ? $item['raw'] : $item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+                $hashSource = $item;
+                unset($hashSource['raw']);
+                $hash = hash('sha256', json_encode($hashSource, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+                $exists = $this->database->prepare('SELECT id,content_hash,provider_course_id FROM provider_commercial_catalog_items WHERE provider_id=:provider AND external_id=:external LIMIT 1');
+                $exists->execute(['provider' => $providerId, 'external' => $external]);
+                $old = $exists->fetch();
+                $id = is_array($old) ? (int)$old['id'] : 0;
+                if ($courseId === null && is_array($old) && (int)($old['provider_course_id'] ?? 0) > 0) $courseId = (int)$old['provider_course_id'];
+                $changed = $id < 1 || !hash_equals((string)($old['content_hash'] ?? ''), $hash);
+                $payload = [
+                    'provider' => $providerId, 'course' => $courseId, 'external' => $external,
+                    'title' => $title, 'slug' => trim((string)($item['slug'] ?? '')) ?: null,
+                    'author' => trim((string)($item['author'] ?? '')) ?: null,
+                    'summary' => trim((string)($item['summary'] ?? '')) ?: null,
+                    'description' => trim((string)($item['description'] ?? '')) ?: null,
+                    'category' => trim((string)($item['category'] ?? '')) ?: null,
+                    'subcategory' => trim((string)($item['subcategory'] ?? '')) ?: null,
+                    'material_type' => trim((string)($item['material_type'] ?? '')) ?: null,
+                    'cover' => trim((string)($item['cover_url'] ?? '')) ?: null,
+                    'detail' => trim((string)($item['detail_url'] ?? '')) ?: null,
+                    'topics' => max(0, (int)($item['topics_count'] ?? 0)),
+                    'resources' => max(0, (int)($item['resources_count'] ?? 0)),
+                    'questions' => max(0, (int)($item['questions_count'] ?? 0)),
+                    'complementary' => max(0, (int)($item['complementary_count'] ?? 0)),
+                    'status' => $courseId !== null ? 'linked' : 'pending_lti',
+                    'hash' => $hash, 'raw' => $raw, 'seen' => $now,
+                ];
+                if ($id > 0) {
+                    $updatePayload = $payload;
+                    unset($updatePayload['provider'], $updatePayload['external']);
+                    $updatePayload['id'] = $id;
+                    $updatePayload['changed'] = $changed ? $now : null;
+                    $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,title=:title,slug=:slug,author=:author,summary=:summary,description=:description,category=:category,subcategory=:subcategory,material_type=:material_type,cover_url=:cover,detail_url=:detail,topics_count=:topics,resources_count=:resources,questions_count=:questions,complementary_count=:complementary,sync_status=:status,is_available=1,content_hash=:hash,raw_payload=:raw,last_seen_at=:seen,last_changed_at=COALESCE(:changed,last_changed_at) WHERE id=:id")->execute($updatePayload);
+                    if ($changed) $updated++;
+                } else {
+                    $payload['first'] = $now;
+                    $payload['changed'] = $now;
+                    $this->database->prepare("INSERT INTO provider_commercial_catalog_items(provider_id,provider_course_id,external_id,title,slug,author,summary,description,category,subcategory,material_type,cover_url,detail_url,topics_count,resources_count,questions_count,complementary_count,sync_status,is_available,content_hash,raw_payload,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:course,:external,:title,:slug,:author,:summary,:description,:category,:subcategory,:material_type,:cover,:detail,:topics,:resources,:questions,:complementary,:status,1,:hash,:raw,:first,:seen,:changed)")->execute($payload);
+                    $created++;
+                }
+                if ($courseId !== null) $linked++;
+            }
+
+            $retired = 0;
+            if ($seen !== []) {
+                $marks = implode(',', array_fill(0, count($seen), '?'));
+                $retire = $this->database->prepare("UPDATE provider_commercial_catalog_items SET is_available=0,sync_status='retired',last_changed_at=NOW() WHERE provider_id=? AND external_id NOT IN ($marks) AND is_available=1");
+                $retire->execute(array_merge([$providerId], array_keys($seen)));
+                $retired = $retire->rowCount();
+            }
+            $this->database->prepare("UPDATE provider_commercial_catalog_connections SET last_sync_status='success',last_synced_at=NOW(),last_error=NULL WHERE provider_id=:id")->execute(['id' => $providerId]);
+            $this->database->commit();
+            return ['received' => count($seen), 'created' => $created, 'updated' => $updated, 'retired' => $retired, 'linked' => $linked];
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+    }
+
+    public function recordCommercialCatalogFailure(string $providerCode, string $message): void
+    {
+        $settings = $this->settingsForProvider($providerCode);
+        $statement = $this->database->prepare("UPDATE provider_commercial_catalog_connections SET last_sync_status='failed',last_error=:error WHERE provider_id=:provider");
+        $statement->execute(['error' => substr(trim($message), 0, 2000), 'provider' => (int)$settings['id']]);
+    }
+
+    /** @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,per_page:int,counts:array<string,int>} */
+    public function commercialCatalog(string $providerCode, string $query = '', string $status = '', int $page = 1, int $perPage = 24): array
+    {
+        $settings = $this->settingsForProvider($providerCode);
+        $providerId = (int)$settings['id'];
+        $page = max(1, $page);
+        $perPage = max(1, min(100, $perPage));
+        $where = ['item.provider_id=:provider'];
+        $params = ['provider' => $providerId];
+        $query = trim($query);
+        if ($query !== '') {
+            $where[] = '(item.title LIKE :query_title OR item.author LIKE :query_author OR item.category LIKE :query_category OR item.subcategory LIKE :query_subcategory)';
+            $like = '%' . $query . '%';
+            $params['query_title'] = $like;
+            $params['query_author'] = $like;
+            $params['query_category'] = $like;
+            $params['query_subcategory'] = $like;
+        }
+        if (in_array($status, ['pending_lti', 'linked', 'retired'], true)) {
+            $where[] = 'item.sync_status=:status';
+            $params['status'] = $status;
+        }
+        $filter = implode(' AND ', $where);
+        $count = $this->database->prepare("SELECT COUNT(*) FROM provider_commercial_catalog_items item WHERE $filter");
+        $count->execute($params);
+        $total = (int)$count->fetchColumn();
+        $pages = max(1, (int)ceil($total / $perPage));
+        $page = min($page, $pages);
+        $statement = $this->database->prepare("SELECT item.*,course.commercial_name course_commercial_name,course.name course_name FROM provider_commercial_catalog_items item LEFT JOIN provider_courses course ON course.id=item.provider_course_id WHERE $filter ORDER BY item.is_available DESC,item.title LIMIT :limit OFFSET :offset");
+        foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
+        $statement->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $statement->bindValue(':offset', ($page - 1) * $perPage, PDO::PARAM_INT);
+        $statement->execute();
+        $summary = $this->database->prepare("SELECT COUNT(*) total,SUM(sync_status='pending_lti' AND is_available=1) pending_lti,SUM(sync_status='linked' AND is_available=1) linked,SUM(sync_status='retired' OR is_available=0) retired FROM provider_commercial_catalog_items WHERE provider_id=:provider");
+        $summary->execute(['provider' => $providerId]);
+        $counts = array_map('intval', $summary->fetch() ?: []);
+        return ['items' => $statement->fetchAll() ?: [], 'total' => $total, 'page' => $page, 'pages' => $pages, 'per_page' => $perPage, 'counts' => $counts];
+    }
+
+    private function linkCommercialCatalogItem(int $providerId, int $courseId, string $title): void
+    {
+        $items = $this->database->prepare("SELECT id,title FROM provider_commercial_catalog_items WHERE provider_id=:provider AND is_available=1 AND provider_course_id IS NULL");
+        $items->execute(['provider' => $providerId]);
+        $titleKey = $this->catalogTitleKey($title);
+        foreach ($items->fetchAll() ?: [] as $item) {
+            if ($titleKey === '' || $this->catalogTitleKey((string)$item['title']) !== $titleKey) continue;
+            $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,sync_status='linked' WHERE id=:id")->execute(['course' => $courseId, 'id' => (int)$item['id']]);
+            break;
+        }
+    }
+
+    private function catalogTitleKey(string $title): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', trim($title));
+        return trim(strtolower(preg_replace('/[^a-zA-Z0-9]+/', ' ', $ascii === false ? $title : $ascii) ?? ''));
     }
 
     /** @return array<int,list<array<string,mixed>>> */

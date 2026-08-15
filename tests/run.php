@@ -2735,6 +2735,27 @@ $tests['configura o E-mail Central e envia acessos pela identidade da franquia']
     assertTrue(str_contains($routes,"'/admin/platform/integrations/email/deliveries/{id:\\d+}/retry'"));
 };
 
+$tests['sincroniza o acervo comercial MASTER sem copiar conteudo protegido'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeCommercialCatalogClient.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000040_create_provider_commercial_catalog.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE provider_commercial_catalog_connections'));
+    assertTrue(str_contains($migration,'CREATE TABLE provider_commercial_catalog_items'));
+    assertTrue(str_contains($repository,'synchronizeCommercialCatalog'));
+    assertTrue(str_contains($repository,"'pending_lti'"));
+    assertTrue(str_contains($repository,"'linked'"));
+    assertTrue(str_contains($repository,"'retired'"));
+    assertTrue(str_contains($client,"/api/v1/auth/login"));
+    assertTrue(str_contains($client,"/api/Disciplines/catalog"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/iesde/commercial-sync'"));
+    assertTrue(str_contains($view,'Acervo comercial'));
+    assertTrue(str_contains($view,'Aguardando LTI'));
+    assertTrue(str_contains($view,'Adicionar via LTI'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
