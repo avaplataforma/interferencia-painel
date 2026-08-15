@@ -2690,8 +2690,11 @@ $tests['configura o E-mail Central e envia acessos pela identidade da franquia']
     $hub=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/central-email.php');
     $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $enrollments=(string)file_get_contents($rootPath.'/modules/Moodle/EnrollmentRepository.php');
+    $access=(string)file_get_contents($rootPath.'/views/moodle/enrollments/access.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailRepository.php');
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000010_create_central_email_service.php');
+    $deliveryMigration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000020_track_sent_ava_access_emails.php');
 
     assertTrue(str_contains($routes,"'/admin/platform/integrations/email'"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/email/test'"));
@@ -2700,6 +2703,12 @@ $tests['configura o E-mail Central e envia acessos pela identidade da franquia']
     assertTrue(str_contains($view,'SPF/DKIM'));
     assertTrue(str_contains($notifier,'CentralEmailService'));
     assertTrue(str_contains($notifier,"'ava_access'"));
+    assertTrue(str_contains($notifier,"'sent', \$userId"));
+    assertTrue(str_contains($enrollments,'recordEmailAccessCommunication'));
+    assertTrue(str_contains($deliveryMigration,"'opened','sent','failed'"));
+    assertTrue(str_contains($routes,'$avaAccessNotifier->notify($id,$auth->user()->id)'));
+    assertTrue(str_contains($access,'Enviar por e-mail'));
+    assertTrue(!str_contains($access,'Abrir no e-mail'));
     assertTrue(str_contains($repository,"preg_replace('/^www\\./'"));
     assertTrue(str_contains($migration,'CREATE TABLE email_delivery_logs'));
     assertTrue(str_contains($migration,'REFERENCES platform_users(id)'));

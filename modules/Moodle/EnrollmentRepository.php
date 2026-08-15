@@ -215,7 +215,7 @@ final readonly class EnrollmentRepository
     public function avaNotificationSummary(array$unitIds):array
     {
         if($unitIds===[])return['ready'=>0,'failed'=>0];$marks=implode(',',array_fill(0,count($unitIds),'?'));
-        $sql="SELECT SUM(e.moodle_enrolment_status='released' AND NOT EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status='opened')) ready,SUM((e.status='payment_confirmed' AND e.moodle_enrolment_status='not_released' AND e.ava_last_error IS NOT NULL) OR (e.moodle_enrolment_status='released' AND EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status='failed') AND NOT EXISTS(SELECT 1 FROM ava_access_communications ok WHERE ok.enrollment_id=e.id AND ok.status='opened'))) failed FROM student_enrollments e WHERE e.unit_id IN ($marks)";
+        $sql="SELECT SUM(e.moodle_enrolment_status='released' AND NOT EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status IN ('opened','sent'))) ready,SUM((e.status='payment_confirmed' AND e.moodle_enrolment_status='not_released' AND e.ava_last_error IS NOT NULL) OR (e.moodle_enrolment_status='released' AND EXISTS(SELECT 1 FROM ava_access_communications c WHERE c.enrollment_id=e.id AND c.status='failed') AND NOT EXISTS(SELECT 1 FROM ava_access_communications ok WHERE ok.enrollment_id=e.id AND ok.status IN ('opened','sent')))) failed FROM student_enrollments e WHERE e.unit_id IN ($marks)";
         $s=$this->database->prepare($sql);$s->execute($unitIds);$row=$s->fetch()?:[];return['ready'=>(int)($row['ready']??0),'failed'=>(int)($row['failed']??0)];
     }
 
@@ -245,8 +245,13 @@ final readonly class EnrollmentRepository
 
     public function recordAutomaticAccessCommunication(int$id,string$channel,string$destination,string$status,?string$error):void
     {
-        if(!in_array($channel,['whatsapp','email'],true)||!in_array($status,['opened','failed'],true))throw new RuntimeException('Comunicação de acesso inválida.');$destination=trim($destination);$error=$error===null?null:mb_substr(trim($error),0,500);
-        $this->database->beginTransaction();try{$s=$this->database->prepare('INSERT INTO ava_access_communications(enrollment_id,channel,destination,status,error_message,created_by) VALUES(:enrollment,:channel,:destination,:status,:error,NULL)');$s->execute(['enrollment'=>$id,'channel'=>$channel,'destination'=>$destination,'status'=>$status,'error'=>$error]);$communicationId=(int)$this->database->lastInsertId();$this->recordEvent($id,'access-auto:'.$communicationId,$status==='opened'?'access_sent':'access_send_failed',$status==='opened'?'Instruções de acesso enviadas automaticamente por e-mail.':'Falha no envio automático das instruções: '.($error?:'erro não informado').'.');$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
+        $this->recordEmailAccessCommunication($id,$destination,$status,null,$error);
+    }
+
+    public function recordEmailAccessCommunication(int$id,string$destination,string$status,?int$userId,?string$error):void
+    {
+        if(!in_array($status,['sent','failed'],true))throw new RuntimeException('Situação de envio inválida.');$destination=trim($destination);if($destination==='')$destination='não informado';$error=$error===null?null:mb_substr(trim($error),0,500);
+        $this->database->beginTransaction();try{$s=$this->database->prepare('INSERT INTO ava_access_communications(enrollment_id,channel,destination,status,error_message,created_by) VALUES(:enrollment,\'email\',:destination,:status,:error,:user)');$s->execute(['enrollment'=>$id,'destination'=>$destination,'status'=>$status,'error'=>$error,'user'=>$userId]);$communicationId=(int)$this->database->lastInsertId();$automatic=$userId===null;$success=$status==='sent';$description=$success?($automatic?'Instruções de acesso enviadas automaticamente pelo E-mail Central.':'Instruções de acesso enviadas pelo E-mail Central.'):'Falha no envio das instruções pelo E-mail Central: '.($error?:'erro não informado').'.';$this->recordEvent($id,'access-email:'.$communicationId,$success?'access_sent':'access_send_failed',$description,$userId);$this->database->commit();}catch(\Throwable$e){$this->database->rollBack();throw$e;}
     }
 
     private function poleIdForUnit(int $unitId): int

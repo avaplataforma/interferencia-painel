@@ -15,7 +15,7 @@ final readonly class AvaAccessNotifier
         private CentralEmailService $email,
     ) {}
 
-    public function notify(int $enrollmentId): bool
+    public function notify(int $enrollmentId, ?int $userId = null): bool
     {
         $context = $this->enrollments->accessCommunicationContextForAutomation($enrollmentId);
         if ($context === null) {
@@ -23,7 +23,7 @@ final readonly class AvaAccessNotifier
         }
         $email = strtolower(trim((string) $context['email']));
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-            $this->enrollments->recordAutomaticAccessCommunication($enrollmentId, 'email', $email ?: 'não informado', 'failed', 'O aluno não possui um e-mail válido.');
+            $this->enrollments->recordEmailAccessCommunication($enrollmentId, $email ?: 'não informado', 'failed', $userId, 'O aluno não possui um e-mail válido.');
             return false;
         }
         $settings = $this->integrations->settings();
@@ -56,10 +56,10 @@ final readonly class AvaAccessNotifier
                 'student_enrollment',
                 $enrollmentId,
             );
-            $this->enrollments->recordAutomaticAccessCommunication($enrollmentId, 'email', $email, 'opened', null);
+            $this->enrollments->recordEmailAccessCommunication($enrollmentId, $email, 'sent', $userId, null);
             return true;
         } catch (Throwable $exception) {
-            $this->enrollments->recordAutomaticAccessCommunication($enrollmentId, 'email', $email, 'failed', $exception->getMessage());
+            $this->enrollments->recordEmailAccessCommunication($enrollmentId, $email, 'failed', $userId, $exception->getMessage());
             return false;
         }
     }
