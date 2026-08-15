@@ -95,7 +95,7 @@ final readonly class AvaCourseProvisioningService
     public function dashboard(string $providerCode, int $limit = 30): array
     {
         $providerCode = trim($providerCode);
-        $summary = ['queued' => 0, 'working' => 0, 'completed' => 0, 'failed' => 0, 'total' => 0];
+        $summary = ['queued' => 0, 'working' => 0, 'completed' => 0, 'failed' => 0, 'attention' => 0, 'total' => 0];
         if ($providerCode === '') return ['summary' => $summary, 'jobs' => []];
 
         $count = $this->database->prepare('SELECT status,COUNT(*) total FROM ava_course_provisioning_jobs WHERE provider_code=:provider GROUP BY status');
@@ -106,6 +106,10 @@ final readonly class AvaCourseProvisioningService
             if (array_key_exists($status, $summary)) $summary[$status] = $total;
             $summary['total'] += $total;
         }
+
+        $attention = $this->database->prepare("SELECT COUNT(*) FROM ava_course_provisioning_jobs WHERE provider_code=:provider AND status='failed' AND attempts>=3");
+        $attention->execute(['provider' => $providerCode]);
+        $summary['attention'] = (int)$attention->fetchColumn();
 
         $limit = max(5, min(100, $limit));
         $statement = $this->database->prepare("SELECT job.id,job.provider_course_id,job.organization_id,job.provider_code,job.status,job.attempts,
@@ -122,6 +126,50 @@ final readonly class AvaCourseProvisioningService
         return ['summary' => $summary, 'jobs' => $statement->fetchAll() ?: []];
     }
 
+    /**
+     * Processes the queue without depending on an open browser session. Failed
+     * jobs are retried at most three times and with a short cooldown, while a
+     * stale worker is safely returned to the queue for the next execution.
+     *
+     * @return array{discovered:int,processed:int,completed:int,failed:int,exhausted:int}
+     */
+    public function processBatch(int $limit = 10, int $maxAttempts = 3): array
+    {
+        $limit = max(1, min(50, $limit));
+        $maxAttempts = max(1, min(10, $maxAttempts));
+
+        $this->database->exec("UPDATE ava_course_provisioning_jobs
+            SET status='failed',completed_at=NOW(),last_error='Processamento interrompido antes da conclusão; nova tentativa agendada.'
+            WHERE status='working' AND updated_at<DATE_SUB(NOW(),INTERVAL 15 MINUTE)");
+
+        // MASTER/IESDE is currently the only Formation with unattended AVA
+        // publishing. Other providers keep their explicit/manual workflows.
+        $statement = $this->database->prepare("SELECT id
+            FROM ava_course_provisioning_jobs
+            WHERE provider_code='iesde' AND attempts<:max_attempts
+              AND (status='queued' OR (status='failed' AND updated_at<=DATE_SUB(NOW(),INTERVAL 2 MINUTE)))
+            ORDER BY FIELD(status,'queued','failed'),attempts ASC,updated_at ASC
+            LIMIT {$limit}");
+        $statement->execute(['max_attempts' => $maxAttempts]);
+        $jobIds = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
+        $result = ['discovered' => count($jobIds), 'processed' => 0, 'completed' => 0, 'failed' => 0, 'exhausted' => 0];
+        foreach ($jobIds as $jobId) {
+            ++$result['processed'];
+            try {
+                $this->retry($jobId, null);
+                ++$result['completed'];
+            } catch (Throwable) {
+                ++$result['failed'];
+            }
+        }
+
+        $exhausted = $this->database->prepare("SELECT COUNT(*) FROM ava_course_provisioning_jobs WHERE provider_code='iesde' AND status='failed' AND attempts>=:max_attempts");
+        $exhausted->execute(['max_attempts' => $maxAttempts]);
+        $result['exhausted'] = (int)$exhausted->fetchColumn();
+        return $result;
+    }
+
     /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
     public function retry(int $jobId, ?int $userId): array
     {
@@ -133,7 +181,12 @@ final readonly class AvaCourseProvisioningService
             WHERE job.id=:id LIMIT 1");
         $statement->execute(['id' => $jobId]);
         $row = $statement->fetch();
-        if (!is_array($row)) throw new RuntimeException('A oferta vinculada a esta publicação não está mais ativa.');
+        if (!is_array($row)) {
+            $message = 'A oferta vinculada a esta publicação não está mais ativa.';
+            $this->startJob($jobId);
+            $this->failJob($jobId, $message);
+            throw new RuntimeException($message);
+        }
         return $this->ensureProviderCourseOffer((int)$row['offer_id'], (int)$row['organization_id'], $userId);
     }
 

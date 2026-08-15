@@ -2612,6 +2612,12 @@ $tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static 
     assertTrue(str_contains($queue,'Tentar novamente'));
     assertTrue(str_contains($service,'public function dashboard'));
     assertTrue(str_contains($service,'public function retry'));
+    assertTrue(str_contains($service,'public function processBatch'));
+    assertTrue(str_contains($service,"attempts<:max_attempts"));
+    assertTrue(str_contains($service,"provider_code='iesde'"));
+    assertTrue(str_contains($queue,'Intervenção necessária'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/bin/console'),'ava-courses:process'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/bin/console'),'--dry-run'));
     assertTrue(str_contains($routes,'provisioningQueue'));
     assertTrue(str_contains($routes,'/provisioning/{id:\\d+}/retry'));
     assertTrue(str_contains($javascript,"['connection', 'homologation', 'capabilities', 'queue']"));

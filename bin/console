@@ -29,6 +29,9 @@ use Interferencia\Modules\Catalog\CourseProviderRepository;
 use Interferencia\Modules\Catalog\ImageGenerationRepository;
 use Interferencia\Modules\Catalog\CatalogMediaStorage;
 use Interferencia\Modules\Catalog\CatalogCoverGenerator;
+use Interferencia\Modules\Catalog\LearningCatalogRepository;
+use Interferencia\Modules\Catalog\AvaCatalogPublisher;
+use Interferencia\Modules\Catalog\AvaCourseProvisioningService;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -60,6 +63,7 @@ Comandos disponíveis:
   moodle:pedagogical:sync  Atualiza progresso, notas, acesso e certificados
   site:recoveries:sync  Atualiza alertas e follow-ups de checkouts abandonados
   catalog-images:process  Gera capas pendentes e salva a versão final no Spaces
+  ava-courses:process  Processa a fila automática de criação de cursos no AVA
 
 TEXT);
         exit(0);
@@ -170,6 +174,30 @@ TEXT);
         $result=(new CatalogCoverGenerator($images,$catalogs,$media,$spaces))->process($limit);
         fwrite(STDOUT,sprintf("Capas processadas: %d; falhas: %d.\n",$result['processed'],$result['failed']));
         exit($result['failed']>0?1:0);
+    }
+
+    if ($command === 'ava-courses:process') {
+        $lockPath=$rootPath.'/storage/ava-course-provisioning.lock';$lock=fopen($lockPath,'c');
+        if($lock===false||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('A fila de cursos do AVA já está em execução.');
+        try{
+            $database=$connection->pdo();
+            $cipher=new SecretCipher((string)$config->get('app.encryption_key'));
+            $providers=new CourseProviderRepository($database,$cipher);
+            $learningCatalog=new LearningCatalogRepository($database);
+            $avaConnections=new AvaConnectionRepository($database,$cipher);
+            $moodleRepository=new MoodleRepository($database);
+            $publisher=new AvaCatalogPublisher($learningCatalog,$avaConnections,$moodleRepository,$providers,$config->string('app.url'));
+            $service=new AvaCourseProvisioningService($database,$providers,$publisher);
+            if(in_array('--dry-run',$argv,true)){
+                $dashboard=$service->dashboard('iesde',5);$summary=$dashboard['summary'];
+                fwrite(STDOUT,sprintf("Fila MASTER: %d aguardando, %d processando, %d falha(s), %d exigindo intervenção. Nenhum item foi alterado.\n",$summary['queued'],$summary['working'],$summary['failed'],$summary['attention']));
+                exit(0);
+            }
+            $limit=max(1,min(50,(int)($argv[2]??10)));
+            $result=$service->processBatch($limit,3);
+            fwrite(STDOUT,sprintf("Fila do AVA: %d encontrado(s), %d processado(s), %d concluído(s), %d falha(s), %d exigindo intervenção.\n",$result['discovered'],$result['processed'],$result['completed'],$result['failed'],$result['exhausted']));
+            exit(0);
+        }finally{flock($lock,LOCK_UN);fclose($lock);}
     }
 
     $migrator = new Migrator(
