@@ -638,7 +638,8 @@ return static function (
         if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
         $catalog=preg_replace('/[^a-z0-9_-]/','',(string)$request->queryValue('catalog',''))?:'';
         $contentPage=$catalog!==''&&$catalog!=='iesde'?$courseProviders->catalogContents($catalog,(string)$request->queryValue('content_q',''),(int)$request->queryValue('content_page','1'),20):['items'=>[],'total'=>0,'page'=>1,'pages'=>1,'per_page'=>20];
-        $commercialCatalog=$catalog==='iesde'?$courseProviders->commercialCatalog('iesde',(string)$request->queryValue('commercial_q',''),(string)$request->queryValue('commercial_status',''),(int)$request->queryValue('commercial_page','1'),24):['items'=>[],'total'=>0,'page'=>1,'pages'=>1,'per_page'=>24,'counts'=>['total'=>0,'pending_lti'=>0,'linked'=>0,'retired'=>0]];
+        $commercialFilters=['category'=>(string)$request->queryValue('commercial_category',''),'material_type'=>(string)$request->queryValue('commercial_type',''),'author'=>(string)$request->queryValue('commercial_author',''),'sort'=>(string)$request->queryValue('commercial_sort','')];
+        $commercialCatalog=$catalog==='iesde'?$courseProviders->commercialCatalog('iesde',(string)$request->queryValue('commercial_q',''),(string)$request->queryValue('commercial_status',''),(int)$request->queryValue('commercial_page','1'),24,$commercialFilters):['items'=>[],'total'=>0,'page'=>1,'pages'=>1,'per_page'=>24,'counts'=>['total'=>0,'pending_lti'=>0,'linked'=>0,'retired'=>0],'filter_options'=>['category'=>[],'material_type'=>[],'author'=>[]]];
         $organizations=$courseProviders->organizations();
         $pilotOrganization=(int)$request->queryValue('pilot_organization','0');
         if($pilotOrganization<1&&$organizations!==[])$pilotOrganization=(int)$organizations[0]['id'];
@@ -662,6 +663,14 @@ return static function (
             try{$courseProviders->recordCommercialCatalogFailure('iesde',$e->getMessage());}catch(Throwable){}
             $session->flash('course_providers.error',$e->getMessage());
         }
+        return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog=iesde&section=commercial');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/platform/integrations/course-providers/catalog/iesde/commercial-curation',static function(Request$request)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
+        try{
+            $count=$courseProviders->curateCommercialCatalogBatch('iesde',array_values((array)$request->input('commercial_item_ids',[])),(string)$request->input('bulk_action',''),['commercial_category'=>$request->input('commercial_category',''),'default_price'=>$request->input('default_price',''),'max_installments'=>$request->input('max_installments','')],$auth->user()?->id);
+            $session->flash('course_providers.message',$count.' item(ns) atualizado(s) na curadoria comercial MASTER. Os vinculados ao AVA também receberam a nova regra.');
+        }catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}
         return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog=iesde&section=commercial');
     },[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/homologation',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=(string)$params['provider'];$organization=(int)$request->input('organization_id','0');try{if($request->input('confirm_no_charge')!=='1')throw new RuntimeException('Confirme que o piloto não deve gerar cobrança.');$rawPrice=trim((string)$request->input('price','0'));$price=str_contains($rawPrice,',')?(float)str_replace(',','.',str_replace('.','',$rawPrice)):(float)$rawPrice;$result=$courseProviders->prepareCatalogHomologation($provider,$organization,(string)$request->input('item_type','course'),(int)$request->input('sample_size','3'),$price,(int)$request->input('installments','1'),$auth->user()?->id);$label=$result['type']==='content'?'conteúdo(s) individual(is)':'curso(s)';$session->flash('course_providers.message',$result['prepared'].' '.$label.' preparado(s) e publicado(s) na franquia para homologação. Nenhuma cobrança foi gerada.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=homologation&pilot_organization='.$organization);},[$requireAuth,new RequirePermission($auth,'users.manage')]);

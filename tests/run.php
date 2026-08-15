@@ -2757,6 +2757,29 @@ $tests['sincroniza o acervo comercial MASTER sem copiar conteudo protegido'] = s
     assertTrue(str_contains($view,'Adicionar via LTI'));
 };
 
+$tests['organiza curadoria comercial MASTER e trata titulos repetidos com seguranca'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $client=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeCommercialCatalogClient.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000010_expand_master_commercial_curation.php');
+
+    assertTrue(str_contains($migration,'duplicate_key'));
+    assertTrue(str_contains($migration,'source_updated_at'));
+    assertTrue(str_contains($migration,'commercial_summary'));
+    assertTrue(str_contains($migration,'default_price'));
+    assertTrue(str_contains($client,"'source_updated_at'"));
+    assertTrue(str_contains($repository,'curateCommercialCatalogBatch'));
+    assertTrue(str_contains($repository,'$status === \'duplicates\''));
+    assertTrue(str_contains($repository,'duplicate_latest_at'));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/iesde/commercial-curation'"));
+    assertTrue(str_contains($view,'Possíveis repetidos'));
+    assertTrue(str_contains($view,'Mais atual do grupo'));
+    assertTrue(str_contains($view,'O fornecedor não informou data'));
+    assertTrue(str_contains($view,'Selecionar esta página'));
+    assertTrue(str_contains($view,'Aprovar e liberar'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {

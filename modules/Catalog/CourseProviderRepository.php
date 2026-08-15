@@ -744,7 +744,8 @@ final readonly class CourseProviderRepository
                 $changed = $id < 1 || !hash_equals((string)($old['content_hash'] ?? ''), $hash);
                 $payload = [
                     'provider' => $providerId, 'course' => $courseId, 'external' => $external,
-                    'title' => $title, 'slug' => trim((string)($item['slug'] ?? '')) ?: null,
+                    'title' => $title, 'duplicate_key' => substr($this->catalogTitleKey($title), 0, 190) ?: null,
+                    'slug' => trim((string)($item['slug'] ?? '')) ?: null,
                     'author' => trim((string)($item['author'] ?? '')) ?: null,
                     'summary' => trim((string)($item['summary'] ?? '')) ?: null,
                     'description' => trim((string)($item['description'] ?? '')) ?: null,
@@ -753,6 +754,8 @@ final readonly class CourseProviderRepository
                     'material_type' => trim((string)($item['material_type'] ?? '')) ?: null,
                     'cover' => trim((string)($item['cover_url'] ?? '')) ?: null,
                     'detail' => trim((string)($item['detail_url'] ?? '')) ?: null,
+                    'source_published' => $this->catalogDateOrNull($item['source_published_at'] ?? null),
+                    'source_updated' => $this->catalogDateOrNull($item['source_updated_at'] ?? null),
                     'topics' => max(0, (int)($item['topics_count'] ?? 0)),
                     'resources' => max(0, (int)($item['resources_count'] ?? 0)),
                     'questions' => max(0, (int)($item['questions_count'] ?? 0)),
@@ -765,15 +768,19 @@ final readonly class CourseProviderRepository
                     unset($updatePayload['provider'], $updatePayload['external']);
                     $updatePayload['id'] = $id;
                     $updatePayload['changed'] = $changed ? $now : null;
-                    $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,title=:title,slug=:slug,author=:author,summary=:summary,description=:description,category=:category,subcategory=:subcategory,material_type=:material_type,cover_url=:cover,detail_url=:detail,topics_count=:topics,resources_count=:resources,questions_count=:questions,complementary_count=:complementary,sync_status=:status,is_available=1,content_hash=:hash,raw_payload=:raw,last_seen_at=:seen,last_changed_at=COALESCE(:changed,last_changed_at) WHERE id=:id")->execute($updatePayload);
+                    $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,title=:title,duplicate_key=:duplicate_key,slug=:slug,author=:author,summary=:summary,description=:description,category=:category,subcategory=:subcategory,material_type=:material_type,cover_url=:cover,detail_url=:detail,source_published_at=:source_published,source_updated_at=:source_updated,topics_count=:topics,resources_count=:resources,questions_count=:questions,complementary_count=:complementary,sync_status=:status,is_available=1,content_hash=:hash,raw_payload=:raw,last_seen_at=:seen,last_changed_at=COALESCE(:changed,last_changed_at) WHERE id=:id")->execute($updatePayload);
                     if ($changed) $updated++;
                 } else {
                     $payload['first'] = $now;
                     $payload['changed'] = $now;
-                    $this->database->prepare("INSERT INTO provider_commercial_catalog_items(provider_id,provider_course_id,external_id,title,slug,author,summary,description,category,subcategory,material_type,cover_url,detail_url,topics_count,resources_count,questions_count,complementary_count,sync_status,is_available,content_hash,raw_payload,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:course,:external,:title,:slug,:author,:summary,:description,:category,:subcategory,:material_type,:cover,:detail,:topics,:resources,:questions,:complementary,:status,1,:hash,:raw,:first,:seen,:changed)")->execute($payload);
+                    $this->database->prepare("INSERT INTO provider_commercial_catalog_items(provider_id,provider_course_id,external_id,title,duplicate_key,slug,author,summary,description,category,subcategory,material_type,cover_url,detail_url,source_published_at,source_updated_at,topics_count,resources_count,questions_count,complementary_count,sync_status,is_available,content_hash,raw_payload,first_seen_at,last_seen_at,last_changed_at) VALUES(:provider,:course,:external,:title,:duplicate_key,:slug,:author,:summary,:description,:category,:subcategory,:material_type,:cover,:detail,:source_published,:source_updated,:topics,:resources,:questions,:complementary,:status,1,:hash,:raw,:first,:seen,:changed)")->execute($payload);
+                    $id = (int)$this->database->lastInsertId();
                     $created++;
                 }
-                if ($courseId !== null) $linked++;
+                if ($courseId !== null) {
+                    $this->applyCommercialCatalogCurationToCourse($id, $courseId);
+                    $linked++;
+                }
             }
 
             $retired = 0;
@@ -799,8 +806,8 @@ final readonly class CourseProviderRepository
         $statement->execute(['error' => substr(trim($message), 0, 2000), 'provider' => (int)$settings['id']]);
     }
 
-    /** @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,per_page:int,counts:array<string,int>} */
-    public function commercialCatalog(string $providerCode, string $query = '', string $status = '', int $page = 1, int $perPage = 24): array
+    /** @param array<string,string> $filters @return array{items:list<array<string,mixed>>,total:int,page:int,pages:int,per_page:int,counts:array<string,int>,filter_options:array<string,list<string>>} */
+    public function commercialCatalog(string $providerCode, string $query = '', string $status = '', int $page = 1, int $perPage = 24, array $filters = []): array
     {
         $settings = $this->settingsForProvider($providerCode);
         $providerId = (int)$settings['id'];
@@ -820,6 +827,18 @@ final readonly class CourseProviderRepository
         if (in_array($status, ['pending_lti', 'linked', 'retired'], true)) {
             $where[] = 'item.sync_status=:status';
             $params['status'] = $status;
+        } elseif ($status === 'approved') {
+            $where[] = "item.review_status='approved' AND item.is_globally_enabled=1";
+        } elseif ($status === 'blocked') {
+            $where[] = 'item.is_globally_enabled=0';
+        } elseif ($status === 'duplicates') {
+            $where[] = "item.duplicate_key IS NOT NULL AND (SELECT COUNT(*) FROM provider_commercial_catalog_items duplicate_item WHERE duplicate_item.provider_id=item.provider_id AND duplicate_item.duplicate_key=item.duplicate_key AND duplicate_item.is_available=1)>1";
+        }
+        foreach (['category', 'material_type', 'author'] as $filterName) {
+            $value = trim((string)($filters[$filterName] ?? ''));
+            if ($value === '') continue;
+            $where[] = 'item.' . $filterName . '=:' . $filterName;
+            $params[$filterName] = $value;
         }
         $filter = implode(' AND ', $where);
         $count = $this->database->prepare("SELECT COUNT(*) FROM provider_commercial_catalog_items item WHERE $filter");
@@ -827,7 +846,10 @@ final readonly class CourseProviderRepository
         $total = (int)$count->fetchColumn();
         $pages = max(1, (int)ceil($total / $perPage));
         $page = min($page, $pages);
-        $statement = $this->database->prepare("SELECT item.*,course.commercial_name course_commercial_name,course.name course_name FROM provider_commercial_catalog_items item LEFT JOIN provider_courses course ON course.id=item.provider_course_id WHERE $filter ORDER BY item.is_available DESC,item.title LIMIT :limit OFFSET :offset");
+        $order = ($filters['sort'] ?? '') === 'recent'
+            ? 'item.is_available DESC,COALESCE(item.source_updated_at,item.source_published_at) DESC,item.title'
+            : ((($filters['sort'] ?? '') === 'duplicates') ? 'duplicate_count DESC,item.title,item.source_updated_at DESC' : 'item.is_available DESC,item.title');
+        $statement = $this->database->prepare("SELECT item.*,course.commercial_name course_commercial_name,course.name course_name,(SELECT COUNT(*) FROM provider_commercial_catalog_items duplicate_item WHERE duplicate_item.provider_id=item.provider_id AND duplicate_item.duplicate_key=item.duplicate_key AND duplicate_item.is_available=1) duplicate_count,(SELECT MAX(COALESCE(duplicate_item.source_updated_at,duplicate_item.source_published_at)) FROM provider_commercial_catalog_items duplicate_item WHERE duplicate_item.provider_id=item.provider_id AND duplicate_item.duplicate_key=item.duplicate_key AND duplicate_item.is_available=1) duplicate_latest_at FROM provider_commercial_catalog_items item LEFT JOIN provider_courses course ON course.id=item.provider_course_id WHERE $filter ORDER BY $order LIMIT :limit OFFSET :offset");
         foreach ($params as $key => $value) $statement->bindValue(':' . $key, $value);
         $statement->bindValue(':limit', $perPage, PDO::PARAM_INT);
         $statement->bindValue(':offset', ($page - 1) * $perPage, PDO::PARAM_INT);
@@ -835,7 +857,57 @@ final readonly class CourseProviderRepository
         $summary = $this->database->prepare("SELECT COUNT(*) total,SUM(sync_status='pending_lti' AND is_available=1) pending_lti,SUM(sync_status='linked' AND is_available=1) linked,SUM(sync_status='retired' OR is_available=0) retired FROM provider_commercial_catalog_items WHERE provider_id=:provider");
         $summary->execute(['provider' => $providerId]);
         $counts = array_map('intval', $summary->fetch() ?: []);
-        return ['items' => $statement->fetchAll() ?: [], 'total' => $total, 'page' => $page, 'pages' => $pages, 'per_page' => $perPage, 'counts' => $counts];
+        $options = [];
+        foreach (['category', 'material_type', 'author'] as $column) {
+            $optionStatement = $this->database->prepare("SELECT DISTINCT $column value FROM provider_commercial_catalog_items WHERE provider_id=:provider AND is_available=1 AND $column IS NOT NULL AND $column<>'' ORDER BY $column LIMIT 200");
+            $optionStatement->execute(['provider' => $providerId]);
+            $options[$column] = array_values(array_filter(array_map('strval', $optionStatement->fetchAll(PDO::FETCH_COLUMN) ?: [])));
+        }
+        return ['items' => $statement->fetchAll() ?: [], 'total' => $total, 'page' => $page, 'pages' => $pages, 'per_page' => $perPage, 'counts' => $counts, 'filter_options' => $options];
+    }
+
+    /** @param list<int> $ids @param array<string,mixed> $data */
+    public function curateCommercialCatalogBatch(string $providerCode, array $ids, string $action, array $data, ?int $userId): int
+    {
+        $settings = $this->settingsForProvider($providerCode);
+        $providerId = (int)($settings['id'] ?? 0);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids), static fn(int $id): bool => $id > 0)));
+        if ($providerId < 1 || $ids === []) throw new RuntimeException('Selecione pelo menos um item do acervo.');
+        if (count($ids) > 100) throw new RuntimeException('Aplique a curadoria em lotes de até 100 itens.');
+        if (!in_array($action, ['prepare', 'approve', 'block', 'restore'], true)) throw new RuntimeException('Escolha uma ação válida para o lote.');
+
+        $sets = ['reviewed_by=:reviewed_by', 'reviewed_at=NOW()'];
+        $params = ['reviewed_by' => $userId, 'provider' => $providerId];
+        $category = trim((string)($data['commercial_category'] ?? ''));
+        $priceInput = trim((string)($data['default_price'] ?? ''));
+        $installmentsInput = trim((string)($data['max_installments'] ?? ''));
+        if ($category !== '') {$sets[] = 'commercial_category=:commercial_category';$params['commercial_category'] = substr($category, 0, 255);}
+        if ($priceInput !== '') {
+            $normalized = str_contains($priceInput, ',') ? str_replace(',', '.', str_replace('.', '', $priceInput)) : $priceInput;
+            if (!is_numeric($normalized) || (float)$normalized < 0) throw new RuntimeException('Informe um preço padrão válido.');
+            $sets[] = 'default_price=:default_price';$params['default_price'] = round((float)$normalized, 2);
+        }
+        if ($installmentsInput !== '') {$sets[] = 'max_installments=:max_installments';$params['max_installments'] = max(1, min(60, (int)$installmentsInput));}
+        if ($action === 'approve') {$sets[] = "review_status='approved'";$sets[] = 'is_globally_enabled=1';}
+        if ($action === 'block') {$sets[] = "review_status='blocked'";$sets[] = 'is_globally_enabled=0';}
+        if ($action === 'restore') {$sets[] = "review_status='imported'";$sets[] = 'is_globally_enabled=1';}
+
+        $marks = [];
+        foreach ($ids as $index => $id) {$key = 'id' . $index;$marks[] = ':' . $key;$params[$key] = $id;}
+        $this->database->beginTransaction();
+        try {
+            $statement = $this->database->prepare('UPDATE provider_commercial_catalog_items SET ' . implode(',', $sets) . ' WHERE provider_id=:provider AND id IN (' . implode(',', $marks) . ')');
+            $statement->execute($params);
+            $linked = $this->database->prepare('SELECT id,provider_course_id FROM provider_commercial_catalog_items WHERE provider_id=:provider AND id IN (' . implode(',', $marks) . ') AND provider_course_id IS NOT NULL');
+            $linkedParams = ['provider' => $providerId];foreach ($ids as $index => $id) $linkedParams['id' . $index] = $id;
+            $linked->execute($linkedParams);
+            foreach ($linked->fetchAll() ?: [] as $item) $this->applyCommercialCatalogCurationToCourse((int)$item['id'], (int)$item['provider_course_id']);
+            $this->database->commit();
+            return $statement->rowCount();
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
     }
 
     private function linkCommercialCatalogItem(int $providerId, int $courseId, string $title): void
@@ -846,8 +918,42 @@ final readonly class CourseProviderRepository
         foreach ($items->fetchAll() ?: [] as $item) {
             if ($titleKey === '' || $this->catalogTitleKey((string)$item['title']) !== $titleKey) continue;
             $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,sync_status='linked' WHERE id=:id")->execute(['course' => $courseId, 'id' => (int)$item['id']]);
+            $this->applyCommercialCatalogCurationToCourse((int)$item['id'], $courseId);
             break;
         }
+    }
+
+    private function applyCommercialCatalogCurationToCourse(int $itemId, int $courseId): void
+    {
+        $statement = $this->database->prepare('SELECT * FROM provider_commercial_catalog_items WHERE id=:id LIMIT 1');
+        $statement->execute(['id' => $itemId]);
+        $item = $statement->fetch();
+        if (!is_array($item)) return;
+        $review = (string)($item['review_status'] ?? 'imported');
+        $release = (int)($item['is_globally_enabled'] ?? 1) === 1 && $review === 'approved' ? 'released' : 'private';
+        $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments),review_status=:review,release_status=:release,is_globally_enabled=:enabled,reviewed_by=:reviewed_by,reviewed_at=:reviewed_at WHERE id=:course")->execute([
+            'name' => trim((string)($item['commercial_name'] ?? '')),
+            'summary' => trim((string)($item['commercial_summary'] ?? '')),
+            'description' => trim((string)($item['commercial_description'] ?? '')),
+            'category' => trim((string)($item['commercial_category'] ?? '')),
+            'cover' => trim((string)($item['cover_url'] ?? '')),
+            'price' => $item['default_price'] ?? null,
+            'installments' => $item['max_installments'] ?? null,
+            'review' => $review,
+            'release' => $release,
+            'enabled' => (int)($item['is_globally_enabled'] ?? 1),
+            'reviewed_by' => $item['reviewed_by'] ?? null,
+            'reviewed_at' => $item['reviewed_at'] ?? null,
+            'course' => $courseId,
+        ]);
+    }
+
+    private function catalogDateOrNull(mixed $value): ?string
+    {
+        $value = trim((string)$value);
+        if ($value === '') return null;
+        $timestamp = strtotime($value);
+        return $timestamp === false ? null : date('Y-m-d H:i:s', $timestamp);
     }
 
     private function catalogTitleKey(string $title): string

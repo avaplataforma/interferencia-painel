@@ -82,12 +82,27 @@ final class IesdeCommercialCatalogClient
             'material_type' => $materialType,
             'cover_url' => $cover,
             'detail_url' => $external !== '' ? 'https://fornecimento.iesde.com.br/disciplines/' . rawurlencode($external) : '',
+            'source_published_at' => $this->dateValue($record, ['publishedAt', 'published_at', 'publicationDate', 'publication_date', 'releasedAt', 'released_at']),
+            'source_updated_at' => $this->dateValue($record, ['updatedAt', 'updated_at', 'lastUpdate', 'last_update', 'modifiedAt', 'modified_at']),
             'topics_count' => $this->integer($record, ['topicsCount', 'topics_count', 'themesCount', 'temas']),
             'resources_count' => $this->integer($record, ['resourcesCount', 'resources_count', 'recursos']),
             'questions_count' => $this->integer($record, ['questionsCount', 'questions_count', 'questoes']),
             'complementary_count' => $this->integer($record, ['complementaryCount', 'complementary_count', 'complementares']),
             'raw' => $record,
         ];
+    }
+
+    /** @param array<string,mixed> $record @param list<string> $keys */
+    private function dateValue(array $record, array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $record)) continue;
+            $value = trim((string)$this->textValue($record[$key]));
+            if ($value === '') continue;
+            $timestamp = strtotime($value);
+            if ($timestamp !== false) return date('Y-m-d H:i:s', $timestamp);
+        }
+        return null;
     }
 
     /** @param array<string,mixed> $response @return list<array<string,mixed>> */
