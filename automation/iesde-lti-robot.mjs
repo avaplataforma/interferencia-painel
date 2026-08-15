@@ -97,6 +97,10 @@ try {
   ].join(', ')).filter({ hasText: /salvar e voltar ao curso/i }).or(page.locator('#id_submitbutton2')).first();
   await saveAndReturn.waitFor({ state: 'attached', timeout: 45000 });
   await page.waitForTimeout(600);
+  const finalNavigation = page.waitForNavigation({
+    timeout: 45000,
+    waitUntil: 'domcontentloaded',
+  });
   await saveAndReturn.evaluate(button => {
     if (!(button instanceof HTMLElement)) throw new Error('Botão final do Moodle inválido.');
     const form = button.closest('form');
@@ -107,16 +111,7 @@ try {
     }
     form.requestSubmit();
   });
-  await page.waitForURL(url => {
-    try {
-      return !/\/course\/modedit\.php$/i.test(new URL(String(url)).pathname);
-    } catch {
-      return false;
-    }
-  }, {
-    timeout: 45000,
-    waitUntil: 'domcontentloaded',
-  });
+  await finalNavigation;
   await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
   process.stdout.write(JSON.stringify({ ok: true }));
 } catch (error) {
