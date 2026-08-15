@@ -19,6 +19,7 @@ final readonly class AvaCourseProvisioningService
         private PDO $database,
         private CourseProviderRepository $providers,
         private AvaCatalogPublisher $publisher,
+        private IesdeLtiRobot $iesdeRobot,
     ) {}
 
     /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
@@ -69,6 +70,7 @@ final readonly class AvaCourseProvisioningService
             }
 
             $this->startJob($jobId);
+            $this->iesdeRobot->prepare($courseId, (string)($target['source_name'] ?? $target['name'] ?? ''));
             $this->publisher->publishMasterCourse($courseId, $userId);
             $current = $this->publishedCourse($courseId, $organizationId);
             if ($current === null) {

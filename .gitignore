@@ -4,6 +4,7 @@
 /sources/
 /AGENTS.md
 /vendor/
+/automation/node_modules/
 /.phpunit.cache/
 /.phpunit.result.cache
 /.idea/

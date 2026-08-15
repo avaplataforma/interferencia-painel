@@ -187,7 +187,8 @@ TEXT);
             $avaConnections=new AvaConnectionRepository($database,$cipher);
             $moodleRepository=new MoodleRepository($database);
             $publisher=new AvaCatalogPublisher($learningCatalog,$avaConnections,$moodleRepository,$providers,$config->string('app.url'));
-            $service=new AvaCourseProvisioningService($database,$providers,$publisher);
+            $robot=new \Interferencia\Modules\Catalog\IesdeLtiRobot($database,$avaConnections,$providers,$rootPath);
+            $service=new AvaCourseProvisioningService($database,$providers,$publisher,$robot);
             if(in_array('--dry-run',$argv,true)){
                 $dashboard=$service->dashboard('iesde',5);$summary=$dashboard['summary'];
                 fwrite(STDOUT,sprintf("Fila MASTER: %d aguardando, %d processando, %d falha(s), %d exigindo intervenção. Nenhum item foi alterado.\n",$summary['queued'],$summary['working'],$summary['failed'],$summary['attention']));

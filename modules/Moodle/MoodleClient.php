@@ -153,13 +153,19 @@ final readonly class MoodleClient
     }
 
     /** @return array{provider:string,courses:list<array<string,mixed>>,coursecount:int,contentcount:int,syncedat:int} */
-    public function ltiSelections(string$provider='iesde'):array
+    public function ltiSelections(string$provider='iesde',int$sourceCourseId=0):array
     {
-        $response=$this->call('local_mundointer_lti_selections',['provider'=>$provider]);
+        $response=$this->call('local_mundointer_lti_selections',['provider'=>$provider,'sourcecourseid'=>max(0,$sourceCourseId)]);
         $payload=json_decode((string)($response['payload']??''),true);
         if(!is_array($payload)||!is_array($payload['courses']??null))throw new RuntimeException('O AVA Cursos retornou uma seleção LTI inválida.');
         $payload['courses']=array_values(array_filter($payload['courses'],'is_array'));
         return$payload;
+    }
+
+    /** @return array{courseid:int,coursename:string,typeid:int,loginurl:string,expiresat:int} */
+    public function prepareLtiRobot(bool$withLogin=true,bool$resetCourse=false,bool$cleanLegacy=false):array
+    {
+        return$this->call('local_mundointer_prepare_lti_robot',['withlogin'=>$withLogin?1:0,'resetcourse'=>$resetCourse?1:0,'cleanlegacy'=>$cleanLegacy?1:0]);
     }
 
     /** @return array<string,mixed> */

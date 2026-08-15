@@ -396,6 +396,48 @@ final readonly class CourseProviderRepository
     }
 
     /**
+     * Links one freshly selected LTI payload to an existing commercial course
+     * without treating the other MASTER courses as removed. This is the safe
+     * incremental path used by the unattended enrollment robot.
+     *
+     * @param array<string,mixed> $selection
+     * @return array{received:int,created:int,updated:int}
+     */
+    public function attachLtiSelectionToCourse(int $courseId, array $selection): array
+    {
+        if ($courseId < 1) throw new RuntimeException('Curso MASTER inválido para vincular os recursos LTI.');
+        $statement = $this->database->prepare("SELECT course.provider_id,course.catalog_id,provider.provider_code
+            FROM provider_courses course
+            INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
+            WHERE course.id=:id LIMIT 1");
+        $statement->execute(['id' => $courseId]);
+        $course = $statement->fetch();
+        if (!is_array($course) || (string)($course['provider_code'] ?? '') !== 'iesde') {
+            throw new RuntimeException('O curso informado não pertence à Formação MASTER.');
+        }
+        $contents = is_array($selection['conteudos'] ?? null) ? array_values(array_filter($selection['conteudos'], 'is_array')) : [];
+        if ($contents === []) throw new RuntimeException('O robô não encontrou aulas, apostila ou avaliação na seleção do fornecedor.');
+
+        $this->database->beginTransaction();
+        try {
+            $result = $this->synchronizeCourseContents(
+                (int)$course['provider_id'],
+                (int)$course['catalog_id'],
+                $courseId,
+                $contents,
+                date('Y-m-d H:i:s'),
+            );
+            $this->database->prepare("UPDATE provider_courses SET sync_state='changed',last_changed_at=NOW(),last_seen_at=NOW(),is_available=1 WHERE id=:id")
+                ->execute(['id' => $courseId]);
+            $this->database->commit();
+            return $result;
+        } catch (Throwable $exception) {
+            if ($this->database->inTransaction()) $this->database->rollBack();
+            throw $exception;
+        }
+    }
+
+    /**
      * @param list<array<string,mixed>> $contents
      * @return array{received:int,created:int,updated:int}
      */
@@ -1384,7 +1426,7 @@ final readonly class CourseProviderRepository
     /** @return array<string,mixed> */
     public function courseAccessTargetForOffer(int $offerId): array
     {
-        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,course.id course_id,COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(course.raw_payload,'$.categoria')),''),NULLIF(course.category,''),'course') content_type,course.remote_id batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(course.commercial_name,''),course.name) name,provider.provider_code FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=offer.organization_id AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='course' AND item_access.item_id=course.id WHERE offer.id=:id AND offer.is_active=1 AND course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_globally_enabled=1 AND COALESCE(catalog_access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND course.review_status='approved' AND course.release_status IN ('released','published') LIMIT 1");
+        $statement = $this->database->prepare("SELECT offer.id offer_id,offer.organization_id,course.id course_id,course.name source_name,COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(course.raw_payload,'$.categoria')),''),NULLIF(course.category,''),'course') content_type,course.remote_id batch,COALESCE(NULLIF(offer.commercial_name,''),NULLIF(course.commercial_name,''),course.name) name,provider.provider_code FROM organization_provider_course_offers offer INNER JOIN provider_courses course ON course.id=offer.provider_course_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=offer.organization_id AND catalog_access.course_catalog_id=catalog.id LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='course' AND item_access.item_id=course.id WHERE offer.id=:id AND offer.is_active=1 AND course.is_available=1 AND course.is_globally_enabled=1 AND catalog.is_globally_enabled=1 AND COALESCE(catalog_access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1 AND course.review_status='approved' AND course.release_status IN ('released','published') LIMIT 1");
         $statement->execute(['id' => $offerId]);
         $row = $statement->fetch();
         if (!is_array($row)) throw new RuntimeException('Oferta de curso externo não encontrada ou não liberada.');

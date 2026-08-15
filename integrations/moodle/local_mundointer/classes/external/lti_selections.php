@@ -22,15 +22,20 @@ final class lti_selections extends external_api
     {
         return new external_function_parameters([
             'provider' => new external_value(PARAM_ALPHANUMEXT, 'Approved provider code.', VALUE_DEFAULT, 'iesde'),
+            'sourcecourseid' => new external_value(PARAM_INT, 'Optional technical source course id.', VALUE_DEFAULT, 0),
         ]);
     }
 
-    public static function execute(string $provider = 'iesde'): array
+    public static function execute(string $provider = 'iesde', int $sourcecourseid = 0): array
     {
         global $DB;
 
-        $parameters = self::validate_parameters(self::execute_parameters(), ['provider' => $provider]);
+        $parameters = self::validate_parameters(self::execute_parameters(), [
+            'provider' => $provider,
+            'sourcecourseid' => $sourcecourseid,
+        ]);
         $provider = strtolower(trim((string)$parameters['provider']));
+        $sourcecourseid = max(0, (int)$parameters['sourcecourseid']);
         self::validate_context(\context_system::instance());
         require_capability('local/mundointer:manage', \context_system::instance());
 
@@ -43,6 +48,7 @@ final class lti_selections extends external_api
             return self::response($provider, []);
         }
 
+        $coursefilter = $sourcecourseid > 0 ? ' AND l.course=:sourcecourseid' : '';
         $sql = "SELECT l.id AS ltiid,l.course,l.name,l.intro,l.typeid,l.toolurl,l.timemodified,
                        cm.id AS cmid,cm.visible,cs.section AS sectionnumber,
                        c.fullname,c.shortname,c.idnumber,c.category
@@ -50,8 +56,13 @@ final class lti_selections extends external_api
                   JOIN {course_modules} cm ON cm.instance=l.id AND cm.module=:moduleid
                   JOIN {course} c ON c.id=l.course
              LEFT JOIN {course_sections} cs ON cs.id=cm.section
+                 WHERE 1=1{$coursefilter}
               ORDER BY c.sortorder,cs.section,FIND_IN_SET(cm.id,cs.sequence),cm.id";
-        $records = $DB->get_records_sql($sql, ['moduleid' => $moduleid]);
+        $sqlparams = ['moduleid' => $moduleid];
+        if ($sourcecourseid > 0) {
+            $sqlparams['sourcecourseid'] = $sourcecourseid;
+        }
+        $records = $DB->get_records_sql($sql, $sqlparams);
         $sourcecourses = [];
 
         foreach ($records as $record) {

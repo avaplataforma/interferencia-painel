@@ -695,12 +695,9 @@ return static function (
                 $ava=$avaConnections->shared();
                 if(!(bool)($ava['configured']??false)||!(bool)($ava['is_active']??false))throw new RuntimeException('Configure e ative primeiro a conexão central com o AVA Cursos.');
                 $client=new MoodleClient((string)$ava['base_url'],(string)$ava['token'],true);
-                $selection=$client->ltiSelections('iesde');
+                $staging=$client->prepareLtiRobot(false,false,true);
+                $selection=$client->ltiSelections('iesde',(int)($staging['courseid']??0));
                 $courses=(array)($selection['courses']??[]);
-                $tree=(new MoodleAcademicCategoryManager($client))->ensureFormation('MASTER');
-                $sourceCourseIds=[];
-                foreach($courses as$course){$sourceId=(int)($course['source_course_id']??0);if($sourceId>0)$sourceCourseIds[$sourceId]=true;}
-                foreach(array_keys($sourceCourseIds)as$sourceCourseId)$client->moveCourse((int)$sourceCourseId,$tree['formation']);
             }else{
                 $courses=match($provider){
                     'escola_avancada'=>(new EscolaAvancadaClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']))->listCourses(),

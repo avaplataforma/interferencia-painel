@@ -52,6 +52,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_prepare_lti_robot' => [
+        'classname' => 'local_mundointer\\external\\prepare_lti_robot',
+        'description' => 'Prepara o curso técnico TESTES - Funções e um acesso temporário para o robô LTI MASTER.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
     'local_mundointer_materialize_lti_course' => [
         'classname' => 'local_mundointer\\external\\materialize_lti_course',
         'description' => 'Cria ou atualiza um Curso Individual MASTER, agrupando as aulas LTI homologadas em módulos pedagógicos.',
@@ -71,6 +78,7 @@ $services = [
             'local_mundointer_sync_trail_sections',
             'local_mundointer_academic_snapshot',
             'local_mundointer_lti_selections',
+            'local_mundointer_prepare_lti_robot',
             'local_mundointer_materialize_lti_course',
             'core_webservice_get_site_info',
             'core_course_get_courses',

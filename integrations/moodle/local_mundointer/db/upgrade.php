@@ -106,5 +106,27 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // official Deep Linking resource order (interactive material/book).
         upgrade_plugin_savepoint(true, 2026081408, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081501) {
+        global $DB;
+        $services = $DB->get_records('external_services', ['component' => 'local_mundointer'], '', 'id');
+        foreach ($services as $service) {
+            if (!$DB->record_exists('external_services_functions', [
+                'externalserviceid' => (int)$service->id,
+                'functionname' => 'local_mundointer_prepare_lti_robot',
+            ])) {
+                $DB->insert_record('external_services_functions', (object)[
+                    'externalserviceid' => (int)$service->id,
+                    'functionname' => 'local_mundointer_prepare_lti_robot',
+                ]);
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026081501, 'local', 'mundointer');
+    }
+
+    if ($oldversion < 2026081502) {
+        // Refresh the external-function signature after adding the isolated
+        // staging reset used by the unattended LTI robot.
+        upgrade_plugin_savepoint(true, 2026081502, 'local', 'mundointer');
+    }
     return true;
 }
