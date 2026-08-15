@@ -1866,9 +1866,13 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($view,'Deployment ID'));
     assertTrue(str_contains($view,'Testar conexão técnica'));
     assertTrue(str_contains($view,'Importação assistida MASTER'));
-    assertTrue(str_contains($view,'Selecionar no AVA'));
-    assertTrue(str_contains($view,'Sincronizar agora'));
-    assertTrue(str_contains($view,'Revisar e publicar'));
+    assertTrue(str_contains($view,'Adicionar pelo Catálogo IESDE'));
+    assertTrue(str_contains($view,'https://fornecimento.iesde.com.br/disciplines'));
+    assertTrue(str_contains($view,'Ativar edição → Adicionar atividade → Ferramenta externa → LTI Hub IESDE'));
+    assertTrue(str_contains($view,'Sincronizar seleção'));
+    assertTrue(str_contains($view,'Revisar antes de publicar'));
+    assertTrue(str_contains($view,'master_add=1#master-import'));
+    assertTrue(str_contains($view,'Nenhum conteúdo protegido é copiado do portal'));
     assertTrue(str_contains($view,'sem duplicar conteúdos'));
     assertTrue(str_contains($routes,"ltiSelections('iesde')"));
     assertTrue(str_contains($repository,'Nenhuma atividade MASTER foi selecionada no AVA Cursos'));
