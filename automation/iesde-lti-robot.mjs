@@ -48,21 +48,38 @@ try {
   await result.click();
   await providerFrame.getByText(/materiais complementares|selecionar todas/i).first().waitFor({ state: 'visible', timeout: 30000 });
 
-  const standalone = providerFrame.getByRole('button', { name: /item avulso/i });
-  const standaloneCount = await standalone.count();
-  for (let index = 0; index < standaloneCount; index += 1) {
-    const button = standalone.nth(index);
-    const pressed = await button.getAttribute('aria-pressed');
-    const classes = await button.getAttribute('class') || '';
-    if (pressed !== 'true' && !/active|selected/i.test(classes)) await button.click();
+  const review = providerFrame.getByRole('button', { name: /revisar e confirmar/i }).first();
+  const lessonResources = providerFrame.getByRole('button', { name: /^(material da aula|material interativo da aula)$/i });
+  const lessonResourceCount = await lessonResources.count();
+  if (lessonResourceCount < 1) {
+    throw new Error('O fornecedor abriu a disciplina sem disponibilizar aulas selecionáveis.');
   }
-
   const selectAll = providerFrame.getByRole('button', { name: /selecionar todas/i }).first();
   await selectAll.waitFor({ state: 'visible' });
   await selectAll.click();
+  await waitForSelectionCount(review, lessonResourceCount, 'as aulas da disciplina');
+
+  // Complementary books are independent from the lesson-level "Selecionar
+  // todas" command. Select each standalone material and confirm through the
+  // provider counter instead of relying on theme-specific active classes.
+  const standalone = providerFrame.getByRole('button', { name: /^item avulso$/i });
+  const standaloneCount = await standalone.count();
+  for (let index = 0; index < standaloneCount; index += 1) {
+    const button = standalone.nth(index);
+    const before = await selectionCount(review);
+    await button.click();
+    let after = await waitForSelectionChange(review, before);
+    if (after < before) {
+      // The material was already selected. Restore it deterministically.
+      await button.click();
+      after = await waitForSelectionCount(review, before, 'o material complementar');
+    }
+    if (after <= before) throw new Error('O fornecedor não confirmou a inclusão do material complementar.');
+  }
 
   const createAssessment = providerFrame.getByRole('button', { name: /criar avalia[cç][aã]o/i }).first();
   await createAssessment.waitFor({ state: 'visible' });
+  const beforeAssessment = await selectionCount(review);
   await createAssessment.click();
   const assessmentName = providerFrame.getByLabel(/nome da avalia[cç][aã]o/i).or(providerFrame.getByPlaceholder(/avalia[cç][aã]o/i)).first();
   if (await assessmentName.count()) await assessmentName.fill(`Avaliação final - ${courseName}`);
@@ -75,8 +92,8 @@ try {
     if (await checkbox.count() && !(await checkbox.isChecked())) await checkbox.check({ force: true });
   }
   await providerFrame.getByRole('button', { name: /^salvar$/i }).last().click();
+  await waitForSelectionCount(review, beforeAssessment + 1, 'a avaliação oficial');
 
-  const review = providerFrame.getByRole('button', { name: /revisar e confirmar/i }).first();
   await review.waitFor({ state: 'visible' });
   await review.click();
   const link = providerFrame.getByRole('button', { name: /vincular ao ava cursos/i }).first();
@@ -177,4 +194,32 @@ async function waitForProviderFrame(context, originPage) {
   }
   const observed = [...new Set(routes.filter(Boolean))].slice(0, 8).join(', ');
   throw new Error(`A janela de seleção do fornecedor não abriu${observed ? `. Rotas observadas: ${observed}` : ''}.`);
+}
+
+async function selectionCount(reviewButton) {
+  const text = (await reviewButton.textContent() || '').replace(/\s+/g, ' ').trim();
+  const values = text.match(/\d+/g) || [];
+  return values.length ? Number(values.at(-1)) : 0;
+}
+
+async function waitForSelectionCount(reviewButton, minimum, label, timeout = 8000) {
+  const deadline = Date.now() + timeout;
+  let count = 0;
+  while (Date.now() < deadline) {
+    count = await selectionCount(reviewButton);
+    if (count >= minimum) return count;
+    await new Promise(resolve => setTimeout(resolve, 120));
+  }
+  throw new Error(`O fornecedor não confirmou ${label}: esperados ao menos ${minimum}, recebidos ${count}.`);
+}
+
+async function waitForSelectionChange(reviewButton, previous, timeout = 4000) {
+  const deadline = Date.now() + timeout;
+  let count = previous;
+  while (Date.now() < deadline) {
+    count = await selectionCount(reviewButton);
+    if (count !== previous) return count;
+    await new Promise(resolve => setTimeout(resolve, 120));
+  }
+  return count;
 }

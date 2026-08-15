@@ -2581,6 +2581,7 @@ $tests['prepara curso MASTER automaticamente antes da matricula'] = static funct
     $snapshotMigration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000030_create_lti_selection_snapshots.php');
     $service=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCourseProvisioningService.php');
     $robot=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeLtiRobot.php');
+    $browserRobot=(string)file_get_contents($rootPath.'/automation/iesde-lti-robot.mjs');
     $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
@@ -2597,6 +2598,11 @@ $tests['prepara curso MASTER automaticamente antes da matricula'] = static funct
     assertTrue(str_contains($robot,"'mi-master-staging'"));
     assertTrue(str_contains($robot,"status='purged'"));
     assertTrue(str_contains($robot,"status='cleanup_failed'"));
+    assertTrue(str_contains($robot,'isCompleteDiscipline'));
+    assertTrue(str_contains($robot,'curso incompleto'));
+    assertTrue(str_contains($browserRobot,'waitForSelectionCount'));
+    assertTrue(str_contains($browserRobot,'lessonResourceCount'));
+    assertTrue(str_contains($browserRobot,'beforeAssessment + 1'));
     assertTrue(str_contains($service,"providerCode !== 'iesde'"));
     assertTrue(str_contains($catalog,"provider.provider_code='iesde'"));
     assertTrue(str_contains($catalog,"'automatic'"));

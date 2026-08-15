@@ -60,6 +60,9 @@ final readonly class IesdeLtiRobot
             $selection = $client->ltiSelections('iesde', $stagingCourseId);
             $course = $this->matchingCourse((array)($selection['courses'] ?? []), $sourceName);
             $resourceCount = count((array)($course['conteudos'] ?? []));
+            if ($this->isCompleteDiscipline($providerCourseId) && $resourceCount < 3) {
+                throw new RuntimeException('O fornecedor identifica esta disciplina como completa, mas o robô recebeu somente parte das aulas, apostila e avaliação. A publicação foi interrompida para não criar um curso incompleto.');
+            }
             $this->recordSelection($snapshotId, $course, $resourceCount, 'selected');
             $result = $this->providers->attachLtiSelectionToCourse($providerCourseId, $course);
             if ((int)$result['received'] < 1) throw new RuntimeException('A seleção foi concluída, mas nenhum recurso acadêmico foi recebido.');
@@ -214,5 +217,19 @@ final readonly class IesdeLtiRobot
         $value = mb_strtolower(trim($value));
         $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
         return trim((string)preg_replace('/[^a-z0-9]+/', ' ', is_string($ascii) ? strtolower($ascii) : $value));
+    }
+
+    private function isCompleteDiscipline(int $providerCourseId): bool
+    {
+        $statement = $this->database->prepare('SELECT raw_payload FROM provider_commercial_catalog_items WHERE provider_course_id=:course AND is_available=1 ORDER BY id DESC LIMIT 1');
+        $statement->execute(['course' => $providerCourseId]);
+        $payload = json_decode((string)$statement->fetchColumn(), true);
+        if (!is_array($payload)) return false;
+        foreach ((array)($payload['productionCategories'] ?? []) as $category) {
+            if (!is_array($category)) continue;
+            $description = $this->normalized((string)($category['description'] ?? ''));
+            if (str_contains($description, 'disciplina completa')) return true;
+        }
+        return false;
     }
 }
