@@ -118,8 +118,18 @@ try {
       '.form-control-feedback',
       '[data-fieldtype] .error',
     ].join(', ')).allTextContents();
+    const invalidFields = await page.locator('input:invalid, select:invalid, textarea:invalid, [aria-invalid="true"]').evaluateAll(elements => elements.map(element => {
+      const id = element instanceof HTMLElement ? element.id : '';
+      const labelled = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
+      const group = element instanceof HTMLElement ? element.closest('.form-group, [data-fieldtype]') : null;
+      const groupLabel = group?.querySelector('label, .col-form-label, legend');
+      const label = (labelled?.textContent || groupLabel?.textContent || element.getAttribute('name') || id || 'campo obrigatório')
+        .replace(/\s+/g, ' ').trim();
+      return label;
+    }).filter(Boolean).slice(0, 8));
     const detail = validationMessages.map(value => value.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 3).join(' ');
-    throw new Error(`O Moodle manteve o formulário aberto após o envio${detail ? `: ${detail}` : '.'}`);
+    const fields = [...new Set(invalidFields)].join(', ');
+    throw new Error(`O Moodle manteve o formulário aberto após o envio${fields ? `. Campos pendentes: ${fields}` : detail ? `: ${detail}` : '.'}`);
   }
   process.stdout.write(JSON.stringify({ ok: true }));
 } catch (error) {
