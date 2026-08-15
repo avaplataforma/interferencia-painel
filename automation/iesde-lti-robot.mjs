@@ -91,7 +91,10 @@ try {
     .first();
   await saveAndReturn.waitFor({ state: 'visible', timeout: 45000 });
   await saveAndReturn.click();
-  await page.waitForURL(url => /\/course\/view\.php/i.test(String(url)), { timeout: 45000 });
+  await page.waitForURL(url => /\/course\/view\.php/i.test(String(url)), {
+    timeout: 45000,
+    waitUntil: 'domcontentloaded',
+  });
   await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
   process.stdout.write(JSON.stringify({ ok: true }));
 } catch (error) {
