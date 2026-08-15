@@ -78,6 +78,9 @@ final class materialize_lti_course extends external_api
         $activitycount = 0;
         $sectionnumber = 0;
         $modulenumber = 0;
+        $booksection = null;
+        $bookhasinteractivematerial = false;
+        $interactiveactivities = [];
 
         foreach ($groups as $group) {
             $sectionnumber++;
@@ -103,7 +106,7 @@ final class materialize_lti_course extends external_api
 
             $bookitemcount = $isbook ? count($group['items']) : 0;
             $bookhasexplicitname = $isbook && array_reduce($group['items'], static function(bool $found, array $candidate): bool {
-                return $found || preg_match('/^nome\s+do\s+livro\s*:/iu', trim((string)$candidate['lti']->name)) === 1;
+                return $found || preg_match('/^(?:nome\s+do\s+)?livro\s*:/iu', trim((string)$candidate['lti']->name)) === 1;
             }, false);
             $bookitemindex = 0;
             foreach ($group['items'] as $item) {
@@ -168,8 +171,23 @@ final class materialize_lti_course extends external_api
                     $firstcmid = $cmid;
                     $firstactivityid = $activityid;
                 }
+                if ($isbook) {
+                    $booksection = $section;
+                    $bookhasinteractivematerial = $bookhasinteractivematerial || $displayname === 'Materiais Interativos';
+                } else if (!$isassessment) {
+                    $interactiveactivities[] = ['cmid' => $cmid, 'name' => $sectionname];
+                }
                 $activitycount++;
             }
+        }
+
+        // Some MASTER titles expose only the complete PDF as complementary
+        // material. In that case, keep the agreed first block complete with a
+        // Moodle page that indexes every interactive lesson already imported.
+        // This avoids duplicating the PDF under a misleading second label.
+        if ($booksection && !$bookhasinteractivematerial && $interactiveactivities !== []) {
+            self::ensure_materials_index($course, $booksection, $interactiveactivities);
+            $activitycount++;
         }
 
         $cover=sync_trail_sections::apply_managed_cover($course,(string)$parameters['coverurl'],(string)$parameters['coveralt']);
@@ -305,7 +323,7 @@ final class materialize_lti_course extends external_api
     private static function lesson_parts(string $name): array
     {
         $name = trim((string) preg_replace('/^aula\s*[-:–—]\s*/iu', '', clean_param($name, PARAM_TEXT)));
-        $name = trim((string)preg_replace('/^nome\s+do\s+livro\s*:\s*/iu', '', $name));
+        $name = trim((string)preg_replace('/^(?:nome\s+do\s+)?livro\s*:\s*/iu', '', $name));
         if (preg_match('/^(.*?)\s*[-:–—]\s*(se[cç][aã]o|atividade)\s*(\d+)\s*$/iu', $name, $match)) {
             return [
                 'base' => trim($match[1]),
@@ -329,7 +347,7 @@ final class materialize_lti_course extends external_api
 
     private static function book_activity_display_name(string $original, string $coursename, int $itemindex, int $itemcount, bool $hasexplicitname): string
     {
-        if (preg_match('/^nome\s+do\s+livro\s*:/iu', trim($original)) === 1) {
+        if (preg_match('/^(?:nome\s+do\s+)?livro\s*:/iu', trim($original)) === 1) {
             return 'Livro - ' . trim($coursename);
         }
         // Some IESDE selections send the HTML and PDF resources with the
@@ -376,10 +394,85 @@ final class materialize_lti_course extends external_api
 
     private static function is_complete_book_group(string $groupname, string $coursename): bool
     {
-        $groupname = trim((string)preg_replace('/^nome\s+do\s+livro\s*:\s*/iu', '', $groupname));
+        $groupname = trim((string)preg_replace('/^(?:nome\s+do\s+)?livro\s*:\s*/iu', '', $groupname));
         $groupkey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($groupname)));
         $coursekey = trim((string)preg_replace('/[^a-z0-9]+/', ' ', self::fold($coursename)));
         return $groupkey !== '' && $coursekey !== '' && $groupkey === $coursekey;
+    }
+
+    /**
+     * Creates or refreshes the fallback interactive-material index used when
+     * the provider exposes the PDF book but no separate HTML book resource.
+     *
+     * @param array<int,array{cmid:int,name:string}> $activities
+     */
+    private static function ensure_materials_index(object $course, object $section, array $activities): void
+    {
+        global $CFG, $DB;
+
+        require_once($CFG->dirroot . '/mod/page/lib.php');
+        $pagemodule = $DB->get_record('modules', ['name' => 'page'], '*', MUST_EXIST);
+        $idnumber = 'mi-master-materials-index-' . (int)$course->id;
+        $items = [];
+        foreach ($activities as $activity) {
+            $url = new \moodle_url('/mod/lti/view.php', ['id' => (int)$activity['cmid']]);
+            $items[] = \html_writer::tag('li', \html_writer::link($url, format_string((string)$activity['name'])));
+        }
+        $content = \html_writer::div(
+            \html_writer::tag('p', 'Acesse os materiais interativos organizados por módulo.')
+            . \html_writer::tag('ol', implode('', $items)),
+            'mundointer-materials-index'
+        );
+        $existing = $DB->get_record('course_modules', [
+            'course' => (int)$course->id,
+            'module' => (int)$pagemodule->id,
+            'idnumber' => $idnumber,
+        ]);
+        if ($existing) {
+            $DB->update_record('page', (object)[
+                'id' => (int)$existing->instance,
+                'name' => 'Materiais Interativos',
+                'content' => $content,
+                'contentformat' => FORMAT_HTML,
+                'timemodified' => time(),
+            ]);
+            $DB->update_record('course_modules', (object)[
+                'id' => (int)$existing->id,
+                'visible' => 1,
+                'visibleoncoursepage' => 1,
+                'completion' => COMPLETION_TRACKING_AUTOMATIC,
+                'completionview' => 1,
+            ]);
+            $cm = get_coursemodule_from_id('page', (int)$existing->id, (int)$course->id, false, MUST_EXIST);
+            moveto_module($cm, $section);
+            return;
+        }
+
+        $moduleinfo = (object)[
+            'course' => (int)$course->id,
+            'name' => 'Materiais Interativos',
+            'modulename' => 'page',
+            'module' => (int)$pagemodule->id,
+            'section' => (int)$section->section,
+            'visible' => 1,
+            'visibleoncoursepage' => 1,
+            'cmidnumber' => $idnumber,
+            'intro' => '',
+            'introformat' => FORMAT_HTML,
+            'content' => $content,
+            'contentformat' => FORMAT_HTML,
+            'display' => 5,
+            'displayoptions' => serialize([]),
+            'revision' => 1,
+            'groupmode' => 0,
+            'groupingid' => 0,
+            'completion' => COMPLETION_TRACKING_AUTOMATIC,
+            'completionview' => 1,
+            'completionexpected' => 0,
+            'coursemodule' => 0,
+            'instance' => 0,
+        ];
+        add_moduleinfo($moduleinfo, $course);
     }
 
     private static function fold(string $value): string
