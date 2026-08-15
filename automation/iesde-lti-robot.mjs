@@ -82,11 +82,17 @@ try {
   await link.waitFor({ state: 'visible', timeout: 30000 });
   await link.click();
 
-  await Promise.race([
-    page.waitForURL(url => !String(url).includes('robot_login.php') && /course\/view|modedit/.test(String(url)), { timeout: 45000 }),
-    providerFrame.waitForTimeout(5000),
-  ]).catch(() => {});
-  await page.waitForTimeout(1500);
+  // Deep Linking only fills the Moodle activity form. The URL activity does
+  // not exist until Moodle receives an explicit final submit, so never close
+  // the browser after the provider confirmation alone.
+  const saveAndReturn = page
+    .getByRole('button', { name: /salvar e voltar ao curso/i })
+    .or(page.locator('input[type="submit"][name="submitbutton"]'))
+    .first();
+  await saveAndReturn.waitFor({ state: 'visible', timeout: 45000 });
+  await saveAndReturn.click();
+  await page.waitForURL(url => /\/course\/view\.php/i.test(String(url)), { timeout: 45000 });
+  await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
   process.stdout.write(JSON.stringify({ ok: true }));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
