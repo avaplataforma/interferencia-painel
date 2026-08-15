@@ -89,6 +89,8 @@ try {
   // attached but outside the visible area after the Deep Linking modal closes.
   // Native requestSubmit preserves the clicked button value and Moodle form
   // validation without depending on screen position or overlay animation.
+  const activityName = page.locator('#id_name, input[name="name"]').first();
+  if (await activityName.count()) await activityName.fill(courseName);
   const saveAndReturn = page.locator([
     '#id_submitbutton2',
     'input[type="submit"][name="submitbutton2"]',
