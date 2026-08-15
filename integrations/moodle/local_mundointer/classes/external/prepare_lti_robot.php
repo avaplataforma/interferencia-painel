@@ -17,7 +17,8 @@ use core_external\external_value;
 final class prepare_lti_robot extends external_api
 {
     private const COURSE_IDNUMBER = 'mi-master-staging';
-    private const COURSE_NAME = 'TESTES - Funções';
+    private const COURSE_NAME = 'Migração LTI';
+    private const LEGACY_COURSE_NAME = 'TESTES - Funções';
 
     public static function execute_parameters(): external_function_parameters
     {
@@ -45,6 +46,9 @@ final class prepare_lti_robot extends external_api
             $course = $DB->get_record('course', ['fullname' => self::COURSE_NAME], '*', IGNORE_MULTIPLE);
         }
         if (!$course) {
+            $course = $DB->get_record('course', ['fullname' => self::LEGACY_COURSE_NAME], '*', IGNORE_MULTIPLE);
+        }
+        if (!$course) {
             require_once($CFG->dirroot . '/course/lib.php');
             $category = \core_course_category::get_default();
             $course = create_course((object)[
@@ -62,6 +66,10 @@ final class prepare_lti_robot extends external_api
             $changed = false;
             if (trim((string)$course->idnumber) !== self::COURSE_IDNUMBER) {
                 $updates['idnumber'] = self::COURSE_IDNUMBER;
+                $changed = true;
+            }
+            if (trim((string)$course->fullname) !== self::COURSE_NAME) {
+                $updates['fullname'] = self::COURSE_NAME;
                 $changed = true;
             }
             if ((int)$course->visible !== 0) {
@@ -131,6 +139,7 @@ final class prepare_lti_robot extends external_api
         return [
             'courseid' => (int)$course->id,
             'coursename' => clean_param((string)$course->fullname, PARAM_TEXT),
+            'courseidnumber' => self::COURSE_IDNUMBER,
             'typeid' => $typeid,
             'loginurl' => $loginurl,
             'expiresat' => $expiresat,
@@ -142,6 +151,7 @@ final class prepare_lti_robot extends external_api
         return new external_single_structure([
             'courseid' => new external_value(PARAM_INT, 'Technical staging course id.'),
             'coursename' => new external_value(PARAM_TEXT, 'Technical staging course name.'),
+            'courseidnumber' => new external_value(PARAM_TEXT, 'Stable technical staging course identifier.'),
             'typeid' => new external_value(PARAM_INT, 'IESDE LTI type id.'),
             'loginurl' => new external_value(PARAM_RAW, 'Short-lived one-time login URL.'),
             'expiresat' => new external_value(PARAM_INT, 'Login URL expiration timestamp.'),

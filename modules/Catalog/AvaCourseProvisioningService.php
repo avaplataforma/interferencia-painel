@@ -70,16 +70,20 @@ final readonly class AvaCourseProvisioningService
             }
 
             $this->startJob($jobId);
-            $this->iesdeRobot->prepare($courseId, (string)($target['source_name'] ?? $target['name'] ?? ''));
+            $snapshotId = 0;
+            $prepared = $this->iesdeRobot->prepare($courseId, (string)($target['source_name'] ?? $target['name'] ?? ''), $jobId);
+            $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
             $this->publisher->publishMasterCourse($courseId, $userId);
             $current = $this->publishedCourse($courseId, $organizationId);
             if ($current === null) {
                 throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
             }
+            $this->iesdeRobot->finalize($snapshotId, (int)$current['remote_course_id']);
             $this->completeJob($jobId);
             return $current + ['course_id' => $courseId, 'created' => true, 'job_id' => $jobId];
         } catch (Throwable $exception) {
             $message = trim($exception->getMessage()) ?: 'Falha ao preparar automaticamente o curso no AVA.';
+            if (isset($snapshotId) && $snapshotId > 0) $this->iesdeRobot->fail($snapshotId, $message);
             $this->failJob($jobId, $message);
             throw new RuntimeException($message, 0, $exception);
         } finally {
@@ -117,7 +121,8 @@ final readonly class AvaCourseProvisioningService
         $statement = $this->database->prepare("SELECT job.id,job.provider_course_id,job.organization_id,job.provider_code,job.status,job.attempts,
                 job.started_at,job.completed_at,job.last_error,job.created_at,job.updated_at,
                 COALESCE(NULLIF(course.commercial_name,''),course.name) course_name,
-                COALESCE(NULLIF(organization.display_name,''),organization.legal_name) organization_name
+                COALESCE(NULLIF(organization.display_name,''),organization.legal_name) organization_name,
+                (SELECT snapshot.status FROM lti_selection_snapshots snapshot WHERE snapshot.provisioning_job_id=job.id ORDER BY snapshot.id DESC LIMIT 1) lti_snapshot_status
             FROM ava_course_provisioning_jobs job
             INNER JOIN provider_courses course ON course.id=job.provider_course_id
             INNER JOIN organizations organization ON organization.id=job.organization_id

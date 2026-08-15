@@ -10,9 +10,9 @@ use PDO;
 use RuntimeException;
 
 /**
- * Selects one MASTER discipline through LTI Deep Linking in the dedicated
- * TESTES - Funções course. Moodle grants a short-lived one-time session, so
- * neither a human login nor a stored Moodle password is required.
+ * Selects one MASTER discipline through LTI Deep Linking in the hidden
+ * Migração LTI bridge. The selection is persisted before the final course is
+ * materialized, so the bridge can be safely emptied after publication.
  */
 final readonly class IesdeLtiRobot
 {
@@ -23,8 +23,8 @@ final readonly class IesdeLtiRobot
         private string $rootPath,
     ) {}
 
-    /** @return array{courseid:int,resources:int} */
-    public function prepare(int $providerCourseId, string $sourceName): array
+    /** @return array{courseid:int,resources:int,snapshot_id:int} */
+    public function prepare(int $providerCourseId, string $sourceName, ?int $jobId = null): array
     {
         $connection = $this->connections->shared();
         if (!(bool)($connection['configured'] ?? false) || !(bool)($connection['is_active'] ?? false)) {
@@ -33,24 +33,35 @@ final readonly class IesdeLtiRobot
         $client = new MoodleClient((string)$connection['base_url'], (string)$connection['token'], true);
         $staging = $client->prepareLtiRobot(false, false, true);
         $stagingCourseId = (int)($staging['courseid'] ?? 0);
-        if ($stagingCourseId < 1 || (string)($staging['coursename'] ?? '') !== 'TESTES - Funções') {
-            throw new RuntimeException('O curso técnico TESTES - Funções não foi localizado no AVA Cursos.');
+        $stagingIdNumber = trim((string)($staging['courseidnumber'] ?? ''));
+        if ($stagingCourseId < 1 || ($stagingIdNumber !== '' && $stagingIdNumber !== 'mi-master-staging')) {
+            throw new RuntimeException('A área técnica Migração LTI não foi localizada no AVA Cursos.');
         }
 
         $context = $this->providers->coursePublicationContext($providerCourseId);
-        $currentSourceId = (int)($context['source_raw']['moodle_course_id'] ?? 0);
-        if ((int)($context['resource_count'] ?? 0) > 0 && $currentSourceId === $stagingCourseId) {
-            return ['courseid' => $stagingCourseId, 'resources' => (int)$context['resource_count']];
-        }
-
+        $snapshotId = $this->createSnapshot($jobId, $providerCourseId, $stagingCourseId, $sourceName);
         $lockName = 'mi:ava:iesde-lti-robot';
         $lock = $this->database->prepare('SELECT GET_LOCK(:lock_name,60)');
         $lock->execute(['lock_name' => $lockName]);
         if ((int)$lock->fetchColumn() !== 1) {
-            throw new RuntimeException('O robô MASTER já está preparando outro curso. A fila tentará novamente.');
+            $message = 'O robô MASTER já está preparando outro curso. A fila tentará novamente.';
+            $this->fail($snapshotId, $message);
+            throw new RuntimeException($message);
         }
 
         try {
+            $currentSourceId = (int)($context['source_raw']['moodle_course_id'] ?? 0);
+            if ((int)($context['resource_count'] ?? 0) > 0 && $currentSourceId === $stagingCourseId) {
+                $resources = (int)$context['resource_count'];
+                $this->recordSelection($snapshotId, [
+                    'source' => 'persistent_inventory',
+                    'provider_course_id' => $providerCourseId,
+                    'resource_count' => $resources,
+                    'source_raw' => (array)($context['source_raw'] ?? []),
+                ], $resources, 'registered');
+                return ['courseid' => $stagingCourseId, 'resources' => $resources, 'snapshot_id' => $snapshotId];
+            }
+
             $session = $client->prepareLtiRobot(true, true);
             $loginUrl = trim((string)($session['loginurl'] ?? ''));
             if ($loginUrl === '') throw new RuntimeException('O AVA não gerou a sessão técnica do robô.');
@@ -58,13 +69,91 @@ final readonly class IesdeLtiRobot
 
             $selection = $client->ltiSelections('iesde', $stagingCourseId);
             $course = $this->matchingCourse((array)($selection['courses'] ?? []), $sourceName);
+            $resourceCount = count((array)($course['conteudos'] ?? []));
+            $this->recordSelection($snapshotId, $course, $resourceCount, 'selected');
             $result = $this->providers->attachLtiSelectionToCourse($providerCourseId, $course);
             if ((int)$result['received'] < 1) throw new RuntimeException('A seleção foi concluída, mas nenhum recurso acadêmico foi recebido.');
-            return ['courseid' => $stagingCourseId, 'resources' => (int)$result['received']];
-        } finally {
-            $release = $this->database->prepare('SELECT RELEASE_LOCK(:lock_name)');
-            $release->execute(['lock_name' => $lockName]);
+            $this->recordSelection($snapshotId, $course, (int)$result['received'], 'registered');
+            return ['courseid' => $stagingCourseId, 'resources' => (int)$result['received'], 'snapshot_id' => $snapshotId];
+        } catch (\Throwable $exception) {
+            $this->fail($snapshotId, $exception->getMessage());
+            throw $exception;
         }
+    }
+
+    /**
+     * Confirms the permanent Moodle course and only then empties the technical
+     * bridge. Cleanup errors remain auditable and never undo a valid course.
+     */
+    public function finalize(int $snapshotId, int $remoteCourseId): bool
+    {
+        if ($snapshotId < 1 || $remoteCourseId < 1) {
+            $this->releaseLock();
+            return false;
+        }
+        try {
+            $this->database->prepare("UPDATE lti_selection_snapshots SET status='materialized',final_remote_course_id=:remote,materialized_at=NOW(),last_error=NULL WHERE id=:id")
+                ->execute(['remote' => $remoteCourseId, 'id' => $snapshotId]);
+            $connection = $this->connections->shared();
+            $client = new MoodleClient((string)$connection['base_url'], (string)$connection['token'], true);
+            $staging = $client->prepareLtiRobot(false, true, false);
+            if ((int)($staging['courseid'] ?? 0) < 1) {
+                throw new RuntimeException('O AVA não confirmou a limpeza da área Migração LTI.');
+            }
+            $this->database->prepare("UPDATE lti_selection_snapshots SET status='purged',purged_at=NOW(),last_error=NULL WHERE id=:id")
+                ->execute(['id' => $snapshotId]);
+            return true;
+        } catch (\Throwable $exception) {
+            $this->database->prepare("UPDATE lti_selection_snapshots SET status='cleanup_failed',last_error=:error WHERE id=:id")
+                ->execute(['id' => $snapshotId, 'error' => mb_substr(trim($exception->getMessage()), 0, 2000)]);
+            return false;
+        } finally {
+            $this->releaseLock();
+        }
+    }
+
+    public function fail(int $snapshotId, string $message): void
+    {
+        if ($snapshotId > 0) {
+            $this->database->prepare("UPDATE lti_selection_snapshots SET status='failed',last_error=:error WHERE id=:id AND status<>'purged'")
+                ->execute(['id' => $snapshotId, 'error' => mb_substr(trim($message), 0, 2000)]);
+        }
+        $this->releaseLock();
+    }
+
+    private function releaseLock(): void
+    {
+        $release = $this->database->prepare('SELECT RELEASE_LOCK(:lock_name)');
+        $release->execute(['lock_name' => 'mi:ava:iesde-lti-robot']);
+    }
+
+    private function createSnapshot(?int $jobId, int $providerCourseId, int $stagingCourseId, string $sourceName): int
+    {
+        $statement = $this->database->prepare("INSERT INTO lti_selection_snapshots(provisioning_job_id,provider_course_id,provider_code,staging_course_id,source_name,status)
+            VALUES(:job,:course,'iesde',:staging,:source,'requested')");
+        $statement->execute([
+            'job' => $jobId !== null && $jobId > 0 ? $jobId : null,
+            'course' => $providerCourseId,
+            'staging' => $stagingCourseId,
+            'source' => mb_substr(trim($sourceName), 0, 500),
+        ]);
+        return (int)$this->database->lastInsertId();
+    }
+
+    /** @param array<string,mixed> $payload */
+    private function recordSelection(int $snapshotId, array $payload, int $resourceCount, string $status): void
+    {
+        $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $statement = $this->database->prepare("UPDATE lti_selection_snapshots
+            SET status=:status,selection_payload=:payload,payload_sha256=:hash,resource_count=:resources,selected_at=COALESCE(selected_at,NOW()),last_error=NULL
+            WHERE id=:id");
+        $statement->execute([
+            'status' => $status,
+            'payload' => $json,
+            'hash' => hash('sha256', $json),
+            'resources' => max(0, $resourceCount),
+            'id' => $snapshotId,
+        ]);
     }
 
     private function runBrowser(string $loginUrl, string $sourceName): void
@@ -121,7 +210,7 @@ final readonly class IesdeLtiRobot
     /** @param list<array<string,mixed>> $courses @return array<string,mixed> */
     private function matchingCourse(array $courses, string $sourceName): array
     {
-        if ($courses === []) throw new RuntimeException('O robô terminou sem criar a seleção no curso TESTES - Funções.');
+        if ($courses === []) throw new RuntimeException('O robô terminou sem criar a seleção na área Migração LTI.');
         $wanted = $this->normalized($sourceName);
         foreach ($courses as $course) {
             if (is_array($course) && $this->normalized((string)($course['nome'] ?? '')) === $wanted) return $course;

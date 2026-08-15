@@ -10,6 +10,15 @@ $queueLabels = [
     'completed' => ['Concluído', 'fa-circle-check', 'is-completed'],
     'failed' => ['Falhou', 'fa-triangle-exclamation', 'is-failed'],
 ];
+$ltiLabels = [
+    'requested' => 'Preparando seleção',
+    'selected' => 'Seleção capturada',
+    'registered' => 'Registrada no Mundo Inter',
+    'materialized' => 'Curso confirmado',
+    'purged' => 'Área técnica limpa',
+    'cleanup_failed' => 'Limpeza pendente',
+    'failed' => 'Seleção falhou',
+];
 ?>
 <section class="catalog-subpanel catalog-technical-block provisioning-queue" data-catalog-subpanel="<?= $escape($provider) ?>:queue" hidden>
  <header class="technical-block-header">
@@ -34,7 +43,7 @@ $queueLabels = [
     <tr>
      <td><strong><?= $escape((string)($job['course_name']??'Curso não identificado')) ?></strong><small>Formação <?= $escape(strtoupper((string)($job['provider_code']??$provider))) ?></small></td>
      <td><?= $escape((string)($job['organization_name']??'Franquia')) ?></td>
-     <td><span class="provisioning-status <?= $escape($definition[2]) ?>"><i class="fa-solid <?= $escape($definition[1]) ?>"></i><?= $escape($needsAttention?'Intervenção necessária':$definition[0]) ?></span><?php if(trim((string)($job['last_error']??''))!==''):?><small class="provisioning-error" title="<?= $escape((string)$job['last_error']) ?>"><?= $escape((string)$job['last_error']) ?></small><?php endif;?></td>
+     <td><span class="provisioning-status <?= $escape($definition[2]) ?>"><i class="fa-solid <?= $escape($definition[1]) ?>"></i><?= $escape($needsAttention?'Intervenção necessária':$definition[0]) ?></span><?php $ltiStatus=trim((string)($job['lti_snapshot_status']??''));if($ltiStatus!==''):?><small><i class="fa-solid fa-link"></i> LTI: <?= $escape($ltiLabels[$ltiStatus]??$ltiStatus) ?></small><?php endif;?><?php if(trim((string)($job['last_error']??''))!==''):?><small class="provisioning-error" title="<?= $escape((string)$job['last_error']) ?>"><?= $escape((string)$job['last_error']) ?></small><?php endif;?></td>
      <td><strong><?= $attempts ?>/3</strong></td>
      <td><?= $escape($formatDate($job['updated_at']??null)) ?></td>
      <td><?php if($status==='failed'):?><form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/provisioning/<?= (int)$job['id'] ?>/retry" onsubmit="return confirm('Tentar preparar este curso novamente?')"><?= $csrfField ?><input type="hidden" name="provider" value="<?= $escape($provider) ?>"><button class="btn btn-secondary" type="submit"><i class="fa-solid fa-rotate-right"></i> Tentar novamente</button></form><?php else:?><span class="muted">Automático</span><?php endif;?></td>

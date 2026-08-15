@@ -54,7 +54,7 @@ $functions = [
     ],
     'local_mundointer_prepare_lti_robot' => [
         'classname' => 'local_mundointer\\external\\prepare_lti_robot',
-        'description' => 'Prepara o curso técnico TESTES - Funções e um acesso temporário para o robô LTI MASTER.',
+        'description' => 'Prepara a área técnica Migração LTI e um acesso temporário para o robô LTI MASTER.',
         'type' => 'write',
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',

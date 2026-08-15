@@ -162,7 +162,7 @@ final readonly class MoodleClient
         return$payload;
     }
 
-    /** @return array{courseid:int,coursename:string,typeid:int,loginurl:string,expiresat:int} */
+    /** @return array{courseid:int,coursename:string,courseidnumber?:string,typeid:int,loginurl:string,expiresat:int} */
     public function prepareLtiRobot(bool$withLogin=true,bool$resetCourse=false,bool$cleanLegacy=false):array
     {
         return$this->call('local_mundointer_prepare_lti_robot',['withlogin'=>$withLogin?1:0,'resetcourse'=>$resetCourse?1:0,'cleanlegacy'=>$cleanLegacy?1:0]);

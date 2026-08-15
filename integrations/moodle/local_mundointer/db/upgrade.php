@@ -128,5 +128,10 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // staging reset used by the unattended LTI robot.
         upgrade_plugin_savepoint(true, 2026081502, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081503) {
+        // The technical LTI bridge now has a neutral name and exposes its
+        // stable idnumber so the central robot never depends on a label.
+        upgrade_plugin_savepoint(true, 2026081503, 'local', 'mundointer');
+    }
     return true;
 }

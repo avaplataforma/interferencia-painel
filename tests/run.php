@@ -2578,16 +2578,25 @@ $tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = sta
 
 $tests['prepara curso MASTER automaticamente antes da matricula'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000020_create_ava_course_provisioning_jobs.php');
+    $snapshotMigration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000030_create_lti_selection_snapshots.php');
     $service=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCourseProvisioningService.php');
+    $robot=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeLtiRobot.php');
     $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
 
     assertTrue(str_contains($migration,'CREATE TABLE ava_course_provisioning_jobs'));
     assertTrue(str_contains($migration,'UNIQUE KEY ava_course_provisioning_request_uq'));
+    assertTrue(str_contains($snapshotMigration,'CREATE TABLE lti_selection_snapshots'));
+    assertTrue(str_contains($snapshotMigration,'selection_payload LONGTEXT'));
+    assertTrue(str_contains($snapshotMigration,'final_remote_course_id'));
     assertTrue(str_contains($service,'ensureProviderCourseOffer'));
     assertTrue(str_contains($service,'GET_LOCK'));
     assertTrue(str_contains($service,'publishMasterCourse'));
+    assertTrue(str_contains($service,'->finalize($snapshotId'));
+    assertTrue(str_contains($robot,"'mi-master-staging'"));
+    assertTrue(str_contains($robot,"status='purged'"));
+    assertTrue(str_contains($robot,"status='cleanup_failed'"));
     assertTrue(str_contains($service,"providerCode !== 'iesde'"));
     assertTrue(str_contains($catalog,"provider.provider_code='iesde'"));
     assertTrue(str_contains($catalog,"'automatic'"));
@@ -2616,6 +2625,7 @@ $tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static 
     assertTrue(str_contains($service,"attempts<:max_attempts"));
     assertTrue(str_contains($service,"provider_code='iesde'"));
     assertTrue(str_contains($queue,'Intervenção necessária'));
+    assertTrue(str_contains($queue,'Área técnica limpa'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/bin/console'),'ava-courses:process'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/bin/console'),'--dry-run'));
     assertTrue(str_contains($routes,'provisioningQueue'));
