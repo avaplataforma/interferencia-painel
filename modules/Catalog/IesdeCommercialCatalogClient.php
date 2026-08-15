@@ -39,7 +39,8 @@ final class IesdeCommercialCatalogClient
             $response = $this->request('/api/Disciplines/catalog', [
                 'page' => $page,
                 'pageSize' => $pageSize,
-                'status' => 'active',
+                // O portal comercial usa "available" para os materiais ativos.
+                'status' => 'available',
             ]);
             $batch = $this->records($response);
             foreach ($batch as $record) {

@@ -2744,6 +2744,7 @@ $tests['sincroniza o acervo comercial MASTER sem copiar conteudo protegido'] = s
 
     assertTrue(str_contains($migration,'CREATE TABLE provider_commercial_catalog_connections'));
     assertTrue(str_contains($migration,'CREATE TABLE provider_commercial_catalog_items'));
+    assertTrue(str_contains($client,"'status' => 'available'"));
     assertTrue(str_contains($repository,'synchronizeCommercialCatalog'));
     assertTrue(str_contains($repository,"'pending_lti'"));
     assertTrue(str_contains($repository,"'linked'"));
