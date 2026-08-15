@@ -107,7 +107,13 @@ try {
     }
     form.requestSubmit();
   });
-  await page.waitForURL(url => /\/course\/view\.php/i.test(String(url)), {
+  await page.waitForURL(url => {
+    try {
+      return !/\/course\/modedit\.php$/i.test(new URL(String(url)).pathname);
+    } catch {
+      return false;
+    }
+  }, {
     timeout: 45000,
     waitUntil: 'domcontentloaded',
   });
