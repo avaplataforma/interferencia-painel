@@ -86,12 +86,16 @@ final readonly class IesdeLtiRobot
         stream_set_blocking($pipes[2], false);
         $stdout = '';
         $stderr = '';
+        $observedExitCode = null;
         $deadline = microtime(true) + 210;
         do {
             $stdout .= stream_get_contents($pipes[1]) ?: '';
             $stderr .= stream_get_contents($pipes[2]) ?: '';
             $status = proc_get_status($process);
-            if (!$status['running']) break;
+            if (!$status['running']) {
+                $observedExitCode = (int)($status['exitcode'] ?? -1);
+                break;
+            }
             if (microtime(true) >= $deadline) {
                 proc_terminate($process, 9);
                 throw new RuntimeException('O robô MASTER excedeu o tempo de preparação do curso.');
@@ -102,7 +106,10 @@ final readonly class IesdeLtiRobot
         $stderr .= stream_get_contents($pipes[2]) ?: '';
         fclose($pipes[1]);
         fclose($pipes[2]);
-        $exitCode = proc_close($process);
+        $closedExitCode = proc_close($process);
+        $exitCode = $observedExitCode !== null && $observedExitCode >= 0
+            ? $observedExitCode
+            : $closedExitCode;
         $payload = json_decode(trim($stdout), true);
         if ($exitCode !== 0 || !is_array($payload) || !($payload['ok'] ?? false)) {
             $detail = is_array($payload) ? trim((string)($payload['error'] ?? '')) : trim($stderr);
