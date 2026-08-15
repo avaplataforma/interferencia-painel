@@ -29,7 +29,7 @@ try {
   await choose.waitFor({ state: 'visible' });
   await choose.click();
 
-  const providerFrame = await waitForProviderFrame(page);
+  const providerFrame = await waitForProviderFrame(context, page);
   const search = providerFrame.getByPlaceholder(/buscar disciplina/i).or(providerFrame.getByPlaceholder(/buscar.*materia/i)).first();
   await search.waitFor({ state: 'visible' });
   await search.fill(courseName);
@@ -94,14 +94,16 @@ try {
   if (browser) await browser.close().catch(() => {});
 }
 
-async function waitForProviderFrame(page) {
+async function waitForProviderFrame(context, originPage) {
   const deadline = Date.now() + 45000;
   while (Date.now() < deadline) {
-    for (const frame of page.frames()) {
-      const url = frame.url();
-      if (/fornecimento\.iesde|api-fornecimento/i.test(url)) return frame;
+    for (const candidatePage of context.pages()) {
+      for (const frame of candidatePage.frames()) {
+        const url = frame.url();
+        if (/fornecimento\.iesde|api-fornecimento/i.test(url)) return frame;
+      }
     }
-    await page.waitForTimeout(250);
+    await originPage.waitForTimeout(250);
   }
   throw new Error('A janela de seleção do fornecedor não abriu.');
 }
