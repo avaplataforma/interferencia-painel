@@ -128,17 +128,18 @@ final readonly class LearningCatalogRepository
     public function enrollmentProviderCoursesForOrganization(int $organizationId): array
     {
         if ($organizationId < 1) return [];
-        $statement = $this->database->prepare("SELECT offer.id offer_id,
+        $statement = $this->database->prepare("SELECT offer.id offer_id,course.id course_id,provider.provider_code,
             COALESCE(NULLIF(offer.commercial_name,''),NULLIF(course.commercial_name,''),course.name) name,
             offer.price,offer.max_installments,catalog.name formation_name,provider.name provider_name,
             publication.moodle_course_id,publication.ava_connection_id,publication.remote_course_id,
-            connection.name ava_connection_name,connection.connection_type
+            connection.name ava_connection_name,connection.connection_type,
+            CASE WHEN publication.remote_course_id IS NULL THEN 'automatic' ELSE 'published' END provisioning_status
             FROM organization_provider_course_offers offer
             INNER JOIN provider_courses course ON course.id=offer.provider_course_id
             INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
             INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id AND provider.is_active=1
-            INNER JOIN catalog_ava_publications publication ON publication.entity_type='provider_course' AND publication.entity_id=course.id AND publication.publication_status='published'
-            INNER JOIN ava_connections connection ON connection.id=publication.ava_connection_id AND connection.is_active=1
+            LEFT JOIN catalog_ava_publications publication ON publication.entity_type='provider_course' AND publication.entity_id=course.id AND publication.publication_status='published'
+            LEFT JOIN ava_connections connection ON connection.id=publication.ava_connection_id AND connection.is_active=1
             LEFT JOIN organization_course_catalog_access catalog_access ON catalog_access.organization_id=offer.organization_id AND catalog_access.course_catalog_id=catalog.id
             LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=offer.organization_id AND item_access.item_type='course' AND item_access.item_id=course.id
             WHERE offer.organization_id=:organization_offer
@@ -147,8 +148,8 @@ final readonly class LearningCatalogRepository
               AND course.is_available=1 AND course.is_globally_enabled=1
               AND catalog.is_active=1 AND catalog.is_globally_enabled=1
               AND COALESCE(catalog_access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1
-              AND publication.moodle_course_id IS NOT NULL AND publication.remote_course_id IS NOT NULL
-              AND (connection.connection_type='shared' OR connection.organization_id=:organization_connection)
+              AND (provider.provider_code='iesde' OR (publication.moodle_course_id IS NOT NULL AND publication.remote_course_id IS NOT NULL))
+              AND (publication.id IS NULL OR connection.connection_type='shared' OR connection.organization_id=:organization_connection)
             ORDER BY catalog.name,name");
         $statement->execute(['organization_offer' => $organizationId, 'organization_connection' => $organizationId]);
         return $statement->fetchAll() ?: [];

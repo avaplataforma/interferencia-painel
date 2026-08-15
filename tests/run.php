@@ -2576,6 +2576,27 @@ $tests['matricula trilhas publicadas com cobranca e liberacao automatica'] = sta
     assertTrue(str_contains($releaser,'prepareForEnrollment'));
 };
 
+$tests['prepara curso MASTER automaticamente antes da matricula'] = static function () use ($rootPath): void {
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000020_create_ava_course_provisioning_jobs.php');
+    $service=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCourseProvisioningService.php');
+    $catalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $form=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
+
+    assertTrue(str_contains($migration,'CREATE TABLE ava_course_provisioning_jobs'));
+    assertTrue(str_contains($migration,'UNIQUE KEY ava_course_provisioning_request_uq'));
+    assertTrue(str_contains($service,'ensureProviderCourseOffer'));
+    assertTrue(str_contains($service,'GET_LOCK'));
+    assertTrue(str_contains($service,'publishMasterCourse'));
+    assertTrue(str_contains($service,"providerCode !== 'iesde'"));
+    assertTrue(str_contains($catalog,"provider.provider_code='iesde'"));
+    assertTrue(str_contains($catalog,"'automatic'"));
+    assertTrue(str_contains($routes,'ensureProviderCourseOffer'));
+    assertTrue(strpos($routes,'ensureProviderCourseOffer')<strpos($routes,'createProviderCourse($customerId'));
+    assertTrue(str_contains($form,'criação automática no AVA'));
+    assertTrue(str_contains($form,'Preparar matrícula'));
+};
+
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260812_000050_create_ava_academic_backfill.php');
     $service=(string)file_get_contents($rootPath.'/modules/Moodle/AcademicOrganizationBackfillService.php');
