@@ -641,6 +641,16 @@ final readonly class CourseProviderRepository
             COALESCE(provider.lti_client_id,'') lti_client_id,
             COALESCE(provider.lti_deployment_id,'') lti_deployment_id,
             COALESCE(provider.lti_status,'draft') lti_status,
+            COALESCE(commercial.base_url,'') commercial_catalog_base_url,
+            COALESCE(commercial.username_last4,'') commercial_catalog_username_last4,
+            COALESCE(commercial.password_last4,'') commercial_catalog_password_last4,
+            CASE WHEN commercial.base_url IS NOT NULL AND commercial.base_url<>''
+                AND commercial.username_encrypted IS NOT NULL AND commercial.username_encrypted<>''
+                AND commercial.password_encrypted IS NOT NULL AND commercial.password_encrypted<>''
+                THEN 1 ELSE 0 END commercial_catalog_configured,
+            COALESCE(commercial.last_sync_status,'never') commercial_catalog_last_sync_status,
+            commercial.last_synced_at commercial_catalog_last_synced_at,
+            COALESCE(commercial.last_error,'') commercial_catalog_last_error,
             CASE WHEN catalog.code='ava-cursos' THEN 'https://avacursos.com.br/{franquia}' ELSE COALESCE(provider.launch_url_template,'') END ava_url,
             CASE WHEN catalog.code='ava-cursos' THEN 1 ELSE COALESCE(provider.is_active,0) END integration_active,
             CASE WHEN catalog.code='ava-cursos' THEN 1
@@ -677,6 +687,7 @@ final readonly class CourseProviderRepository
             (SELECT COUNT(*) FROM organizations organization LEFT JOIN organization_course_catalog_access access ON access.organization_id=organization.id AND access.course_catalog_id=catalog.id WHERE organization.status='active' AND COALESCE(access.is_enabled,1)=1) organization_count
             FROM course_catalogs catalog
             LEFT JOIN course_provider_integrations provider ON provider.catalog_id=catalog.id
+            LEFT JOIN provider_commercial_catalog_connections commercial ON commercial.provider_id=provider.id
             LEFT JOIN course_provider_capabilities capability ON capability.provider_id=provider.id
             WHERE catalog.is_active=1
             ORDER BY FIELD(catalog.code,'ava-cursos','catalogo-pro','catalogo-up','catalogo-master','catalogo-expert','catalogo-cefe','catalogo-conclusao','catalogo-prepara','catalogo-drive'),catalog.name");
