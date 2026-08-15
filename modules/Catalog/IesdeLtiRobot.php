@@ -38,7 +38,6 @@ final readonly class IesdeLtiRobot
             throw new RuntimeException('A área técnica Migração LTI não foi localizada no AVA Cursos.');
         }
 
-        $context = $this->providers->coursePublicationContext($providerCourseId);
         $snapshotId = $this->createSnapshot($jobId, $providerCourseId, $stagingCourseId, $sourceName);
         $lockName = 'mi:ava:iesde-lti-robot';
         $lock = $this->database->prepare('SELECT GET_LOCK(:lock_name,60)');
@@ -50,18 +49,9 @@ final readonly class IesdeLtiRobot
         }
 
         try {
-            $currentSourceId = (int)($context['source_raw']['moodle_course_id'] ?? 0);
-            if ((int)($context['resource_count'] ?? 0) > 0 && $currentSourceId === $stagingCourseId) {
-                $resources = (int)$context['resource_count'];
-                $this->recordSelection($snapshotId, [
-                    'source' => 'persistent_inventory',
-                    'provider_course_id' => $providerCourseId,
-                    'resource_count' => $resources,
-                    'source_raw' => (array)($context['source_raw'] ?? []),
-                ], $resources, 'registered');
-                return ['courseid' => $stagingCourseId, 'resources' => $resources, 'snapshot_id' => $snapshotId];
-            }
-
+            // The bridge is intentionally transient. A previous source module
+            // is deleted after materialization, so every run recreates the Deep
+            // Linking selection before the final course is updated.
             $session = $client->prepareLtiRobot(true, true);
             $loginUrl = trim((string)($session['loginurl'] ?? ''));
             if ($loginUrl === '') throw new RuntimeException('O AVA não gerou a sessão técnica do robô.');
