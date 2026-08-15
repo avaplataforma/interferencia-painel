@@ -32,6 +32,7 @@ try {
   await choose.click();
 
   const providerFrame = await waitForProviderFrame(context, page);
+  const moodlePage = providerFrame.page();
   const search = providerFrame.getByPlaceholder(/buscar disciplina/i).or(providerFrame.getByPlaceholder(/buscar.*materia/i)).first();
   await search.waitFor({ state: 'visible' });
   await search.fill(courseName);
@@ -89,17 +90,17 @@ try {
   // attached but outside the visible area after the Deep Linking modal closes.
   // Native requestSubmit preserves the clicked button value and Moodle form
   // validation without depending on screen position or overlay animation.
-  const activityName = page.locator('#id_name, input[name="name"]').first();
+  const activityName = moodlePage.locator('#id_name, input[name="name"]').first();
   if (await activityName.count()) await activityName.fill(courseName);
-  const saveAndReturn = page.locator([
+  const saveAndReturn = moodlePage.locator([
     '#id_submitbutton2',
     'input[type="submit"][name="submitbutton2"]',
     'input[type="submit"][name="submitbutton"]',
     'button[type="submit"]',
   ].join(', ')).filter({ hasText: /salvar e voltar ao curso/i }).or(page.locator('#id_submitbutton2')).first();
   await saveAndReturn.waitFor({ state: 'attached', timeout: 45000 });
-  await page.waitForTimeout(600);
-  const finalNavigation = page.waitForNavigation({
+  await moodlePage.waitForTimeout(600);
+  const finalNavigation = moodlePage.waitForNavigation({
     timeout: 45000,
     waitUntil: 'domcontentloaded',
   });
@@ -111,16 +112,16 @@ try {
     button.click();
   });
   await finalNavigation;
-  await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
-  const finalSubmitStillPresent = await page.locator('#id_submitbutton2').count();
+  await moodlePage.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+  const finalSubmitStillPresent = await moodlePage.locator('#id_submitbutton2').count();
   if (finalSubmitStillPresent > 0) {
-    const validationMessages = await page.locator([
+    const validationMessages = await moodlePage.locator([
       '.alert-danger',
       '.invalid-feedback',
       '.form-control-feedback',
       '[data-fieldtype] .error',
     ].join(', ')).allTextContents();
-    const invalidFields = await page.locator('input:invalid, select:invalid, textarea:invalid, [aria-invalid="true"]').evaluateAll(elements => elements.map(element => {
+    const invalidFields = await moodlePage.locator('input:invalid, select:invalid, textarea:invalid, [aria-invalid="true"]').evaluateAll(elements => elements.map(element => {
       const id = element instanceof HTMLElement ? element.id : '';
       const labelled = id ? document.querySelector(`label[for="${CSS.escape(id)}"]`) : null;
       const group = element instanceof HTMLElement ? element.closest('.form-group, [data-fieldtype]') : null;
@@ -129,7 +130,7 @@ try {
         .replace(/\s+/g, ' ').trim();
       return label;
     }).filter(Boolean).slice(0, 8));
-    const serverErrorFields = await page.locator('.invalid-feedback, .form-control-feedback, [id^="id_error_"]').evaluateAll(elements => elements.map(error => {
+    const serverErrorFields = await moodlePage.locator('.invalid-feedback, .form-control-feedback, [id^="id_error_"]').evaluateAll(elements => elements.map(error => {
       const errorId = error instanceof HTMLElement ? error.id : '';
       const fieldId = errorId.replace(/^id_error_/, 'id_');
       const field = fieldId ? document.getElementById(fieldId) : null;
