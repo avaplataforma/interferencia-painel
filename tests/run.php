@@ -1110,7 +1110,7 @@ $tests['centraliza conexoes AVA por franquia sem romper a integracao Moodle atua
     assertTrue(str_contains($integrationHub,'IA - OpenAI'));
     assertTrue(str_contains($integrationHub,'Fornecedores/Catálogos'));
     assertTrue(!str_contains($integrationHub,'>Painel Inter<'));
-    assertTrue(substr_count($integrationHub,'integration-card ')===5);
+    assertTrue(substr_count($integrationHub,'integration-card ')===6);
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/version.php'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php'));
     $services=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/db/services.php');
@@ -2683,6 +2683,26 @@ $tests['edita aluno no modo seguro e orienta a liberação do AVA'] = static fun
     assertTrue(str_contains($actions,"'/students/enrollments?focus='"));
     assertTrue(str_contains($routes,'Libere esta matrícula no AVA antes de enviar os dados de acesso.'));
     assertTrue(str_contains($enrollments,'id="enrollment-'));
+};
+
+$tests['configura o E-mail Central e envia acessos pela identidade da franquia'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $hub=(string)file_get_contents($rootPath.'/views/admin/platform/integrations.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/central-email.php');
+    $notifier=(string)file_get_contents($rootPath.'/modules/Moodle/AvaAccessNotifier.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Email/CentralEmailRepository.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260814_000010_create_central_email_service.php');
+
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/email'"));
+    assertTrue(str_contains($routes,"'/admin/platform/integrations/email/test'"));
+    assertTrue(str_contains($hub,'E-mail Central'));
+    assertTrue(str_contains($view,'Identidade por franquia'));
+    assertTrue(str_contains($view,'SPF/DKIM'));
+    assertTrue(str_contains($notifier,'CentralEmailService'));
+    assertTrue(str_contains($notifier,"'ava_access'"));
+    assertTrue(str_contains($repository,"preg_replace('/^www\\./'"));
+    assertTrue(str_contains($migration,'CREATE TABLE email_delivery_logs'));
+    assertTrue(str_contains($migration,'REFERENCES platform_users(id)'));
 };
 
 $failures = 0;

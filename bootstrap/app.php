@@ -75,6 +75,8 @@ use Interferencia\Modules\Catalog\CourseProviderRepository;
 use Interferencia\Modules\Catalog\CatalogMediaStorage;
 use Interferencia\Modules\Catalog\ImageGenerationRepository;
 use Interferencia\Modules\Catalog\CatalogCoverGenerator;
+use Interferencia\Modules\Email\CentralEmailRepository;
+use Interferencia\Modules\Email\CentralEmailService;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -173,6 +175,8 @@ $ticketDepartments = new DepartmentRepository($database);
 $ticketFiles = new MediaStorage($rootPath . '/storage/tickets',$spacesStorage,$storageScope,$organizationId,'Tickets');
 $financeSecretCipher = new SecretCipher((string)$config->get('app.encryption_key'));
 $financeIntegrations = new IntegrationRepository($database,$financeSecretCipher);
+$centralEmails = new CentralEmailRepository($database,$financeSecretCipher);
+$centralEmailService = new CentralEmailService($centralEmails);
 $courseProviders = new CourseProviderRepository($database,$financeSecretCipher);
 $learningCatalog = new \Interferencia\Modules\Catalog\LearningCatalogRepository($database);
 $catalogMedia = new CatalogMediaStorage($spacesStorage);
@@ -193,7 +197,7 @@ $studentEnrollments=new EnrollmentRepository($database,$organizationId);
 $academicOrganization=new AcademicOrganizationRepository($database);
 $academicOrganizationBackfill=new AcademicOrganizationBackfillService($database,$avaConnections,$studentEnrollments,$organizationPoles,$academicOrganization);
 $avaEnrollmentReleaser=new AvaEnrollmentReleaser($avaConnections,$moodleIntegrations,$moodleRepository,$studentEnrollments,$organizationPoles,$courseProviders,$academicOrganization,(string)$config->get('app.ava_auto_release_from'));
-$avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations);
+$avaAccessNotifier=new AvaAccessNotifier($studentEnrollments,$moodleIntegrations,$centralEmailService);
 $moodleSynchronizer=new MoodleSynchronizer($moodleClient,$moodleRepository);
 $pedagogicalSynchronizer=new PedagogicalSynchronizer($moodleClient,$moodleRepository,$avaConnections);
 $asaasSettings=$financeIntegrations->asaas('production');
@@ -280,6 +284,6 @@ $view->share([
     'centralSandboxTests' => $isCentralContext ? $franchiseSandboxTests->recent() : [],
 ]);
 $registerRoutes = require $rootPath . '/routes/web.php';
-$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$courseProviders,$learningCatalog,$avaCatalogPublisher,$catalogMedia,$catalogImages,$catalogCoverGenerator,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$academicOrganization,$academicOrganizationBackfill,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
+$registerRoutes($router, $config, $effectiveBasePath, $view, $session, $csrf, new Validator(), $auth, $organizations, $organizationPoles, $franchiseApplications, $franchiseContracts, $franchiseContractBilling, $franchiseSandboxTests, $franchiseSandboxBilling, $platformSettingsRepository, $spacesStorage, $organizationId, $users, new UserManager($users, new PasswordHasher()), $units, new UnitManager($units), $roles, new RoleManager($roles), $unitContext, $contacts, new ContactManager($contacts,$tags), new ExternalContactIntake($contacts, $config->string('app.external_form_key')), $tags, $statuses, $followUps, $externalForms, $whatsappLines, $whatsappMessages, $whatsappTemplates, $whatsappMedia, $whatsappWebhook, $whatsappCloudApi,$finance,$financeCatalog,$financeCampaigns,$asaas,$asaasSynchronizer,$asaasWebhook,$financeIntegrations,$organizationFinanceIntegrations,$centralEmails,$centralEmailService,$courseProviders,$learningCatalog,$avaCatalogPublisher,$catalogMedia,$catalogImages,$catalogCoverGenerator,$tickets,$ticketDepartments,$ticketFiles,$avaConnections,$avaBrands,$avaPoloMappings,$sites,$moodleIntegrations,$moodleClient,$moodleRepository,$moodleSynchronizer,$pedagogicalSynchronizer,$studentEnrollments,$academicOrganization,$academicOrganizationBackfill,$avaEnrollmentReleaser,$avaAccessNotifier,$siteRecoveries,$siteOrderFulfillment,$database);
 
 return new Application($router, $request);

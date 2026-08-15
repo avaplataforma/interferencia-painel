@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Interferencia\Modules\Moodle;
 
-use RuntimeException;
+use Interferencia\Modules\Email\CentralEmailService;
 use Throwable;
 
 final readonly class AvaAccessNotifier
@@ -12,6 +12,7 @@ final readonly class AvaAccessNotifier
     public function __construct(
         private EnrollmentRepository $enrollments,
         private IntegrationRepository $integrations,
+        private CentralEmailService $email,
     ) {}
 
     public function notify(int $enrollmentId): bool
@@ -46,10 +47,15 @@ final readonly class AvaAccessNotifier
         $lines[] = 'PAINEL INTER';
         $subject = preg_replace('/[\r\n]+/', ' ', 'Seu acesso ao AVA — ' . $context['course_name']) ?: 'Seu acesso ao AVA';
         try {
-            $sent = mail($email, mb_encode_mimeheader($subject, 'UTF-8'), implode("\r\n", $lines), "Content-Type: text/plain; charset=UTF-8\r\nMIME-Version: 1.0");
-            if (!$sent) {
-                throw new RuntimeException('O servidor de e-mail não aceitou a mensagem.');
-            }
+            $this->email->deliver(
+                (int) ($context['organization_id'] ?? 0) ?: null,
+                $email,
+                $subject,
+                implode("\r\n", $lines),
+                'ava_access',
+                'student_enrollment',
+                $enrollmentId,
+            );
             $this->enrollments->recordAutomaticAccessCommunication($enrollmentId, 'email', $email, 'opened', null);
             return true;
         } catch (Throwable $exception) {
