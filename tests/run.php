@@ -2378,6 +2378,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($publisher,"'sections_synced'"));
     assertTrue(str_contains($publisher,"'book_ready'"));
     assertTrue(str_contains($providerRepository,'book_resource_count'));
+    assertTrue(substr_count($providerRepository,"LIKE 'livro:%'") >= 2);
     assertTrue(str_contains($routes,'A apostila oficial do IESDE também foi sincronizada.'));
     assertTrue(str_contains($routes,"' módulo(s) e '"));
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
