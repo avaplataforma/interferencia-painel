@@ -110,6 +110,17 @@ try {
   });
   await finalNavigation;
   await page.waitForLoadState('domcontentloaded', { timeout: 30000 }).catch(() => {});
+  const finalSubmitStillPresent = await page.locator('#id_submitbutton2').count();
+  if (finalSubmitStillPresent > 0) {
+    const validationMessages = await page.locator([
+      '.alert-danger',
+      '.invalid-feedback',
+      '.form-control-feedback',
+      '[data-fieldtype] .error',
+    ].join(', ')).allTextContents();
+    const detail = validationMessages.map(value => value.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, 3).join(' ');
+    throw new Error(`O Moodle manteve o formulário aberto após o envio${detail ? `: ${detail}` : '.'}`);
+  }
   process.stdout.write(JSON.stringify({ ok: true }));
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
