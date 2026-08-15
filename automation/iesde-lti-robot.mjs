@@ -24,6 +24,8 @@ try {
   const page = await context.newPage();
   page.setDefaultTimeout(30000);
   await page.goto(loginUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
+  await page.waitForTimeout(800);
 
   const choose = page.getByRole('button', { name: /selecionar conte[uú]do/i }).or(page.getByText(/selecionar conte[uú]do/i, { exact: true })).first();
   await choose.waitFor({ state: 'visible' });
@@ -105,5 +107,15 @@ async function waitForProviderFrame(context, originPage) {
     }
     await originPage.waitForTimeout(250);
   }
-  throw new Error('A janela de seleção do fornecedor não abriu.');
+  const routes = [];
+  for (const candidatePage of context.pages()) {
+    for (const frame of candidatePage.frames()) {
+      try {
+        const current = new URL(frame.url());
+        routes.push(`${current.hostname}${current.pathname}`);
+      } catch {}
+    }
+  }
+  const observed = [...new Set(routes.filter(Boolean))].slice(0, 8).join(', ');
+  throw new Error(`A janela de seleção do fornecedor não abriu${observed ? `. Rotas observadas: ${observed}` : ''}.`);
 }
