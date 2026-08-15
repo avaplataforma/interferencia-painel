@@ -85,12 +85,28 @@ try {
   // Deep Linking only fills the Moodle activity form. The URL activity does
   // not exist until Moodle receives an explicit final submit, so never close
   // the browser after the provider confirmation alone.
-  const saveAndReturn = page
-    .getByRole('button', { name: /salvar e voltar ao curso/i })
-    .or(page.locator('input[type="submit"][name="submitbutton"]'))
-    .first();
-  await saveAndReturn.waitFor({ state: 'visible', timeout: 45000 });
-  await saveAndReturn.click();
+  // Depending on the Moodle theme and viewport, the final submit can remain
+  // attached but outside the visible area after the Deep Linking modal closes.
+  // Native requestSubmit preserves the clicked button value and Moodle form
+  // validation without depending on screen position or overlay animation.
+  const saveAndReturn = page.locator([
+    '#id_submitbutton2',
+    'input[type="submit"][name="submitbutton2"]',
+    'input[type="submit"][name="submitbutton"]',
+    'button[type="submit"]',
+  ].join(', ')).filter({ hasText: /salvar e voltar ao curso/i }).or(page.locator('#id_submitbutton2')).first();
+  await saveAndReturn.waitFor({ state: 'attached', timeout: 45000 });
+  await page.waitForTimeout(600);
+  await saveAndReturn.evaluate(button => {
+    if (!(button instanceof HTMLElement)) throw new Error('Botão final do Moodle inválido.');
+    const form = button.closest('form');
+    if (!(form instanceof HTMLFormElement)) throw new Error('Formulário final do Moodle não encontrado.');
+    if (button instanceof HTMLButtonElement || button instanceof HTMLInputElement) {
+      form.requestSubmit(button);
+      return;
+    }
+    form.requestSubmit();
+  });
   await page.waitForURL(url => /\/course\/view\.php/i.test(String(url)), {
     timeout: 45000,
     waitUntil: 'domcontentloaded',
