@@ -24,7 +24,7 @@ final class materialize_lti_course extends external_api
             'idnumber' => new external_value(PARAM_ALPHANUMEXT, 'Código idempotente da atividade inicial.'),
             'coverurl' => new external_value(PARAM_URL, 'Capa comercial do Curso Individual MASTER.', VALUE_DEFAULT, ''),
             'coveralt' => new external_value(PARAM_TEXT, 'Texto alternativo da capa.', VALUE_DEFAULT, ''),
-            'assessmentjson' => new external_value(PARAM_RAW, 'Avaliação final revisada em JSON.', VALUE_DEFAULT, ''),
+            'assessmentjson' => new external_value(PARAM_RAW, 'Avaliação oficial revisada em JSON.', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -72,6 +72,7 @@ final class materialize_lti_course extends external_api
         sync_trail_sections::apply_managed_course_format($course);
 
         $groups = self::order_groups(self::group_sources($sources), (string)$course->fullname);
+        $assessmenttitle = self::assessment_display_name((string)$course->fullname);
         $firstcmid = 0;
         $firstactivityid = 0;
         $reusedactivities = 0;
@@ -94,7 +95,7 @@ final class materialize_lti_course extends external_api
                 $modulenumber++;
             }
             $sectionname = $isassessment
-                ? 'Avaliação final'
+                ? $assessmenttitle
                 : ($isbook
                     ? 'Livro e Materiais Interativos'
                     : 'Módulo ' . $modulenumber . ' - ' . $group['name']);
@@ -118,9 +119,11 @@ final class materialize_lti_course extends external_api
                 $moduleidnumber = (int) $sourceitemcm->id === (int) $sourcecm->id
                     ? $parameters['idnumber']
                     : 'mi-master-lti-cm-' . (int) $sourceitemcm->id;
-                $displayname = $isbook
-                    ? self::book_activity_display_name((string)$source->name, (string)$course->fullname, $bookitemindex, $bookitemcount, $bookhasexplicitname)
-                    : self::activity_display_name((string) $source->name, $item['kind'], $item['number']);
+                $displayname = $isassessment
+                    ? $assessmenttitle
+                    : ($isbook
+                        ? self::book_activity_display_name((string)$source->name, (string)$course->fullname, $bookitemindex, $bookitemcount, $bookhasexplicitname)
+                        : self::activity_display_name((string) $source->name, $item['kind'], $item['number']));
                 $existing = $DB->get_record('course_modules', [
                     'course' => $course->id,
                     'module' => $ltimodule->id,
@@ -290,7 +293,7 @@ final class materialize_lti_course extends external_api
             ];
         }
         if ($assessments !== []) {
-            $groups[] = ['name' => 'Avaliação final', 'assessment' => true, 'items' => $assessments];
+            $groups[] = ['name' => 'Avaliação', 'assessment' => true, 'items' => $assessments];
         }
         return $groups;
     }
@@ -340,9 +343,14 @@ final class materialize_lti_course extends external_api
             'section' => 'Aula - Seção ' . $number,
             'activity' => 'Atividade ' . $number,
             'presentation' => 'Aula - Apresentação',
-            'assessment' => 'Avaliação final',
+            'assessment' => trim($original),
             default => trim((string) preg_replace('/^aula\s*[-:–—]\s*/iu', '', $original)),
         };
+    }
+
+    private static function assessment_display_name(string $modulename): string
+    {
+        return \core_text::substr('AVP - Avaliação: ' . trim($modulename), 0, 255);
     }
 
     private static function book_activity_display_name(string $original, string $coursename, int $itemindex, int $itemcount, bool $hasexplicitname): string
