@@ -67,7 +67,7 @@ final class sync_trail_sections extends external_api
         $cover=self::sync_course_cover($course,(string)$parameters['coverurl'],(string)$parameters['coveralt']);
         foreach($decoded as$offset=>$item){
             $number=$offset+1;
-            $name=trim(clean_param((string)($item['name']??''),PARAM_TEXT));
+            $name=self::normalize_portuguese_title(trim(clean_param((string)($item['name']??''),PARAM_TEXT)));
             if($name==='')throw new \invalid_parameter_exception('Todos os blocos da Trilha precisam de nome.');
             $key=trim(clean_param((string)($item['key']??('item-'.$number)),PARAM_ALPHANUMEXT));
             $accessurl=clean_param((string)($item['accessurl']??''),PARAM_URL);
@@ -127,6 +127,20 @@ final class sync_trail_sections extends external_api
         rebuild_course_cache($parameters['courseid'],true);
         $audit=self::audit_managed_course((int)$course->id);
         return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts]+$cover+$audit;
+    }
+
+    private static function normalize_portuguese_title(string $title): string
+    {
+        $title=trim((string)preg_replace('/\s+/u',' ',$title));
+        if($title==='')return'';
+        $title=mb_convert_case(mb_strtolower($title,'UTF-8'),MB_CASE_TITLE,'UTF-8');
+        $connectors=['A','As','E','Em','Na','Nas','No','Nos','O','Os','Ou','Com','Da','Das','De','Do','Dos','Para','Por','Sem','Sob'];
+        foreach($connectors as$connector){
+            $title=(string)preg_replace('/(?<!^)\b'.preg_quote($connector,'/').'\b/u',mb_strtolower($connector,'UTF-8'),$title);
+        }
+        $acronyms=['Ava'=>'AVA','Avp'=>'AVP','Eja'=>'EJA','Ia'=>'IA','Lgpd'=>'LGPD','Lti'=>'LTI','Mba'=>'MBA','Rh'=>'RH','Ti'=>'TI','Tti'=>'TTI'];
+        $title=strtr($title,$acronyms);
+        return(string)preg_replace_callback('/\b(?:I|Ii|Iii|Iv|V|Vi|Vii|Viii|Ix|X)\b/u',static fn(array$m):string=>mb_strtoupper($m[0],'UTF-8'),$title);
     }
 
     /**
