@@ -23,7 +23,7 @@ final readonly class IesdeLtiRobot
         private string $rootPath,
     ) {}
 
-    /** @return array{courseid:int,resources:int,snapshot_id:int} */
+    /** @return array{courseid:int,resources:int,snapshot_id:int,source_cmid:int} */
     public function prepare(int $providerCourseId, string $sourceName, ?int $jobId = null): array
     {
         $connection = $this->connections->shared();
@@ -59,6 +59,10 @@ final readonly class IesdeLtiRobot
 
             $selection = $client->ltiSelections('iesde', $stagingCourseId);
             $course = $this->matchingCourse((array)($selection['courses'] ?? []), $sourceName);
+            $sourceCmId = $this->sourceCourseModuleId($course);
+            if ($sourceCmId < 1) {
+                throw new RuntimeException('O AVA não devolveu a atividade LTI recém-criada para esta disciplina.');
+            }
             $resourceCount = count((array)($course['conteudos'] ?? []));
             if ($this->isCompleteDiscipline($providerCourseId) && $resourceCount < 3) {
                 throw new RuntimeException('O fornecedor identifica esta disciplina como completa, mas o robô recebeu somente parte das aulas, apostila e avaliação. A publicação foi interrompida para não criar um curso incompleto.');
@@ -67,7 +71,7 @@ final readonly class IesdeLtiRobot
             $result = $this->providers->attachLtiSelectionToCourse($providerCourseId, $course);
             if ((int)$result['received'] < 1) throw new RuntimeException('A seleção foi concluída, mas nenhum recurso acadêmico foi recebido.');
             $this->recordSelection($snapshotId, $course, (int)$result['received'], 'registered');
-            return ['courseid' => $stagingCourseId, 'resources' => (int)$result['received'], 'snapshot_id' => $snapshotId];
+            return ['courseid' => $stagingCourseId, 'resources' => (int)$result['received'], 'snapshot_id' => $snapshotId, 'source_cmid' => $sourceCmId];
         } catch (\Throwable $exception) {
             $this->fail($snapshotId, $exception->getMessage());
             throw $exception;
@@ -219,6 +223,21 @@ final readonly class IesdeLtiRobot
         return trim((string)preg_replace('/[^a-z0-9]+/', ' ', is_string($ascii) ? strtolower($ascii) : $value));
     }
 
+    /** @param array<string,mixed> $course */
+    private function sourceCourseModuleId(array $course): int
+    {
+        $fallback = 0;
+        foreach ((array)($course['conteudos'] ?? []) as $content) {
+            if (!is_array($content)) continue;
+            $raw = is_array($content['raw'] ?? null) ? $content['raw'] : [];
+            $cmid = (int)($raw['course_module_id'] ?? 0);
+            if ($cmid < 1) continue;
+            if ($fallback < 1) $fallback = $cmid;
+            if ((string)($content['type'] ?? '') !== 'assessment') return $cmid;
+        }
+        return $fallback;
+    }
+
     private function isCompleteDiscipline(int $providerCourseId): bool
     {
         $statement = $this->database->prepare('SELECT raw_payload FROM provider_commercial_catalog_items WHERE provider_course_id=:course AND is_available=1 ORDER BY id DESC LIMIT 1');
@@ -233,3 +252,4 @@ final readonly class IesdeLtiRobot
         return false;
     }
 }
+
