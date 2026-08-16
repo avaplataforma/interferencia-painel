@@ -280,5 +280,86 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081615, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081616) {
+        global $DB;
+
+        // Trail courses use the Portuguese management idnumber "mi-trilha-*".
+        // Normalize historical assessment names and visual subtitles that the
+        // earlier migration missed while looking only for "mi-trail-*".
+        $managedcourses = $DB->get_records_select(
+            'course',
+            'idnumber LIKE :trail',
+            ['trail' => 'mi-trilha-%'],
+            'id ASC',
+            'id,fullname,idnumber'
+        );
+        $ltimodule = $DB->get_record('modules', ['name' => 'lti'], 'id');
+        $labelmodule = $DB->get_record('modules', ['name' => 'label'], 'id');
+
+        foreach ($managedcourses as $managedcourse) {
+            $sections = $DB->get_records('course_sections', ['course' => $managedcourse->id], 'section ASC');
+            foreach ($sections as $section) {
+                $sectionname = trim((string)$section->name);
+                $modulelabel = trim((string)preg_replace('/^M[oó]dulo\s+\d+\s*[-:–—]\s*/iu', '', $sectionname));
+                if ($modulelabel === '' || preg_match('/avalia|prova|exame/iu', $modulelabel)) {
+                    $modulelabel = trim((string)$managedcourse->fullname);
+                }
+                $assessmentname = \core_text::substr('AVP - Avaliação: ' . $modulelabel, 0, 255);
+
+                if ($ltimodule) {
+                    $modules = $DB->get_records('course_modules', [
+                        'course' => $managedcourse->id,
+                        'section' => $section->id,
+                        'module' => $ltimodule->id,
+                    ]);
+                    foreach ($modules as $coursemodule) {
+                        $activity = $DB->get_record('lti', ['id' => $coursemodule->instance], 'id,name');
+                        if (!$activity) {
+                            continue;
+                        }
+                        $idnumber = (string)$coursemodule->idnumber;
+                        $isassessment = str_contains($idnumber, '-assessment-')
+                            || preg_match('/avalia|prova|exame/iu', (string)$activity->name) === 1;
+                        if ($isassessment) {
+                            $DB->set_field('lti', 'name', $assessmentname, ['id' => $activity->id]);
+                        }
+                    }
+                }
+
+                if ($labelmodule) {
+                    $labels = $DB->get_records('course_modules', [
+                        'course' => $managedcourse->id,
+                        'section' => $section->id,
+                        'module' => $labelmodule->id,
+                    ]);
+                    foreach ($labels as $coursemodule) {
+                        if (!str_starts_with((string)$coursemodule->idnumber, 'mi-trail-master-')
+                            || !str_contains((string)$coursemodule->idnumber, '-subtitle-')) {
+                            continue;
+                        }
+                        $label = $DB->get_record('label', ['id' => $coursemodule->instance], 'id,name,intro');
+                        if (!$label) {
+                            continue;
+                        }
+                        $title = trim(strip_tags((string)$label->intro));
+                        if ($title === '') {
+                            $title = trim((string)$label->name);
+                        }
+                        $title = \core_text::strtoupper($title);
+                        $DB->update_record('label', (object)[
+                            'id' => $label->id,
+                            'name' => \core_text::substr($title, 0, 255),
+                            'intro' => \html_writer::tag('b', s($title), ['class' => 'mundointer-subtitle']),
+                            'introformat' => FORMAT_HTML,
+                            'timemodified' => time(),
+                        ]);
+                    }
+                }
+            }
+            rebuild_course_cache((int)$managedcourse->id, true);
+        }
+
+        upgrade_plugin_savepoint(true, 2026081616, 'local', 'mundointer');
+    }
     return true;
 }
