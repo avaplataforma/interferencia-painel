@@ -2709,6 +2709,7 @@ $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static f
     $overviews=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-standard-overviews.php');
     $policy=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-commercial-policy.php');
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260816_000010_expand_catalog_commercial_policy.php');
+    $installmentMigration=(string)file_get_contents($rootPath.'/database/migrations/20260816_000020_add_trail_installments_to_catalog_policy.php');
 
     assertTrue(str_contains($providers,'Sincronizar Catálogo'));
     assertTrue(str_contains($providers,'Completar pendências com IA'));
@@ -2721,8 +2722,14 @@ $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static f
     assertTrue(str_contains($overviews,'Nova Trilha'));
     assertTrue(str_contains($policy,'central_trail_default_price'));
     assertTrue(str_contains($policy,'Carga horária padrão'));
+    assertTrue(str_contains($policy,'module_max_installments'));
+    assertTrue(str_contains($policy,'trail_max_installments'));
+    assertTrue(!str_contains($policy,'Ajuste sobre o fornecedor (%)'));
+    assertTrue(str_contains($policy,'type="number" min="1" step="1" inputmode="numeric" name="module_workload"'));
     assertTrue(str_contains($policy,'Herança e autonomia da franquia'));
     assertTrue(str_contains($migration,'allow_franchise_price_override'));
+    assertTrue(str_contains($installmentMigration,'central_trail_default_max_installments'));
+    assertTrue(str_contains($installmentMigration,'SET central_trail_default_max_installments=central_default_max_installments'));
 };
 
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
