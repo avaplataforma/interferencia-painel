@@ -272,8 +272,8 @@ final readonly class AvaCatalogPublisher
     private function friendlyError(Throwable$exception):string
     {
         $message=trim($exception->getMessage());
-        if(str_contains($message,'local_mundointer_sync_trail_sections'))return'O plugin Mundo Inter do AVA precisa ser atualizado para organizar os Cursos individuais em blocos separados.';
-        if(str_contains($message,'local_mundointer_materialize_lti_course'))return'O plugin Mundo Inter do AVA precisa ser atualizado para transformar a disciplina MASTER em Curso Individual.';
+        if(str_contains($message,'local_mundointer_sync_trail_sections')&&str_contains($message,'Código: accessexception'))return'O serviço web do AVA não permite organizar as Trilhas. Libere a função acadêmica no token do AVA Cursos e tente novamente.';
+        if(str_contains($message,'local_mundointer_materialize_lti_course')&&str_contains($message,'Código: accessexception'))return'O serviço web do AVA não permite transformar a disciplina MASTER em Curso Individual. Libere a função acadêmica no token do AVA Cursos e tente novamente.';
         if(str_contains($message,'core_course_create_courses')||str_contains($message,'core_course_update_courses')||str_contains($message,'core_course_create_categories'))return'O serviço web do AVA ainda não permite publicar cursos e categorias. Libere as funções acadêmicas no token do AVA Cursos e tente novamente.';
         return$message!==''?$message:'Não foi possível publicar a Trilha no AVA Cursos.';
     }
