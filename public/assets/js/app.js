@@ -482,10 +482,10 @@ document.querySelectorAll('.color-field').forEach((group) => {
           ? ['connection', 'access', 'classes', 'capabilities', 'queue']
           : ['connection', 'homologation', 'capabilities', 'queue'];
       }
-      if (section === 'commercial' && provider !== 'iesde' && provider !== 'ava_cursos') return ['courses'];
+      if (section === 'commercial') return ['commercial'];
       if (section === 'modules') {
         return provider !== 'iesde' && provider !== 'ava_cursos'
-          ? ['modules', 'contents']
+          ? ['modules', 'courses', 'contents']
           : ['modules', 'courses'];
       }
       return [section];
