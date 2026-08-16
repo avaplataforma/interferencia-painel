@@ -1666,8 +1666,8 @@ final readonly class CourseProviderRepository
         if ($organization->fetchColumn() === false) throw new RuntimeException('Franquia não encontrada.');
 
         $enabled = array_values(array_unique(array_filter(array_map('intval', $enabledCatalogIds), static fn(int $id): bool => $id > 0)));
-        $catalogs = $this->database->query('SELECT id,central_default_price,central_markup_percent,central_default_max_installments,central_valid_from,central_valid_until,allow_franchise_commercial_override FROM course_catalogs WHERE is_active=1')->fetchAll() ?: [];
-        $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,:enabled,:markup,:default_price,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
+        $catalogs = $this->database->query('SELECT id,central_default_price,central_markup_percent,central_default_max_installments,central_valid_from,central_valid_until,allow_franchise_commercial_override,allow_franchise_price_override,allow_franchise_installment_override FROM course_catalogs WHERE is_active=1')->fetchAll() ?: [];
+        $statement = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,price_is_overridden,default_max_installments,installments_is_overridden,valid_from,valid_until,dates_are_overridden,updated_by) VALUES(:organization,:catalog,:enabled,:markup,:default_price,:price_override,:installments,:installment_override,:valid_from,:valid_until,:dates_override,:user) ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),price_is_overridden=VALUES(price_is_overridden),default_max_installments=VALUES(default_max_installments),installments_is_overridden=VALUES(installments_is_overridden),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),dates_are_overridden=VALUES(dates_are_overridden),updated_by=VALUES(updated_by)');
 
         $this->database->beginTransaction();
         try {
@@ -1684,7 +1684,10 @@ final readonly class CourseProviderRepository
                 if ($markup < -100 || $markup > 1000) throw new RuntimeException('O ajuste em lote deve ficar entre -100% e 1.000%.');
                 if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
                 if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final da regra não pode ser anterior ao início.');
-                $statement->execute(['organization' => $organizationId, 'catalog' => $id, 'enabled' => (int)in_array($id, $enabled, true), 'markup' => $markup, 'default_price' => $defaultPrice, 'installments' => $installments, 'valid_from' => $validFrom, 'valid_until' => $validUntil, 'user' => $userId]);
+                $priceOverride = !$locked && (int)$catalog['allow_franchise_price_override'] === 1 && $defaultPrice !== null && ($catalog['central_default_price'] === null || abs($defaultPrice-(float)$catalog['central_default_price']) > 0.009);
+                $installmentOverride = !$locked && (int)$catalog['allow_franchise_installment_override'] === 1 && $installments !== (int)$catalog['central_default_max_installments'];
+                $datesOverride = !$locked && ($validFrom !== ($catalog['central_valid_from'] ?: null) || $validUntil !== ($catalog['central_valid_until'] ?: null));
+                $statement->execute(['organization' => $organizationId, 'catalog' => $id, 'enabled' => (int)in_array($id, $enabled, true), 'markup' => $markup, 'default_price' => $defaultPrice, 'price_override' => (int)$priceOverride, 'installments' => $installments, 'installment_override' => (int)$installmentOverride, 'valid_from' => $validFrom, 'valid_until' => $validUntil, 'dates_override' => (int)$datesOverride, 'user' => $userId]);
             }
             $this->database->commit();
         } catch (Throwable $exception) {
@@ -1758,13 +1761,100 @@ final readonly class CourseProviderRepository
         ]);
     }
 
-    /** @return array{franchises:int,offers:int} */
-    public function applyCentralCatalogPolicy(int $catalogId, ?int $organizationId, ?int $userId): array
+    /** @return array{franchises:int,modules:int,module_offers:int,trails:int,exceptions:int} */
+    public function previewCentralCatalogPolicy(int $catalogId, ?int $organizationId, string $scope = 'both'): array
     {
-        $catalog = $this->database->prepare('SELECT id,central_default_price,central_markup_percent,central_default_max_installments,central_valid_from,central_valid_until FROM course_catalogs WHERE id=:id AND is_active=1');
+        $scope = $this->policyScope($scope);
+        $catalog = $this->database->prepare('SELECT id FROM course_catalogs WHERE id=:id AND is_active=1');
+        $catalog->execute(['id' => $catalogId]);
+        if ($catalog->fetchColumn() === false) throw new RuntimeException('Catálogo não encontrado.');
+
+        $organizationFilter = '';
+        $parameters = ['catalog' => $catalogId];
+        if ($organizationId !== null && $organizationId > 0) {
+            $organizationFilter = ' AND organization.id=:organization';
+            $parameters['organization'] = $organizationId;
+        }
+
+        $countOrganizations = $this->database->prepare("SELECT COUNT(*) FROM organizations organization WHERE organization.status='active'{$organizationFilter}");
+        $countOrganizations->execute(array_filter($parameters, static fn(string $key): bool => $key !== 'catalog', ARRAY_FILTER_USE_KEY));
+        $franchises = (int)$countOrganizations->fetchColumn();
+        if ($franchises < 1) throw new RuntimeException('Nenhuma franquia ativa foi encontrada para esta prévia.');
+
+        $modules = 0;
+        $moduleOffers = 0;
+        if ($scope !== 'trails') {
+            $moduleCount = $this->database->prepare("SELECT COUNT(*) FROM provider_courses course WHERE course.catalog_id=:catalog AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1");
+            $moduleCount->execute(['catalog' => $catalogId]);
+            $modules = (int)$moduleCount->fetchColumn();
+
+            $offerCount = $this->database->prepare("SELECT COUNT(*)
+                FROM organizations organization
+                INNER JOIN provider_courses course ON course.catalog_id=:catalog AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1
+                LEFT JOIN organization_course_catalog_access access ON access.organization_id=organization.id AND access.course_catalog_id=course.catalog_id
+                LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=organization.id AND item_access.item_type='course' AND item_access.item_id=course.id
+                WHERE organization.status='active' AND COALESCE(access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1{$organizationFilter}");
+            $offerCount->execute($parameters);
+            $moduleOffers = (int)$offerCount->fetchColumn();
+        }
+
+        $trailCount = 0;
+        if ($scope !== 'modules') {
+            $trailStatement = $this->database->prepare("SELECT COUNT(DISTINCT trail.id) FROM catalog_trails trail
+                WHERE trail.is_active=1 AND EXISTS(SELECT 1 FROM catalog_trail_items item
+                    LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+                    LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+                    WHERE item.catalog_trail_id=trail.id AND (course.catalog_id=:course_catalog OR content.catalog_id=:content_catalog))");
+            $trailStatement->execute(['course_catalog' => $catalogId, 'content_catalog' => $catalogId]);
+            $trailCount = (int)$trailStatement->fetchColumn();
+        }
+
+        $exceptionStatement = $this->database->prepare("SELECT COUNT(*) FROM organization_course_catalog_access access
+            INNER JOIN organizations organization ON organization.id=access.organization_id AND organization.status='active'
+            WHERE access.course_catalog_id=:catalog AND (access.price_is_overridden=1 OR access.installments_is_overridden=1 OR access.dates_are_overridden=1){$organizationFilter}");
+        $exceptionStatement->execute($parameters);
+        $exceptions = (int)$exceptionStatement->fetchColumn();
+        if ($scope !== 'modules') {
+            $trailExceptions = $this->database->prepare("SELECT COUNT(*) FROM organization_catalog_trail_access trail_access
+                INNER JOIN organizations organization ON organization.id=trail_access.organization_id AND organization.status='active'
+                INNER JOIN catalog_trails trail ON trail.id=trail_access.catalog_trail_id
+                WHERE (trail_access.price_override IS NOT NULL OR trail_access.max_installments_override IS NOT NULL)
+                  AND EXISTS(SELECT 1 FROM catalog_trail_items item
+                    LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+                    LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+                    WHERE item.catalog_trail_id=trail.id AND (course.catalog_id=:course_catalog OR content.catalog_id=:content_catalog)){$organizationFilter}");
+            $trailParameters = ['course_catalog' => $catalogId, 'content_catalog' => $catalogId];
+            if ($organizationId !== null && $organizationId > 0) $trailParameters['organization'] = $organizationId;
+            $trailExceptions->execute($trailParameters);
+            $exceptions += (int)$trailExceptions->fetchColumn();
+        }
+
+        return ['franchises' => $franchises, 'modules' => $modules, 'module_offers' => $moduleOffers, 'trails' => $trailCount, 'exceptions' => $exceptions];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function centralCatalogPolicyHistory(int $catalogId, int $limit = 8): array
+    {
+        $statement = $this->database->prepare("SELECT event.*,COALESCE(user.name,'Sistema') user_name,COALESCE(organization.display_name,organization.legal_name,'Todas as franquias') organization_name
+            FROM catalog_commercial_policy_events event
+            LEFT JOIN platform_users user ON user.id=event.created_by
+            LEFT JOIN organizations organization ON organization.id=event.organization_id
+            WHERE event.course_catalog_id=:catalog ORDER BY event.id DESC LIMIT :limit");
+        $statement->bindValue(':catalog', $catalogId, PDO::PARAM_INT);
+        $statement->bindValue(':limit', max(1, min(30, $limit)), PDO::PARAM_INT);
+        $statement->execute();
+        return $statement->fetchAll() ?: [];
+    }
+
+    /** @return array{franchises:int,offers:int,trails:int,exceptions:int} */
+    public function applyCentralCatalogPolicy(int $catalogId, ?int $organizationId, ?int $userId, string $scope = 'both'): array
+    {
+        $scope = $this->policyScope($scope);
+        $catalog = $this->database->prepare('SELECT id,central_default_price,central_trail_default_price,central_default_module_workload,central_default_trail_workload,central_default_max_installments,central_trail_default_max_installments,central_valid_from,central_valid_until,allow_franchise_commercial_override,allow_franchise_price_override,allow_franchise_installment_override FROM course_catalogs WHERE id=:id AND is_active=1');
         $catalog->execute(['id' => $catalogId]);
         $policy = $catalog->fetch();
         if (!is_array($policy)) throw new RuntimeException('Catálogo não encontrado.');
+        $preview = $this->previewCentralCatalogPolicy($catalogId, $organizationId, $scope);
 
         $sql = "SELECT id FROM organizations WHERE status='active'";
         $parameters = [];
@@ -1776,35 +1866,83 @@ final readonly class CourseProviderRepository
         $targets = $this->database->prepare($sql);
         $targets->execute($parameters);
         $organizationIds = array_map('intval', $targets->fetchAll(PDO::FETCH_COLUMN) ?: []);
-        if ($organizationIds === []) throw new RuntimeException('Nenhuma franquia ativa foi encontrada para aplicar esta regra.');
 
-        $upsert = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,default_max_installments,valid_from,valid_until,updated_by) VALUES(:organization,:catalog,1,:markup,:default_price,:installments,:valid_from,:valid_until,:user) ON DUPLICATE KEY UPDATE markup_percent=VALUES(markup_percent),default_price=VALUES(default_price),default_max_installments=VALUES(default_max_installments),valid_from=VALUES(valid_from),valid_until=VALUES(valid_until),updated_by=VALUES(updated_by)');
+        $upsert = $this->database->prepare('INSERT INTO organization_course_catalog_access(organization_id,course_catalog_id,is_enabled,markup_percent,default_price,price_is_overridden,default_max_installments,installments_is_overridden,valid_from,valid_until,dates_are_overridden,updated_by) VALUES(:organization,:catalog,1,0,:default_price,0,:installments,0,:valid_from,:valid_until,0,:user) ON DUPLICATE KEY UPDATE default_price=IF(:preserve_price=1 AND price_is_overridden=1,default_price,VALUES(default_price)),price_is_overridden=IF(:preserve_price_flag=1,price_is_overridden,0),default_max_installments=IF(:preserve_installments=1 AND installments_is_overridden=1,default_max_installments,VALUES(default_max_installments)),installments_is_overridden=IF(:preserve_installments_flag=1,installments_is_overridden,0),valid_from=IF(:preserve_dates=1 AND dates_are_overridden=1,valid_from,VALUES(valid_from)),valid_until=IF(:preserve_dates_until=1 AND dates_are_overridden=1,valid_until,VALUES(valid_until)),dates_are_overridden=IF(:preserve_dates_flag=1,dates_are_overridden,0),updated_by=VALUES(updated_by)');
         $enabled = $this->database->prepare('SELECT COALESCE(access.is_enabled,1) FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=:organization WHERE catalog.id=:catalog AND catalog.is_globally_enabled=1');
         $offers = 0;
+        $trails = 0;
 
         $this->database->beginTransaction();
         try {
-            foreach ($organizationIds as $targetId) {
-                $upsert->execute([
-                    'organization' => $targetId,
-                    'catalog' => $catalogId,
-                    'markup' => (float)$policy['central_markup_percent'],
-                    'default_price' => $policy['central_default_price'],
-                    'installments' => max(1, (int)$policy['central_default_max_installments']),
-                    'valid_from' => $policy['central_valid_from'],
-                    'valid_until' => $policy['central_valid_until'],
-                    'user' => $userId,
-                ]);
-                $enabled->execute(['organization' => $targetId, 'catalog' => $catalogId]);
-                if ((int)$enabled->fetchColumn() === 1) $offers += $this->applyCatalogPolicy($targetId, $catalogId, $userId);
+            if ($scope !== 'trails') {
+                $workload = $policy['central_default_module_workload'];
+                if ($workload !== null) {
+                    $updateWorkload = $this->database->prepare("UPDATE provider_courses SET commercial_workload=:workload WHERE catalog_id=:catalog AND (commercial_workload IS NULL OR TRIM(commercial_workload)='')");
+                    $updateWorkload->execute(['workload' => $workload, 'catalog' => $catalogId]);
+                }
+                foreach ($organizationIds as $targetId) {
+                    $preserveCommercial = (int)$policy['allow_franchise_commercial_override'] === 1;
+                    $upsert->execute([
+                        'organization' => $targetId,
+                        'catalog' => $catalogId,
+                        'default_price' => $policy['central_default_price'],
+                        'installments' => max(1, (int)$policy['central_default_max_installments']),
+                        'valid_from' => $policy['central_valid_from'],
+                        'valid_until' => $policy['central_valid_until'],
+                        'user' => $userId,
+                        'preserve_price' => $preserveCommercial && (int)$policy['allow_franchise_price_override'] === 1 ? 1 : 0,
+                        'preserve_price_flag' => $preserveCommercial && (int)$policy['allow_franchise_price_override'] === 1 ? 1 : 0,
+                        'preserve_installments' => $preserveCommercial && (int)$policy['allow_franchise_installment_override'] === 1 ? 1 : 0,
+                        'preserve_installments_flag' => $preserveCommercial && (int)$policy['allow_franchise_installment_override'] === 1 ? 1 : 0,
+                        'preserve_dates' => $preserveCommercial ? 1 : 0,
+                        'preserve_dates_until' => $preserveCommercial ? 1 : 0,
+                        'preserve_dates_flag' => $preserveCommercial ? 1 : 0,
+                    ]);
+                    $enabled->execute(['organization' => $targetId, 'catalog' => $catalogId]);
+                    if ((int)$enabled->fetchColumn() === 1) $offers += $this->applyCatalogPolicy($targetId, $catalogId, $userId);
+                }
             }
+
+            if ($scope !== 'modules') {
+                $trailUpdate = $this->database->prepare("UPDATE catalog_trails trail SET
+                    default_price=:price,
+                    max_installments=:installments,
+                    workload_hours=CASE WHEN workload_hours IS NULL OR workload_hours<=0 THEN :workload ELSE workload_hours END,
+                    updated_by=:user
+                    WHERE EXISTS(SELECT 1 FROM catalog_trail_items item
+                        LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+                        LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+                        WHERE item.catalog_trail_id=trail.id AND (course.catalog_id=:course_catalog OR content.catalog_id=:content_catalog))");
+                $trailUpdate->execute([
+                    'price' => $policy['central_trail_default_price'],
+                    'installments' => max(1, (int)$policy['central_trail_default_max_installments']),
+                    'workload' => $policy['central_default_trail_workload'],
+                    'user' => $userId,
+                    'course_catalog' => $catalogId,
+                    'content_catalog' => $catalogId,
+                ]);
+                $trails = $preview['trails'];
+            }
+
+            $event = $this->database->prepare('INSERT INTO catalog_commercial_policy_events(course_catalog_id,organization_id,action,apply_scope,franchises_count,module_offers_count,trails_count,exceptions_count,snapshot_json,created_by) VALUES(:catalog,:organization,\'applied\',:scope,:franchises,:offers,:trails,:exceptions,:snapshot,:user)');
+            $event->execute([
+                'catalog' => $catalogId,
+                'organization' => $organizationId,
+                'scope' => $scope,
+                'franchises' => count($organizationIds),
+                'offers' => $preview['module_offers'],
+                'trails' => $trails,
+                'exceptions' => $preview['exceptions'],
+                'snapshot' => json_encode(['policy' => $policy, 'preview' => $preview], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'user' => $userId,
+            ]);
             $this->database->commit();
         } catch (Throwable $exception) {
             if ($this->database->inTransaction()) $this->database->rollBack();
             throw $exception;
         }
 
-        return ['franchises' => count($organizationIds), 'offers' => $offers];
+        return ['franchises' => count($organizationIds), 'offers' => $offers, 'trails' => $trails, 'exceptions' => $preview['exceptions']];
     }
 
     /** @param array<string,mixed> $metadata */
@@ -1850,7 +1988,39 @@ final readonly class CourseProviderRepository
 
         if ($status !== 'approved' || $releaseStatus === 'private') {
             $this->database->prepare('UPDATE organization_provider_course_offers SET is_visible=0,updated_by=:user WHERE provider_course_id=:course')->execute(['user' => $userId, 'course' => $courseId]);
+        } else {
+            $this->inheritCentralPolicyForCourse($courseId, $userId);
         }
+    }
+
+    private function inheritCentralPolicyForCourse(int $courseId, ?int $userId): void
+    {
+        $course = $this->database->prepare("SELECT course.id,course.catalog_id,catalog.central_default_module_workload,catalog.central_default_price,catalog.central_default_max_installments
+            FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id AND catalog.is_active=1 AND catalog.is_globally_enabled=1
+            WHERE course.id=:course AND course.review_status='approved' AND course.release_status IN ('released','published') AND course.is_available=1 AND course.is_globally_enabled=1");
+        $course->execute(['course' => $courseId]);
+        $row = $course->fetch();
+        if (!is_array($row)) return;
+        if ($row['central_default_module_workload'] !== null) {
+            $this->database->prepare("UPDATE provider_courses SET commercial_workload=:workload WHERE id=:course AND (commercial_workload IS NULL OR TRIM(commercial_workload)='')")
+                ->execute(['workload' => $row['central_default_module_workload'], 'course' => $courseId]);
+        }
+
+        $offers = $this->database->prepare("INSERT INTO organization_provider_course_offers(organization_id,provider_course_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by)
+            SELECT organization.id,course.id,COALESCE(NULLIF(course.commercial_name,''),course.name),course.commercial_description,
+                COALESCE(access.default_price,catalog.central_default_price,0),COALESCE(access.default_max_installments,catalog.central_default_max_installments,1),'assisted',0,1,:created_by,:updated_by
+            FROM provider_courses course INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id
+            INNER JOIN organizations organization ON organization.status='active'
+            LEFT JOIN organization_course_catalog_access access ON access.organization_id=organization.id AND access.course_catalog_id=catalog.id
+            LEFT JOIN organization_catalog_item_access item_access ON item_access.organization_id=organization.id AND item_access.item_type='course' AND item_access.item_id=course.id
+            WHERE course.id=:course AND COALESCE(access.is_enabled,1)=1 AND COALESCE(item_access.is_enabled,1)=1
+            ON DUPLICATE KEY UPDATE is_active=1,updated_by=VALUES(updated_by)");
+        $offers->execute(['created_by' => $userId, 'updated_by' => $userId, 'course' => $courseId]);
+    }
+
+    private function policyScope(string $scope): string
+    {
+        return in_array($scope, ['modules', 'trails', 'both'], true) ? $scope : 'both';
     }
 
     /** @param array<string,mixed> $input */
