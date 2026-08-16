@@ -361,5 +361,49 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081616, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081617) {
+        global $DB;
+
+        $formatportuguesetitle = static function (string $title): string {
+            $title = trim((string)preg_replace('/\s+/u', ' ', $title));
+            if ($title === '') {
+                return '';
+            }
+            $title = mb_convert_case(mb_strtolower($title, 'UTF-8'), MB_CASE_TITLE, 'UTF-8');
+            $connectors = ['A', 'As', 'E', 'Em', 'Na', 'Nas', 'No', 'Nos', 'O', 'Os', 'Ou', 'Com', 'Da', 'Das', 'De', 'Do', 'Dos', 'Para', 'Por', 'Sem', 'Sob'];
+            foreach ($connectors as $connector) {
+                $title = (string)preg_replace('/(?<!^)\b' . preg_quote($connector, '/') . '\b/u', mb_strtolower($connector, 'UTF-8'), $title);
+            }
+            $title = strtr($title, ['Ava' => 'AVA', 'Avp' => 'AVP', 'Eja' => 'EJA', 'Ia' => 'IA', 'Lgpd' => 'LGPD', 'Lti' => 'LTI', 'Mba' => 'MBA', 'Rh' => 'RH', 'Ti' => 'TI', 'Tti' => 'TTI']);
+            return (string)preg_replace_callback('/\b(?:I|Ii|Iii|Iv|V|Vi|Vii|Viii|Ix|X)\b/u', static fn(array $match): string => mb_strtoupper($match[0], 'UTF-8'), $title);
+        };
+
+        $managedcourses = $DB->get_records_select('course', 'idnumber LIKE :trail', ['trail' => 'mi-trilha-%'], 'id ASC', 'id');
+        $ltimodule = $DB->get_record('modules', ['name' => 'lti'], 'id');
+        foreach ($managedcourses as $managedcourse) {
+            $sections = $DB->get_records_select('course_sections', 'course = :course AND section > 0', ['course' => $managedcourse->id], 'section ASC');
+            foreach ($sections as $section) {
+                $modulelabel = trim((string)preg_replace('/^M[oó]dulo\s+\d+\s*[-:–—]\s*/iu', '', (string)$section->name));
+                $modulelabel = $formatportuguesetitle($modulelabel);
+                if ($modulelabel === '') {
+                    continue;
+                }
+                $DB->set_field('course_sections', 'name', 'Módulo ' . (int)$section->section . ' - ' . $modulelabel, ['id' => $section->id]);
+                if (!$ltimodule) {
+                    continue;
+                }
+                $modules = $DB->get_records('course_modules', ['course' => $managedcourse->id, 'section' => $section->id, 'module' => $ltimodule->id]);
+                foreach ($modules as $coursemodule) {
+                    if (!str_contains((string)$coursemodule->idnumber, '-assessment-')) {
+                        continue;
+                    }
+                    $DB->set_field('lti', 'name', \core_text::substr('AVP - Avaliação: ' . $modulelabel, 0, 255), ['id' => $coursemodule->instance]);
+                }
+            }
+            rebuild_course_cache((int)$managedcourse->id, true);
+        }
+
+        upgrade_plugin_savepoint(true, 2026081617, 'local', 'mundointer');
+    }
     return true;
 }
