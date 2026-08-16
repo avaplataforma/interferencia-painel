@@ -405,5 +405,38 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081617, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081618) {
+        global $DB;
+
+        // Some installations use a manually-created web service and token
+        // instead of the component-owned service declared in db/services.php.
+        // Any service that already exposes the Mundo Inter ping is therefore
+        // an existing connector service and must receive the publication
+        // functions required by the MASTER and Trail automation.
+        $connectorservices = $DB->get_records_sql(
+            "SELECT DISTINCT service.id
+               FROM {external_services} service
+               JOIN {external_services_functions} functionlink
+                 ON functionlink.externalserviceid = service.id
+              WHERE functionlink.functionname = :ping",
+            ['ping' => 'local_mundointer_ping']
+        );
+        foreach ($connectorservices as $service) {
+            foreach (['local_mundointer_materialize_lti_course', 'local_mundointer_sync_trail_sections'] as $functionname) {
+                if (!$DB->record_exists('external_services_functions', [
+                    'externalserviceid' => (int)$service->id,
+                    'functionname' => $functionname,
+                ])) {
+                    $DB->insert_record('external_services_functions', (object)[
+                        'externalserviceid' => (int)$service->id,
+                        'functionname' => $functionname,
+                    ]);
+                }
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026081618, 'local', 'mundointer');
+    }
     return true;
 }
+
