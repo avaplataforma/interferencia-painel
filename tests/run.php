@@ -2021,7 +2021,7 @@ $tests['padroniza capas leves e heranca comercial em todos os catalogos'] = stat
     assertTrue(str_contains($routes,"'/catalog-media/{id:\\d+}'"));
     assertTrue(str_contains($courseCuration,'Capa otimizada no Spaces'));
     assertTrue(str_contains($contentView,'Capa herdada'));
-    assertTrue(str_contains($javascript,"section === 'contents' && provider !== loadedContentProvider"));
+    assertTrue(str_contains($javascript,"section === 'modules' && !['iesde', 'ava_cursos'].includes(provider) && provider !== loadedContentProvider"));
 };
 
 $tests['libera catalogos por padrao e registra bloqueios como excecoes'] = static function () use ($rootPath): void {
@@ -2666,10 +2666,11 @@ $tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static 
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $javascript=(string)file_get_contents($rootPath.'/public/assets/js/app.js');
 
-    $expected=['Acervo Comercial','Cursos','Módulos','Trilhas','Política Comercial','Conexão e API'];
+    $expected=['Loja de Cursos','Módulos','Trilhas','Política Comercial','Conexão e API'];
     $position=-1;
     foreach($expected as$label){$next=strpos($tabs,$label);assertTrue($next!==false&&$next>$position);$position=$next;}
-    assertTrue(substr_count($tabs,'data-catalog-subtab=')===6);
+    assertTrue(substr_count($tabs,'data-catalog-subtab=')===5);
+    assertTrue(!str_contains($tabs,'data-catalog-subtab="courses"'));
     assertTrue(str_contains($queue,'Fila de publicação'));
     assertTrue(str_contains($queue,'Tentar novamente'));
     assertTrue(str_contains($service,'public function dashboard'));

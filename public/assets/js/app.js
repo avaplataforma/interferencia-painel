@@ -465,7 +465,8 @@ document.querySelectorAll('.color-field').forEach((group) => {
       classes: 'connection',
       capabilities: 'connection',
       homologation: 'connection',
-      contents: 'courses',
+      courses: 'modules',
+      contents: 'modules',
     };
     const normalizedSection = legacySections[requestedSection] || requestedSection;
     const section = providerTabs.some((item) => item.dataset.catalogSubtab === normalizedSection) ? normalizedSection : 'commercial';
@@ -482,7 +483,11 @@ document.querySelectorAll('.color-field').forEach((group) => {
           : ['connection', 'homologation', 'capabilities', 'queue'];
       }
       if (section === 'commercial' && provider !== 'iesde' && provider !== 'ava_cursos') return ['courses'];
-      if (section === 'courses' && provider !== 'iesde' && provider !== 'ava_cursos') return ['contents'];
+      if (section === 'modules') {
+        return provider !== 'iesde' && provider !== 'ava_cursos'
+          ? ['modules', 'contents']
+          : ['modules', 'courses'];
+      }
       return [section];
     })();
     subpanels
@@ -526,10 +531,10 @@ document.querySelectorAll('.color-field').forEach((group) => {
       location.assign(url.toString());
       return;
     }
-    if (section === 'courses' && !['iesde', 'ava_cursos'].includes(provider) && provider !== loadedContentProvider) {
+    if (section === 'modules' && !['iesde', 'ava_cursos'].includes(provider) && provider !== loadedContentProvider) {
       const url = new URL(location.href);
       url.searchParams.set('catalog', provider);
-      url.searchParams.set('section', 'courses');
+      url.searchParams.set('section', 'modules');
       url.searchParams.delete('content_page');
       location.assign(url.toString());
       return;

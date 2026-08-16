@@ -3,10 +3,10 @@
  <div class="content-toolbar">
   <form method="get" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers">
    <input type="hidden" name="catalog" value="<?= $escape($provider) ?>">
-   <input type="hidden" name="section" value="contents">
+   <input type="hidden" name="section" value="modules">
    <label><?= $provider==='iesde'?'Localizar aula, recurso ou disciplina':'Localizar conteúdo, disciplina, curso ou código' ?><input name="content_q" value="<?= $escape($contentQuery) ?>" placeholder="Ex.: Atendimento ao cliente"></label>
    <button class="btn btn-primary" type="submit"><i class="fa-solid fa-magnifying-glass"></i> Pesquisar</button>
-   <?php if($contentQuery!==''):?><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers?catalog=<?= $escape($provider) ?>&amp;section=contents">Limpar</a><?php endif;?>
+   <?php if($contentQuery!==''):?><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers?catalog=<?= $escape($provider) ?>&amp;section=modules">Limpar</a><?php endif;?>
   </form>
   <p><strong><?= (int)($contentPage['total']??0) ?></strong> conteúdo(s)</p>
  </div>
@@ -78,6 +78,6 @@
    </td></tr><?php endif;?>
   <?php endforeach;?>
   </tbody></table></div>
-  <?php if((int)($contentPage['pages']??1)>1):$currentPage=(int)$contentPage['page'];$lastPage=(int)$contentPage['pages'];$visiblePages=array_values(array_unique(array_filter([1,$currentPage-2,$currentPage-1,$currentPage,$currentPage+1,$currentPage+2,$lastPage],static fn(int$page):bool=>$page>=1&&$page<=$lastPage)));sort($visiblePages);?><nav class="content-pagination" aria-label="Paginação de conteúdos"><?php $previousPage=0;foreach($visiblePages as$pageNumber):if($previousPage>0&&$pageNumber>$previousPage+1):?><span aria-hidden="true">…</span><?php endif;$pageUrl=$basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=contents&content_page='.$pageNumber.($contentQuery!==''?'&content_q='.rawurlencode($contentQuery):'');?><a class="<?= $pageNumber===$currentPage?'is-current':'' ?>" href="<?= $escape($pageUrl) ?>"><?= $pageNumber ?></a><?php $previousPage=$pageNumber;endforeach;?></nav><?php endif;?>
+  <?php if((int)($contentPage['pages']??1)>1):$currentPage=(int)$contentPage['page'];$lastPage=(int)$contentPage['pages'];$visiblePages=array_values(array_unique(array_filter([1,$currentPage-2,$currentPage-1,$currentPage,$currentPage+1,$currentPage+2,$lastPage],static fn(int$page):bool=>$page>=1&&$page<=$lastPage)));sort($visiblePages);?><nav class="content-pagination" aria-label="Paginação de conteúdos"><?php $previousPage=0;foreach($visiblePages as$pageNumber):if($previousPage>0&&$pageNumber>$previousPage+1):?><span aria-hidden="true">…</span><?php endif;$pageUrl=$basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=modules&content_page='.$pageNumber.($contentQuery!==''?'&content_q='.rawurlencode($contentQuery):'');?><a class="<?= $pageNumber===$currentPage?'is-current':'' ?>" href="<?= $escape($pageUrl) ?>"><?= $pageNumber ?></a><?php $previousPage=$pageNumber;endforeach;?></nav><?php endif;?>
  <?php endif;?>
 </div>
