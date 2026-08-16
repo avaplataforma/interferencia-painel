@@ -2936,6 +2936,29 @@ $tests['organiza curadoria comercial MASTER e trata titulos repetidos com segura
     assertTrue(str_contains($view,'Aprovar e liberar'));
 };
 
+$tests['aplica política comercial por tipo com prévia, herança e auditoria'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $learningCatalog=(string)file_get_contents($rootPath.'/modules/Catalog/LearningCatalogRepository.php');
+    $view=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-commercial-policy.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260816_000030_create_catalog_commercial_policy_history.php');
+
+    assertTrue(str_contains($repository,'function previewCentralCatalogPolicy'));
+    assertTrue(str_contains($repository,'function centralCatalogPolicyHistory'));
+    assertTrue(str_contains($repository,'function inheritCentralPolicyForCourse'));
+    assertTrue(str_contains($repository,"['modules', 'trails', 'both']"));
+    assertTrue(str_contains($repository,'price_is_overridden=1'));
+    assertTrue(str_contains($learningCatalog,'centralPolicyForItems'));
+    assertTrue(str_contains($routes,"input('apply_scope','both')"));
+    assertTrue(str_contains($routes,"action==='preview'"));
+    assertTrue(str_contains($view,'Prévia de impacto'));
+    assertTrue(str_contains($view,'Somente Módulos'));
+    assertTrue(str_contains($view,'Somente Trilhas'));
+    assertTrue(str_contains($view,'Histórico de aplicações'));
+    assertTrue(str_contains($migration,'CREATE TABLE catalog_commercial_policy_events'));
+    assertTrue(str_contains($migration,'price_is_overridden'));
+};
+
 $failures = 0;
 
 foreach ($tests as $name => $test) {
