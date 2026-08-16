@@ -90,7 +90,7 @@ final readonly class AvaCatalogPublisher
     }
 
     /** @return array{remote_course_id:int,remote_category_id:int,created_or_updated:string,reused_activity:bool,sections_synced:int,activities_synced:int,assessment_ready:bool,book_ready:bool} */
-    public function publishMasterCourse(int$courseId,?int$userId):array
+    public function publishMasterCourse(int$courseId,?int$userId,?int$preparedSourceCmId=null):array
     {
         $context=$this->providers->coursePublicationContext($courseId);
         if($context===null)throw new RuntimeException('Curso Individual MASTER não encontrado.');
@@ -100,7 +100,7 @@ final readonly class AvaCatalogPublisher
         $assessmentReady=(int)($context['assessment_resource_count']??0)>0;
         $bookReady=(int)($context['book_resource_count']??0)>0;
         $raw=is_array($context['source_raw']??null)?$context['source_raw']:[];
-        $sourceCmId=(int)($raw['course_module_id']??0);
+        $sourceCmId=$preparedSourceCmId!==null&&$preparedSourceCmId>0?$preparedSourceCmId:(int)($raw['course_module_id']??0);
         if($sourceCmId<1)throw new RuntimeException('Sincronize novamente as seleções MASTER: a atividade LTI de origem não foi identificada.');
         $connection=$this->connections->shared();
         if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)throw new RuntimeException('Configure e ative primeiro a integração AVA Cursos.');
@@ -278,3 +278,4 @@ final readonly class AvaCatalogPublisher
         return$message!==''?$message:'Não foi possível publicar a Trilha no AVA Cursos.';
     }
 }
+
