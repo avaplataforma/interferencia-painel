@@ -21,9 +21,15 @@ final readonly class MoodleAcademicCategoryManager
         $categories=$this->client->courseCategories();
         $root=$this->ensureCategory($categories,'MUNDO INTER','mi-mundo-inter',0);
         $formationCategory=$this->ensureCategory($categories,'Formação '.$code,'mi-formacao-'.strtolower($code),(int)$root['id']);
-        // Keep the stable internal idnumber so existing courses remain linked,
-        // while presenting the academic role of these entries more clearly.
-        $individuals=$this->ensureCategory($categories,'Módulos','mi-formacao-'.strtolower($code).'-individuais',(int)$formationCategory['id']);
+        $modulesIdNumber='mi-formacao-'.strtolower($code).'-modulos';
+        $legacyIndividualsIdNumber='mi-formacao-'.strtolower($code).'-individuais';
+        $individuals=$this->ensureCategory(
+            $categories,
+            'Módulos',
+            $modulesIdNumber,
+            (int)$formationCategory['id'],
+            [$legacyIndividualsIdNumber]
+        );
         $trails=$this->ensureCategory($categories,'Trilhas','mi-formacao-'.strtolower($code).'-trilhas',(int)$formationCategory['id']);
         return['root'=>(int)$root['id'],'formation'=>(int)$formationCategory['id'],'individuals'=>(int)$individuals['id'],'trails'=>(int)$trails['id'],'code'=>$code];
     }
@@ -34,15 +40,21 @@ final readonly class MoodleAcademicCategoryManager
     }
 
     /** @param list<array<string,mixed>> $categories @return array<string,mixed> */
-    private function ensureCategory(array &$categories,string $name,string $idNumber,int $parent): array
+    private function ensureCategory(array &$categories,string $name,string $idNumber,int $parent,array $legacyIdNumbers=[]): array
     {
         $category=$this->findCategory($categories,$idNumber);
+        if($category===null){
+            foreach($legacyIdNumbers as$legacyIdNumber){
+                $category=$this->findCategory($categories,(string)$legacyIdNumber);
+                if($category!==null)break;
+            }
+        }
         if($category===null){
             $category=$this->client->createCourseCategory($name,$idNumber,$parent);
             $categories[]=$category+['name'=>$name,'idnumber'=>$idNumber,'parent'=>$parent];
             return$category+['name'=>$name,'idnumber'=>$idNumber,'parent'=>$parent];
         }
-        if(trim((string)($category['name']??''))!==$name||(int)($category['parent']??0)!==$parent){
+        if(trim((string)($category['name']??''))!==$name||trim((string)($category['idnumber']??''))!==$idNumber||(int)($category['parent']??0)!==$parent){
             $this->client->updateCourseCategory((int)$category['id'],$name,$idNumber,$parent);
             $category['name']=$name;$category['idnumber']=$idNumber;$category['parent']=$parent;
         }

@@ -2434,6 +2434,9 @@ $tests['organiza catalogos em formacoes modulos e trilhas no moodle'] = static f
     assertTrue(str_contains($manager,"'MUNDO INTER','mi-mundo-inter'"));
     assertTrue(str_contains($manager,"'Formação '.\$code,'mi-formacao-'"));
     assertTrue(str_contains($manager,"'Módulos','mi-formacao-'"));
+    assertTrue(str_contains($manager,"'-modulos'"));
+    assertTrue(str_contains($manager,"'-individuais'"));
+    assertTrue(str_contains($manager,'legacyIdNumbers'));
     assertTrue(str_contains($manager,"'Trilhas','mi-formacao-'"));
     assertTrue(str_contains($publisher,"return preg_match('/\\btest"));
     assertTrue(str_contains($publisher,"return\$tree['trails']"));
