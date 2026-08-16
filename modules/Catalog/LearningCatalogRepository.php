@@ -337,13 +337,19 @@ final readonly class LearningCatalogRepository
         $providerScope = trim((string)$providerScope);
         if ($providerScope !== '') $this->assertItemsBelongToProvider($items, $providerScope);
         if (count($items) < 2) throw new RuntimeException('Uma Trilha precisa reunir pelo menos dois cursos ou conteúdos.');
+        $centralPolicy = $this->centralPolicyForItems($items);
         $slug = $this->slug((string)($data['slug'] ?? ''));
         if ($slug === '') $slug = $this->slug($name);
         if ($slug === '') throw new RuntimeException('Informe um endereço válido para a Trilha.');
-        $workload = $this->positiveDecimal((string)($data['workload_hours'] ?? ''), 'Informe a carga horária total da Trilha.');
+        $rawWorkload = trim((string)($data['workload_hours'] ?? ''));
+        if ($rawWorkload === '' && $centralPolicy !== null && $centralPolicy['central_default_trail_workload'] !== null) $rawWorkload = (string)$centralPolicy['central_default_trail_workload'];
+        $workload = $this->positiveDecimal($rawWorkload, 'Informe a carga horária total da Trilha.');
         $rawPrice = trim((string)($data['default_price'] ?? ''));
+        if ($rawPrice === '' && $centralPolicy !== null && $centralPolicy['central_trail_default_price'] !== null) $rawPrice = (string)$centralPolicy['central_trail_default_price'];
         $price = $rawPrice === '' ? null : $this->money($rawPrice);
         if ($price !== null && $price < 0) throw new RuntimeException('O preço não pode ser negativo.');
+        $rawInstallments = trim((string)($data['max_installments'] ?? ''));
+        if ($rawInstallments === '' && $centralPolicy !== null) $rawInstallments = (string)$centralPolicy['central_trail_default_max_installments'];
         $values = [
             'category' => $categoryId,
             'name' => $name,
@@ -352,7 +358,7 @@ final readonly class LearningCatalogRepository
             'description' => trim((string)($data['description'] ?? '')) ?: null,
             'workload' => $workload,
             'price' => $price,
-            'installments' => max(1, min(60, (int)($data['max_installments'] ?? 1))),
+            'installments' => max(1, min(60, (int)($rawInstallments !== '' ? $rawInstallments : 1))),
             'cover' => trim((string)($data['cover_url'] ?? '')) ?: null,
             'active' => (int)(bool)($data['is_active'] ?? false),
         ];
@@ -403,6 +409,32 @@ final readonly class LearningCatalogRepository
             $result[] = ['type' => $type, 'id' => $itemId];
         }
         return $result;
+    }
+
+    /** @param list<array{type:string,id:int}> $items @return array<string,mixed>|null */
+    private function centralPolicyForItems(array $items): ?array
+    {
+        $catalogIds = [];
+        $courseCatalog = $this->database->prepare('SELECT catalog_id FROM provider_courses WHERE id=:id');
+        $contentCatalog = $this->database->prepare('SELECT catalog_id FROM provider_catalog_contents WHERE id=:id');
+        foreach ($items as $item) {
+            if ($item['type'] === 'provider_course') {
+                $courseCatalog->execute(['id' => $item['id']]);
+                $catalogId = (int)$courseCatalog->fetchColumn();
+            } elseif ($item['type'] === 'provider_content') {
+                $contentCatalog->execute(['id' => $item['id']]);
+                $catalogId = (int)$contentCatalog->fetchColumn();
+            } else {
+                continue;
+            }
+            if ($catalogId > 0) $catalogIds[$catalogId] = true;
+        }
+        if (count($catalogIds) !== 1) return null;
+        $catalogId = (int)array_key_first($catalogIds);
+        $statement = $this->database->prepare('SELECT central_trail_default_price,central_default_trail_workload,central_trail_default_max_installments FROM course_catalogs WHERE id=:id AND is_active=1');
+        $statement->execute(['id' => $catalogId]);
+        $policy = $statement->fetch();
+        return is_array($policy) ? $policy : null;
     }
 
     /** @param list<array{type:string,id:int}> $items */
