@@ -174,7 +174,7 @@ final class sync_trail_sections extends external_api
             $sourcecm=$item['cm'];$source=$item['lti'];
             $sourcekind=(string)$item['kind'];
             $idnumber=\core_text::substr('mi-trail-master-'.$key.'-'.$sourcekind.'-'.(int)$sourcecm->id,0,100);
-            $displayname=$sourcekind==='assessment'?'Avaliação oficial':trim(clean_param((string)$source->name,PARAM_TEXT));
+            $displayname=$sourcekind==='assessment'?'AVP - Avaliação: '.$name:trim(clean_param((string)$source->name,PARAM_TEXT));
             if($sourcekind==='book'){
                 $displayname=preg_match('/material/iu',$displayname)===1?'Materiais Interativos':('Livro - '.$name);
             }else if($displayname===''){
