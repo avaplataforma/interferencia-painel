@@ -22,6 +22,48 @@ final readonly class AvaCourseProvisioningService
         private IesdeLtiRobot $iesdeRobot,
     ) {}
 
+    /**
+     * Publishes or refreshes one MASTER module from the ADM Central using the
+     * same transient LTI bridge used by just-in-time enrollment provisioning.
+     * This keeps manual publication independent from expired Moodle module IDs.
+     *
+     * @return array<string,mixed>
+     */
+    public function publishProviderCourse(int $courseId, ?int $userId): array
+    {
+        if ($courseId < 1) {
+            throw new RuntimeException('Curso Individual inválido para a preparação do AVA.');
+        }
+
+        $context = $this->providers->coursePublicationContext($courseId);
+        if ($context === null || (string)($context['provider_code'] ?? '') !== 'iesde') {
+            throw new RuntimeException('Esta preparação automática está disponível somente para a Formação MASTER.');
+        }
+
+        $sourceName = trim((string)($context['effective_name'] ?? $context['name'] ?? ''));
+        if ($sourceName === '') {
+            throw new RuntimeException('Informe o nome do Módulo MASTER antes de publicá-lo.');
+        }
+
+        $snapshotId = 0;
+        try {
+            $prepared = $this->iesdeRobot->prepare($courseId, $sourceName);
+            $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
+            $result = $this->publisher->publishMasterCourse($courseId, $userId);
+            $remoteCourseId = (int)($result['remote_course_id'] ?? 0);
+            if ($remoteCourseId < 1) {
+                throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
+            }
+            $result['staging_cleaned'] = $this->iesdeRobot->finalize($snapshotId, $remoteCourseId);
+            return $result;
+        } catch (Throwable $exception) {
+            if ($snapshotId > 0) {
+                $this->iesdeRobot->fail($snapshotId, $exception->getMessage());
+            }
+            throw $exception;
+        }
+    }
+
     /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
     public function ensureProviderCourseOffer(int $offerId, int $organizationId, ?int $userId): array
     {
