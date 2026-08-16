@@ -1,0 +1,60 @@
+name: Publicar na VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: production-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Atualizar Mundo Inter
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Preparar acesso seguro
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
+
+      - name: Atualizar aplicação na VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=20 \
+            ubuntu@15.204.121.10 'bash -s' <<'REMOTE'
+          set -euo pipefail
+
+          repo=''
+          for candidate in \
+            /home/*/web/*/private/interferencia-painel \
+            /var/www/*/interferencia-painel \
+            /opt/interferencia-painel \
+            /srv/interferencia-painel
+          do
+            if [ -d "$candidate/.git" ]; then
+              repo="$candidate"
+              break
+            fi
+          done
+
+          if [ -z "$repo" ]; then
+            echo 'Repositório de produção não localizado.' >&2
+            exit 1
+          fi
+
+          owner="$(stat -c '%U' "$repo")"
+          before="$(sudo -u "$owner" -H git -C "$repo" rev-parse --short HEAD)"
+
+          sudo -u "$owner" -H git -C "$repo" fetch origin main
+          sudo -u "$owner" -H git -C "$repo" pull --ff-only origin main
+          sudo -u "$owner" -H composer --working-dir="$repo" dump-autoload --classmap-authoritative
+          sudo -u "$owner" -H composer --working-dir="$repo" check
+
+          after="$(sudo -u "$owner" -H git -C "$repo" rev-parse --short HEAD)"
+          echo "Publicação concluída: $before -> $after"
+          REMOTE
