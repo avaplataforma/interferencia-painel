@@ -667,11 +667,52 @@ final readonly class CourseProviderRepository
     }
 
     /** @return list<array<string,mixed>> */
+    public function commercialAiCandidates(string $providerCode, int $limit = 10): array
+    {
+        $limit = max(1, min(25, $limit));
+        $statement = $this->database->prepare("SELECT course.id,'course' entity_type,provider.provider_code,
+            COALESCE(NULLIF(course.commercial_name,''),course.name) effective_name,
+            COALESCE(NULLIF(course.commercial_category,''),course.category,'') effective_category,
+            COALESCE(course.description,'') source_description,
+            COALESCE(course.commercial_summary,'') commercial_summary,
+            COALESCE(course.commercial_description,'') commercial_description,
+            CASE WHEN NULLIF(COALESCE(course.commercial_cover_url,course.cover_url,''),'') IS NOT NULL OR asset.id IS NOT NULL THEN 1 ELSE 0 END has_cover
+            FROM provider_courses course
+            INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
+            LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=course.id AND asset.purpose='cover' AND asset.generation_status='ready'
+            WHERE provider.provider_code=:provider AND course.is_available=1
+              AND (NULLIF(TRIM(course.commercial_summary),'') IS NULL OR NULLIF(TRIM(course.commercial_description),'') IS NULL
+                OR (NULLIF(COALESCE(course.commercial_cover_url,course.cover_url,''),'') IS NULL AND asset.id IS NULL))
+            ORDER BY CASE WHEN NULLIF(TRIM(course.commercial_summary),'') IS NULL OR NULLIF(TRIM(course.commercial_description),'') IS NULL THEN 0 ELSE 1 END,course.id
+            LIMIT :limit");
+        $statement->bindValue(':provider', $providerCode);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll() ?: [];
+    }
+
+    public function fillMissingCourseCopy(int $courseId, string $summary, string $description, ?int $userId): void
+    {
+        $statement = $this->database->prepare("UPDATE provider_courses SET
+            commercial_summary=CASE WHEN NULLIF(TRIM(commercial_summary),'') IS NULL THEN :summary ELSE commercial_summary END,
+            commercial_description=CASE WHEN NULLIF(TRIM(commercial_description),'') IS NULL THEN :description ELSE commercial_description END,
+            review_status=CASE WHEN review_status='imported' THEN 'reviewed' ELSE review_status END,
+            reviewed_by=COALESCE(:user,reviewed_by),reviewed_at=NOW()
+            WHERE id=:id");
+        $statement->execute(['summary' => trim($summary), 'description' => trim($description), 'user' => $userId, 'id' => $courseId]);
+        if ($statement->rowCount() < 1 && !$this->exists('provider_courses', $courseId)) {
+            throw new RuntimeException('Módulo não encontrado.');
+        }
+    }
+
+    /** @return list<array<string,mixed>> */
     public function providerCatalogRegistry(): array
     {
         $statement = $this->database->query("SELECT catalog.id,catalog.code,catalog.name,catalog.description,catalog.execution_environment,catalog.is_globally_enabled,catalog.is_shared_ava_enabled,catalog.shared_ava_updated_at,
-            catalog.central_default_price,catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,
-            catalog.allow_franchise_commercial_override,catalog.commercial_policy_updated_at,
+            catalog.central_default_price,catalog.central_trail_default_price,catalog.central_default_module_workload,catalog.central_default_trail_workload,
+            catalog.central_markup_percent,catalog.central_default_max_installments,catalog.central_valid_from,catalog.central_valid_until,
+            catalog.allow_franchise_commercial_override,catalog.allow_franchise_price_override,catalog.allow_franchise_installment_override,catalog.allow_franchise_visibility_override,catalog.commercial_policy_updated_at,
             CASE WHEN catalog.code='ava-cursos' THEN 'AVA Cursos' ELSE COALESCE(provider.name,'Fornecedor a definir') END provider_name,
             COALESCE(provider.provider_code,'ava_cursos') provider_code,
             COALESCE(provider.base_url,'') base_url,COALESCE(provider.token_last4,'') token_last4,
@@ -1682,24 +1723,37 @@ final readonly class CourseProviderRepository
         $catalog->execute(['id' => $catalogId]);
         if ($catalog->fetchColumn() === false) throw new RuntimeException('Catálogo não encontrado.');
 
-        $defaultPriceInput = trim((string)($input['default_price'] ?? ''));
-        $defaultPrice = $this->money($defaultPriceInput);
+        $defaultPrice = $this->money(trim((string)($input['default_price'] ?? '')));
+        $trailDefaultPrice = $this->money(trim((string)($input['trail_default_price'] ?? '')));
+        $moduleWorkloadInput = trim((string)($input['module_workload'] ?? ''));
+        $trailWorkloadInput = trim((string)($input['trail_workload'] ?? ''));
+        $moduleWorkload = $moduleWorkloadInput === '' ? null : round((float)str_replace(',', '.', preg_replace('/[^0-9,.]/', '', $moduleWorkloadInput) ?? ''), 2);
+        $trailWorkload = $trailWorkloadInput === '' ? null : round((float)str_replace(',', '.', preg_replace('/[^0-9,.]/', '', $trailWorkloadInput) ?? ''), 2);
         $markup = round((float)str_replace(',', '.', preg_replace('/[^0-9,.-]/', '', (string)($input['markup_percent'] ?? '0')) ?? '0'), 4);
         $installments = max(1, min(60, (int)($input['default_max_installments'] ?? 1)));
         $validFrom = $this->dateOrNull((string)($input['valid_from'] ?? ''));
         $validUntil = $this->dateOrNull((string)($input['valid_until'] ?? ''));
         if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
+        if ($trailDefaultPrice !== null && $trailDefaultPrice <= 0) throw new RuntimeException('O preço padrão das Trilhas deve ser maior que zero.');
+        if ($moduleWorkload !== null && $moduleWorkload <= 0) throw new RuntimeException('A carga horária padrão dos Módulos deve ser maior que zero.');
+        if ($trailWorkload !== null && $trailWorkload <= 0) throw new RuntimeException('A carga horária padrão das Trilhas deve ser maior que zero.');
         if ($markup < -100 || $markup > 1000) throw new RuntimeException('O ajuste deve ficar entre -100% e 1.000%.');
         if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final não pode ser anterior ao início.');
 
-        $statement = $this->database->prepare('UPDATE course_catalogs SET central_default_price=:default_price,central_markup_percent=:markup,central_default_max_installments=:installments,central_valid_from=:valid_from,central_valid_until=:valid_until,allow_franchise_commercial_override=:allow_override,commercial_policy_updated_by=:user,commercial_policy_updated_at=NOW() WHERE id=:id');
+        $statement = $this->database->prepare('UPDATE course_catalogs SET central_default_price=:default_price,central_trail_default_price=:trail_default_price,central_default_module_workload=:module_workload,central_default_trail_workload=:trail_workload,central_markup_percent=:markup,central_default_max_installments=:installments,central_valid_from=:valid_from,central_valid_until=:valid_until,allow_franchise_commercial_override=:allow_override,allow_franchise_price_override=:allow_price_override,allow_franchise_installment_override=:allow_installment_override,allow_franchise_visibility_override=:allow_visibility_override,commercial_policy_updated_by=:user,commercial_policy_updated_at=NOW() WHERE id=:id');
         $statement->execute([
             'default_price' => $defaultPrice,
+            'trail_default_price' => $trailDefaultPrice,
+            'module_workload' => $moduleWorkload,
+            'trail_workload' => $trailWorkload,
             'markup' => $markup,
             'installments' => $installments,
             'valid_from' => $validFrom,
             'valid_until' => $validUntil,
             'allow_override' => $allowFranchiseOverride ? 1 : 0,
+            'allow_price_override' => !empty($input['allow_price_override']) ? 1 : 0,
+            'allow_installment_override' => !empty($input['allow_installment_override']) ? 1 : 0,
+            'allow_visibility_override' => !empty($input['allow_visibility_override']) ? 1 : 0,
             'user' => $userId,
             'id' => $catalogId,
         ]);
@@ -1956,4 +2010,3 @@ final readonly class CourseProviderRepository
         return $value;
     }
 }
-

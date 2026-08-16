@@ -88,6 +88,44 @@ final readonly class OpenAiCatalogTextClient
         return ['short_description' => $summary, 'description' => $description];
     }
 
+    /** @return array{short_description:string,description:string} */
+    public function generateCourseCopy(string $name, string $category, string $sourceDescription = '', string $guidance = ''): array
+    {
+        if (trim($this->apiKey) === '') {
+            throw new RuntimeException('Configure a chave da API da OpenAI em ADM Central > Integrações > IA - OpenAI.');
+        }
+
+        $prompt = "Crie a apresentação comercial de um Módulo educacional para uma loja de cursos brasileira.\nNome: {$name}\nCategoria: {$category}\n";
+        if (trim($sourceDescription) !== '') {
+            $prompt .= 'Informações oficiais disponíveis: '.mb_substr(trim(strip_tags($sourceDescription)), 0, 5000)."\n";
+        }
+        if (trim($guidance) !== '') {
+            $prompt .= 'Orientação adicional: '.mb_substr(trim($guidance), 0, 1000)."\n";
+        }
+        $prompt .= 'Entregue um resumo atrativo com até 280 caracteres e uma descrição de 2 a 4 parágrafos. Nunca mencione fornecedor, catálogo interno, integração, API ou origem tecnológica. Não invente carga horária, certificado, reconhecimento oficial, legislação, estatísticas, preço, garantia ou resultados assegurados.';
+
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'short_description' => ['type' => 'string'],
+                'description' => ['type' => 'string'],
+            ],
+            'required' => ['short_description', 'description'],
+            'additionalProperties' => false,
+        ];
+        $result = $this->structured('course_copy', $prompt, $schema);
+        $summary = trim((string)($result['short_description'] ?? ''));
+        $description = trim((string)($result['description'] ?? ''));
+        if ($summary === '' || $description === '') {
+            throw new RuntimeException('A OpenAI não retornou o resumo e a descrição esperados.');
+        }
+        if (mb_strlen($summary) > 280) {
+            $summary = rtrim(mb_substr($summary, 0, 277)).'...';
+        }
+
+        return ['short_description' => $summary, 'description' => $description];
+    }
+
     private function sanitizeMasterText(string $value): string
     {
         $value = (string) (preg_replace('/\bIESDE\b/iu', 'Formação MASTER', $value) ?? $value);
