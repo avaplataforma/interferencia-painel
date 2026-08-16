@@ -13,13 +13,15 @@ $trailUrl = static function(array $parameters = []) use ($basePath, $catalogScop
 $categoryEdit = is_array($categoryEdit ?? null) ? $categoryEdit : null;
 $trailEdit = is_array($trailEdit ?? null) ? $trailEdit : null;
 $trailDraft = is_array($trailDraft ?? null) ? $trailDraft : null;
+$trailPolicy = is_array($trailPolicy ?? null) ? $trailPolicy : null;
 $expectedDraftId = $trailEdit === null ? null : (int)$trailEdit['id'];
 if ($trailDraft !== null && ($trailDraft['_trail_id'] ?? null) !== $expectedDraftId) $trailDraft = null;
 $trailForm = array_replace($trailEdit ?? [], $trailDraft ?? []);
 $selectedItems = array_fill_keys(array_map('strval', $trailForm['item_keys'] ?? []), true);
 $trailCoverPreview = (string)($trailDraft['ai_cover_preview'] ?? '');
-$trailPriceValue = $trailDraft !== null ? (string)($trailDraft['default_price'] ?? '') : ($trailEdit !== null && $trailEdit['default_price'] !== null ? number_format((float)$trailEdit['default_price'], 2, ',', '') : '');
-$trailWorkloadValue = $trailDraft !== null ? (string)($trailDraft['workload_hours'] ?? '') : ($trailEdit !== null && $trailEdit['workload_hours'] !== null ? number_format((float)$trailEdit['workload_hours'], 2, ',', '') : '');
+$trailPriceValue = $trailDraft !== null ? (string)($trailDraft['default_price'] ?? '') : ($trailEdit !== null && $trailEdit['default_price'] !== null ? number_format((float)$trailEdit['default_price'], 2, ',', '') : ($trailPolicy !== null && $trailPolicy['central_trail_default_price'] !== null ? number_format((float)$trailPolicy['central_trail_default_price'], 2, ',', '') : ''));
+$trailWorkloadValue = $trailDraft !== null ? (string)($trailDraft['workload_hours'] ?? '') : ($trailEdit !== null && $trailEdit['workload_hours'] !== null ? number_format((float)$trailEdit['workload_hours'], 2, ',', '') : ($trailPolicy !== null && $trailPolicy['central_default_trail_workload'] !== null ? number_format((float)$trailPolicy['central_default_trail_workload'], 0, ',', '') : ''));
+$trailInstallmentsValue = $trailDraft !== null ? (string)($trailDraft['max_installments'] ?? '') : ($trailEdit !== null ? (string)($trailEdit['max_installments'] ?? '') : ($trailPolicy !== null ? (string)($trailPolicy['central_trail_default_max_installments'] ?? '') : ''));
 $typeLabels = ['finance_product'=>'INTER','provider_course'=>'Curso individual','provider_content'=>'Curso individual'];
 $publicationLabels = ['draft'=>'Rascunho','ready'=>'Pronto para publicar','published'=>'Publicado no AVA','failed'=>'Falha na publicação'];
 $publicationIcons = ['draft'=>'fa-pen-ruler','ready'=>'fa-circle-check','published'=>'fa-cloud-arrow-up','failed'=>'fa-triangle-exclamation'];
@@ -105,7 +107,7 @@ $aiReady = (bool)($aiSettings['configured'] ?? false) && (bool)($aiSettings['is_
     <label class="span-6">Endereço amigável<input name="slug" maxlength="160" value="<?= $escape($trailForm['slug']??'') ?>" placeholder="Gerado automaticamente pelo nome"></label>
     <label>Carga horária total *<input required inputmode="decimal" name="workload_hours" value="<?= $escape($trailWorkloadValue) ?>" placeholder="Ex.: 160"></label>
     <label>Preço padrão (R$)<input inputmode="decimal" name="default_price" value="<?= $escape($trailPriceValue) ?>" placeholder="Ex.: 299,90"></label>
-    <label>Máximo de parcelas<input required type="number" min="1" max="60" name="max_installments" value="<?= (int)($trailForm['max_installments']??1) ?>"></label>
+    <label>Máximo de parcelas<input required type="number" min="1" max="60" name="max_installments" value="<?= $escape($trailInstallmentsValue) ?>"></label>
     <label class="form-check-line"><input type="checkbox" name="is_active" value="1" <?= !array_key_exists('is_active',$trailForm)||(bool)$trailForm['is_active']?'checked':'' ?>> Trilha ativa</label>
    </div></section>
    <section class="item-picker"><div class="item-picker-head"><div><h3><span class="trail-step">2</span><i class="fa-solid fa-layer-group"></i> Cursos individuais da Trilha</h3><p>Escolha a composição usada pela IA. No Moodle, cada Curso Individual será criado em um bloco separado.</p></div><small><span class="selection-count" data-trail-selection-count><?= count($selectedItems) ?></span> selecionado(s) · mínimo 2 · <span data-trail-visible-count><?= count($availableItems) ?></span> exibido(s)</small></div>
