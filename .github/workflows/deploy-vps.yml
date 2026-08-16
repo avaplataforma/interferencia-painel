@@ -1,6 +1,8 @@
 name: Publicar na VPS
 
 
+
+
 on:
   push:
     branches:
@@ -8,9 +10,13 @@ on:
   workflow_dispatch:
 
 
+
+
 concurrency:
   group: production-vps
   cancel-in-progress: false
+
+
 
 
 jobs:
@@ -26,16 +32,14 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/mundointer"
           chmod 600 "$HOME/.ssh/mundointer"
+          ssh-keygen -lf "$HOME/.ssh/mundointer"
 
 
-          ssh \
+
+
+          ssh -vv \
             -i "$HOME/.ssh/mundointer" \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=20 \
             deploy@15.204.121.10 'bash -s' <<'REMOTE'
           set -euo pipefail
-
-
-          repo=''
-          for candidate in \
-            /home/*/web/*/private/interferencia-painel \
