@@ -392,6 +392,17 @@ final readonly class LearningCatalogRepository
         if ($delete->rowCount() !== 1) throw new RuntimeException('Trilha não encontrada.');
     }
 
+    /** @return array<string,mixed>|null */
+    public function trailPolicyForProvider(string $providerCode): ?array
+    {
+        $providerCode = trim($providerCode);
+        if ($providerCode === '') return null;
+        $statement = $this->database->prepare('SELECT catalog.central_trail_default_price,catalog.central_default_trail_workload,catalog.central_trail_default_max_installments FROM course_provider_integrations provider INNER JOIN course_catalogs catalog ON catalog.id=provider.catalog_id WHERE provider.provider_code=:provider AND catalog.is_active=1 LIMIT 1');
+        $statement->execute(['provider' => $providerCode]);
+        $policy = $statement->fetch();
+        return is_array($policy) ? $policy : null;
+    }
+
     /** @param list<string> $keys @return list<array{type:string,id:int}> */
     private function normalizeItems(array $keys): array
     {
