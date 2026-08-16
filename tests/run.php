@@ -2319,6 +2319,9 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginSections,"'Avaliação oficial'"));
     assertTrue(str_contains($pluginSections,"'Livro - '.\$name"));
     assertTrue(str_contains($pluginSections,"'Materiais Interativos'"));
+    assertTrue(str_contains($pluginSections,"'mi-trail-master-'.\$key.'-materials-index'"));
+    assertTrue(str_contains($pluginSections,'sync_trail_materials_index'));
+    assertTrue(str_contains($pluginSections,'array_merge($bookcmids,$materialcmids,$lessoncmids,$assessmentcmids)'));
     assertTrue(str_contains($pluginSections,"'mi-trail-master-'"));
     assertTrue(str_contains($pluginSections,"set_field('course_sections','sequence'"));
     assertTrue(!str_contains($pluginSections,'Formação:'));

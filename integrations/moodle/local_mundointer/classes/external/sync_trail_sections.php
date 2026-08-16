@@ -47,6 +47,7 @@ final class sync_trail_sections extends external_api
         require_once($CFG->dirroot.'/mod/url/locallib.php');
         require_once($CFG->dirroot.'/mod/lti/lib.php');
         require_once($CFG->dirroot.'/mod/lti/locallib.php');
+        require_once($CFG->dirroot.'/mod/page/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/locallib.php');
         require_once($CFG->dirroot.'/question/editlib.php');
@@ -159,7 +160,7 @@ final class sync_trail_sections extends external_api
         if($buckets['assessment']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui a avaliação oficial sincronizada.');
 
         $ordered=array_merge($buckets['book'],$buckets['lesson'],$buckets['assessment']);
-        $active=[];$orderedcmids=[];$activities=0;$assessments=0;
+        $active=[];$bookcmids=[];$materialcmids=[];$lessonactivities=[];$assessmentcmids=[];$activities=0;$assessments=0;
         foreach($ordered as$item){
             $sourcecm=$item['cm'];$source=$item['lti'];
             $sourcekind=(string)$item['kind'];
@@ -192,14 +193,44 @@ final class sync_trail_sections extends external_api
                 $cmid=(int)($created->coursemodule??0);
                 if($cmid<1)throw new \moodle_exception('O Moodle não confirmou a cópia de uma atividade MASTER para a Trilha.');
             }
-            $active[$idnumber]=true;$orderedcmids[]=$cmid;$activities++;
-            if($sourcekind==='assessment')$assessments++;
+            $active[$idnumber]=true;$activities++;
+            if($sourcekind==='assessment'){
+                $assessmentcmids[]=$cmid;
+                $assessments++;
+            }else if($sourcekind==='book'){
+                if($displayname==='Materiais Interativos')$materialcmids[]=$cmid;
+                else$bookcmids[]=$cmid;
+            }else{
+                $lessonactivities[]=['cmid'=>$cmid,'name'=>$displayname];
+            }
         }
+
+        // When the provider exposes the complete book but no standalone HTML
+        // resource, create a lightweight index for the interactive lessons.
+        // This keeps every MASTER module in the same academic order without
+        // copying protected provider content into Moodle.
+        if($materialcmids===[]){
+            $materials=self::sync_trail_materials_index($course,$section,$sectionnumber,$key,$name,$lessonactivities);
+            $active[$materials['idnumber']]=true;
+            $materialcmids[]=$materials['cmid'];
+            $activities++;
+        }
+        $lessoncmids=array_map(static fn(array$item):int=>(int)$item['cmid'],$lessonactivities);
+        $orderedcmids=array_merge($bookcmids,$materialcmids,$lessoncmids,$assessmentcmids);
 
         $hidden=0;
         $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>\core_text::substr('mi-trail-master-'.$key.'-%',0,100)]);
         foreach($managed as$cm){
             if(isset($active[(string)$cm->idnumber]))continue;
+            if((int)$cm->visible!==0){set_coursemodule_visible((int)$cm->id,0);$hidden++;}
+        }
+        // Managed Trails are rebuilt from their approved Cursos Individuais.
+        // Hide legacy LTI links left by older synchronizers so repeated runs
+        // never show duplicate books, lessons or assessments to the learner.
+        $activecmids=array_fill_keys($orderedcmids,true);
+        $sectionlti=$DB->get_records('course_modules',['course'=>$course->id,'section'=>$section->id,'module'=>$ltimodule->id]);
+        foreach($sectionlti as$cm){
+            if(isset($activecmids[(int)$cm->id]))continue;
             if((int)$cm->visible!==0){set_coursemodule_visible((int)$cm->id,0);$hidden++;}
         }
         // moveto_module() does not reorder an activity that is already in the
@@ -211,6 +242,57 @@ final class sync_trail_sections extends external_api
         $tail=array_values(array_filter($current,static fn(int$cmid):bool=>!in_array($cmid,$orderedcmids,true)));
         $DB->set_field('course_sections','sequence',implode(',',array_merge($orderedcmids,$tail)),['id'=>$section->id]);
         return['activities'=>$activities,'assessments'=>$assessments,'hidden'=>$hidden];
+    }
+
+    /**
+     * Creates the reusable "Materiais Interativos" index for a MASTER Trail
+     * module. The links always point to the cloned activities in this Trail,
+     * never to the source course used during homologation.
+     *
+     * @param array<int,array{cmid:int,name:string}> $activities
+     * @return array{idnumber:string,cmid:int}
+     */
+    private static function sync_trail_materials_index(object$course,object$section,int$sectionnumber,string$key,string$name,array$activities):array
+    {
+        global$DB;
+        $pagemodule=$DB->get_record('modules',['name'=>'page'],'*',MUST_EXIST);
+        $idnumber=\core_text::substr('mi-trail-master-'.$key.'-materials-index',0,100);
+        $items=[];
+        foreach($activities as$activity){
+            $url=new \moodle_url('/mod/lti/view.php',['id'=>(int)$activity['cmid']]);
+            $items[]=\html_writer::tag('li',\html_writer::link($url,format_string((string)$activity['name'])));
+        }
+        $content=\html_writer::div(
+            \html_writer::tag('p','Acesse as aulas e os materiais interativos de '.format_string($name).'.')
+            .\html_writer::tag('ol',implode('',$items)),
+            'mundointer-materials-index'
+        );
+        $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$pagemodule->id,'idnumber'=>$idnumber]);
+        if($existing){
+            $DB->update_record('page',(object)[
+                'id'=>(int)$existing->instance,'name'=>'Materiais Interativos','content'=>$content,
+                'contentformat'=>FORMAT_HTML,'timemodified'=>time(),
+            ]);
+            $DB->update_record('course_modules',(object)[
+                'id'=>(int)$existing->id,'visible'=>1,'visibleold'=>1,'visibleoncoursepage'=>1,
+                'completion'=>COMPLETION_TRACKING_AUTOMATIC,'completionview'=>1,'completionexpected'=>0,
+            ]);
+            $cm=get_coursemodule_from_id('page',(int)$existing->id,(int)$course->id,false,MUST_EXIST);
+            moveto_module($cm,$section);
+            return['idnumber'=>$idnumber,'cmid'=>(int)$existing->id];
+        }
+        $moduleinfo=(object)[
+            'course'=>(int)$course->id,'name'=>'Materiais Interativos','modulename'=>'page','module'=>(int)$pagemodule->id,
+            'section'=>$sectionnumber,'visible'=>1,'visibleoncoursepage'=>1,'cmidnumber'=>$idnumber,
+            'intro'=>'','introformat'=>FORMAT_HTML,'content'=>$content,'contentformat'=>FORMAT_HTML,
+            'display'=>5,'displayoptions'=>serialize([]),'revision'=>1,'groupmode'=>0,'groupingid'=>0,
+            'completion'=>COMPLETION_TRACKING_AUTOMATIC,'completionview'=>1,'completionexpected'=>0,
+            'coursemodule'=>0,'instance'=>0,
+        ];
+        $created=add_moduleinfo($moduleinfo,$course);
+        $cmid=(int)($created->coursemodule??0);
+        if($cmid<1)throw new \moodle_exception('O Moodle não confirmou o índice de Materiais Interativos da Trilha.');
+        return['idnumber'=>$idnumber,'cmid'=>$cmid];
     }
 
     private static function fold(string$value):string
