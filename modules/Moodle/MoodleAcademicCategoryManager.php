@@ -21,7 +21,9 @@ final readonly class MoodleAcademicCategoryManager
         $categories=$this->client->courseCategories();
         $root=$this->ensureCategory($categories,'MUNDO INTER','mi-mundo-inter',0);
         $formationCategory=$this->ensureCategory($categories,'Formação '.$code,'mi-formacao-'.strtolower($code),(int)$root['id']);
-        $individuals=$this->ensureCategory($categories,'Individuais','mi-formacao-'.strtolower($code).'-individuais',(int)$formationCategory['id']);
+        // Keep the stable internal idnumber so existing courses remain linked,
+        // while presenting the academic role of these entries more clearly.
+        $individuals=$this->ensureCategory($categories,'Módulos','mi-formacao-'.strtolower($code).'-individuais',(int)$formationCategory['id']);
         $trails=$this->ensureCategory($categories,'Trilhas','mi-formacao-'.strtolower($code).'-trilhas',(int)$formationCategory['id']);
         return['root'=>(int)$root['id'],'formation'=>(int)$formationCategory['id'],'individuals'=>(int)$individuals['id'],'trails'=>(int)$trails['id'],'code'=>$code];
     }

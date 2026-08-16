@@ -2409,7 +2409,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginVersion,"release = '0.9.41'"));
 };
 
-$tests['organiza catalogos em formacoes individuais e trilhas no moodle'] = static function () use ($rootPath): void {
+$tests['organiza catalogos em formacoes modulos e trilhas no moodle'] = static function () use ($rootPath): void {
     $manager=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleAcademicCategoryManager.php');
     $publisher=(string)file_get_contents($rootPath.'/modules/Catalog/AvaCatalogPublisher.php');
     $client=(string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php');
@@ -2418,7 +2418,7 @@ $tests['organiza catalogos em formacoes individuais e trilhas no moodle'] = stat
 
     assertTrue(str_contains($manager,"'MUNDO INTER','mi-mundo-inter'"));
     assertTrue(str_contains($manager,"'Formação '.\$code,'mi-formacao-'"));
-    assertTrue(str_contains($manager,"'Individuais','mi-formacao-'"));
+    assertTrue(str_contains($manager,"'Módulos','mi-formacao-'"));
     assertTrue(str_contains($manager,"'Trilhas','mi-formacao-'"));
     assertTrue(str_contains($publisher,"return preg_match('/\\btest"));
     assertTrue(str_contains($publisher,"return\$tree['trails']"));
