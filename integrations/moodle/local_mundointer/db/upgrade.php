@@ -133,5 +133,152 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // stable idnumber so the central robot never depends on a label.
         upgrade_plugin_savepoint(true, 2026081503, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081614) {
+        global $DB;
+
+        // Bring previously published MASTER modules and Trails to the same
+        // naming standard used by new synchronizations. Only records carrying
+        // Mundo Inter idnumbers are changed; manual Moodle content is kept.
+        $managedcourses = $DB->get_records_select(
+            'course',
+            'idnumber LIKE :content OR idnumber LIKE :course OR idnumber LIKE :trail',
+            [
+                'content' => 'mi-master-content-%',
+                'course' => 'mi-master-course-%',
+                'trail' => 'mi-trail-%',
+            ],
+            'id ASC',
+            'id,fullname,idnumber'
+        );
+        $ltimodule = $DB->get_record('modules', ['name' => 'lti'], 'id');
+        $labelmodule = $DB->get_record('modules', ['name' => 'label'], 'id');
+
+        foreach ($managedcourses as $managedcourse) {
+            $sections = $DB->get_records('course_sections', ['course' => $managedcourse->id], 'section ASC');
+            foreach ($sections as $section) {
+                $sectionname = trim((string)$section->name);
+                $modulelabel = preg_replace('/^M[oó]dulo\s+\d+\s*[-:–—]\s*/iu', '', $sectionname);
+                $modulelabel = trim((string)$modulelabel);
+                if ($modulelabel === '' || preg_match('/avalia|prova|exame/iu', $modulelabel)) {
+                    $modulelabel = trim((string)$managedcourse->fullname);
+                }
+                $assessmentname = \core_text::substr('AVP - Avaliação: ' . $modulelabel, 0, 255);
+
+                if ($ltimodule) {
+                    $modules = $DB->get_records('course_modules', [
+                        'course' => $managedcourse->id,
+                        'section' => $section->id,
+                        'module' => $ltimodule->id,
+                    ]);
+                    foreach ($modules as $coursemodule) {
+                        $idnumber = (string)$coursemodule->idnumber;
+                        $activity = $DB->get_record('lti', ['id' => $coursemodule->instance], 'id,name');
+                        if (!$activity) {
+                            continue;
+                        }
+                        $isassessment = str_contains($idnumber, '-assessment-')
+                            || preg_match('/avalia|prova|exame/iu', (string)$activity->name) === 1;
+                        if ($isassessment && str_starts_with($idnumber, 'mi-')) {
+                            $DB->set_field('lti', 'name', $assessmentname, ['id' => $activity->id]);
+                            if (preg_match('/avalia|prova|exame/iu', $sectionname) === 1) {
+                                $DB->set_field('course_sections', 'name', $assessmentname, ['id' => $section->id]);
+                            }
+                        }
+                    }
+                }
+
+                if ($labelmodule) {
+                    $labels = $DB->get_records('course_modules', [
+                        'course' => $managedcourse->id,
+                        'section' => $section->id,
+                        'module' => $labelmodule->id,
+                    ]);
+                    foreach ($labels as $coursemodule) {
+                        if (!str_starts_with((string)$coursemodule->idnumber, 'mi-trail-master-')
+                            || !str_contains((string)$coursemodule->idnumber, '-subtitle-')) {
+                            continue;
+                        }
+                        $label = $DB->get_record('label', ['id' => $coursemodule->instance], 'id,name,intro');
+                        if (!$label) {
+                            continue;
+                        }
+                        $title = trim(strip_tags((string)$label->intro));
+                        if ($title === '') {
+                            $title = trim((string)$label->name);
+                        }
+                        $title = \core_text::strtoupper($title);
+                        $DB->update_record('label', (object)[
+                            'id' => $label->id,
+                            'name' => \core_text::substr($title, 0, 255),
+                            'intro' => \html_writer::tag('b', s($title), ['class' => 'mundointer-subtitle']),
+                            'introformat' => FORMAT_HTML,
+                            'timemodified' => time(),
+                        ]);
+                    }
+                }
+            }
+            rebuild_course_cache((int)$managedcourse->id, true);
+        }
+
+        upgrade_plugin_savepoint(true, 2026081614, 'local', 'mundointer');
+    }
+    if ($oldversion < 2026081615) {
+        global $DB;
+
+        // Some Trails published before stable activity idnumbers were added
+        // still carry the legacy "Avaliação oficial/final" name. The course
+        // idnumber is already sufficient to keep this migration restricted to
+        // Mundo Inter content, so normalize those historical activities too.
+        $managedcourses = $DB->get_records_select(
+            'course',
+            'idnumber LIKE :content OR idnumber LIKE :course OR idnumber LIKE :trail',
+            [
+                'content' => 'mi-master-content-%',
+                'course' => 'mi-master-course-%',
+                'trail' => 'mi-trail-%',
+            ],
+            'id ASC',
+            'id,fullname,idnumber'
+        );
+        $ltimodule = $DB->get_record('modules', ['name' => 'lti'], 'id');
+
+        if ($ltimodule) {
+            foreach ($managedcourses as $managedcourse) {
+                $sections = $DB->get_records('course_sections', ['course' => $managedcourse->id], 'section ASC');
+                foreach ($sections as $section) {
+                    $sectionname = trim((string)$section->name);
+                    $modulelabel = trim((string)preg_replace('/^M[oó]dulo\s+\d+\s*[-:–—]\s*/iu', '', $sectionname));
+                    if ($modulelabel === '' || preg_match('/avalia|prova|exame/iu', $modulelabel)) {
+                        $modulelabel = trim((string)$managedcourse->fullname);
+                    }
+                    $assessmentname = \core_text::substr('AVP - Avaliação: ' . $modulelabel, 0, 255);
+                    $modules = $DB->get_records('course_modules', [
+                        'course' => $managedcourse->id,
+                        'section' => $section->id,
+                        'module' => $ltimodule->id,
+                    ]);
+                    foreach ($modules as $coursemodule) {
+                        $activity = $DB->get_record('lti', ['id' => $coursemodule->instance], 'id,name');
+                        if (!$activity) {
+                            continue;
+                        }
+                        $idnumber = (string)$coursemodule->idnumber;
+                        $isassessment = str_contains($idnumber, '-assessment-')
+                            || preg_match('/avalia|prova|exame/iu', (string)$activity->name) === 1;
+                        if (!$isassessment) {
+                            continue;
+                        }
+                        $DB->set_field('lti', 'name', $assessmentname, ['id' => $activity->id]);
+                        if (preg_match('/avalia|prova|exame/iu', $sectionname) === 1) {
+                            $DB->set_field('course_sections', 'name', $assessmentname, ['id' => $section->id]);
+                        }
+                    }
+                }
+                rebuild_course_cache((int)$managedcourse->id, true);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026081615, 'local', 'mundointer');
+    }
     return true;
 }
