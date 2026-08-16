@@ -41,7 +41,7 @@
      <div class="content-row-actions">
       <button class="btn btn-secondary" type="button" data-content-curation-toggle="<?= $escape($editorId) ?>" aria-expanded="false"><i class="fa-solid fa-pen-to-square"></i> Curadoria</button>
       <?php if($provider==='iesde'):?>
-       <form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/publish-ava" onsubmit="return confirm('<?= $avaPublished?'Atualizar este Curso Individual no AVA sem criar duplicidade?':'Criar um Curso Individual reutilizável com esta disciplina MASTER?' ?>')">
+       <form method="post" action="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/publish-ava">
         <?= $csrfField ?>
         <input type="hidden" name="provider" value="iesde">
         <input type="hidden" name="content_q" value="<?= $escape($contentQuery) ?>">
