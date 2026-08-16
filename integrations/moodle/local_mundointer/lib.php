@@ -573,6 +573,15 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
     font-size: .82rem !important;
     line-height: 1.4 !important;
 }
+body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.mundointer-content-label .mundointer-subtitle {
+    display: block !important;
+    color: #203246 !important;
+    font-size: 1rem !important;
+    font-weight: 800 !important;
+    line-height: 1.35 !important;
+    letter-spacing: .035em !important;
+    text-transform: uppercase !important;
+}
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.mundointer-content-note {
     padding: 1rem !important;
     border-left-color: #d69b16 !important;

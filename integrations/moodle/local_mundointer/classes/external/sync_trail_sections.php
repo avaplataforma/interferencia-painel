@@ -290,9 +290,10 @@ final class sync_trail_sections extends external_api
     private static function sync_trail_subtitle(object$course,object$section,int$sectionnumber,string$key,string$title,int$position):array
     {
         global$DB;
+        $title=\core_text::strtoupper(trim($title));
         $labelmodule=$DB->get_record('modules',['name'=>'label'],'*',MUST_EXIST);
         $idnumber=\core_text::substr('mi-trail-master-'.$key.'-subtitle-'.$position.'-'.substr(sha1(self::fold($title)),0,8),0,100);
-        $intro=\html_writer::tag('b',s($title));
+        $intro=\html_writer::tag('b',s($title),['class'=>'mundointer-subtitle']);
         $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$labelmodule->id,'idnumber'=>$idnumber]);
         if($existing){
             $DB->update_record('label',(object)[
