@@ -47,6 +47,7 @@ final class sync_trail_sections extends external_api
         require_once($CFG->dirroot.'/mod/url/locallib.php');
         require_once($CFG->dirroot.'/mod/lti/lib.php');
         require_once($CFG->dirroot.'/mod/lti/locallib.php');
+        require_once($CFG->dirroot.'/mod/label/lib.php');
         require_once($CFG->dirroot.'/mod/page/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/locallib.php');
@@ -145,6 +146,7 @@ final class sync_trail_sections extends external_api
         $buckets=['book'=>[],'lesson'=>[],'assessment'=>[]];
         $sections=$DB->get_records('course_sections',['course'=>$sourcecourseid],'section ASC','id,section,name,sequence');
         foreach($sections as$sourcesection){
+            $sectionsubtitle=self::trail_subtitle((string)($sourcesection->name??''));
             $sectionname=self::fold((string)($sourcesection->name??''));
             $kind=preg_match('/avalia|prova|exame/u',$sectionname)===1?'assessment':(preg_match('/livro|material/u',$sectionname)===1?'book':'lesson');
             foreach(array_filter(array_map('intval',explode(',',(string)$sourcesection->sequence)))as$sourcecmid){
@@ -158,7 +160,7 @@ final class sync_trail_sections extends external_api
                 // exposed again as regular lessons in a Trail.
                 $activityname=self::fold((string)$source->name);
                 $activitykind=preg_match('/avalia|prova|exame/u',$activityname)===1?'assessment':(preg_match('/livro|apostila|material/u',$activityname)===1?'book':$kind);
-                $buckets[$activitykind][]=['cm'=>$sourcecm,'lti'=>$source,'kind'=>$activitykind];
+                $buckets[$activitykind][]=['cm'=>$sourcecm,'lti'=>$source,'kind'=>$activitykind,'subtitle'=>$sectionsubtitle];
             }
         }
         if($buckets['book']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui Livro e materiais sincronizados.');
@@ -216,7 +218,7 @@ final class sync_trail_sections extends external_api
                 if($displayname==='Materiais Interativos')$materialcmids[]=$cmid;
                 else$bookcmids[]=$cmid;
             }else{
-                $lessonactivities[]=['cmid'=>$cmid,'name'=>$displayname];
+                $lessonactivities[]=['cmid'=>$cmid,'name'=>$displayname,'subtitle'=>(string)($item['subtitle']??'')];
             }
         }
 
@@ -230,8 +232,22 @@ final class sync_trail_sections extends external_api
             $materialcmids[]=$materials['cmid'];
             $activities++;
         }
-        $lessoncmids=array_map(static fn(array$item):int=>(int)$item['cmid'],$lessonactivities);
-        $orderedcmids=array_merge($bookcmids,$materialcmids,$lessoncmids,$assessmentcmids);
+        $lessonsequence=[];$previoussubtitle='';$subtitleindex=0;
+        foreach($lessonactivities as$lessonactivity){
+            $subtitle=trim((string)($lessonactivity['subtitle']??''));
+            if($subtitle==='')$subtitle=self::trail_subtitle((string)$lessonactivity['name']);
+            if($subtitle!==''&&self::fold($subtitle)!==self::fold($previoussubtitle)){
+                $subtitleindex++;
+                $label=self::sync_trail_subtitle($course,$section,$sectionnumber,$key,$subtitle,$subtitleindex);
+                $active[$label['idnumber']]=true;
+                $lessonsequence[]=$label['cmid'];
+                $previoussubtitle=$subtitle;
+            }
+            $lessonsequence[]=(int)$lessonactivity['cmid'];
+        }
+        $assessmentlabel=self::sync_trail_subtitle($course,$section,$sectionnumber,$key,'ATIVIDADES AVALIATIVAS',$subtitleindex+1);
+        $active[$assessmentlabel['idnumber']]=true;
+        $orderedcmids=array_merge($bookcmids,$materialcmids,$lessonsequence,[$assessmentlabel['cmid']],$assessmentcmids);
 
         $hidden=0;$hiddencmids=[];
         $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>\core_text::substr('mi-trail-master-'.$key.'-%',0,100)]);
@@ -261,6 +277,55 @@ final class sync_trail_sections extends external_api
         $tail=array_values(array_filter($current,static fn(int$cmid):bool=>!in_array($cmid,$orderedcmids,true)&&!isset($hiddencmids[$cmid])));
         $DB->set_field('course_sections','sequence',implode(',',array_merge($orderedcmids,$tail)),['id'=>$section->id]);
         return['activities'=>$activities,'assessments'=>$assessments,'hidden'=>$hidden];
+    }
+
+    /**
+     * Adds a visual-only Moodle "Text and media area" between lesson groups.
+     * It never contributes to completion or the learner progress calculation.
+     *
+     * @return array{idnumber:string,cmid:int}
+     */
+    private static function sync_trail_subtitle(object$course,object$section,int$sectionnumber,string$key,string$title,int$position):array
+    {
+        global$DB;
+        $labelmodule=$DB->get_record('modules',['name'=>'label'],'*',MUST_EXIST);
+        $idnumber=\core_text::substr('mi-trail-master-'.$key.'-subtitle-'.$position.'-'.substr(sha1(self::fold($title)),0,8),0,100);
+        $intro=\html_writer::tag('b',s($title));
+        $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$labelmodule->id,'idnumber'=>$idnumber]);
+        if($existing){
+            $DB->update_record('label',(object)[
+                'id'=>(int)$existing->instance,'name'=>\core_text::substr($title,0,255),
+                'intro'=>$intro,'introformat'=>FORMAT_HTML,'timemodified'=>time(),
+            ]);
+            $DB->update_record('course_modules',(object)[
+                'id'=>(int)$existing->id,'visible'=>1,'visibleold'=>1,'visibleoncoursepage'=>1,
+                'completion'=>COMPLETION_TRACKING_NONE,'completionview'=>0,'completionexpected'=>0,
+                'showdescription'=>0,
+            ]);
+            $cm=get_coursemodule_from_id('label',(int)$existing->id,(int)$course->id,false,MUST_EXIST);
+            moveto_module($cm,$section);
+            return['idnumber'=>$idnumber,'cmid'=>(int)$existing->id];
+        }
+        $moduleinfo=(object)[
+            'course'=>(int)$course->id,'name'=>\core_text::substr($title,0,255),
+            'modulename'=>'label','module'=>(int)$labelmodule->id,'section'=>$sectionnumber,
+            'visible'=>1,'visibleoncoursepage'=>1,'cmidnumber'=>$idnumber,
+            'intro'=>$intro,'introformat'=>FORMAT_HTML,'groupmode'=>0,'groupingid'=>0,
+            'completion'=>COMPLETION_TRACKING_NONE,'completionview'=>0,'completionexpected'=>0,
+            'showdescription'=>0,'coursemodule'=>0,'instance'=>0,
+        ];
+        $created=add_moduleinfo($moduleinfo,$course);
+        $cmid=(int)($created->coursemodule??0);
+        if($cmid<1)throw new \moodle_exception('O Moodle não confirmou o subtítulo da Trilha.');
+        return['idnumber'=>$idnumber,'cmid'=>$cmid];
+    }
+
+    private static function trail_subtitle(string$value):string
+    {
+        $value=trim(clean_param($value,PARAM_TEXT));
+        $value=trim((string)preg_replace('/^m[oó]dulo\s+\d+\s*[-:–—]\s*/iu','',$value));
+        $value=trim((string)preg_replace('/\s*[-:–—]\s*parte\s+\d+\s*$/iu','',$value));
+        return $value;
     }
 
     /**
