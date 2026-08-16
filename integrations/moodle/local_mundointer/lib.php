@@ -576,7 +576,7 @@ body.mundointer-brand-active #multi_section_tiles .section.state-visible .activi
 body.mundointer-brand-active #multi_section_tiles .section.state-visible .activity.mundointer-content-label .mundointer-subtitle {
     display: block !important;
     color: #203246 !important;
-    font-size: 1rem !important;
+    font-size: 1.125rem !important;
     font-weight: 800 !important;
     line-height: 1.35 !important;
     letter-spacing: .035em !important;
