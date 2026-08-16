@@ -1,23 +1,14 @@
 name: Publicar na VPS
 
-
-
-
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
-
-
-
 concurrency:
   group: production-vps
   cancel-in-progress: false
-
-
-
 
 jobs:
   deploy:
@@ -32,14 +23,23 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/mundointer"
           chmod 600 "$HOME/.ssh/mundointer"
-          ssh-keygen -lf "$HOME/.ssh/mundointer"
 
-
-
-
-          ssh -vv \
+          ssh \
             -i "$HOME/.ssh/mundointer" \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=20 \
-            deploy@15.204.121.10 'bash -s' <<'REMOTE'
+            deploy@15.204.121.10 'bash -se' <<'REMOTE'
           set -euo pipefail
+
+          repo=/var/www/painel-inter
+          test -d "$repo/.git"
+
+          before="$(git -C "$repo" rev-parse --short HEAD)"
+          git -C "$repo" fetch origin main
+          git -C "$repo" pull --ff-only origin main
+          composer --working-dir="$repo" dump-autoload --classmap-authoritative
+          composer --working-dir="$repo" check
+          after="$(git -C "$repo" rev-parse --short HEAD)"
+
+          echo "Publicação concluída: $before -> $after"
+          REMOTE
