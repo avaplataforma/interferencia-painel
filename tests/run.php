@@ -2336,6 +2336,9 @@ $tests['publica trilhas no AVA com curso unico e historico'] = static function (
     assertTrue(str_contains($pluginLib,'.mundointer-subtitle'));
     assertTrue(str_contains($pluginLib,'text-transform: uppercase'));
     assertTrue(str_contains($pluginLib,'font-size: 1.125rem'));
+    assertTrue(str_contains($pluginSections,'normalize_portuguese_title'));
+    assertTrue(str_contains($pluginLib,'avp - avaliacao'));
+    assertTrue(str_contains($pluginLib,'#16a34a'));
     assertTrue(str_contains($pluginSections,"'Livro e Materiais Interativos',0"));
     assertTrue(str_contains($pluginSections,"'ATIVIDADES AVALIATIVAS'"));
     assertTrue(str_contains($pluginSections,"'modulename'=>'label'"));
@@ -2426,9 +2429,6 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginUpgrade,"'mi-trilha-%'"));
     assertTrue(str_contains($pluginUpgrade,"'AVP - Avaliação: '"));
     assertTrue(str_contains($pluginUpgrade,"'mundointer-subtitle'"));
-    assertTrue(str_contains($pluginSections,'normalize_portuguese_title'));
-    assertTrue(str_contains($pluginLib,'avp - avaliacao'));
-    assertTrue(str_contains($pluginLib,'#16a34a'));
 };
 
 $tests['organiza catalogos em formacoes modulos e trilhas no moodle'] = static function () use ($rootPath): void {
