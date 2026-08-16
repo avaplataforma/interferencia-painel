@@ -18,7 +18,7 @@ final class PortugueseCourseTitle
         'a'=>true,'as'=>true,'ao'=>true,'aos'=>true,'à'=>true,'às'=>true,
         'com'=>true,'contra'=>true,'da'=>true,'das'=>true,'de'=>true,'do'=>true,'dos'=>true,
         'e'=>true,'em'=>true,'entre'=>true,'na'=>true,'nas'=>true,'no'=>true,'nos'=>true,
-        'o'=>true,'os'=>true,'para'=>true,'pela'=>true,'pelas'=>true,'pelo'=>true,'pelos'=>true,
+        'o'=>true,'os'=>true,'ou'=>true,'para'=>true,'pela'=>true,'pelas'=>true,'pelo'=>true,'pelos'=>true,
         'por'=>true,'sem'=>true,'sob'=>true,'sobre'=>true,'um'=>true,'uma'=>true,'uns'=>true,'umas'=>true,
     ];
 

@@ -37,6 +37,7 @@ $tests['padroniza titulos academicos em portugues']=static function():void{
     assertSame('Ensino Religioso no Brasil',PortugueseCourseTitle::format('ENSINO RELIGIOSO NO BRASIL'));
     assertSame('Técnico em TTI e Avaliação II',PortugueseCourseTitle::format('TÉCNICO EM TTI E AVALIAÇÃO II'));
     assertSame('A Arte da Comunicação',PortugueseCourseTitle::format('A ARTE DA COMUNICAÇÃO'));
+    assertSame('Gestão Pública ou Privada',PortugueseCourseTitle::format('GESTÃO PÚBLICA OU PRIVADA'));
 };
 $tests['carrega fluxo financeiro Sandbox por franquia']=static function()use($rootPath):void{
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_910000_create_franchise_sandbox_billing_tests.php');
