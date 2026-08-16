@@ -420,6 +420,12 @@ final readonly class CourseProviderRepository
 
         $this->database->beginTransaction();
         try {
+            // A Deep Linking run creates fresh Moodle course-module IDs. The
+            // previous links must not remain eligible as the publication
+            // source after the transient bridge has been reset, otherwise an
+            // expired cmid can be selected before the newly created one.
+            $this->database->prepare('DELETE FROM provider_course_content_links WHERE provider_course_id=:course')
+                ->execute(['course' => $courseId]);
             $result = $this->synchronizeCourseContents(
                 (int)$course['provider_id'],
                 (int)$course['catalog_id'],
@@ -1950,3 +1956,4 @@ final readonly class CourseProviderRepository
         return $value;
     }
 }
+
