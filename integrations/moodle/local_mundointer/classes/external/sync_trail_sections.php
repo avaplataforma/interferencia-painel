@@ -45,6 +45,8 @@ final class sync_trail_sections extends external_api
         require_once($CFG->dirroot.'/course/modlib.php');
         require_once($CFG->dirroot.'/mod/url/lib.php');
         require_once($CFG->dirroot.'/mod/url/locallib.php');
+        require_once($CFG->dirroot.'/mod/lti/lib.php');
+        require_once($CFG->dirroot.'/mod/lti/locallib.php');
         require_once($CFG->dirroot.'/mod/quiz/lib.php');
         require_once($CFG->dirroot.'/mod/quiz/locallib.php');
         require_once($CFG->dirroot.'/question/editlib.php');
@@ -79,15 +81,29 @@ final class sync_trail_sections extends external_api
                 'summaryformat'=>FORMAT_HTML,
                 'visible'=>1,
             ]);
-            $activity=self::sync_url_activity($course,$section,$number,$key,$name,$accessurl);
-            if($activity>0)$activities++;
-            if($activity<0)$hiddenactivities++;
-            $exam=is_array($item['exam']??null)?$item['exam']:null;
-            $quizresult=self::sync_quiz_activity($course,$section,$number,$key,$name,$exam);
-            if($quizresult['quiz']>0)$quizzes++;
-            if($quizresult['quiz']<0)$hiddenquizzes++;
-            $quizquestions+=$quizresult['questions'];
-            $examconflicts+=$quizresult['conflict'];
+            $sourcecourseid=(int)($item['sourcecourseid']??0);
+            if($sourcecourseid>0){
+                $master=self::sync_master_course_module($course,$section,$number,$key,$name,$sourcecourseid);
+                $activities+=$master['activities'];
+                $hiddenactivities+=$master['hidden'];
+                $quizzes+=$master['assessments'];
+                // A Trilha MASTER usa a avaliação LTI oficial do fornecedor;
+                // jamais converte esse banco em questões geradas por IA.
+                $legacyurl=self::sync_url_activity($course,$section,$number,$key,$name,'');
+                if($legacyurl<0)$hiddenactivities++;
+                $legacyquiz=self::sync_quiz_activity($course,$section,$number,$key,$name,null);
+                if($legacyquiz['quiz']<0)$hiddenquizzes++;
+            }else{
+                $activity=self::sync_url_activity($course,$section,$number,$key,$name,$accessurl);
+                if($activity>0)$activities++;
+                if($activity<0)$hiddenactivities++;
+                $exam=is_array($item['exam']??null)?$item['exam']:null;
+                $quizresult=self::sync_quiz_activity($course,$section,$number,$key,$name,$exam);
+                if($quizresult['quiz']>0)$quizzes++;
+                if($quizresult['quiz']<0)$hiddenquizzes++;
+                $quizquestions+=$quizresult['questions'];
+                $examconflicts+=$quizresult['conflict'];
+            }
             $updated++;
         }
 
@@ -103,10 +119,104 @@ final class sync_trail_sections extends external_api
             }
             $managedquizzes=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>'mi-trail-exam-%']);
             foreach($managedquizzes as$cm){set_coursemodule_visible((int)$cm->id,0);$hiddenquizzes++;}
+            $managedmaster=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>'mi-trail-master-%']);
+            foreach($managedmaster as$cm){set_coursemodule_visible((int)$cm->id,0);$hiddenactivities++;}
         }
         rebuild_course_cache($parameters['courseid'],true);
         $audit=self::audit_managed_course((int)$course->id);
         return['status'=>'ok','courseid'=>$parameters['courseid'],'sections'=>$updated,'hidden'=>$hidden,'activities'=>$activities,'hiddenactivities'=>$hiddenactivities,'quizzes'=>$quizzes,'quizquestions'=>$quizquestions,'hiddenquizzes'=>$hiddenquizzes,'examconflicts'=>$examconflicts]+$cover+$audit;
+    }
+
+    /**
+     * Reuses the already homologated Curso Individual MASTER as the academic
+     * source for one Trail module. Only the official LTI links are copied; the
+     * protected provider content remains at the provider.
+     *
+     * @return array{activities:int,assessments:int,hidden:int}
+     */
+    private static function sync_master_course_module(object$course,object$section,int$sectionnumber,string$key,string$name,int$sourcecourseid):array
+    {
+        global$DB;
+        if($sourcecourseid===(int)$course->id)throw new \invalid_parameter_exception('A Trilha não pode usar o próprio curso como fonte MASTER.');
+        $sourcecourse=$DB->get_record('course',['id'=>$sourcecourseid],'*',MUST_EXIST);
+        if(!str_starts_with((string)$sourcecourse->idnumber,'mi-master-'))throw new \invalid_parameter_exception('O Curso Individual de origem não é uma publicação MASTER gerenciada pelo Mundo Inter.');
+        $ltimodule=$DB->get_record('modules',['name'=>'lti'],'*',MUST_EXIST);
+        $buckets=['book'=>[],'lesson'=>[],'assessment'=>[]];
+        $sections=$DB->get_records('course_sections',['course'=>$sourcecourseid],'section ASC','id,section,name,sequence');
+        foreach($sections as$sourcesection){
+            $sectionname=self::fold((string)($sourcesection->name??''));
+            $kind=preg_match('/avalia|prova|exame/u',$sectionname)===1?'assessment':(preg_match('/livro|material/u',$sectionname)===1?'book':'lesson');
+            foreach(array_filter(array_map('intval',explode(',',(string)$sourcesection->sequence)))as$sourcecmid){
+                $sourcecm=$DB->get_record('course_modules',['id'=>$sourcecmid,'course'=>$sourcecourseid,'module'=>$ltimodule->id]);
+                if(!$sourcecm)continue;
+                $source=$DB->get_record('lti',['id'=>$sourcecm->instance]);
+                if(!$source)continue;
+                $buckets[$kind][]=['cm'=>$sourcecm,'lti'=>$source,'kind'=>$kind];
+            }
+        }
+        if($buckets['book']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui Livro e materiais sincronizados.');
+        if($buckets['lesson']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui aulas sincronizadas.');
+        if($buckets['assessment']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui a avaliação oficial sincronizada.');
+
+        $ordered=array_merge($buckets['book'],$buckets['lesson'],$buckets['assessment']);
+        $active=[];$orderedcmids=[];$activities=0;$assessments=0;
+        foreach($ordered as$item){
+            $sourcecm=$item['cm'];$source=$item['lti'];
+            $sourcekind=(string)$item['kind'];
+            $idnumber=\core_text::substr('mi-trail-master-'.$key.'-'.$sourcekind.'-'.(int)$sourcecm->id,0,100);
+            $displayname=$sourcekind==='assessment'?'Avaliação oficial':trim(clean_param((string)$source->name,PARAM_TEXT));
+            if($sourcekind==='book'){
+                $displayname=preg_match('/material/iu',$displayname)===1?'Materiais Interativos':('Livro - '.$name);
+            }else if($displayname===''){
+                $displayname='Aula - '.$name;
+            }
+            $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$ltimodule->id,'idnumber'=>$idnumber]);
+            if($existing){
+                $copy=clone$source;
+                $copy->id=(int)$existing->instance;$copy->course=(int)$course->id;$copy->name=\core_text::substr($displayname,0,255);$copy->timemodified=time();
+                $DB->update_record('lti',$copy);
+                $DB->update_record('course_modules',(object)['id'=>$existing->id,'visible'=>1,'visibleold'=>1,'visibleoncoursepage'=>1,'completion'=>COMPLETION_TRACKING_AUTOMATIC,'completionview'=>1,'completionexpected'=>0,'showdescription'=>0]);
+                $cm=get_coursemodule_from_id('lti',(int)$existing->id,(int)$course->id,false,MUST_EXIST);
+                moveto_module($cm,$section);
+                $cmid=(int)$existing->id;
+            }else{
+                $moduleinfo=clone$source;
+                unset($moduleinfo->id,$moduleinfo->timecreated,$moduleinfo->timemodified);
+                $moduleinfo->course=(int)$course->id;$moduleinfo->name=\core_text::substr($displayname,0,255);
+                $moduleinfo->modulename='lti';$moduleinfo->module=(int)$ltimodule->id;$moduleinfo->section=$sectionnumber;
+                $moduleinfo->visible=1;$moduleinfo->visibleoncoursepage=1;$moduleinfo->cmidnumber=$idnumber;
+                $moduleinfo->groupmode=0;$moduleinfo->groupingid=0;$moduleinfo->completion=COMPLETION_TRACKING_AUTOMATIC;
+                $moduleinfo->completionview=1;$moduleinfo->completionexpected=0;$moduleinfo->showdescription=0;
+                $moduleinfo->coursemodule=0;$moduleinfo->instance=0;
+                $created=add_moduleinfo($moduleinfo,$course);
+                $cmid=(int)($created->coursemodule??0);
+                if($cmid<1)throw new \moodle_exception('O Moodle não confirmou a cópia de uma atividade MASTER para a Trilha.');
+            }
+            $active[$idnumber]=true;$orderedcmids[]=$cmid;$activities++;
+            if($sourcekind==='assessment')$assessments++;
+        }
+
+        $hidden=0;
+        $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>\core_text::substr('mi-trail-master-'.$key.'-%',0,100)]);
+        foreach($managed as$cm){
+            if(isset($active[(string)$cm->idnumber]))continue;
+            if((int)$cm->visible!==0){set_coursemodule_visible((int)$cm->id,0);$hidden++;}
+        }
+        // moveto_module() does not reorder an activity that is already in the
+        // same section on every supported Moodle version. Persist the exact
+        // academic order explicitly and keep any manual/unmanaged item after
+        // the Mundo Inter sequence.
+        $currentsequence=(string)$DB->get_field('course_sections','sequence',['id'=>$section->id]);
+        $current=array_filter(array_map('intval',explode(',',$currentsequence)));
+        $tail=array_values(array_filter($current,static fn(int$cmid):bool=>!in_array($cmid,$orderedcmids,true)));
+        $DB->set_field('course_sections','sequence',implode(',',array_merge($orderedcmids,$tail)),['id'=>$section->id]);
+        return['activities'=>$activities,'assessments'=>$assessments,'hidden'=>$hidden];
+    }
+
+    private static function fold(string$value):string
+    {
+        $value=\core_text::strtolower(trim($value));
+        return str_replace(['á','à','ã','â','ä','é','è','ê','ë','í','ì','î','ï','ó','ò','õ','ô','ö','ú','ù','û','ü','ç'],['a','a','a','a','a','e','e','e','e','i','i','i','i','o','o','o','o','o','u','u','u','u','c'],$value);
     }
 
     /** @return array{coverstatus:string,coverfilename:string,courseimage:int,coursebanner:int} */
@@ -393,9 +503,17 @@ final class sync_trail_sections extends external_api
         $columns=$DB->get_columns('course_modules');
         $managedurls=$DB->get_records_select('course_modules','course=:course AND idnumber LIKE :prefix AND visible=1',['course'=>$courseid,'prefix'=>'mi-trail-url-%']);
         $managedquizzes=$DB->get_records_select('course_modules','course=:course AND idnumber LIKE :prefix AND visible=1',['course'=>$courseid,'prefix'=>'mi-trail-exam-%']);
+        $managedmaster=$DB->get_records_select('course_modules','course=:course AND idnumber LIKE :prefix AND visible=1',['course'=>$courseid,'prefix'=>'mi-trail-master-%']);
         $validurls=0;
         foreach($managedurls as$cm){
             if((int)$cm->completion===COMPLETION_TRACKING_AUTOMATIC&&(int)$cm->completionview===1)$validurls++;
+        }
+        $masterlessons=0;$validmasterlessons=0;$masterassessments=0;$validmasterassessments=0;
+        foreach($managedmaster as$cm){
+            $isassessment=str_contains((string)$cm->idnumber,'-assessment-');
+            $valid=(int)$cm->completion===COMPLETION_TRACKING_AUTOMATIC&&(int)$cm->completionview===1;
+            if($isassessment){$masterassessments++;if($valid)$validmasterassessments++;}
+            else{$masterlessons++;if($valid)$validmasterlessons++;}
         }
         $validquizzes=0;
         $questioncount=0;
@@ -413,13 +531,17 @@ final class sync_trail_sections extends external_api
                 &&abs((float)$gradeitem->gradepass-self::QUIZ_PASS_GRADE)<0.001;
             if($completionvalid&&$gradevalid)$validquizzes++;
         }
-        $ready=$validurls===count($managedurls)&&$validquizzes===count($managedquizzes)&&count($managedquizzes)>0;
+        $ready=$validurls===count($managedurls)
+            &&$validmasterlessons===$masterlessons
+            &&$validquizzes===count($managedquizzes)
+            &&$validmasterassessments===$masterassessments
+            &&(count($managedquizzes)+$masterassessments)>0;
         return[
             'auditstatus'=>$ready?'ok':'warning',
-            'auditurls'=>count($managedurls),
-            'auditvalidurls'=>$validurls,
-            'auditquizzes'=>count($managedquizzes),
-            'auditvalidquizzes'=>$validquizzes,
+            'auditurls'=>count($managedurls)+$masterlessons,
+            'auditvalidurls'=>$validurls+$validmasterlessons,
+            'auditquizzes'=>count($managedquizzes)+$masterassessments,
+            'auditvalidquizzes'=>$validquizzes+$validmasterassessments,
             'auditquestions'=>$questioncount,
             'passinggrade'=>self::QUIZ_PASS_GRADE,
             'maxattempts'=>self::QUIZ_ATTEMPTS,

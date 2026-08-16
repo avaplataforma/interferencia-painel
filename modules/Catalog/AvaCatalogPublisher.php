@@ -222,6 +222,14 @@ final readonly class AvaCatalogPublisher
                 'execution'=>$execution==='shared_ava'?'shared_ava':'provider_ava',
                 'accessurl'=>$accessUrl,
             ];
+            if((string)($item['provider_code']??'')==='iesde'&&(string)($item['item_type']??'')==='provider_course'){
+                $sourceCourseId=(int)($item['source_remote_course_id']??0);
+                if($sourceCourseId<1){
+                    throw new RuntimeException('Publique primeiro o Curso Individual MASTER "'.$name.'" no AVA Cursos. A Trilha reutiliza esse curso para montar o módulo completo com livro, aulas e avaliação oficial.');
+                }
+                $section['sourcecourseid']=$sourceCourseId;
+                $section['academicorder']=['book_and_materials','lessons','official_assessment'];
+            }
             if((string)($item['provider_code']??'')==='conted_tech'&&in_array((string)($item['content_type']??''),['discipline','unit','object'],true)&&$remote!==''){
                 if($conted===null)$conted=$this->contedClient();
                 $exam=$conted->exam((string)$item['content_type'],$remote);
