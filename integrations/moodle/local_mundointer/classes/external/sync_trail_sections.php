@@ -161,6 +161,7 @@ final class sync_trail_sections extends external_api
 
         $ordered=array_merge($buckets['book'],$buckets['lesson'],$buckets['assessment']);
         $active=[];$bookcmids=[];$materialcmids=[];$lessonactivities=[];$assessmentcmids=[];$activities=0;$assessments=0;
+        $seen=['book'=>[],'lesson'=>[],'assessment'=>[]];
         foreach($ordered as$item){
             $sourcecm=$item['cm'];$source=$item['lti'];
             $sourcekind=(string)$item['kind'];
@@ -171,6 +172,14 @@ final class sync_trail_sections extends external_api
             }else if($displayname===''){
                 $displayname='Aula - '.$name;
             }
+            // Older homologations may contain the same official resource more
+            // than once. A Trail must expose one book, one materials index,
+            // one copy of each lesson and one official assessment per Curso
+            // Individual, regardless of how many legacy LTI links remain in
+            // the source course.
+            $dedupekey=$sourcekind==='assessment'?'official':self::fold($displayname);
+            if(isset($seen[$sourcekind][$dedupekey]))continue;
+            $seen[$sourcekind][$dedupekey]=true;
             $existing=$DB->get_record('course_modules',['course'=>$course->id,'module'=>$ltimodule->id,'idnumber'=>$idnumber]);
             if($existing){
                 $copy=clone$source;
@@ -218,11 +227,13 @@ final class sync_trail_sections extends external_api
         $lessoncmids=array_map(static fn(array$item):int=>(int)$item['cmid'],$lessonactivities);
         $orderedcmids=array_merge($bookcmids,$materialcmids,$lessoncmids,$assessmentcmids);
 
-        $hidden=0;
+        $hidden=0;$hiddencmids=[];
         $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>\core_text::substr('mi-trail-master-'.$key.'-%',0,100)]);
         foreach($managed as$cm){
             if(isset($active[(string)$cm->idnumber]))continue;
             if((int)$cm->visible!==0){set_coursemodule_visible((int)$cm->id,0);$hidden++;}
+            $DB->set_field('course_modules','visibleoncoursepage',0,['id'=>$cm->id]);
+            $hiddencmids[(int)$cm->id]=true;
         }
         // Managed Trails are rebuilt from their approved Cursos Individuais.
         // Hide legacy LTI links left by older synchronizers so repeated runs
@@ -232,6 +243,8 @@ final class sync_trail_sections extends external_api
         foreach($sectionlti as$cm){
             if(isset($activecmids[(int)$cm->id]))continue;
             if((int)$cm->visible!==0){set_coursemodule_visible((int)$cm->id,0);$hidden++;}
+            $DB->set_field('course_modules','visibleoncoursepage',0,['id'=>$cm->id]);
+            $hiddencmids[(int)$cm->id]=true;
         }
         // moveto_module() does not reorder an activity that is already in the
         // same section on every supported Moodle version. Persist the exact
@@ -239,7 +252,7 @@ final class sync_trail_sections extends external_api
         // the Mundo Inter sequence.
         $currentsequence=(string)$DB->get_field('course_sections','sequence',['id'=>$section->id]);
         $current=array_filter(array_map('intval',explode(',',$currentsequence)));
-        $tail=array_values(array_filter($current,static fn(int$cmid):bool=>!in_array($cmid,$orderedcmids,true)));
+        $tail=array_values(array_filter($current,static fn(int$cmid):bool=>!in_array($cmid,$orderedcmids,true)&&!isset($hiddencmids[$cmid])));
         $DB->set_field('course_sections','sequence',implode(',',array_merge($orderedcmids,$tail)),['id'=>$section->id]);
         return['activities'=>$activities,'assessments'=>$assessments,'hidden'=>$hidden];
     }
