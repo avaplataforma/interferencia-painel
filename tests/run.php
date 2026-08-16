@@ -2644,6 +2644,12 @@ $tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static 
     assertTrue(str_contains($routes,'provisioningQueue'));
     assertTrue(str_contains($routes,'/provisioning/{id:\\d+}/retry'));
     assertTrue(str_contains($javascript,"['connection', 'homologation', 'capabilities', 'queue']"));
+    $reuseMigration=(string)file_get_contents($rootPath.'/database/migrations/20260815_000040_track_ava_course_reuse.php');
+    assertTrue(str_contains($reuseMigration,'reuse_count'));
+    assertTrue(str_contains($reuseMigration,'last_reused_at'));
+    assertTrue(str_contains($queue,'Homologação de produção'));
+    assertTrue(str_contains($queue,'Reutilização'));
+    assertTrue(str_contains($queue,'Recuperação'));
 };
 
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {

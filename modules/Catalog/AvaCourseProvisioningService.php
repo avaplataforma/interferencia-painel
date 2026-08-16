@@ -43,6 +43,7 @@ final readonly class AvaCourseProvisioningService
         $current = $this->publishedCourse($courseId, $organizationId);
         $jobId = $this->upsertJob($courseId, $organizationId, $providerCode, $userId, $current !== null ? 'completed' : 'queued');
         if ($current !== null) {
+            $this->recordReuse($jobId);
             return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
         }
 
@@ -66,6 +67,7 @@ final readonly class AvaCourseProvisioningService
             $current = $this->publishedCourse($courseId, $organizationId);
             if ($current !== null) {
                 $this->completeJob($jobId);
+                $this->recordReuse($jobId);
                 return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
             }
 
@@ -101,7 +103,7 @@ final readonly class AvaCourseProvisioningService
     public function dashboard(string $providerCode, int $limit = 30): array
     {
         $providerCode = trim($providerCode);
-        $summary = ['queued' => 0, 'working' => 0, 'completed' => 0, 'failed' => 0, 'attention' => 0, 'total' => 0];
+        $summary = ['queued' => 0, 'working' => 0, 'completed' => 0, 'failed' => 0, 'attention' => 0, 'created' => 0, 'reused' => 0, 'recovered' => 0, 'total' => 0];
         if ($providerCode === '') return ['summary' => $summary, 'jobs' => []];
 
         $count = $this->database->prepare('SELECT status,COUNT(*) total FROM ava_course_provisioning_jobs WHERE provider_code=:provider GROUP BY status');
@@ -117,9 +119,22 @@ final readonly class AvaCourseProvisioningService
         $attention->execute(['provider' => $providerCode]);
         $summary['attention'] = (int)$attention->fetchColumn();
 
+        $homologation = $this->database->prepare("SELECT
+                SUM(status='completed' AND attempts=1) created_count,
+                SUM(reuse_count>0) reused_count,
+                SUM(status='completed' AND attempts>1) recovered_count
+            FROM ava_course_provisioning_jobs WHERE provider_code=:provider");
+        $homologation->execute(['provider' => $providerCode]);
+        $homologationRow = $homologation->fetch();
+        if (is_array($homologationRow)) {
+            $summary['created'] = (int)($homologationRow['created_count'] ?? 0);
+            $summary['reused'] = (int)($homologationRow['reused_count'] ?? 0);
+            $summary['recovered'] = (int)($homologationRow['recovered_count'] ?? 0);
+        }
+
         $limit = max(5, min(100, $limit));
-        $statement = $this->database->prepare("SELECT job.id,job.provider_course_id,job.organization_id,job.provider_code,job.status,job.attempts,
-                job.started_at,job.completed_at,job.last_error,job.created_at,job.updated_at,
+        $statement = $this->database->prepare("SELECT job.id,job.provider_course_id,job.organization_id,job.provider_code,job.status,job.attempts,job.reuse_count,
+                job.started_at,job.completed_at,job.last_reused_at,job.last_error,job.created_at,job.updated_at,
                 COALESCE(NULLIF(course.commercial_name,''),course.name) course_name,
                 COALESCE(NULLIF(organization.display_name,''),organization.legal_name) organization_name,
                 (SELECT snapshot.status FROM lti_selection_snapshots snapshot WHERE snapshot.provisioning_job_id=job.id ORDER BY snapshot.id DESC LIMIT 1) lti_snapshot_status
@@ -250,6 +265,14 @@ final readonly class AvaCourseProvisioningService
     private function completeJob(int $jobId): void
     {
         $this->database->prepare("UPDATE ava_course_provisioning_jobs SET status='completed',completed_at=NOW(),last_error=NULL WHERE id=:id")
+            ->execute(['id' => $jobId]);
+    }
+
+    private function recordReuse(int $jobId): void
+    {
+        $this->database->prepare("UPDATE ava_course_provisioning_jobs
+                SET reuse_count=reuse_count+1,last_reused_at=NOW(),status='completed',completed_at=COALESCE(completed_at,NOW()),last_error=NULL
+                WHERE id=:id")
             ->execute(['id' => $jobId]);
     }
 
