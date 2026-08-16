@@ -1865,7 +1865,7 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($verifier,'api-fornecimento.iesde.com.br'));
     assertTrue(str_contains($verifier,'CURLOPT_PROTOCOLS'));
     assertTrue(str_contains($verifier,"['keys']"));
-    assertTrue(str_contains($view,'Configuração LTI 1.3'));
+    assertTrue(str_contains($view,'Conexão e API'));
     assertTrue(str_contains($view,'Mundo Inter — Catálogo MASTER'));
     assertTrue(str_contains($view,'/mod/lti/certs.php'));
     assertTrue(str_contains($view,'Deep Linking'));
@@ -2901,7 +2901,7 @@ $tests['sincroniza o acervo comercial MASTER sem copiar conteudo protegido'] = s
     assertTrue(str_contains($client,"/api/v1/auth/login"));
     assertTrue(str_contains($client,"/api/Disciplines/catalog"));
     assertTrue(str_contains($routes,"'/admin/platform/integrations/course-providers/catalog/iesde/commercial-sync'"));
-    assertTrue(str_contains($view,'Acervo comercial'));
+    assertTrue(str_contains($view,'Loja de Cursos MASTER'));
     assertTrue(str_contains($view,'Aguardando LTI'));
     assertTrue(str_contains($view,'Adicionar via LTI'));
 };
