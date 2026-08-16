@@ -16,14 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Preparar acesso seguro
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-
       - name: Atualizar aplicação na VPS
         env:
-          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
-          sshpass -e ssh \
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/mundointer"
+          chmod 600 "$HOME/.ssh/mundointer"
+
+          ssh \
+            -i "$HOME/.ssh/mundointer" \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=20 \
             ubuntu@15.204.121.10 'bash -s' <<'REMOTE'
