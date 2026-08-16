@@ -232,6 +232,8 @@ final class sync_trail_sections extends external_api
             $materialcmids[]=$materials['cmid'];
             $activities++;
         }
+        $booklabel=self::sync_trail_subtitle($course,$section,$sectionnumber,$key,'Livro e Materiais Interativos',0);
+        $active[$booklabel['idnumber']]=true;
         $lessonsequence=[];$previoussubtitle='';$subtitleindex=0;
         foreach($lessonactivities as$lessonactivity){
             $subtitle=trim((string)($lessonactivity['subtitle']??''));
@@ -247,7 +249,7 @@ final class sync_trail_sections extends external_api
         }
         $assessmentlabel=self::sync_trail_subtitle($course,$section,$sectionnumber,$key,'ATIVIDADES AVALIATIVAS',$subtitleindex+1);
         $active[$assessmentlabel['idnumber']]=true;
-        $orderedcmids=array_merge($bookcmids,$materialcmids,$lessonsequence,[$assessmentlabel['cmid']],$assessmentcmids);
+        $orderedcmids=array_merge([$booklabel['cmid']],$bookcmids,$materialcmids,$lessonsequence,[$assessmentlabel['cmid']],$assessmentcmids);
 
         $hidden=0;$hiddencmids=[];
         $managed=$DB->get_records_select('course_modules','course=:course AND section=:section AND idnumber LIKE :prefix',['course'=>$course->id,'section'=>$section->id,'prefix'=>\core_text::substr('mi-trail-master-'.$key.'-%',0,100)]);
