@@ -49,7 +49,7 @@ final readonly class AvaCourseProvisioningService
         try {
             $prepared = $this->iesdeRobot->prepare($courseId, $sourceName);
             $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
-            $result = $this->publisher->publishMasterCourse($courseId, $userId);
+            $result = $this->publisher->publishMasterCourse($courseId, $userId, (int)($prepared['source_cmid'] ?? 0));
             $remoteCourseId = (int)($result['remote_course_id'] ?? 0);
             if ($remoteCourseId < 1) {
                 throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
@@ -117,7 +117,7 @@ final readonly class AvaCourseProvisioningService
             $snapshotId = 0;
             $prepared = $this->iesdeRobot->prepare($courseId, (string)($target['source_name'] ?? $target['name'] ?? ''), $jobId);
             $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
-            $this->publisher->publishMasterCourse($courseId, $userId);
+            $this->publisher->publishMasterCourse($courseId, $userId, (int)($prepared['source_cmid'] ?? 0));
             $current = $this->publishedCourse($courseId, $organizationId);
             if ($current === null) {
                 throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
@@ -324,3 +324,4 @@ final readonly class AvaCourseProvisioningService
             ->execute(['id' => $jobId, 'error' => mb_substr($message, 0, 2000)]);
     }
 }
+
