@@ -304,20 +304,20 @@ body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-book .ti
     color: #1d4ed8;
 }
 body.mundointer-brand-active #multi_section_tiles.tiles > .tile.mundointer-tile-assessment {
-    border-color: color-mix(in srgb, #7c3aed 42%, #d9e1e8);
-    background: #fcfaff !important;
+    border-color: color-mix(in srgb, #16a34a 42%, #d9e1e8);
+    background: #f5fff8 !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-bg {
-    border-top-color: #7c3aed;
-    background: radial-gradient(circle at 100% 0, rgba(124, 58, 237, .14), transparent 45%),
-        linear-gradient(145deg, #fff 20%, #f5f3ff) !important;
+    border-top-color: #16a34a;
+    background: radial-gradient(circle at 100% 0, rgba(22, 163, 74, .14), transparent 45%),
+        linear-gradient(145deg, #fff 20%, #ecfdf3) !important;
 }
 body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-top::before {
-    background: linear-gradient(145deg, #7c3aed, #6d28d9);
-    box-shadow: 0 .35rem .8rem rgba(124, 58, 237, .24);
+    background: linear-gradient(145deg, #22c55e, #15803d);
+    box-shadow: 0 .35rem .8rem rgba(22, 163, 74, .24);
 }
 body.mundointer-brand-active #multi_section_tiles .tile.mundointer-tile-assessment .tile-top::after {
-    color: #6d28d9;
+    color: #15803d;
 }
 body.mundointer-brand-active #multi_section_tiles .tile-text {
     position: static !important;
@@ -1476,7 +1476,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             var tile = title.closest(".tile");
             if (tile) {
                 tile.classList.toggle("mundointer-tile-book", normalized.indexOf("apostila") === 0 || normalized.indexOf("livro e materiais interativos") === 0);
-                tile.classList.toggle("mundointer-tile-assessment", normalized.indexOf("avaliacao") === 0);
+                tile.classList.toggle("mundointer-tile-assessment", normalized.indexOf("avaliacao") === 0 || normalized.indexOf("avp - avaliacao") === 0);
             }
             var concise = original.replace(/^M[oó]dulo\s+\d+\s*[-–—:]\s*/i, "").trim();
             if (concise) {
