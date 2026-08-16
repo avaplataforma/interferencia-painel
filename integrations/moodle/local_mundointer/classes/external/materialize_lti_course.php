@@ -37,8 +37,25 @@ final class materialize_lti_course extends external_api
         self::validate_context($system);
         require_capability('local/mundointer:manage', $system);
 
-        $sourcecm = $DB->get_record('course_modules', ['id' => $parameters['sourcecmid']], '*', MUST_EXIST);
         $ltimodule = $DB->get_record('modules', ['name' => 'lti'], '*', MUST_EXIST);
+        $sourcecm = $DB->get_record('course_modules', ['id' => $parameters['sourcecmid']]);
+        if (!$sourcecm) {
+            // The technical bridge is intentionally reset for every run. If
+            // the caller still holds an expired cmid, recover the newest LTI
+            // activity from the isolated staging course. That course contains
+            // only the selection created by the current robot execution.
+            $staging = $DB->get_record('course', ['idnumber' => 'mi-master-staging'], 'id');
+            if ($staging) {
+                $candidates = $DB->get_records('course_modules', [
+                    'course' => (int)$staging->id,
+                    'module' => (int)$ltimodule->id,
+                ], 'id DESC', '*', 0, 1);
+                $sourcecm = $candidates ? reset($candidates) : false;
+            }
+        }
+        if (!$sourcecm) {
+            throw new \moodle_exception('A seleção LTI atual não foi encontrada na área Migração LTI.');
+        }
         if ((int) $sourcecm->module !== (int) $ltimodule->id) {
             throw new \invalid_parameter_exception('A origem selecionada não é uma atividade LTI.');
         }
@@ -547,3 +564,4 @@ final class materialize_lti_course extends external_api
         ]);
     }
 }
+
