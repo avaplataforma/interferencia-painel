@@ -152,7 +152,13 @@ final class sync_trail_sections extends external_api
                 if(!$sourcecm)continue;
                 $source=$DB->get_record('lti',['id'=>$sourcecm->instance]);
                 if(!$source)continue;
-                $buckets[$kind][]=['cm'=>$sourcecm,'lti'=>$source,'kind'=>$kind];
+                // Some older MASTER publications placed the official book or
+                // assessment inside an ordinary lesson section. The activity
+                // name is the authoritative fallback so those links are not
+                // exposed again as regular lessons in a Trail.
+                $activityname=self::fold((string)$source->name);
+                $activitykind=preg_match('/avalia|prova|exame/u',$activityname)===1?'assessment':(preg_match('/livro|apostila|material/u',$activityname)===1?'book':$kind);
+                $buckets[$activitykind][]=['cm'=>$sourcecm,'lti'=>$source,'kind'=>$activitykind];
             }
         }
         if($buckets['book']===[])throw new \moodle_exception('O Curso Individual MASTER "'.$name.'" ainda não possui Livro e materiais sincronizados.');
