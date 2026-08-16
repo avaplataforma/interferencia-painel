@@ -46,7 +46,7 @@
         <input type="hidden" name="provider" value="iesde">
         <input type="hidden" name="content_q" value="<?= $escape($contentQuery) ?>">
         <input type="hidden" name="content_page" value="<?= (int)($contentPage['page']??1) ?>">
-        <button class="btn <?= $avaPublished?'btn-secondary':'btn-primary' ?>" type="submit" title="<?= $escape($avaPublicationError!==''?$avaPublicationError:($avaPublished?'Curso Moodle #'.$avaRemoteCourseId:'Criar curso definitivo no AVA Cursos')) ?>"><i class="fa-solid <?= $avaPublished?'fa-arrows-rotate':'fa-graduation-cap' ?>"></i> <?= $avaPublished?'Atualizar no AVA':'Criar curso no AVA' ?></button>
+        <button class="btn <?= $avaPublished?'btn-secondary':'btn-primary' ?>" type="submit" formaction="<?= $escape($basePath) ?>/admin/platform/integrations/course-providers/contents/<?= (int)$content['id'] ?>/publish-ava" formmethod="post" title="<?= $escape($avaPublicationError!==''?$avaPublicationError:($avaPublished?'Curso Moodle #'.$avaRemoteCourseId:'Criar curso definitivo no AVA Cursos')) ?>"><i class="fa-solid <?= $avaPublished?'fa-arrows-rotate':'fa-graduation-cap' ?>"></i> <?= $avaPublished?'Atualizar no AVA':'Criar curso no AVA' ?></button>
        </form>
        <?php if($avaPublished):?><span class="catalog-badge ok" title="Curso definitivo reutilizável"><i class="fa-solid fa-circle-check"></i> Moodle #<?= $avaRemoteCourseId ?></span><?php elseif($avaPublicationStatus==='failed'):?><span class="catalog-badge changed" title="<?= $escape($avaPublicationError) ?>"><i class="fa-solid fa-triangle-exclamation"></i> Revisar falha</span><?php endif;?>
       <?php endif;?>
