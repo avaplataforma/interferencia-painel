@@ -19,6 +19,7 @@ use Interferencia\Modules\Finance\AsaasClient;
 use Interferencia\Modules\Finance\WebhookVerifier as AsaasWebhookVerifier;
 use Interferencia\Kernel\Security\SecretCipher;
 use Interferencia\Modules\Organization\OrganizationRepository;
+use Interferencia\Modules\Catalog\PortugueseCourseTitle;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -31,6 +32,12 @@ if (!is_file($autoload)) {
 require $autoload;
 
 $tests = [];
+$tests['padroniza titulos academicos em portugues']=static function():void{
+    assertSame('Administração de Imóveis e Locação',PortugueseCourseTitle::format('ADMINISTRAÇÃO DE IMÓVEIS E LOCAÇÃO'));
+    assertSame('Ensino Religioso no Brasil',PortugueseCourseTitle::format('ENSINO RELIGIOSO NO BRASIL'));
+    assertSame('Técnico em TTI e Avaliação II',PortugueseCourseTitle::format('TÉCNICO EM TTI E AVALIAÇÃO II'));
+    assertSame('A Arte da Comunicação',PortugueseCourseTitle::format('A ARTE DA COMUNICAÇÃO'));
+};
 $tests['carrega fluxo financeiro Sandbox por franquia']=static function()use($rootPath):void{
     $migration=(string)file_get_contents($rootPath.'/database/migrations/20260807_910000_create_franchise_sandbox_billing_tests.php');
     $service=(string)file_get_contents($rootPath.'/modules/Organization/FranchiseSandboxBillingService.php');

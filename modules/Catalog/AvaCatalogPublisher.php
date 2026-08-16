@@ -44,13 +44,14 @@ final readonly class AvaCatalogPublisher
             $idNumber='mi-trilha-'.$trailId;
             $shortName=$this->limitedCode('MI-TRILHA-'.$trailId.'-'.$trail['slug'],100);
             $summary=$this->summary($trail);
-            $course=$client->publishCourse(['fullname'=>(string)$trail['name'],'shortname'=>$shortName,'idnumber'=>$idNumber,'categoryid'=>$categoryId,'summary'=>$summary]);
+            $courseName=PortugueseCourseTitle::format((string)$trail['name']);
+            $course=$client->publishCourse(['fullname'=>$courseName,'shortname'=>$shortName,'idnumber'=>$idNumber,'categoryid'=>$categoryId,'summary'=>$summary]);
             $remoteCourseId=(int)($course['id']??0);
             if($remoteCourseId<1)throw new RuntimeException('O AVA não devolveu o identificador do curso publicado.');
             $sections=$this->sections($trail);
             $coverUrl=$this->coverUrl($trail);
-            $sectionSync=$client->syncTrailSections($remoteCourseId,$sections,$coverUrl,(string)$trail['name']);
-            $course['categoryid']=$categoryId;$course['fullname']=(string)$trail['name'];$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
+            $sectionSync=$client->syncTrailSections($remoteCourseId,$sections,$coverUrl,$courseName);
+            $course['categoryid']=$categoryId;$course['fullname']=$courseName;$course['shortname']=$shortName;$course['idnumber']=$idNumber;$course['visible']=1;
             $this->moodle->upsertCourse($course);
             $localCourseId=$this->moodle->localCourseIdByRemote($remoteCourseId);
             $this->catalog->markPublicationSuccess($publicationId,$localCourseId,$categoryId,$remoteCourseId,$signature,[
@@ -104,7 +105,7 @@ final readonly class AvaCatalogPublisher
         $connection=$this->connections->shared();
         if(!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false)||(int)($connection['id']??0)<1)throw new RuntimeException('Configure e ative primeiro a integração AVA Cursos.');
 
-        $name=$this->masterCourseName((string)($context['effective_name']??$context['name']??''));
+        $name=PortugueseCourseTitle::format($this->masterCourseName((string)($context['effective_name']??$context['name']??'')));
         if($name==='')throw new RuntimeException('Informe o nome da disciplina antes de criar o curso.');
         $signature=hash('sha256',json_encode(['course_id'=>$courseId,'name'=>$name,'description'=>$context['effective_description']??'','summary'=>$context['commercial_summary']??'','category'=>$context['effective_category']??'','workload'=>$context['effective_workload']??'','source_cmid'=>$sourceCmId,'resource_count'=>(int)$context['resource_count'],'assessment_resource_count'=>(int)$context['assessment_resource_count'],'book_resource_count'=>(int)($context['book_resource_count']??0),'media_asset_id'=>(int)($context['media_asset_id']??0)],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR));
         $publicationId=$this->catalog->markEntityPublicationReady('provider_course',$courseId,(int)$connection['id'],$signature,$userId);
@@ -155,7 +156,7 @@ final readonly class AvaCatalogPublisher
     /** @param array<string,mixed> $content */
     private function masterSummary(array$content):string
     {
-        $name=trim((string)($content['effective_name']??$content['name']??''));
+        $name=PortugueseCourseTitle::format((string)($content['effective_name']??$content['name']??''));
         $description=trim((string)($content['effective_description']??''));
         $commercialSummary=trim((string)($content['commercial_summary']??''));
         $category=trim((string)($content['effective_category']??''));
@@ -192,7 +193,7 @@ final readonly class AvaCatalogPublisher
         $workload=(float)($trail['workload_hours']??0);
         $workloadLabel=$workload>0?'<p><strong>Carga horária total:</strong> '.rtrim(rtrim(number_format($workload,2,',','.'),'0'),',').' horas</p>':'';
         $names=[];
-        foreach((array)($trail['items']??[])as$item){$name=trim((string)($item['item_name']??''));if($name!=='')$names[]=$name;}
+        foreach((array)($trail['items']??[])as$item){$name=PortugueseCourseTitle::format((string)($item['item_name']??''));if($name!=='')$names[]=$name;}
         $list=$names===[]?'':'<h3>Cursos individuais desta Trilha</h3><ol><li>'.implode('</li><li>',array_map(static fn(string$name):string=>htmlspecialchars($name,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8'),$names)).'</li></ol>';
         return'<p>'.nl2br(htmlspecialchars($description,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')).'</p>'.$workloadLabel.$list.'<p><small>Publicação gerenciada pelo Mundo Inter.</small></p>';
     }
@@ -203,7 +204,7 @@ final readonly class AvaCatalogPublisher
         $sections=[];
         $conted=null;
         foreach((array)($trail['items']??[])as$position=>$item){
-            $name=trim((string)($item['item_name']??''));
+            $name=PortugueseCourseTitle::format((string)($item['item_name']??''));
             if($name==='')continue;
             $execution=(string)($item['execution_environment']??'provider_ava');
             $catalog=trim((string)($item['item_catalog']??'Formação'));
