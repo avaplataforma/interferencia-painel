@@ -1925,7 +1925,7 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     assertTrue(str_contains($organizationView,'Salvar regra e aplicar em lote'));
     assertTrue(str_contains($organizationView,'catalog_policy['));
     assertTrue(str_contains($organizationView,'Padrão definido pelo ADM Central'));
-    assertTrue(str_contains($centralPolicyView,'Permitir personalização pela franquia'));
+    assertTrue(str_contains($centralPolicyView,'Herança e autonomia da franquia'));
     assertTrue(str_contains($centralPolicyView,'Todas as franquias ativas'));
     assertTrue(str_contains($centralPolicyView,'Salvar e aplicar'));
 };
@@ -2700,6 +2700,29 @@ $tests['padroniza areas dos catalogos e acompanha fila de publicacao'] = static 
     assertTrue(str_contains($queue,'Homologação de produção'));
     assertTrue(str_contains($queue,'Reutilização'));
     assertTrue(str_contains($queue,'Recuperação'));
+};
+
+$tests['organiza loja modulos trilhas e politica comercial ampliada'] = static function () use ($rootPath): void {
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $providers=(string)file_get_contents($rootPath.'/views/admin/platform/course-providers.php');
+    $overviews=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-standard-overviews.php');
+    $policy=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-commercial-policy.php');
+    $migration=(string)file_get_contents($rootPath.'/database/migrations/20260816_000010_expand_catalog_commercial_policy.php');
+
+    assertTrue(str_contains($providers,'Sincronizar Catálogo'));
+    assertTrue(str_contains($providers,'Completar pendências com IA'));
+    assertTrue(str_contains($providers,'fa-pen-to-square"></i> Editar'));
+    assertTrue(str_contains($routes,'complete-commercial-ai'));
+    assertTrue(str_contains($routes,'catalogTrails'));
+    assertTrue(str_contains($repository,'commercialAiCandidates'));
+    assertTrue(str_contains($repository,'fillMissingCourseCopy'));
+    assertTrue(str_contains($overviews,'Trilha(s) cadastrada(s)'));
+    assertTrue(str_contains($overviews,'Nova Trilha'));
+    assertTrue(str_contains($policy,'central_trail_default_price'));
+    assertTrue(str_contains($policy,'Carga horária padrão'));
+    assertTrue(str_contains($policy,'Herança e autonomia da franquia'));
+    assertTrue(str_contains($migration,'allow_franchise_price_override'));
 };
 
 $tests['sincroniza alunos antigos em lotes sem recriar acesso no AVA'] = static function () use ($rootPath): void {
