@@ -1910,6 +1910,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($siteRepository,'about_mission=:about_mission'));
     assertTrue(str_contains($routes,"'about_mission'=>"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/admin.php'),'name="about_mission"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php'),"(string)(\$row['access_mode']??'shared')"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaConnectionRepository.php'),"(string)(\$row['primary_ava']??'shared')"));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));

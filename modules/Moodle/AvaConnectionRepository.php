@@ -34,8 +34,8 @@ final readonly class AvaConnectionRepository
         $own['mapped_courses']=$this->mappedCourseCount((int)($own['id']??0));
         return [
             'organization_id'=>$organizationId,
-            'access_mode'=>in_array(($row['access_mode']??'shared'),['shared','own','both'],true)?(string)$row['access_mode']:'shared',
-            'primary_ava'=>in_array(($row['primary_ava']??'shared'),['shared','own'],true)?(string)$row['primary_ava']:'shared',
+            'access_mode'=>in_array(($row['access_mode']??'shared'),['shared','own','both'],true)?(string)($row['access_mode']??'shared'):'shared',
+            'primary_ava'=>in_array(($row['primary_ava']??'shared'),['shared','own'],true)?(string)($row['primary_ava']??'shared'):'shared',
             'shared'=>$shared,
             'own'=>$own,
         ];
