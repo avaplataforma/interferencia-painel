@@ -23,6 +23,10 @@ $scholarshipFloating = $scholarshipEnabled && in_array($scholarshipMode, ['float
 $scholarshipPopup = $scholarshipEnabled && in_array($scholarshipMode, ['popup', 'both'], true);
 $footerText = trim((string) ($site['footer_text'] ?? ''));
 $classroomUrl = trim((string) ($site['classroom_url'] ?? ''));
+if ($classroomUrl === '') {
+    $classroomUrl = trim((string) ($site['ava_access_url'] ?? ''));
+    if ($classroomUrl === '' && trim((string) ($site['panel_slug'] ?? '')) !== '') $classroomUrl = 'https://avacursos.com.br/franquia.php?slug=' . rawurlencode(trim((string) $site['panel_slug']));
+}
 $classroomLabel = trim((string) ($site['classroom_label'] ?? 'Sala de Aula')) ?: 'Sala de Aula';
 $webmailUrl = trim((string) ($site['webmail_url'] ?? ''));
 $searchEnabled = (int) ($site['site_search_enabled'] ?? 1) === 1;

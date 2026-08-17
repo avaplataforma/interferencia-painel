@@ -126,14 +126,15 @@ final readonly class OrganizationRepository
     }
     public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath):void
     {$s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');}
-    public function updateAvaCommunication(int$id,string$loginTitle,string$poloName,string$welcome,string$email,string$phone):void
+    public function updateAvaCommunication(int$id,string$loginTitle,string$poloName,string$welcome,string$email,string$phone,string$avaAccessUrl=''):void
     {
-        $loginTitle=trim($loginTitle);$poloName=trim(preg_replace('/\s+/u',' ',$poloName)??'');$welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);
+        $loginTitle=trim($loginTitle);$poloName=trim(preg_replace('/\s+/u',' ',$poloName)??'');$welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);$avaAccessUrl=trim($avaAccessUrl);
         if($this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
         if($email!==''&&filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail de suporte válido.');
-        if(mb_strlen($loginTitle)>160||mb_strlen($poloName)>255||mb_strlen($welcome)>500||mb_strlen($phone)>30)throw new RuntimeException('Um dos textos de identidade ou comunicação do AVA excede o tamanho permitido.');
-        $s=$this->database->prepare('UPDATE organizations SET login_title=:login_title,ava_polo_name=:polo_name,login_welcome_text=:welcome,support_email=:email,support_phone=:phone WHERE id=:id');
-        $s->execute(['login_title'=>$loginTitle!==''?$loginTitle:null,'polo_name'=>$poloName!==''?$poloName:null,'welcome'=>$welcome!==''?$welcome:null,'email'=>$email!==''?$email:null,'phone'=>$phone!==''?$phone:null,'id'=>$id]);
+        if($avaAccessUrl!==''&&filter_var($avaAccessUrl,FILTER_VALIDATE_URL)===false)throw new RuntimeException('Informe um endereço HTTPS válido para o acesso ao AVA.');
+        if(mb_strlen($loginTitle)>160||mb_strlen($poloName)>255||mb_strlen($welcome)>500||mb_strlen($phone)>30||mb_strlen($avaAccessUrl)>500)throw new RuntimeException('Um dos textos de identidade ou comunicação do AVA excede o tamanho permitido.');
+        $s=$this->database->prepare('UPDATE organizations SET login_title=:login_title,ava_polo_name=:polo_name,login_welcome_text=:welcome,support_email=:email,support_phone=:phone,ava_access_url=:ava_access WHERE id=:id');
+        $s->execute(['login_title'=>$loginTitle!==''?$loginTitle:null,'polo_name'=>$poloName!==''?$poloName:null,'welcome'=>$welcome!==''?$welcome:null,'email'=>$email!==''?$email:null,'phone'=>$phone!==''?$phone:null,'ava_access'=>$avaAccessUrl!==''?$avaAccessUrl:null,'id'=>$id]);
     }
     public function saveFinanceSettings(int$id,array$data):void
     {

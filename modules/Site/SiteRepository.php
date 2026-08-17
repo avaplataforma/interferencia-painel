@@ -593,7 +593,7 @@ final readonly class SiteRepository
     public function publicSite(int $organizationId,bool $preview=false):?array
     {
         $this->processScheduled($organizationId);
-        $statement=$this->database->prepare("SELECT s.*,o.display_name,o.legal_name,o.cnpj,o.panel_slug,o.logo_path,o.favicon_path,o.primary_color,o.secondary_color,o.support_email organization_email,o.support_phone organization_phone,o.status organization_status,d.host site_host,d.status domain_status FROM organization_sites s INNER JOIN organizations o ON o.id=s.organization_id LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.purpose='site' AND d.is_primary=1 WHERE s.organization_id=:organization LIMIT 1");
+        $statement=$this->database->prepare("SELECT s.*,o.display_name,o.legal_name,o.cnpj,o.panel_slug,o.logo_path,o.favicon_path,o.primary_color,o.secondary_color,o.support_email organization_email,o.support_phone organization_phone,o.status organization_status,o.ava_access_url,d.host site_host,d.status domain_status FROM organization_sites s INNER JOIN organizations o ON o.id=s.organization_id LEFT JOIN organization_domains d ON d.organization_id=o.id AND d.purpose='site' AND d.is_primary=1 WHERE s.organization_id=:organization LIMIT 1");
         $statement->execute(['organization'=>$organizationId]);$site=$statement->fetch();
         if(!is_array($site)||(int)$site['is_enabled']!==1||($site['organization_status']??'')!=='active')return null;
         $live=null;if(!$preview&&trim((string)($site['live_snapshot_json']??''))!==''){$decoded=json_decode((string)$site['live_snapshot_json'],true);if(is_array($decoded))$live=$decoded;}

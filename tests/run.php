@@ -1949,6 +1949,14 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Identity/UserManager.php'),'roleGrantsAllUnits'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),"r.code='headquarters'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000090_grant_all_permissions_to_headquarters.php'));
+    assertTrue(str_contains($routes,'ava_access_url'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),'ava_access_url=:ava_access'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'name="ava_access_url"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'franquia.php?slug='));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000100_add_ava_access_url_to_organizations.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php'),'o.ava_access_url'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/public.php'),'franquia.php?slug='));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/admin.php'),'link central da aba Formações/AVA'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));
