@@ -225,7 +225,7 @@ return static function (
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
         $previewDevice=$preview&&$request->queryValue('device','desktop')==='mobile'?'mobile':'desktop';
         $catalogInit=['q'=>(string)$request->queryValue('q',''),'formacao'=>(string)$request->queryValue('formacao',''),'categoria'=>(string)$request->queryValue('categoria',''),'ordenar'=>(string)$request->queryValue('ordenar','featured')];
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'testimonialMessage'=>$session->get('site_testimonial.message'),'testimonialError'=>$session->get('site_testimonial.error'),'testimonials'=>$sites->publishedTestimonials($organizationId),'catalogInit'=>$catalogInit,'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300']);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'testimonialMessage'=>$session->get('site_testimonial.message'),'testimonialError'=>$session->get('site_testimonial.error'),'testimonials'=>$sites->publishedTestimonials($organizationId),'catalogInit'=>$catalogInit,'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
     });
 
     $router->get('/site/formacao/{code:[a-z0-9_-]+}',static function(Request$request,array$params)use($basePath):Response{return Response::redirect($basePath.'/site?formacao='.rawurlencode((string)$params['code']),301);});
@@ -299,14 +299,14 @@ return static function (
 
     $router->get('/site/p/{slug:[a-z0-9-]+}',static function(Request$request,array$params)use($view,$auth,$sites,$organizationId,$basePath):Response{
         $preview=$request->queryValue('preview')==='1'&&$auth->check()&&$auth->can('users.manage');$site=$sites->publicSite($organizationId,$preview);$page=$site===null?null:$sites->publicPage($organizationId,(string)$params['slug'],$preview);
-        if($site===null||$page===null)return$view->renderStandalone('site/unavailable',[],404);return$view->renderStandalone('site/page',['site'=>$site,'page'=>$page,'preview'=>$preview,'basePath'=>$basePath])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300']);
+        if($site===null||$page===null)return$view->renderStandalone('site/unavailable',[],404);return$view->renderStandalone('site/page',['site'=>$site,'page'=>$page,'preview'=>$preview,'basePath'=>$basePath])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
     });
 
     $router->get('/site/curso/{product:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicCatalogProduct($organizationId,(int)$params['product']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
         $unitId=$product['unit_id']===null?null:(int)$product['unit_id'];
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/curso/{product:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -331,7 +331,7 @@ return static function (
     $router->get('/site/catalogo-pro/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalProduct($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/catalogo-pro/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -354,7 +354,7 @@ return static function (
     $router->get('/site/conteudo/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalContent($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/conteudo/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -377,7 +377,7 @@ return static function (
     $router->get('/site/trilha/{trail:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicTrail($organizationId,(int)$params['trail']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/trilha/{trail:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
