@@ -9,15 +9,15 @@ $store = ($site['selected_mode'] ?? 'catalog') === 'store';
 $publicBase = rtrim((string) $basePath, '/') . '/site';
 $isExternal = (int)($product['is_external'] ?? 0) === 1;
 $isIndividualContent = ($product['product_kind'] ?? '') === 'provider_content';
-$isTrail = ($product['product_kind'] ?? '') === 'catalog_trail';
-$formationName = trim((string)preg_replace('/^(?:Cat[aá]logo|Forma[cç][aã]o)\s+/iu', '', (string)($product['catalog_name'] ?? ''))) ?: 'INTER';
+$isTrail = ($product['product_kind'] ?? '') === 'trail';
+$formationName = trim((string)preg_replace('/^Cat[aá]logo\s+/iu', '', (string)($product['catalog_name'] ?? ''))) ?: 'INTER';
 $coverUrl = !empty($product['media_asset_id']) ? rtrim((string)$basePath, '/') . '/catalog-media/' . (int)$product['media_asset_id'] : trim((string)($product['cover_url'] ?? ''));
 $coursePath = $isTrail ? '/trilha/' . (int)$product['id'] : ($isIndividualContent ? '/conteudo/' . (int)$product['id'] : ($isExternal ? '/catalogo-pro/' . (int)$product['id'] : '/curso/' . (int)$product['id']));
 $whatsappDigits = preg_replace('/\D+/', '', (string) ($site['whatsapp'] ?? '')) ?? '';
 $whatsapp = $whatsappDigits !== '' ? (str_starts_with($whatsappDigits, '55') ? $whatsappDigits : '55' . $whatsappDigits) : '';
 $whatsappMessage = rawurlencode('Olá! Tenho interesse no curso ' . $product['name'] . '.');
 $seoTitle = trim((string) ($product['seo_title'] ?? '')) ?: (string) $product['name'];
-$seoDescription = trim((string) ($product['seo_description'] ?? '')) ?: trim((string) ($product['description'] ?? ''));
+$seoDescription = trim((string) ($product['seo_description'] ?? '')) ?: trim((string) ($product['description'] ?? '')) ?: 'Conheça esta formação, consulte o conteúdo e solicite sua matrícula.';
 $category = trim((string) ($product['category'] ?? '')) ?: 'Formação profissional';
 $modality = trim((string) ($product['modality'] ?? '')) ?: 'Consulte a modalidade';
 $workload = (int) ($product['workload_hours'] ?? 0);
@@ -32,6 +32,12 @@ foreach (preg_split('/\R+/', (string) ($product['faq_text'] ?? '')) ?: [] as $fa
 }
 $rating = (float) ($product['rating_average'] ?? 0);
 $ratingCount = (int) ($product['rating_count'] ?? 0);
+$moduleCount = max(0, (int) ($product['lesson_count'] ?? count($curriculum)));
+$kindLabel = $isTrail ? 'Trilha' : 'Módulo';
+$detailHeading = $isTrail ? 'Sobre esta Trilha' : 'Sobre este Módulo';
+$siteHost = preg_replace('/[^a-z0-9.-]/i', '', (string) ($site['site_host'] ?? '')) ?: 'mundointer.com.br';
+$canonicalUrl = 'https://' . $siteHost . $publicBase . $coursePath;
+$absoluteCoverUrl = $coverUrl === '' ? '' : (preg_match('#^https?://#i', $coverUrl) === 1 ? $coverUrl : 'https://' . $siteHost . '/' . ltrim($coverUrl, '/'));
 $relatedProducts = [];
 foreach (($isExternal ? ($site['external_products'] ?? []) : ($site['products'] ?? [])) as $related) {
     if ((int) $related['id'] === (int) $product['id']) continue;
@@ -39,15 +45,22 @@ foreach (($isExternal ? ($site['external_products'] ?? []) : ($site['products'] 
     $relatedProducts[] = $related;
     if (count($relatedProducts) === 3) break;
 }
-$structuredData = ['@context' => 'https://schema.org', '@type' => 'Course', 'name' => (string) $product['name'], 'description' => $seoDescription, 'provider' => ['@type' => 'Organization', 'name' => $siteTitle]];
-if ($workload > 0) $structuredData['timeRequired'] = 'PT' . $workload . 'H';
-if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $rating, 'reviewCount' => $ratingCount];
+$structuredCourse = ['@type' => 'Course', 'name' => (string) $product['name'], 'description' => $seoDescription, 'url' => $canonicalUrl, 'provider' => ['@type' => 'Organization', 'name' => $siteTitle]];
+$structuredCourse['courseMode'] = $modality;
+$structuredCourse['educationalLevel'] = $category;
+$structuredCourse['offers'] = ['@type' => 'Offer', 'priceCurrency' => 'BRL', 'price' => number_format((float)($product['value'] ?? 0), 2, '.', ''), 'availability' => 'https://schema.org/InStock', 'url' => $canonicalUrl];
+if ($absoluteCoverUrl !== '') $structuredCourse['image'] = $absoluteCoverUrl;
+if ($isTrail && $curriculum !== []) $structuredCourse['hasPart'] = array_map(static fn(string $item): array => ['@type' => 'Course', 'name' => $item], $curriculum);
+$structuredData = ['@context' => 'https://schema.org', '@graph' => [$structuredCourse, ['@type' => 'BreadcrumbList', 'itemListElement' => [['@type' => 'ListItem', 'position' => 1, 'name' => 'Cursos', 'item' => 'https://' . $siteHost . $publicBase . '#cursos'], ['@type' => 'ListItem', 'position' => 2, 'name' => (string)$product['name'], 'item' => $canonicalUrl]]]];
+if ($workload > 0) $structuredData['@graph'][0]['timeRequired'] = 'PT' . $workload . 'H';
+if ($rating > 0 && $ratingCount > 0) $structuredData['@graph'][0]['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $rating, 'reviewCount' => $ratingCount];
 ?>
 <!doctype html>
 <html lang="pt-BR">
 <head>
  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
- <meta name="description" content="<?= $escape($seoDescription) ?>"><meta property="og:title" content="<?= $escape($seoTitle) ?>"><meta property="og:description" content="<?= $escape($seoDescription) ?>">
+ <meta name="description" content="<?= $escape($seoDescription) ?>"><meta property="og:type" content="website"><meta property="og:title" content="<?= $escape($seoTitle) ?>"><meta property="og:description" content="<?= $escape($seoDescription) ?>"><meta property="og:url" content="<?= $escape($canonicalUrl) ?>"><?php if ($absoluteCoverUrl !== ''): ?><meta property="og:image" content="<?= $escape($absoluteCoverUrl) ?>"><?php endif; ?>
+ <link rel="canonical" href="<?= $escape($canonicalUrl) ?>">
  <title><?= $escape($seoTitle) ?> · <?= $escape($siteTitle) ?></title>
  <?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?>
  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
@@ -62,14 +75,14 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
 <header class="top"><nav class="shell nav"><a class="brand" href="<?= $escape($publicBase) ?>"><?php if ($logo !== ''): ?><img src="<?= $escape($assetBasePath . $logo) ?>" alt="<?= $escape($siteTitle) ?>"><?php else: ?><?= $escape($siteTitle) ?><?php endif; ?></a><a class="back" href="<?= $escape($publicBase) ?>#cursos"><i class="fa-solid fa-arrow-left"></i> Voltar aos cursos</a></nav></header>
 <main class="shell course-layout" id="conteudo">
  <article class="content">
-  <header class="cover"><p class="eyebrow"><?= $escape($isExternal ? 'Formação '.$formationName : $category) ?></p><h1><?= $escape($product['name']) ?></h1><div class="cover-meta"><?php if($isExternal): ?><span><i class="fa-solid fa-layer-group"></i> Formação <?= $escape($formationName) ?></span><?php endif; ?><span><i class="fa-solid fa-laptop"></i> <?= $escape($modality) ?></span><?php if ($workload > 0): ?><span><i class="fa-regular fa-clock"></i> <?= $workload ?> horas</span><?php endif; ?><?php if ($rating > 0): ?><span><i class="fa-solid fa-star"></i> <?= number_format($rating, 1, ',', '.') ?><?= $ratingCount > 0 ? ' · ' . $ratingCount . ' avaliação(ões)' : '' ?></span><?php endif; ?></div></header>
-  <div class="body"><h2>Sobre esta formação</h2><div class="description"><?= nl2br($escape((string) ($product['description'] ?: 'Uma formação preparada para desenvolver novas competências e ampliar suas oportunidades.'))) ?></div>
-   <div class="benefits"><div class="benefit"><strong>Atendimento local</strong><span>Escolha o polo mais conveniente.</span></div><div class="benefit"><strong>Acesso organizado</strong><span>Matrícula integrada ao ambiente do aluno.</span></div><div class="benefit"><strong>Suporte da franquia</strong><span>Acompanhamento durante sua jornada.</span></div></div>
+  <header class="cover"><p class="eyebrow"><?= $escape($kindLabel) ?> · Formação <?= $escape($formationName) ?></p><h1><?= $escape($product['name']) ?></h1><div class="cover-meta"><span><i class="fa-solid <?= $isTrail ? 'fa-route' : 'fa-book-open' ?>"></i> <?= $escape($kindLabel) ?></span><span><i class="fa-solid fa-layer-group"></i> Formação <?= $escape($formationName) ?></span><span><i class="fa-solid fa-laptop"></i> <?= $escape($modality) ?></span><?php if ($moduleCount > 0): ?><span><i class="fa-solid fa-list-check"></i> <?= $moduleCount ?> <?= $isTrail ? 'Módulo(s)' : 'unidade(s)' ?></span><?php endif; ?><?php if ($workload > 0): ?><span><i class="fa-regular fa-clock"></i> <?= $workload ?> horas</span><?php endif; ?><?php if ($rating > 0): ?><span><i class="fa-solid fa-star"></i> <?= number_format($rating, 1, ',', '.') ?><?= $ratingCount > 0 ? ' · ' . $ratingCount . ' avaliação(ões)' : '' ?></span><?php endif; ?></div></header>
+   <div class="body"><h2><?= $escape($detailHeading) ?></h2><div class="description"><?= nl2br($escape((string) ($product['description'] ?: 'Uma formação preparada para desenvolver novas competências e ampliar suas oportunidades.'))) ?></div>
+    <div class="benefits"><div class="benefit"><strong><?= $isTrail ? 'Jornada completa' : 'Conteúdo objetivo' ?></strong><span><?= $isTrail ? 'Módulos organizados em uma sequência de aprendizagem.' : 'Um Módulo focado em uma competência específica.' ?></span></div><div class="benefit"><strong>Acesso no AVA Cursos</strong><span>Matrícula integrada ao ambiente do aluno.</span></div><div class="benefit"><strong>Suporte da franquia</strong><span>Acompanhamento local durante sua jornada.</span></div></div>
    <?php if ($targetAudience !== ''): ?><section class="detail-section"><h2>Para quem é este curso?</h2><p><?= nl2br($escape($targetAudience)) ?></p></section><?php endif; ?>
-   <?php if ($curriculum !== []): ?><section class="detail-section"><h2>Conteúdo programático</h2><ul class="curriculum"><?php foreach ($curriculum as $item): ?><li><i class="fa-regular fa-circle-check"></i> <?= $escape($item) ?></li><?php endforeach; ?></ul></section><?php endif; ?>
+    <?php if ($curriculum !== []): ?><section class="detail-section"><h2><?= $isTrail ? 'Módulos desta Trilha' : 'Conteúdo programático' ?></h2><ul class="curriculum"><?php foreach ($curriculum as $index => $item): ?><li><i class="fa-regular fa-circle-check"></i> <?php if ($isTrail): ?><strong>Módulo <?= $index + 1 ?>:</strong> <?php endif; ?><?= $escape($item) ?></li><?php endforeach; ?></ul></section><?php endif; ?>
    <?php if ($requirements !== '' || $certificateText !== ''): ?><section class="detail-section"><div class="facts"><?php if ($requirements !== ''): ?><div class="fact"><strong><i class="fa-solid fa-list-check"></i> Requisitos</strong><span><?= nl2br($escape($requirements)) ?></span></div><?php endif; ?><?php if ($certificateText !== ''): ?><div class="fact"><strong><i class="fa-solid fa-certificate"></i> Certificado</strong><span><?= nl2br($escape($certificateText)) ?></span></div><?php endif; ?><div class="fact"><strong><i class="fa-solid fa-shield-halved"></i> Compra segura</strong><span>Atendimento e pagamento integrados à franquia.</span></div></div></section><?php endif; ?>
    <?php if ($faq !== []): ?><section class="detail-section"><h2>Perguntas frequentes</h2><div class="faq"><?php foreach ($faq as $item): ?><details><summary><?= $escape($item['question']) ?></summary><?php if ($item['answer'] !== ''): ?><p><?= nl2br($escape($item['answer'])) ?></p><?php endif; ?></details><?php endforeach; ?></div></section><?php endif; ?>
-   <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): $relatedKind=(string)($related['product_kind']??'');$relatedPath=$relatedKind==='provider_content'?'/conteudo/':($relatedKind==='catalog_trail'?'/trilha/':($isExternal?'/catalogo-pro/':'/curso/'));?><a href="<?= $escape($publicBase.$relatedPath) ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
+    <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): $relatedKind=(string)($related['product_kind']??'finance_product');$relatedPath=$relatedKind==='provider_content'?'/conteudo/':($relatedKind==='trail'?'/trilha/':($relatedKind==='provider_course'?'/catalogo-pro/':'/curso/'));?><a href="<?= $escape($publicBase.$relatedPath) ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($relatedKind === 'trail' ? 'Trilha' : 'Módulo') ?> · <?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
   </div>
  </article>
  <aside class="action">
@@ -82,7 +95,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
    <p class="hint">Seus dados e o pagamento serão tratados em ambiente seguro. Após a confirmação, a matrícula seguirá o fluxo definido pela franquia.</p>
   <?php else: ?>
    <?php if($isExternal): ?><span class="price-label">Investimento</span><strong class="price">R$ <?= number_format((float)$product['value'],2,',','.') ?><?php if((int)$product['max_installments']>1): ?><small>em até <?= (int)$product['max_installments'] ?>x</small><?php endif; ?></strong><?php endif; ?>
-   <h2 class="interest-title">Quero receber atendimento</h2><p class="interest-copy"><?= $isTrail?'Esta Trilha reúne '.(int)($product['item_count']??0).' Módulos da Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro pelo AVA Cursos.':($isExternal?'Este Curso individual pertence à Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro ao AVA definido.':'Preencha seus dados. A equipe da franquia receberá seu interesse como um novo lead.') ?></p>
+    <h2 class="interest-title"><?= $isTrail ? 'Quero fazer esta Trilha' : 'Quero fazer este Módulo' ?></h2><p class="interest-copy"><?= $isTrail ? 'A equipe confirmará as condições comerciais, a matrícula e o acesso aos Módulos desta Trilha.' : ($isExternal?'Este Módulo pertence à Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro ao AVA definido.':'Preencha seus dados. A equipe da franquia receberá seu interesse como um novo lead.') ?></p>
    <form method="post" action="<?= $escape($publicBase.$coursePath) ?>/interesse"><?= $csrfField ?><div class="fields">
     <label>Nome completo *<input required maxlength="160" autocomplete="name" name="name"></label>
     <label>E-mail *<input required type="email" maxlength="190" autocomplete="email" name="email"></label>
@@ -90,7 +103,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
     <label>CPF ou CNPJ <input maxlength="18" inputmode="numeric" name="document" placeholder="Opcional nesta etapa"></label>
     <label>Polo de atendimento *<select required name="unit_id"><option value="">Selecione o polo</option><?php foreach ($units as $unit): ?><option value="<?= (int) $unit['id'] ?>"><?= $escape($unit['name']) ?><?= !empty($unit['city']) ? ' · ' . $escape($unit['city']) : '' ?></option><?php endforeach; ?></select></label>
     <label class="privacy"><input required type="checkbox" name="privacy_consent" value="1"><span>Autorizo o uso destes dados para receber atendimento sobre este curso.</span></label>
-    <div class="submit-space"><button class="button" type="submit"><i class="fa-regular fa-paper-plane"></i> Solicitar atendimento</button></div>
+     <div class="submit-space"><button class="button" type="submit"><i class="fa-regular fa-paper-plane"></i> Solicitar matrícula</button></div>
    </div></form>
   <?php endif; ?>
  </aside>
