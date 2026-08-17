@@ -8,6 +8,9 @@ $favicon = (string) ($site['favicon_path'] ?? '');
 $siteTitle = (string) ($site['site_title'] ?: $site['display_name']);
 $seoTitle = (string) ($site['seo_title'] ?: $siteTitle);
 $seoDescription = (string) ($site['seo_description'] ?: $site['hero_text']);
+$siteHost = preg_replace('/[^a-z0-9.-]/i', '', (string) ($site['site_host'] ?? '')) ?: 'mundointer.com.br';
+$canonicalUrl = 'https://' . $siteHost . rtrim((string) $basePath, '/') . '/site';
+$absoluteLogo = $logo === '' ? '' : (preg_match('#^https?://#i', $logo) === 1 ? $logo : 'https://' . $siteHost . '/' . ltrim($assetBasePath . $logo, '/'));
 $templateKey = in_array((string) ($site['template_key'] ?? 'modern'), ['modern', 'classic', 'minimal'], true) ? (string) $site['template_key'] : 'modern';
 $store = ($site['selected_mode'] ?? 'catalog') === 'store';
 $publicBase = rtrim((string) $basePath, '/') . '/site';
@@ -55,10 +58,9 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
  <meta name="viewport" content="width=device-width,initial-scale=1">
  <title><?= $escape($siteTitle) ?></title>
  <meta name="description" content="<?= $escape($seoDescription) ?>">
- <meta property="og:title" content="<?= $escape($seoTitle) ?>">
- <meta property="og:description" content="<?= $escape($seoDescription) ?>">
- <meta name="twitter:title" content="<?= $escape($seoTitle) ?>">
- <meta name="twitter:description" content="<?= $escape($seoDescription) ?>">
+ <meta property="og:type" content="website"><meta property="og:url" content="<?= $escape($canonicalUrl) ?>"><meta property="og:title" content="<?= $escape($seoTitle) ?>"><meta property="og:description" content="<?= $escape($seoDescription) ?>"><?php if ($absoluteLogo !== ''): ?><meta property="og:image" content="<?= $escape($absoluteLogo) ?>"><?php endif; ?>
+ <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="<?= $escape($seoTitle) ?>"><meta name="twitter:description" content="<?= $escape($seoDescription) ?>">
+ <link rel="canonical" href="<?= $escape($canonicalUrl) ?>">
  <?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?>
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css">
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/solid.min.css">
@@ -96,7 +98,7 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
  <style>.course{overflow:hidden}.course-media{width:calc(100% + 2.7rem);height:10.5rem;margin:-1.35rem -1.35rem .2rem;object-fit:cover;background:linear-gradient(135deg,var(--secondary),color-mix(in srgb,var(--secondary) 70%,var(--primary)))}</style>
 <style>.catalog-band{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1rem 1.1rem;border:1px solid color-mix(in srgb,var(--primary) 24%,var(--line));border-radius:1rem;background:linear-gradient(120deg,color-mix(in srgb,var(--primary) 7%,#fff),#fff)}.catalog-band-icon{display:grid;place-items:center;width:3rem;height:3rem;flex:0 0 3rem;border-radius:.85rem;color:#fff;background:var(--primary);font-size:1.2rem}.catalog-band strong,.catalog-band small{display:block}.catalog-band small{margin-top:.2rem;color:var(--muted);line-height:1.45}</style>
 </head>
-<body class="site-template-<?= $escape($templateKey) ?><?= $previewDevice === 'mobile' ? ' site-preview-mobile' : '' ?>" data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="page_view" data-site-entity-type="site" data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>">
+<body class="site-template-<?= $escape($templateKey) ?><?= $previewDevice === 'mobile' ? ' site-preview-mobile' : '' ?>" data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="page_view" data-site-entity-type="site" data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-ga4="<?= $escape($ga4Id ?? '') ?>">
 <?php if ($socialBarEnabled && ($socialLinks !== [] || $searchEnabled)): ?>
 <div class="utility"><div class="shell utility-row"><nav class="socials" aria-label="Redes sociais"><?php foreach ($socialLinks as $social): ?><a class="social-link" href="<?= $escape($social['url']) ?>" <?= str_starts_with($social['url'], 'http') ? 'target="_blank" rel="noopener"' : '' ?> title="<?= $escape($social['label']) ?>" aria-label="<?= $escape($social['label']) ?>"><i class="<?= $escape($social['icon']) ?>"></i></a><?php endforeach; ?></nav><div class="utility-actions"><?php if ($searchEnabled): ?><button class="utility-button" type="button" data-site-search-open aria-label="Pesquisar no site" title="Pesquisar"><i class="fa-solid fa-magnifying-glass"></i></button><?php endif; ?></div></div></div>
 <?php endif; ?>
@@ -167,6 +169,6 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
 <?php if ($privacyPolicy !== ''): ?><dialog class="legal-dialog" id="privacy-dialog"><header class="search-head"><div><small>LGPD</small><h2>Política de privacidade</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($privacyPolicy)) ?></div></dialog><?php endif; ?>
 <?php if ($termsText !== ''): ?><dialog class="legal-dialog" id="terms-dialog"><header class="search-head"><div><small>Regras do site</small><h2>Termos de uso</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($termsText)) ?></div></dialog><?php endif; ?>
 <?php if ($cookieBannerEnabled): ?><aside class="cookie-consent" data-cookie-banner hidden><div class="cookie-row"><div class="cookie-copy"><strong>Privacidade e cookies</strong><p><?= $escape($cookieNotice !== '' ? $cookieNotice : 'Usamos cookies essenciais para o funcionamento do site e, com sua autorização, métricas para melhorar sua experiência.') ?></p></div><div class="cookie-actions"><button type="button" data-cookie-essential>Somente essenciais</button><button class="accept" type="button" data-cookie-accept>Aceitar métricas</button></div></div></aside><?php endif; ?>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=6" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=7" defer></script>
 </body>
 </html>

@@ -67,6 +67,7 @@ Comandos disponíveis:
   ava-courses:process  Processa a fila automática de criação de cursos no AVA
   ava-courses:link-catalog  Vincula itens pendentes da Loja MASTER a cursos individuais (sem tocar o AVA)
   catalog-ai:complete  Preenche textos e capas pendentes da Loja MASTER com IA (lote de 25 por execução)
+  catalog:release-ready  Libera cursos prontos da Loja MASTER em lotes (texto IA, capa, carga e preço)
 
 TEXT);
         exit(0);
@@ -157,6 +158,21 @@ TEXT);
         if($lock===false||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('A sincronização pedagógica já está em execução.');
         try{$database=$connection->pdo();$cipher=new SecretCipher((string)$config->get('app.encryption_key'));$settings=(new MoodleIntegrationRepository($database,$cipher))->settings();$client=new MoodleClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']);$repository=new MoodleRepository($database);$connections=new AvaConnectionRepository($database,$cipher);$unitIds=array_map('intval',$database->query('SELECT id FROM units WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN));$result=(new PedagogicalSynchronizer($client,$repository,$connections))->sync($unitIds,300);fwrite(STDOUT,sprintf("Acompanhamento atualizado: %d matrícula(s); falhas: %d.\n",$result['updated'],$result['failed']));if($result['last_error']!==null)fwrite(STDERR,"Última falha: ".$result['last_error']."\n");exit($result['updated']===0&&$result['failed']>0?1:0);}
         finally{flock($lock,LOCK_UN);fclose($lock);}
+    }
+
+    if ($command === 'catalog:release-ready') {
+        $database = $connection->pdo();
+        $cipher = new SecretCipher((string) $config->get('app.encryption_key'));
+        $providers = new CourseProviderRepository($database, $cipher);
+        $limit = max(1, min(100, (int) ($argv[2] ?? 25)));
+        $dryRun = in_array('--dry-run', $argv, true);
+        $result = $providers->releaseReadyCourses('iesde', $limit, $dryRun, null);
+        if ($dryRun) {
+            fwrite(STDOUT, sprintf("Prontos para liberação (qualidade mínima): %d. Nenhum item foi alterado.\n", $result['ready']));
+        } else {
+            fwrite(STDOUT, sprintf("Liberados com qualidade mínima: %d de %d prontos no lote.\n", $result['released'], $result['ready']));
+        }
+        exit(0);
     }
 
     if ($command === 'site:recoveries:sync') {

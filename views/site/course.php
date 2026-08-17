@@ -71,7 +71,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['@graph'][0]['aggregateRati
  </style>
  <?php if ($coverUrl !== ''): ?><style>.cover{position:relative;isolation:isolate;background-image:url('<?= $escape($coverUrl) ?>');background-position:center;background-size:cover}.cover:before{content:"";position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgb(4 14 28 / 92%),rgb(4 14 28 / 38%))}</style><?php endif; ?>
 </head>
-<body data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="course_view" data-site-entity-type="course" data-site-entity-id="<?= (int) $product['id'] ?>">
+<body data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="course_view" data-site-entity-type="course" data-site-entity-id="<?= (int) $product['id'] ?>" data-site-ga4="<?= $escape($ga4Id ?? '') ?>">
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <header class="top"><nav class="shell nav"><a class="brand" href="<?= $escape($publicBase) ?>"><?php if ($logo !== ''): ?><img src="<?= $escape($assetBasePath . $logo) ?>" alt="<?= $escape($siteTitle) ?>"><?php else: ?><?= $escape($siteTitle) ?><?php endif; ?></a><a class="back" href="<?= $escape($publicBase) ?>#cursos"><i class="fa-solid fa-arrow-left"></i> Voltar aos cursos</a></nav></header>
 <main class="shell course-layout" id="conteudo">

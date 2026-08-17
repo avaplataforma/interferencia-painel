@@ -1767,6 +1767,21 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     assertTrue(str_contains($routes,"'module_access_months'=>"));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000010_add_access_months_to_catalog_policy.php'));
+    assertTrue(str_contains($routes,"'ga4Id'=>"));
+    $publicView=(string)file_get_contents($rootPath.'/views/site/public.php');
+    assertTrue(str_contains($publicView,'og:url'));
+    assertTrue(str_contains($publicView,'rel="canonical"'));
+    assertTrue(str_contains($publicView,'data-site-ga4'));
+    assertTrue(str_contains($courseView,'data-site-ga4'));
+    $siteJs=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
+    assertTrue(str_contains($siteJs,'data-site-ga4-script'));
+    assertTrue(str_contains($siteJs,"window.gtag('config', ga4Id)"));
+    $appConfig=(string)file_get_contents($rootPath.'/config/app.php');
+    assertTrue(str_contains($appConfig,"'analytics_ga4_id'"));
+    assertTrue(str_contains($catalogRepo,'function releaseReadyCourses'));
+    assertTrue(str_contains($catalogRepo,"course.release_status NOT IN ('released','published')"));
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+    assertTrue(str_contains($console,'catalog:release-ready'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

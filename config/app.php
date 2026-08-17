@@ -25,5 +25,6 @@ return [
     'asaas_webhook_token' => getenv('ASAAS_WEBHOOK_TOKEN') ?: '',
     'asaas_payments_write_enabled' => filter_var(getenv('ASAAS_PAYMENTS_WRITE_ENABLED') ?: false, FILTER_VALIDATE_BOOL),
     'ava_auto_release_from' => getenv('AVA_AUTO_RELEASE_FROM') ?: '',
+    'analytics_ga4_id' => getenv('GA4_ID') ?: '',
     'encryption_key' => getenv('APP_ENCRYPTION_KEY') ?: '',
 ];

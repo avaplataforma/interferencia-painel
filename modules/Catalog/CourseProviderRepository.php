@@ -1328,6 +1328,20 @@ final readonly class CourseProviderRepository
         return $affected;
     }
 
+    /** Libera em lote apenas cursos com qualidade mínima: texto IA, capa, carga horária e oferta com preço. */
+    public function releaseReadyCourses(string $providerCode, int $limit, bool $dryRun, ?int $userId): array
+    {
+        $limit = max(1, min(100, $limit));
+        $statement = $this->database->prepare("SELECT course.id FROM provider_courses course INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id WHERE provider.provider_code=:provider AND course.review_status='approved' AND course.release_status NOT IN ('released','published') AND course.is_available=1 AND TRIM(COALESCE(course.commercial_summary,''))<>'' AND TRIM(COALESCE(course.commercial_description,''))<>'' AND (EXISTS(SELECT 1 FROM catalog_media_assets cover WHERE cover.entity_type='course' AND cover.entity_id=course.id AND cover.purpose='cover' AND cover.generation_status='ready') OR TRIM(COALESCE(course.commercial_cover_url,''))<>'' OR TRIM(COALESCE(course.cover_url,''))<>'') AND CAST(COALESCE(NULLIF(course.commercial_workload,''),course.workload,catalog.central_default_module_workload) AS DECIMAL(10,1))>0 AND EXISTS(SELECT 1 FROM organization_provider_course_offers offer WHERE offer.provider_course_id=course.id AND offer.is_active=1 AND offer.is_visible=1 AND offer.price>=5) ORDER BY course.id LIMIT :limit");
+        $statement->execute(['provider' => $providerCode, 'limit' => $limit]);
+        $ids = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: []);
+        if ($dryRun || $ids === []) return ['ready' => count($ids), 'released' => 0];
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $update = $this->database->prepare("UPDATE provider_courses course SET course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW() WHERE course.id IN ({$placeholders})");
+        $update->execute(array_merge([$userId], $ids));
+        return ['ready' => count($ids), 'released' => $update->rowCount()];
+    }
+
     public function setOrganizationItemAvailability(int $organizationId, string $itemType, int $itemId, bool $enabled, ?int $userId): void
     {
         if (!in_array($itemType, ['course', 'content'], true)) throw new RuntimeException('Tipo de item do catálogo inválido.');

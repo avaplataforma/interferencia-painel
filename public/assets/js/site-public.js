@@ -168,4 +168,22 @@
       if (Date.now() - last > repeat) window.setTimeout(() => { open(); localStorage.setItem(storageKey, String(Date.now())); }, delay);
     }
   }
+
+  const ga4Id = body.dataset.siteGa4 || '';
+  if (ga4Id) {
+    const loadGa4 = () => {
+      if (document.querySelector('script[data-site-ga4-script]')) return;
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function gtag() { window.dataLayer.push(arguments); };
+      window.gtag('js', new Date());
+      window.gtag('config', ga4Id);
+      const script = document.createElement('script');
+      script.dataset.siteGa4Script = '1';
+      script.async = true;
+      script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga4Id)}`;
+      document.head.append(script);
+    };
+    if (metricsAllowed()) loadGa4();
+    document.querySelectorAll('[data-cookie-accept]').forEach((button) => button.addEventListener('click', loadGa4));
+  }
 })();
