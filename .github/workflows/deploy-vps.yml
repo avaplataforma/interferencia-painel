@@ -52,6 +52,11 @@ jobs:
             chmod -R a+rX "$repo/automation/.playwright-browsers"
           fi
 
+          # A publicação LTI pode levar alguns minutos. Ela roda fora da
+          # requisição web para não depender do limite de espera do Cloudflare.
+          cron_line="* * * * * cd $repo && php bin/console ava-courses:process 2 >> /tmp/mundointer-ava-course-worker.log 2>&1"
+          (crontab -l 2>/dev/null | grep -Fv 'bin/console ava-courses:process' || true; echo "$cron_line") | crontab -
+
           after="$(git -C "$repo" rev-parse --short HEAD)"
           echo "Publicação concluída: $before -> $after"
           REMOTE
