@@ -46,7 +46,7 @@ $old = is_array($old ?? null) ? $old : [];
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail('Informe um e-mail válido.');
     if (document.length !== 11 && document.length !== 14) return fail('Informe um CPF ou CNPJ válido.');
     if (mobile.length < 10 || mobile.length > 11) return fail('Informe um celular válido com DDD.');
-    if (phone !== '' && (phone.length < 10 || phone.length > 11)) return fail('Informe um telefone válido com DDD.');
+    if (phone !== '' && phone.length !== 10) return fail('Telefone fixo: informe 10 dígitos com DDD ou deixe vazio.');
     if (postal.length !== 8) return fail('Informe um CEP válido com 8 dígitos.');
     if (address.length < 2) return fail('Informe o endereço.');
     if (number === '') return fail('Informe o número.');
