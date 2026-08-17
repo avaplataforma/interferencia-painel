@@ -1012,6 +1012,148 @@ final readonly class CourseProviderRepository
         }
     }
 
+    /**
+     * Links pending commercial catalog items to individual courses without
+     * touching the AVA. The Moodle course is created later, on demand, at the
+     * first enrollment or through the manual "Sincronizar com o AVA" action.
+     *
+     * Items whose normalized title repeats inside the catalog stay pending for
+     * manual curation: they may be distinct disciplines that only share a name.
+     *
+     * @return array{total_pending:int,linked:int,created:int,skipped_duplicates:int,skipped_ambiguous:int}
+     */
+    public function linkPendingCommercialItems(string $providerCode, ?int $userId): array
+    {
+        $result = ['total_pending' => 0, 'linked' => 0, 'created' => 0, 'skipped_duplicates' => 0, 'skipped_ambiguous' => 0];
+
+        $provider = $this->database->prepare("SELECT id,catalog_id FROM course_provider_integrations WHERE provider_code=:code AND is_active=1 LIMIT 1");
+        $provider->execute(['code' => $providerCode]);
+        $providerRow = $provider->fetch();
+        if (! is_array($providerRow)) throw new RuntimeException('Integração do fornecedor não encontrada.');
+        $providerId = (int) $providerRow['id'];
+        $catalogId = (int) ($providerRow['catalog_id'] ?? 0);
+        if ($catalogId < 1) throw new RuntimeException('Catálogo do fornecedor não encontrado.');
+
+        $items = $this->database->query(
+            "SELECT * FROM provider_commercial_catalog_items
+             WHERE provider_id={$providerId} AND is_available=1 AND sync_status='pending_lti' AND provider_course_id IS NULL
+             ORDER BY id"
+        )->fetchAll();
+        $result['total_pending'] = count($items);
+
+        $groups = [];
+        foreach ($items as $item) {
+            $key = $this->catalogTitleKey((string) $item['title']);
+            if ($key === '') continue;
+            $groups[$key][] = $item;
+        }
+
+        $activeCourses = $this->database->query(
+            "SELECT id,name FROM provider_courses WHERE provider_id={$providerId} AND is_available=1"
+        )->fetchAll();
+
+        $now = date('Y-m-d H:i:s');
+        $this->database->beginTransaction();
+        try {
+            foreach ($groups as $titleKey => $group) {
+                if (count($group) > 1) {
+                    $result['skipped_duplicates'] += count($group);
+                    continue;
+                }
+                $item = $group[0];
+
+                $courseId = 0;
+                $ambiguous = false;
+                foreach ($activeCourses as $course) {
+                    if ($this->catalogTitleKey((string) $course['name']) !== $titleKey) continue;
+                    if ($courseId > 0) { $ambiguous = true; break; }
+                    $courseId = (int) $course['id'];
+                }
+                if ($ambiguous) {
+                    $result['skipped_ambiguous']++;
+                    continue;
+                }
+
+                if ($courseId === 0) {
+                    $courseId = $this->createCourseFromCommercialItem($providerId, $catalogId, $item, $now);
+                    $activeCourses[] = ['id' => $courseId, 'name' => (string) $item['title']];
+                    $result['created']++;
+                }
+
+                $this->database->prepare("UPDATE provider_commercial_catalog_items SET provider_course_id=:course,sync_status='linked' WHERE id=:id")
+                    ->execute(['course' => $courseId, 'id' => (int) $item['id']]);
+                $this->applyCommercialCatalogCurationToCourse((int) $item['id'], $courseId);
+                $result['linked']++;
+            }
+            $this->database->commit();
+        } catch (\Throwable $exception) {
+            $this->database->rollBack();
+            throw $exception;
+        }
+
+        return $result;
+    }
+
+    private function createCourseFromCommercialItem(int $providerId, int $catalogId, array $item, string $now): int
+    {
+        $name = PortugueseCourseTitle::format((string) $item['title']);
+        if (trim($name) === '') $name = trim((string) $item['title']);
+        $slug = $this->uniqueCourseSlug($this->slug($name) !== '' ? $this->slug($name) : 'curso');
+
+        $external = trim((string) ($item['external_id'] ?? ''));
+        $externalKey = $external !== '' ? hash('sha256', 'commercial:' . $external) : hash('sha256', 'commercial:' . $slug . ':' . (string) $item['id']);
+        $rawPayload = trim((string) ($item['raw_payload'] ?? ''));
+        $contentHash = hash('sha256', 'commercial:' . $external . '|' . (string) $item['title'] . '|' . (string) $item['content_hash']);
+
+        $statement = $this->database->prepare("INSERT INTO provider_courses(
+                provider_id,catalog_id,external_key,remote_id,name,slug,short_description,description,category,
+                workload,certificate,access_type,supplier_updated_at,lesson_count,cover_url,
+                remote_reference_price,remote_promotional_price,remote_installments,remote_status,
+                is_available,raw_payload,content_hash,sync_state,last_changed_at,first_seen_at,last_seen_at)
+            VALUES(
+                :provider,:catalog,:external,:remote,:name,:slug,:summary,:description,:category,
+                NULL,NULL,'LTI 1.3',NULL,:lessons,:cover,
+                NULL,NULL,NULL,NULL,
+                1,:raw,:hash,'new',:now,:now,:now)");
+        $statement->execute([
+            'provider' => $providerId,
+            'catalog' => $catalogId,
+            'external' => $externalKey,
+            'remote' => $external !== '' ? $external : null,
+            'name' => $name,
+            'slug' => $slug,
+            'summary' => $this->nullIfEmpty((string) ($item['summary'] ?? '')),
+            'description' => $this->nullIfEmpty((string) ($item['description'] ?? '')),
+            'category' => $this->nullIfEmpty((string) ($item['category'] ?? '')),
+            'lessons' => max(0, (int) ($item['resources_count'] ?? 0)),
+            'cover' => $this->nullIfEmpty((string) ($item['cover_url'] ?? '')),
+            'raw' => $rawPayload !== '' ? $rawPayload : null,
+            'hash' => $contentHash,
+            'now' => $now,
+        ]);
+
+        return (int) $this->database->lastInsertId();
+    }
+
+    private function uniqueCourseSlug(string $base): string
+    {
+        $candidate = $base;
+        $suffix = 2;
+        while (true) {
+            $statement = $this->database->prepare('SELECT COUNT(*) FROM provider_courses WHERE slug=:slug');
+            $statement->execute(['slug' => $candidate]);
+            if ((int) $statement->fetchColumn() === 0) return $candidate;
+            $candidate = $base . '-' . $suffix;
+            $suffix++;
+        }
+    }
+
+    private function nullIfEmpty(string $value): ?string
+    {
+        $value = trim($value);
+        return $value === '' ? null : $value;
+    }
+
     private function applyCommercialCatalogCurationToCourse(int $itemId, int $courseId): void
     {
         $statement = $this->database->prepare('SELECT * FROM provider_commercial_catalog_items WHERE id=:id LIMIT 1');

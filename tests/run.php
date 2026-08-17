@@ -2722,6 +2722,23 @@ $tests['agenda publicacao MASTER pela fila sem depender de metodo removido'] = s
     assertTrue(!str_contains($service,'organizations WHERE is_active=1'));
 };
 
+$tests['vincula itens pendentes da Loja MASTER sem criar cursos no AVA'] = static function () use ($rootPath): void {
+    $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+    assertTrue(str_contains($repository,'public function linkPendingCommercialItems'));
+    assertTrue(str_contains($repository,"sync_status='pending_lti' AND provider_course_id IS NULL"));
+    assertTrue(str_contains($repository,'skipped_duplicates'));
+    assertTrue(str_contains($repository,'skipped_ambiguous'));
+    assertTrue(str_contains($repository,'function createCourseFromCommercialItem'));
+    assertTrue(str_contains($repository,'PortugueseCourseTitle::format'));
+    assertTrue(str_contains($repository,'function uniqueCourseSlug'));
+    assertTrue(str_contains($repository,"'commercial:' . \$external"));
+    assertTrue(str_contains($repository,'applyCommercialCatalogCurationToCourse((int) $item'));
+    assertTrue(str_contains($console,'ava-courses:link-catalog'));
+    assertTrue(str_contains($console,'Nenhum curso foi criado no AVA.'));
+    assertTrue(str_contains($console,'--dry-run'));
+};
+
 $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');

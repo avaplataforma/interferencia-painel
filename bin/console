@@ -64,6 +64,7 @@ Comandos disponíveis:
   site:recoveries:sync  Atualiza alertas e follow-ups de checkouts abandonados
   catalog-images:process  Gera capas pendentes e salva a versão final no Spaces
   ava-courses:process  Processa a fila automática de criação de cursos no AVA
+  ava-courses:link-catalog  Vincula itens pendentes da Loja MASTER a cursos individuais (sem tocar o AVA)
 
 TEXT);
         exit(0);
@@ -199,6 +200,27 @@ TEXT);
             fwrite(STDOUT,sprintf("Fila do AVA: %d encontrado(s), %d processado(s), %d concluído(s), %d falha(s), %d exigindo intervenção.\n",$result['discovered'],$result['processed'],$result['completed'],$result['failed'],$result['exhausted']));
             exit(0);
         }finally{flock($lock,LOCK_UN);fclose($lock);}
+    }
+
+    if ($command === 'ava-courses:link-catalog') {
+        $database = $connection->pdo();
+        $cipher = new SecretCipher((string) $config->get('app.encryption_key'));
+        $providers = new CourseProviderRepository($database, $cipher);
+        if (in_array('--dry-run', $argv, true)) {
+            $pending = $database->query("SELECT COUNT(*) FROM provider_commercial_catalog_items WHERE provider_id=4 AND is_available=1 AND sync_status='pending_lti' AND provider_course_id IS NULL")->fetchColumn();
+            fwrite(STDOUT, sprintf("Catálogo MASTER: %d item(ns) pendente(s) de vínculo. Nenhum item foi alterado.\n", (int) $pending));
+            exit(0);
+        }
+        $result = $providers->linkPendingCommercialItems('iesde', null);
+        fwrite(STDOUT, sprintf(
+            "Catálogo MASTER vinculado: %d pendente(s), %d vinculado(s), %d curso(s) criado(s) no painel, %d pulado(s) por nome duplicado, %d pulado(s) por ambiguidade. Nenhum curso foi criado no AVA.\n",
+            $result['total_pending'],
+            $result['linked'],
+            $result['created'],
+            $result['skipped_duplicates'],
+            $result['skipped_ambiguous'],
+        ));
+        exit(0);
     }
 
     $migrator = new Migrator(
