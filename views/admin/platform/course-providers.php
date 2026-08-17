@@ -72,29 +72,6 @@ $tabLabel=static function(string $name):string{
  <div><p class="eyebrow">ADM Central · Integrações</p><h1>Fornecedores/Catálogos</h1><p>Cada fornecedor concentra suas credenciais, Cursos individuais e Trilhas de origem. Pacotes próprios que combinam fornecedores ficam separados nas Trilhas Mundo Inter.</p></div>
  <div class="page-actions"><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/catalog-trails"><i class="fa-solid fa-route"></i> Trilhas Mundo Inter</a><a class="btn btn-secondary" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-arrow-left"></i> Voltar</a></div>
 </div>
-<script>
-if (!window.__masterCourseDetailTabsBound) {
- window.__masterCourseDetailTabsBound = true;
- document.addEventListener('click', function (event) {
-  const tab = event.target.closest('[data-master-course-section]');
-  if (!tab) return;
-
-  const detail = tab.closest('[data-master-course-detail]');
-  if (!detail) return;
-
-  event.preventDefault();
-  const section = tab.getAttribute('data-master-course-section') || 'curation';
-  detail.querySelectorAll('[data-master-course-section]').forEach(function (item) {
-   const active = item.getAttribute('data-master-course-section') === section;
-   item.classList.toggle('is-active', active);
-   item.setAttribute('aria-selected', active ? 'true' : 'false');
-  });
-  detail.querySelectorAll('[data-master-course-panel]').forEach(function (panel) {
-   panel.hidden = panel.getAttribute('data-master-course-panel') !== section;
-  });
- }, true);
-}
-</script>
 <?php if(!empty($message)):?><div class="alert alert-success"><?= $escape($message) ?></div><?php endif;?>
 <?php if(!empty($error)):?><div class="alert alert-danger"><?= $escape($error) ?></div><?php endif;?>
 <?php if(!$encryptionReady):?><div class="alert alert-warning"><strong>Proteção pendente:</strong> configure a chave-mestra antes de salvar credenciais.</div><?php endif;?>
