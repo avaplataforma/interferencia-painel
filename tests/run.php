@@ -1738,8 +1738,15 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($courseView,'Sobre este Curso'));
     assertTrue(str_contains($courseView,'Quero fazer este Curso'));
     assertTrue(str_contains($courseView,'Cursos desta Trilha'));
-    assertTrue(str_contains($courseView,'Aula(s)'));
+    assertTrue(str_contains($courseView,'Carga Horária:'));
+    assertTrue(str_contains($courseView,'Acesso por'));
+    assertTrue(str_contains($courseView,'fa-calendar-check'));
+    assertTrue(!str_contains($courseView,'fa-layer-group'));
     assertTrue(!str_contains($courseView,'unidade(s)'));
+    assertTrue(str_contains($courseView,'total R$ '));
+    assertTrue(str_contains($courseView,'round($priceValue/$installments,2)'));
+    assertTrue(str_contains($public,'total R$ '));
+    assertTrue(str_contains($public,'round($priceValue/$installments,2)'));
     assertTrue(str_contains($courseView,'Certificação'));
     assertTrue(str_contains($courseView,'fa-award'));
     assertTrue(str_contains($courseView,'fa-headset'));
@@ -1747,6 +1754,19 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(!str_contains($courseView,'Sobre este Módulo'));
     assertTrue(!str_contains($courseView,'Módulos desta Trilha'));
     assertTrue(!str_contains($courseView,'fa-laptop'));
+    $policyView=(string)file_get_contents($rootPath.'/views/admin/platform/_catalog-commercial-policy.php');
+    assertTrue(str_contains($policyView,'Tempo de acesso (meses)'));
+    assertTrue(str_contains($policyView,'module_access_months'));
+    assertTrue(str_contains($policyView,'trail_access_months'));
+    $catalogRepo=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
+    assertTrue(str_contains($catalogRepo,'central_default_module_access_months=:module_access'));
+    assertTrue(str_contains($catalogRepo,'central_default_trail_access_months=:trail_access'));
+    $siteRepo=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    assertTrue(str_contains($siteRepo,'COALESCE(catalog.central_default_module_access_months,3) access_months'));
+    assertTrue(str_contains($siteRepo,'central_default_trail_access_months,12)'));
+    $routes=(string)file_get_contents($rootPath.'/routes/web.php');
+    assertTrue(str_contains($routes,"'module_access_months'=>"));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000010_add_access_months_to_catalog_policy.php'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

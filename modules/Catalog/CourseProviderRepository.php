@@ -1878,6 +1878,10 @@ final readonly class CourseProviderRepository
         $trailWorkload = $trailWorkloadInput === '' ? null : round((float)str_replace(',', '.', preg_replace('/[^0-9,.]/', '', $trailWorkloadInput) ?? ''), 2);
         $moduleInstallments = max(1, min(60, (int)($input['module_max_installments'] ?? 1)));
         $trailInstallments = max(1, min(60, (int)($input['trail_max_installments'] ?? 1)));
+        $moduleAccessInput = trim((string)($input['module_access_months'] ?? ''));
+        $trailAccessInput = trim((string)($input['trail_access_months'] ?? ''));
+        $moduleAccess = $moduleAccessInput === '' ? null : max(1, min(120, (int) $moduleAccessInput));
+        $trailAccess = $trailAccessInput === '' ? null : max(1, min(120, (int) $trailAccessInput));
         $validFrom = $this->dateOrNull((string)($input['valid_from'] ?? ''));
         $validUntil = $this->dateOrNull((string)($input['valid_until'] ?? ''));
         if ($defaultPrice !== null && $defaultPrice <= 0) throw new RuntimeException('O preço padrão deve ser maior que zero.');
@@ -1886,12 +1890,14 @@ final readonly class CourseProviderRepository
         if ($trailWorkload !== null && $trailWorkload <= 0) throw new RuntimeException('A carga horária padrão das Trilhas deve ser maior que zero.');
         if ($validFrom !== null && $validUntil !== null && $validUntil < $validFrom) throw new RuntimeException('A validade final não pode ser anterior ao início.');
 
-        $statement = $this->database->prepare('UPDATE course_catalogs SET central_default_price=:default_price,central_trail_default_price=:trail_default_price,central_default_module_workload=:module_workload,central_default_trail_workload=:trail_workload,central_markup_percent=0,central_default_max_installments=:module_installments,central_trail_default_max_installments=:trail_installments,central_valid_from=:valid_from,central_valid_until=:valid_until,allow_franchise_commercial_override=:allow_override,allow_franchise_price_override=:allow_price_override,allow_franchise_installment_override=:allow_installment_override,allow_franchise_visibility_override=:allow_visibility_override,commercial_policy_updated_by=:user,commercial_policy_updated_at=NOW() WHERE id=:id');
+        $statement = $this->database->prepare('UPDATE course_catalogs SET central_default_price=:default_price,central_trail_default_price=:trail_default_price,central_default_module_workload=:module_workload,central_default_trail_workload=:trail_workload,central_default_module_access_months=:module_access,central_default_trail_access_months=:trail_access,central_markup_percent=0,central_default_max_installments=:module_installments,central_trail_default_max_installments=:trail_installments,central_valid_from=:valid_from,central_valid_until=:valid_until,allow_franchise_commercial_override=:allow_override,allow_franchise_price_override=:allow_price_override,allow_franchise_installment_override=:allow_installment_override,allow_franchise_visibility_override=:allow_visibility_override,commercial_policy_updated_by=:user,commercial_policy_updated_at=NOW() WHERE id=:id');
         $statement->execute([
             'default_price' => $defaultPrice,
             'trail_default_price' => $trailDefaultPrice,
             'module_workload' => $moduleWorkload,
             'trail_workload' => $trailWorkload,
+            'module_access' => $moduleAccess,
+            'trail_access' => $trailAccess,
             'module_installments' => $moduleInstallments,
             'trail_installments' => $trailInstallments,
             'valid_from' => $validFrom,

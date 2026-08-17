@@ -140,7 +140,7 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
          <p class="course-description"><?= $escape($product['description'] ?? 'Formação disponível nesta trilha.') ?></p>
         <div class="course-bottom">
          <?php if($isTrail): ?><span class="provider-course-note"><i class="fa-solid fa-list-check"></i><span>Trilha completa com <?= (int)($product['lesson_count']??0) ?> Curso(s) no AVA Cursos.</span></span><?php elseif($isContent): ?><span class="provider-course-note"><i class="fa-solid fa-play"></i><span>Curso com acesso à unidade contratada.</span></span><?php endif; ?>
-         <span class="course-price">R$ <?= number_format((float)$product['value'],2,',','.') ?><?php if ((int)$product['max_installments']>1): ?><small>em até <?= (int)$product['max_installments'] ?>x</small><?php endif; ?></span>
+         <span class="course-price"><?php $priceValue=(float)$product['value'];$installments=max(1,(int)($product['max_installments']??1));$displayPrice=$installments>1?round($priceValue/$installments,2):$priceValue;?>R$ <?= number_format($displayPrice,2,',','.') ?><?php if($installments>1): ?><small>em até <?= $installments ?>x · total R$ <?= number_format($priceValue,2,',','.') ?></small><?php endif; ?></span>
          <a class="button" data-site-offer="<?= $escape($product['offer_key']) ?>" data-offer-kind="<?= $escape($kind) ?>" data-offer-id="<?= (int)$product['id'] ?>" href="<?= $escape($publicBase.(string)$product['detail_path']) ?>"><?= $buttonLabel ?></a>
         </div>
       </article>
