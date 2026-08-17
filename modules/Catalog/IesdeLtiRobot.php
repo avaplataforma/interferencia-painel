@@ -159,11 +159,14 @@ final readonly class IesdeLtiRobot
         if (!is_file($script)) throw new RuntimeException('O executor automático MASTER não está instalado na VPS.');
         $command = ['node', $script];
         $pipes = [];
+        $environment = getenv();
+        if (!is_array($environment)) $environment = [];
+        $environment['PLAYWRIGHT_BROWSERS_PATH'] = $this->rootPath . '/automation/.playwright-browsers';
         $process = proc_open($command, [
             0 => ['pipe', 'r'],
             1 => ['pipe', 'w'],
             2 => ['pipe', 'w'],
-        ], $pipes, $this->rootPath);
+        ], $pipes, $this->rootPath, $environment);
         if (!is_resource($process)) throw new RuntimeException('Não foi possível iniciar o robô MASTER.');
 
         fwrite($pipes[0], json_encode(['login_url' => $loginUrl, 'course_name' => $sourceName], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -252,4 +255,3 @@ final readonly class IesdeLtiRobot
         return false;
     }
 }
-
