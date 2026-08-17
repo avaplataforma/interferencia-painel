@@ -1162,21 +1162,19 @@ final readonly class CourseProviderRepository
         $statement->execute(['id' => $itemId]);
         $item = $statement->fetch();
         if (!is_array($item)) return;
-        $review = (string)($item['review_status'] ?? 'imported');
-        $release = (int)($item['is_globally_enabled'] ?? 1) === 1 && $review === 'approved' ? 'released' : 'private';
-        $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments),review_status=:review,release_status=:release,is_globally_enabled=:enabled,reviewed_by=:reviewed_by,reviewed_at=:reviewed_at WHERE id=:course")->execute([
+        $commercialCategory = trim((string)($item['commercial_category'] ?? ''));
+        if ($commercialCategory === '') {
+            $commercialCategory = trim((string)($item['subcategory'] ?? ''));
+            if ($commercialCategory === '') $commercialCategory = trim((string)($item['category'] ?? ''));
+        }
+        $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments) WHERE id=:course")->execute([
             'name' => trim((string)($item['commercial_name'] ?? '')),
             'summary' => trim((string)($item['commercial_summary'] ?? '')),
             'description' => trim((string)($item['commercial_description'] ?? '')),
-            'category' => trim((string)($item['commercial_category'] ?? '')),
+            'category' => $commercialCategory,
             'cover' => trim((string)($item['cover_url'] ?? '')),
             'price' => $item['default_price'] ?? null,
             'installments' => $item['max_installments'] ?? null,
-            'review' => $review,
-            'release' => $release,
-            'enabled' => (int)($item['is_globally_enabled'] ?? 1),
-            'reviewed_by' => $item['reviewed_by'] ?? null,
-            'reviewed_at' => $item['reviewed_at'] ?? null,
             'course' => $courseId,
         ]);
     }

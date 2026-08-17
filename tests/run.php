@@ -1884,6 +1884,13 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     $htaccess=(string)file_get_contents($rootPath.'/public/.htaccess');
     assertTrue(str_contains($htaccess,'mod_expires'));
     assertTrue(str_contains($htaccess,'image/webp'));
+    $iesdeClient=(string)file_get_contents($rootPath.'/modules/Catalog/IesdeCommercialCatalogClient.php');
+    assertTrue(str_contains($iesdeClient,'firstName'));
+    assertTrue(str_contains($iesdeClient,"'subAreas'"));
+    assertTrue(str_contains($iesdeClient,"'teachingAreas'"));
+    assertTrue(str_contains($iesdeClient,"'productionCategories'"));
+    assertTrue(str_contains($catalogRepo,"trim((string)(\$item['subcategory'] ?? ''))"));
+    assertTrue(!str_contains($catalogRepo,'review_status=:review'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

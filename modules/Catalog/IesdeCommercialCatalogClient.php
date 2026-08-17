@@ -63,9 +63,9 @@ final class IesdeCommercialCatalogClient
         $author = $this->textValue($record['author'] ?? $record['authors'] ?? $record['autor'] ?? '');
         $summary = $this->scalar($record, ['summary', 'synopsis', 'resumo', 'ementa', 'shortDescription']);
         $description = $this->scalar($record, ['description', 'descricao', 'content']);
-        $category = $this->textValue($record['academicLevel'] ?? $record['academic_level'] ?? $record['category'] ?? $record['categoria'] ?? '');
-        $subcategory = $this->textValue($record['teachingArea'] ?? $record['teaching_area'] ?? $record['subcategory'] ?? $record['subArea'] ?? '');
-        $materialType = $this->textValue($record['productionCategory'] ?? $record['production_category'] ?? $record['materialType'] ?? $record['type'] ?? '');
+        $category = $this->firstName($record, ['teachingAreas', 'teaching_area', 'academicLevel', 'academic_level', 'category', 'categoria']);
+        $subcategory = $this->firstName($record, ['subAreas', 'sub_area', 'teachingArea', 'subcategory', 'subArea']);
+        $materialType = $this->firstName($record, ['productionCategories', 'production_category', 'materialType', 'type']);
         $cover = $this->urlValue($record['coverUrl'] ?? $record['cover_url'] ?? $record['imageUrl'] ?? $record['image'] ?? $record['thumbnail'] ?? $record['cover'] ?? '');
         $slug = $this->scalar($record, ['slug']);
         if ($slug === '') $slug = $this->slug($title);
@@ -90,6 +90,26 @@ final class IesdeCommercialCatalogClient
             'complementary_count' => $this->integer($record, ['complementaryCount', 'complementary_count', 'complementares']),
             'raw' => $record,
         ];
+    }
+
+    /** @param array<string,mixed> $record @param list<string> $keys */
+    private function firstName(array $record, array $keys): string
+    {
+        foreach ($keys as $key) {
+            if (!array_key_exists($key, $record)) continue;
+            $value = $record[$key];
+            if (is_array($value)) {
+                foreach ($value as $entry) {
+                    if (!is_array($entry)) continue;
+                    $name = $this->textValue($entry['name'] ?? $entry['nome'] ?? '');
+                    if ($name !== '') return $name;
+                }
+                continue;
+            }
+            $name = $this->textValue($value);
+            if ($name !== '') return $name;
+        }
+        return '';
     }
 
     /** @param array<string,mixed> $record @param list<string> $keys */
