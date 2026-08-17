@@ -9,9 +9,10 @@ $store = ($site['selected_mode'] ?? 'catalog') === 'store';
 $publicBase = rtrim((string) $basePath, '/') . '/site';
 $isExternal = (int)($product['is_external'] ?? 0) === 1;
 $isIndividualContent = ($product['product_kind'] ?? '') === 'provider_content';
-$formationName = trim((string)preg_replace('/^Cat[aá]logo\s+/iu', '', (string)($product['catalog_name'] ?? ''))) ?: 'INTER';
+$isTrail = ($product['product_kind'] ?? '') === 'catalog_trail';
+$formationName = trim((string)preg_replace('/^(?:Cat[aá]logo|Forma[cç][aã]o)\s+/iu', '', (string)($product['catalog_name'] ?? ''))) ?: 'INTER';
 $coverUrl = !empty($product['media_asset_id']) ? rtrim((string)$basePath, '/') . '/catalog-media/' . (int)$product['media_asset_id'] : trim((string)($product['cover_url'] ?? ''));
-$coursePath = $isIndividualContent ? '/conteudo/' . (int)$product['id'] : ($isExternal ? '/catalogo-pro/' . (int)$product['id'] : '/curso/' . (int)$product['id']);
+$coursePath = $isTrail ? '/trilha/' . (int)$product['id'] : ($isIndividualContent ? '/conteudo/' . (int)$product['id'] : ($isExternal ? '/catalogo-pro/' . (int)$product['id'] : '/curso/' . (int)$product['id']));
 $whatsappDigits = preg_replace('/\D+/', '', (string) ($site['whatsapp'] ?? '')) ?? '';
 $whatsapp = $whatsappDigits !== '' ? (str_starts_with($whatsappDigits, '55') ? $whatsappDigits : '55' . $whatsappDigits) : '';
 $whatsappMessage = rawurlencode('Olá! Tenho interesse no curso ' . $product['name'] . '.');
@@ -68,7 +69,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
    <?php if ($curriculum !== []): ?><section class="detail-section"><h2>Conteúdo programático</h2><ul class="curriculum"><?php foreach ($curriculum as $item): ?><li><i class="fa-regular fa-circle-check"></i> <?= $escape($item) ?></li><?php endforeach; ?></ul></section><?php endif; ?>
    <?php if ($requirements !== '' || $certificateText !== ''): ?><section class="detail-section"><div class="facts"><?php if ($requirements !== ''): ?><div class="fact"><strong><i class="fa-solid fa-list-check"></i> Requisitos</strong><span><?= nl2br($escape($requirements)) ?></span></div><?php endif; ?><?php if ($certificateText !== ''): ?><div class="fact"><strong><i class="fa-solid fa-certificate"></i> Certificado</strong><span><?= nl2br($escape($certificateText)) ?></span></div><?php endif; ?><div class="fact"><strong><i class="fa-solid fa-shield-halved"></i> Compra segura</strong><span>Atendimento e pagamento integrados à franquia.</span></div></div></section><?php endif; ?>
    <?php if ($faq !== []): ?><section class="detail-section"><h2>Perguntas frequentes</h2><div class="faq"><?php foreach ($faq as $item): ?><details><summary><?= $escape($item['question']) ?></summary><?php if ($item['answer'] !== ''): ?><p><?= nl2br($escape($item['answer'])) ?></p><?php endif; ?></details><?php endforeach; ?></div></section><?php endif; ?>
-   <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): $relatedPath=($related['product_kind']??'')==='provider_content'?'/conteudo/':($isExternal?'/catalogo-pro/':'/curso/');?><a href="<?= $escape($publicBase.$relatedPath) ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
+   <?php if ($relatedProducts !== []): ?><section class="detail-section"><h2>Você também pode gostar</h2><div class="related"><?php foreach ($relatedProducts as $related): $relatedKind=(string)($related['product_kind']??'');$relatedPath=$relatedKind==='provider_content'?'/conteudo/':($relatedKind==='catalog_trail'?'/trilha/':($isExternal?'/catalogo-pro/':'/curso/'));?><a href="<?= $escape($publicBase.$relatedPath) ?><?= (int) $related['id'] ?>"><strong><?= $escape($related['name']) ?></strong><small><?= $escape($related['category'] ?? 'Formação profissional') ?></small></a><?php endforeach; ?></div></section><?php endif; ?>
   </div>
  </article>
  <aside class="action">
@@ -81,7 +82,7 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['aggregateRating'] = ['@typ
    <p class="hint">Seus dados e o pagamento serão tratados em ambiente seguro. Após a confirmação, a matrícula seguirá o fluxo definido pela franquia.</p>
   <?php else: ?>
    <?php if($isExternal): ?><span class="price-label">Investimento</span><strong class="price">R$ <?= number_format((float)$product['value'],2,',','.') ?><?php if((int)$product['max_installments']>1): ?><small>em até <?= (int)$product['max_installments'] ?>x</small><?php endif; ?></strong><?php endif; ?>
-   <h2 class="interest-title">Quero receber atendimento</h2><p class="interest-copy"><?= $isExternal?'Este Curso individual pertence à Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro ao AVA definido.':'Preencha seus dados. A equipe da franquia receberá seu interesse como um novo lead.' ?></p>
+   <h2 class="interest-title">Quero receber atendimento</h2><p class="interest-copy"><?= $isTrail?'Esta Trilha reúne '.(int)($product['item_count']??0).' Módulos da Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro pelo AVA Cursos.':($isExternal?'Este Curso individual pertence à Formação '.$escape($formationName).'. A equipe confirmará pagamento, matrícula e acesso seguro ao AVA definido.':'Preencha seus dados. A equipe da franquia receberá seu interesse como um novo lead.') ?></p>
    <form method="post" action="<?= $escape($publicBase.$coursePath) ?>/interesse"><?= $csrfField ?><div class="fields">
     <label>Nome completo *<input required maxlength="160" autocomplete="name" name="name"></label>
     <label>E-mail *<input required type="email" maxlength="190" autocomplete="email" name="email"></label>
