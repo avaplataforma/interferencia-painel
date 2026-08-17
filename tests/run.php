@@ -1816,6 +1816,10 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($publicView,'data-catalog-init-formacao'));
     assertTrue(str_contains($publicView,'/depoimentos'));
     assertTrue(str_contains($publicView,'[hidden]{display:none!important}'));
+    assertTrue(str_contains($publicView,'.course-trail{display:inline-flex;align-items:center;gap:.4rem'));
+    assertTrue(str_contains($publicView,'.legal-link{display:inline-flex;align-items:center;gap:.4rem'));
+    assertTrue(str_contains($courseView,'.cover-meta span{display:inline-flex;align-items:center;gap:.4rem'));
+    assertTrue(str_contains($courseView,'.curriculum li{display:flex;align-items:flex-start;gap:.5rem'));
     assertTrue(!str_contains($publicView,'data-testimonial-form'));
     $testimonialsView=(string)file_get_contents($rootPath.'/views/site/testimonials.php');
     assertTrue(str_contains($testimonialsView,'data-testimonial-form'));
