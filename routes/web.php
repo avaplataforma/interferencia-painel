@@ -1571,9 +1571,9 @@ return static function (
         try{$source=(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown'));$result=$externalIntake->receive($key,$data,$source);return Response::json(['ok'=>true]+$result,200);}catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
     });
 
-    $router->get('/health',static function()use($platformSettingsRepository):Response{
+    $router->get('/health',static function()use($platformSettings):Response{
         $database=true;$status='ok';$http=200;
-        try{$platformSettingsRepository->settings();}catch(Throwable){$database=false;$status='degraded';$http=503;}
+        try{$platformSettings->settings();}catch(Throwable){$database=false;$status='degraded';$http=503;}
         return(new Response(json_encode(['status'=>$status,'database'=>$database,'time'=>date('c')],JSON_UNESCAPED_UNICODE),$http))->withHeaders(['Content-Type'=>'application/json; charset=UTF-8','Cache-Control'=>'no-store']);
     });
 
