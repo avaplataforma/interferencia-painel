@@ -1785,6 +1785,9 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($siteJs,"window.gtag('config', ga4Id)"));
     assertTrue(str_contains($siteJs,'input[name="phone"]'));
     assertTrue(str_contains($siteJs,'__outro__'));
+    assertTrue(str_contains($siteJs,'catalogVisible'));
+    assertTrue(str_contains($siteJs,'data-catalog-more'));
+    assertTrue(str_contains($publicView,'data-catalog-more'));
     $appConfig=(string)file_get_contents($rootPath.'/config/app.php');
     assertTrue(str_contains($appConfig,"'analytics_ga4_id'"));
     assertTrue(str_contains($catalogRepo,'function releaseReadyCourses'));

@@ -94,6 +94,9 @@
   const readFavorites = () => { try { return new Set(JSON.parse(localStorage.getItem(favoritesKey) || '[]').map(String)); } catch { return new Set(); } };
   let favorites = readFavorites();
   const syncFavoriteButtons = () => catalogCards.forEach((card) => { const button = card.querySelector('[data-course-favorite]'); const active = favorites.has(String(card.dataset.courseId || '')); if (button) { button.setAttribute('aria-pressed', active ? 'true' : 'false'); button.title = active ? 'Remover dos favoritos' : 'Adicionar aos favoritos'; const icon = button.querySelector('i'); if (icon) icon.className = active ? 'fa-solid fa-heart' : 'fa-regular fa-heart'; } });
+  const catalogBatch = 24;
+  let catalogVisible = catalogBatch;
+  const catalogMore = document.querySelector('[data-catalog-more]');
   const filterCatalog = () => {
     if (!(catalogGrid instanceof HTMLElement)) return;
     const term = normalizeCatalog(catalogSearch?.value || '');
@@ -102,9 +105,7 @@
     const sort = catalogSort?.value || 'featured';
     const matching = catalogCards.filter((card) => {
       const searchable = normalizeCatalog(card.textContent || '');
-      const visible = (!term || searchable.includes(term)) && (!formation || normalizeCatalog(card.dataset.courseFormation) === formation) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
-      card.hidden = !visible;
-      return visible;
+      return (!term || searchable.includes(term)) && (!formation || normalizeCatalog(card.dataset.courseFormation) === formation) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
     });
     const sorted = [...matching].sort((a, b) => {
       if (sort === 'name') return String(a.dataset.courseName).localeCompare(String(b.dataset.courseName), 'pt-BR');
@@ -112,14 +113,19 @@
       return 0;
     });
     sorted.forEach((card) => catalogGrid.append(card));
+    const shown = new Set(sorted.slice(0, catalogVisible));
+    catalogCards.forEach((card) => { card.hidden = !shown.has(card); });
     if (catalogEmpty instanceof HTMLElement) catalogEmpty.hidden = matching.length !== 0;
+    if (catalogMore instanceof HTMLButtonElement) catalogMore.hidden = matching.length <= catalogVisible;
   };
   catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
-  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
+  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', () => { catalogVisible = catalogBatch; filterCatalog(); }));
   catalogSubmit?.addEventListener('click', () => {
+    catalogVisible = catalogBatch;
     filterCatalog();
     catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
+  catalogMore?.addEventListener('click', () => { catalogVisible += catalogBatch; filterCatalog(); });
   catalogSearch?.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
