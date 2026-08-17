@@ -647,7 +647,18 @@ return static function (
         if($pilotOrganization<1&&$organizations!==[])$pilotOrganization=(int)$organizations[0]['id'];
         $homologation=$catalog!==''?$courseProviders->catalogHomologationStatus($catalog,$pilotOrganization):[];
         $provisioningQueue=$catalog!==''?$avaCourseProvisioning->dashboard($catalog,30):['summary'=>['queued'=>0,'working'=>0,'completed'=>0,'failed'=>0,'total'=>0],'jobs'=>[]];
-        return$view->render('admin/platform/course-providers',['title'=>'Fornecedores de cursos — '.$browserTitle,'providerCatalogs'=>$courseProviders->providerCatalogRegistry(),'courses'=>$courseProviders->allCourses(),'courseResources'=>$catalog==='iesde'?$courseProviders->courseResourcesByProvider('iesde'):[],'commercialCatalog'=>$commercialCatalog,'catalogContents'=>$contentPage,'catalogHomologation'=>$homologation,'provisioningQueue'=>$provisioningQueue,'organizations'=>$organizations,'imageGenerationSettings'=>$catalogImages->settings(),'imageGenerationJobs'=>$catalogImages->summary(),'interSettings'=>$avaConnections->shared(),'interAccessSettings'=>$moodleIntegrations->settings(),'academicOrganizationSummary'=>$academicOrganization->summary(),'academicOrganizationGroups'=>$academicOrganization->recent(20),'academicBackfill'=>$academicOrganizationBackfill->dashboard(),'encryptionReady'=>$courseProviders->encryptionReady()&&$avaConnections->encryptionReady(),'message'=>$session->get('course_providers.message')??$session->get('ava_connections.message'),'error'=>$session->get('course_providers.error')??$session->get('ava_connections.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+        $providerCatalogs=$courseProviders->providerCatalogRegistry();
+        $commercialPolicyPreviews=[];
+        $commercialPolicyHistory=[];
+        foreach($providerCatalogs as$providerCatalog){
+            $catalogId=(int)($providerCatalog['id']??0);
+            if($catalogId<1)continue;
+            try{$commercialPolicyPreviews[$catalogId]=$courseProviders->previewCentralCatalogPolicy($catalogId,null,'both');}
+            catch(Throwable){$commercialPolicyPreviews[$catalogId]=['franchises'=>0,'modules'=>0,'module_offers'=>0,'trails'=>0,'exceptions'=>0];}
+            try{$commercialPolicyHistory[$catalogId]=$courseProviders->centralCatalogPolicyHistory($catalogId);}
+            catch(Throwable){$commercialPolicyHistory[$catalogId]=[];}
+        }
+        return$view->render('admin/platform/course-providers',['title'=>'Fornecedores de cursos — '.$browserTitle,'providerCatalogs'=>$providerCatalogs,'courses'=>$courseProviders->allCourses(),'courseResources'=>$catalog==='iesde'?$courseProviders->courseResourcesByProvider('iesde'):[],'commercialCatalog'=>$commercialCatalog,'catalogContents'=>$contentPage,'catalogHomologation'=>$homologation,'provisioningQueue'=>$provisioningQueue,'organizations'=>$organizations,'commercialPolicyPreviews'=>$commercialPolicyPreviews,'commercialPolicyPreviewSelection'=>$session->get('course_providers.policy_preview'),'commercialPolicyHistory'=>$commercialPolicyHistory,'imageGenerationSettings'=>$catalogImages->settings(),'imageGenerationJobs'=>$catalogImages->summary(),'interSettings'=>$avaConnections->shared(),'interAccessSettings'=>$moodleIntegrations->settings(),'academicOrganizationSummary'=>$academicOrganization->summary(),'academicOrganizationGroups'=>$academicOrganization->recent(20),'academicBackfill'=>$academicOrganizationBackfill->dashboard(),'encryptionReady'=>$courseProviders->encryptionReady()&&$avaConnections->encryptionReady(),'message'=>$session->get('course_providers.message')??$session->get('ava_connections.message'),'error'=>$session->get('course_providers.error')??$session->get('ava_connections.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
     },[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/provisioning/{id:\d+}/retry',static function(Request$request,array$params)use($avaCourseProvisioning,$platformAdmin,$auth,$session,$basePath):Response{
         if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
@@ -675,6 +686,39 @@ return static function (
         }
         return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog=iesde&section=commercial');
     },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/complete-commercial-ai',static function(Request$request,array$params)use($courseProviders,$catalogImages,$catalogCoverGenerator,$platformAdmin,$auth,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
+        $provider=(string)$params['provider'];
+        try{
+            $candidates=$courseProviders->commercialAiCandidates($provider,5);
+            if($candidates===[])throw new RuntimeException('Todos os Módulos disponíveis já possuem resumo, descrição e capa.');
+            $settings=$catalogImages->settings(true);
+            if(!(bool)($settings['configured']??false)||!(bool)($settings['is_active']??false))throw new RuntimeException('Ative a integração IA - OpenAI no ADM Central.');
+            $client=new OpenAiCatalogTextClient((string)$settings['api_key']);
+            $texts=0;
+            $covers=0;
+            foreach($candidates as$candidate){
+                $courseId=(int)$candidate['id'];
+                $summary=trim((string)($candidate['commercial_summary']??''));
+                $description=trim((string)($candidate['commercial_description']??''));
+                if($summary===''||$description===''){
+                    $copy=$client->generateCourseCopy((string)$candidate['effective_name'],(string)$candidate['effective_category'],(string)$candidate['source_description']);
+                    $courseProviders->fillMissingCourseCopy($courseId,$copy['short_description'],$copy['description'],$auth->user()?->id);
+                    $texts++;
+                }
+                if((int)($candidate['has_cover']??0)!==1){
+                    $catalogCoverGenerator->queue('course',$courseId,null,$auth->user()?->id);
+                    $covers++;
+                }
+            }
+            $remaining=$courseProviders->commercialAiCandidates($provider,1)!==[];
+            $message=$texts.' Módulo(s) receberam textos e '.$covers.' capa(s) foram adicionadas à fila.';
+            if($remaining)$message.=' Ainda existem pendências; use o botão novamente após concluir este lote.';
+            $session->flash('course_providers.message',$message);
+        }catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}
+        return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=commercial');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
+
     $router->post('/admin/platform/integrations/course-providers/catalog/iesde/commercial-curation',static function(Request$request)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{
         if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
         try{
@@ -768,7 +812,40 @@ return static function (
     $router->post('/admin/platform/integrations/course-providers/courses/{id:\d+}/generate-cover',static function(Request$request,array$params)use($catalogCoverGenerator,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','ava_cursos'))?:'ava_cursos';try{$catalogCoverGenerator->queue('course',(int)$params['id'],(string)$request->input('prompt',''),$auth->user()?->id);$session->flash('course_providers.message','Capa adicionada à fila. A imagem será gerada, otimizada e salva no Spaces automaticamente.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=courses');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/contents/{id:\d+}/generate-cover',static function(Request$request,array$params)use($catalogCoverGenerator,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','conted_tech'))?:'conted_tech';try{$catalogCoverGenerator->queue('content',(int)$params['id'],(string)$request->input('prompt',''),$auth->user()?->id);$session->flash('course_providers.message','Capa do conteúdo adicionada à fila. A vitrine usará a versão otimizada no Spaces quando estiver pronta.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=contents');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/catalogs/{id:\d+}/availability',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','ava_cursos'))?:'ava_cursos';$enabled=$request->input('enabled')==='1';try{$courseProviders->setCatalogGlobalAvailability((int)$params['id'],$enabled,$auth->user()?->id);$session->flash('course_providers.message',$enabled?'Catálogo liberado por padrão para todas as franquias.':'Catálogo bloqueado globalmente. Históricos e matrículas existentes foram preservados.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $router->post('/admin/platform/integrations/course-providers/catalogs/{id:\d+}/commercial-policy',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','ava_cursos'))?:'ava_cursos';try{$courseProviders->saveCentralCatalogPolicy((int)$params['id'],['default_price'=>$request->input('default_price',''),'markup_percent'=>$request->input('markup_percent','0'),'default_max_installments'=>$request->input('default_max_installments','1'),'valid_from'=>$request->input('valid_from',''),'valid_until'=>$request->input('valid_until','')],$request->input('allow_franchise_override')==='1',$auth->user()?->id);if($request->input('policy_action')==='apply'){$organizationId=(int)$request->input('organization_id','0');$result=$courseProviders->applyCentralCatalogPolicy((int)$params['id'],$organizationId>0?$organizationId:null,$auth->user()?->id);$session->flash('course_providers.message','Padrão central salvo e aplicado a '.$result['franchises'].' franquia(s), atualizando '.$result['offers'].' oferta(s).');}else{$session->flash('course_providers.message','Padrão comercial central salvo. Nenhum preço existente foi alterado.');}}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=policy');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/platform/integrations/course-providers/catalogs/{id:\d+}/commercial-policy',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{
+        if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);
+        $provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','ava_cursos'))?:'ava_cursos';
+        $catalogId=(int)$params['id'];
+        $action=(string)$request->input('policy_action','save');
+        $scope=(string)$request->input('apply_scope','both');
+        $organizationId=(int)$request->input('organization_id','0');
+        try{
+            $courseProviders->saveCentralCatalogPolicy($catalogId,[
+                'default_price'=>$request->input('default_price',''),
+                'trail_default_price'=>$request->input('trail_default_price',''),
+                'module_workload'=>$request->input('module_workload',''),
+                'trail_workload'=>$request->input('trail_workload',''),
+                'module_max_installments'=>$request->input('module_max_installments','1'),
+                'trail_max_installments'=>$request->input('trail_max_installments','1'),
+                'allow_price_override'=>$request->input('allow_price_override')==='1',
+                'allow_installment_override'=>$request->input('allow_installment_override')==='1',
+                'allow_visibility_override'=>$request->input('allow_visibility_override')==='1',
+                'valid_from'=>$request->input('valid_from',''),
+                'valid_until'=>$request->input('valid_until',''),
+            ],$request->input('allow_franchise_override')==='1',$auth->user()?->id);
+            if($action==='preview'){
+                $result=$courseProviders->previewCentralCatalogPolicy($catalogId,$organizationId>0?$organizationId:null,$scope);
+                $session->flash('course_providers.policy_preview',['catalog_id'=>$catalogId,'organization_id'=>$organizationId,'scope'=>$scope,'result'=>$result]);
+                $session->flash('course_providers.message','Prévia atualizada. Confira o alcance antes de aplicar a política.');
+            }elseif($action==='apply'){
+                $result=$courseProviders->applyCentralCatalogPolicy($catalogId,$organizationId>0?$organizationId:null,$auth->user()?->id,$scope);
+                $session->flash('course_providers.message','Política salva e aplicada a '.$result['franchises'].' franquia(s): '.$result['offers'].' oferta(s) de Módulos e '.$result['trails'].' Trilha(s) atualizadas.');
+            }else{
+                $session->flash('course_providers.message','Política comercial salva. As ofertas existentes permanecem inalteradas até a aplicação em lote.');
+            }
+        }catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}
+        return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=policy');
+    },[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/courses/{id:\d+}/availability',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','escola_avancada'))?:'escola_avancada';$enabled=$request->input('enabled')==='1';try{$courseProviders->setItemGlobalAvailability('course',(int)$params['id'],$enabled,$auth->user()?->id);$session->flash('course_providers.message',$enabled?'Curso liberado globalmente por padrão.':'Curso bloqueado globalmente sem excluir históricos.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=courses');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/catalog/{provider:[a-z0-9_-]+}/courses/bulk',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=(string)$params['provider'];$ids=$request->input('course_ids',[]);$action=(string)$request->input('bulk_action','');try{$affected=$courseProviders->bulkCourseAction($provider,is_array($ids)?$ids:[],$action,$auth->user()?->id);$labels=['approve_release'=>'aprovado(s) e liberado(s)','release'=>'liberado(s) globalmente','block'=>'bloqueado(s) globalmente'];$session->flash('course_providers.message',$affected.' curso(s) '.($labels[$action]??'atualizado(s)').' em lote.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}$query=http_build_query(['catalog'=>$provider,'section'=>'courses','course_q'=>(string)$request->input('course_q',''),'course_review'=>(string)$request->input('course_review',''),'course_availability'=>(string)$request->input('course_availability','')]);return Response::redirect($basePath.'/admin/platform/integrations/course-providers?'.$query);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/platform/integrations/course-providers/contents/{id:\d+}/availability',static function(Request$request,array$params)use($courseProviders,$platformAdmin,$auth,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$provider=preg_replace('/[^a-z0-9_-]/','',(string)$request->input('provider','conted_tech'))?:'conted_tech';$enabled=$request->input('enabled')==='1';try{$courseProviders->setItemGlobalAvailability('content',(int)$params['id'],$enabled,$auth->user()?->id);$session->flash('course_providers.message',$enabled?'Conteúdo liberado globalmente por padrão.':'Conteúdo bloqueado globalmente sem excluir históricos.');}catch(Throwable$e){$session->flash('course_providers.error',$e->getMessage());}return Response::redirect($basePath.'/admin/platform/integrations/course-providers?catalog='.$provider.'&section=contents');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
