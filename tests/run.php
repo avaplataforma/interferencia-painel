@@ -1901,6 +1901,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     $taxonomy=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogTaxonomy.php');
     assertTrue(str_contains($taxonomy,"'administracao geral' => 'Administração'"));
     assertTrue(str_contains($taxonomy,'Metodologia de Ensino'));
+    assertTrue(str_contains($taxonomy,"'preparatorio aprova concursos' => 'Preparatórios'"));
+    assertTrue(str_contains($iesdeClient,"'academicLevels'"));
     assertTrue(str_contains($catalogRepo,'CatalogTaxonomy::category'));
     assertTrue(str_contains($iesdeClient,'CatalogTaxonomy::area'));
     assertTrue(str_contains($publicView,'$categoryCounts'));

@@ -15,6 +15,7 @@ final class CatalogTaxonomy
         'inteligencia artifical' => 'Inteligência Artificial',
         'metodologia do ensino' => 'Metodologia de Ensino',
         'eja - educacao de jovens e adultos' => 'EJA',
+        'preparatorio aprova concursos' => 'Preparatórios',
     ];
 
     public static function clean(?string $value): ?string

@@ -63,7 +63,7 @@ final class IesdeCommercialCatalogClient
         $author = $this->textValue($record['author'] ?? $record['authors'] ?? $record['autor'] ?? '');
         $summary = $this->scalar($record, ['summary', 'synopsis', 'resumo', 'ementa', 'shortDescription']);
         $description = $this->scalar($record, ['description', 'descricao', 'content']);
-        $category = CatalogTaxonomy::category($this->firstName($record, ['teachingAreas', 'teaching_area', 'academicLevel', 'academic_level', 'category', 'categoria'])) ?? '';
+        $category = CatalogTaxonomy::category($this->firstName($record, ['teachingAreas', 'teaching_area', 'academicLevels', 'academicLevel', 'academic_level', 'category', 'categoria'])) ?? '';
         $subcategory = CatalogTaxonomy::area($this->firstName($record, ['subAreas', 'sub_area', 'teachingArea', 'subcategory', 'subArea'])) ?? '';
         $materialType = CatalogTaxonomy::clean($this->firstName($record, ['productionCategories', 'production_category', 'materialType', 'type'])) ?? '';
         $cover = $this->urlValue($record['coverUrl'] ?? $record['cover_url'] ?? $record['imageUrl'] ?? $record['image'] ?? $record['thumbnail'] ?? $record['cover'] ?? '');
@@ -100,9 +100,13 @@ final class IesdeCommercialCatalogClient
             $value = $record[$key];
             if (is_array($value)) {
                 foreach ($value as $entry) {
-                    if (!is_array($entry)) continue;
-                    $name = $this->textValue($entry['name'] ?? $entry['nome'] ?? '');
-                    if ($name !== '') return $name;
+                    if (is_array($entry)) {
+                        $name = $this->textValue($entry['name'] ?? $entry['nome'] ?? '');
+                        if ($name !== '') return $name;
+                    } else {
+                        $name = $this->textValue($entry);
+                        if ($name !== '') return $name;
+                    }
                 }
                 continue;
             }
