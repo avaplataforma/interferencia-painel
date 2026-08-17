@@ -183,16 +183,26 @@ TEXT);
     }
 
     if ($command === 'sitemap:ping') {
+        $database = $connection->pdo();
         $sitemapUrl = (string) ($argv[2] ?? '');
         if ($sitemapUrl === '') {
-            $host = (string) $config->get('app.central_host', 'mundointer.com.br');
-            $path = rtrim((string) $config->path('app.base_path'), '/');
-            $sitemapUrl = 'https://' . $host . $path . '/site/sitemap.xml';
+            $rows = $database->query("SELECT d.host,o.panel_slug FROM organization_domains d INNER JOIN organizations o ON o.id=d.organization_id WHERE d.purpose='site' AND d.is_primary=1 AND d.status='active' AND o.status='active'")->fetchAll();
+            foreach ($rows as $row) {
+                $path = '/site/sitemap.xml';
+                if (trim((string) $row['panel_slug']) !== '') $path = '/' . trim((string) $row['panel_slug']) . $path;
+                $url = 'https://' . (string) $row['host'] . $path;
+                $target = 'https://www.google.com/ping?sitemap=' . rawurlencode($url);
+                $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
+                @file_get_contents($target, false, $context);
+                fwrite(STDOUT, sprintf("Aviso enviado sobre %s\n", $url));
+            }
+            fwrite(STDOUT, "Obs.: o ping do Google está descontinuado; o sitemap com lastmod atualizado segue sendo a forma oficial.\n");
+            exit(0);
         }
         if (!preg_match('#^https?://#i', $sitemapUrl)) throw new RuntimeException('Informe a URL completa do sitemap.');
         $target = 'https://www.google.com/ping?sitemap=' . rawurlencode($sitemapUrl);
         $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
-        $body = @file_get_contents($target, false, $context);
+        @file_get_contents($target, false, $context);
         fwrite(STDOUT, sprintf("Aviso enviado sobre %s (o ping do Google está descontinuado; o sitemap com lastmod atualizado segue sendo a forma oficial).\n", $sitemapUrl));
         exit(0);
     }
