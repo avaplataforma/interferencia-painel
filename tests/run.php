@@ -1477,7 +1477,7 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicJavascript,'scholarshipPopup'));
     assertTrue(str_contains($course,'Quero fazer esta'));
     assertTrue(str_contains($course,'Ir para o pagamento'));
-    assertTrue(str_contains($course,'Módulos desta Trilha'));
+    assertTrue(str_contains($course,'Cursos desta Trilha'));
     assertTrue(str_contains($course,'rel="canonical"'));
     assertTrue(str_contains($course,"'BreadcrumbList'"));
     assertTrue(str_contains($repository,'trailProducts'));
@@ -1730,7 +1730,17 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($public,'course-facts'));
     assertTrue(str_contains($public,'course-fact'));
     assertTrue(!str_contains($public,'class="course-category"'));
+    assertTrue(str_contains($public,'class="course-description"'));
+    assertTrue(str_contains($public,'Curso(s) no AVA Cursos'));
+    assertTrue(!str_contains($public,'Módulo(s) no AVA Cursos'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php'),'catalog.central_default_module_workload) workload_text'));
+    $courseView=(string)file_get_contents($rootPath.'/views/site/course.php');
+    assertTrue(str_contains($courseView,'Sobre este Curso'));
+    assertTrue(str_contains($courseView,'Quero fazer este Curso'));
+    assertTrue(str_contains($courseView,'Cursos desta Trilha'));
+    assertTrue(!str_contains($courseView,'Sobre este Módulo'));
+    assertTrue(!str_contains($courseView,'Módulos desta Trilha'));
+    assertTrue(!str_contains($courseView,'fa-laptop'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

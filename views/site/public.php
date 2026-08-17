@@ -137,8 +137,9 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
           <?php $workload=(int)($product['workload_hours']??0);if($workload>0):?><span class="course-fact"><i class="fa-regular fa-clock"></i> Carga Horária: <?= $workload ?>h</span><?php endif;?>
           <span class="course-fact"><i class="fa-solid fa-tag"></i> Categoria: <?= $escape($category) ?></span>
          </div>
+         <p class="course-description"><?= $escape($product['description'] ?? 'Formação disponível nesta trilha.') ?></p>
         <div class="course-bottom">
-         <?php if($isTrail): ?><span class="provider-course-note"><i class="fa-solid fa-list-check"></i><span>Trilha completa com <?= (int)($product['lesson_count']??0) ?> Módulo(s) no AVA Cursos.</span></span><?php elseif($isContent): ?><span class="provider-course-note"><i class="fa-solid fa-play"></i><span>Módulo com acesso à unidade contratada.</span></span><?php endif; ?>
+         <?php if($isTrail): ?><span class="provider-course-note"><i class="fa-solid fa-list-check"></i><span>Trilha completa com <?= (int)($product['lesson_count']??0) ?> Curso(s) no AVA Cursos.</span></span><?php elseif($isContent): ?><span class="provider-course-note"><i class="fa-solid fa-play"></i><span>Curso com acesso à unidade contratada.</span></span><?php endif; ?>
          <span class="course-price">R$ <?= number_format((float)$product['value'],2,',','.') ?><?php if ((int)$product['max_installments']>1): ?><small>em até <?= (int)$product['max_installments'] ?>x</small><?php endif; ?></span>
          <a class="button" data-site-offer="<?= $escape($product['offer_key']) ?>" data-offer-kind="<?= $escape($kind) ?>" data-offer-id="<?= (int)$product['id'] ?>" href="<?= $escape($publicBase.(string)$product['detail_path']) ?>"><?= $buttonLabel ?></a>
         </div>
