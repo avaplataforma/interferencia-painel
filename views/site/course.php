@@ -51,7 +51,7 @@ $structuredCourse['educationalLevel'] = $category;
 $structuredCourse['offers'] = ['@type' => 'Offer', 'priceCurrency' => 'BRL', 'price' => number_format((float)($product['value'] ?? 0), 2, '.', ''), 'availability' => 'https://schema.org/InStock', 'url' => $canonicalUrl];
 if ($absoluteCoverUrl !== '') $structuredCourse['image'] = $absoluteCoverUrl;
 if ($isTrail && $curriculum !== []) $structuredCourse['hasPart'] = array_map(static fn(string $item): array => ['@type' => 'Course', 'name' => $item], $curriculum);
-$structuredData = ['@context' => 'https://schema.org', '@graph' => [$structuredCourse, ['@type' => 'BreadcrumbList', 'itemListElement' => [['@type' => 'ListItem', 'position' => 1, 'name' => 'Cursos', 'item' => 'https://' . $siteHost . $publicBase . '#cursos'], ['@type' => 'ListItem', 'position' => 2, 'name' => (string)$product['name'], 'item' => $canonicalUrl]]]];
+$structuredData = ['@context' => 'https://schema.org', '@graph' => [$structuredCourse, ['@type' => 'BreadcrumbList', 'itemListElement' => [['@type' => 'ListItem', 'position' => 1, 'name' => 'Cursos', 'item' => 'https://' . $siteHost . $publicBase . '#cursos'], ['@type' => 'ListItem', 'position' => 2, 'name' => (string)$product['name'], 'item' => $canonicalUrl]]]]];
 if ($workload > 0) $structuredData['@graph'][0]['timeRequired'] = 'PT' . $workload . 'H';
 if ($rating > 0 && $ratingCount > 0) $structuredData['@graph'][0]['aggregateRating'] = ['@type' => 'AggregateRating', 'ratingValue' => $rating, 'reviewCount' => $ratingCount];
 ?>
