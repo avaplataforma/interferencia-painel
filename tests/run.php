@@ -1903,6 +1903,17 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($taxonomy,'Metodologia de Ensino'));
     assertTrue(str_contains($taxonomy,"'preparatorio aprova concursos' => 'Preparatórios'"));
     assertTrue(str_contains($iesdeClient,"'academicLevels'"));
+    assertTrue(str_contains($taxonomy,'refineCategory'));
+    assertTrue(str_contains($taxonomy,"'Cursos Livres'"));
+    assertTrue(str_contains($catalogRepo,'refineCategory'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000070_add_mission_vision_values_to_organization_sites.php'));
+    assertTrue(str_contains($siteRepository,'about_mission=:about_mission'));
+    assertTrue(str_contains($routes,"'about_mission'=>"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/admin.php'),'name="about_mission"'));
+    assertTrue(str_contains($publicView,'mvv-grid'));
+    assertTrue(str_contains($publicView,'>Missão<'));
+    assertTrue(str_contains($publicView,'>Visão<'));
+    assertTrue(str_contains($publicView,'>Valores<'));
     assertTrue(str_contains($catalogRepo,'CatalogTaxonomy::category'));
     assertTrue(str_contains($iesdeClient,'CatalogTaxonomy::area'));
     assertTrue(str_contains($publicView,'$categoryCounts'));

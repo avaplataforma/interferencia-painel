@@ -1164,6 +1164,7 @@ final readonly class CourseProviderRepository
         if (!is_array($item)) return;
         $commercialCategory = CatalogTaxonomy::category((string)($item['commercial_category'] ?? ''));
         if ($commercialCategory === null) $commercialCategory = CatalogTaxonomy::category((string)($item['category'] ?? ''));
+        $commercialCategory = CatalogTaxonomy::refineCategory($commercialCategory, (string)($item['title'] ?? ''));
         $commercialArea = CatalogTaxonomy::area((string)($item['subcategory'] ?? ''));
         $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_area=COALESCE(NULLIF(:area,''),commercial_area),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments) WHERE id=:course")->execute([
             'name' => trim((string)($item['commercial_name'] ?? '')),
