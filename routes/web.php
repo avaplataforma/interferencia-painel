@@ -18,6 +18,7 @@ use Interferencia\Modules\Identity\UserRepository;
 use Interferencia\Modules\Identity\UserManager;
 use Interferencia\Modules\Identity\RoleManager;
 use Interferencia\Modules\Identity\RoleRepository;
+use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\UnitContext;
@@ -561,6 +562,7 @@ return static function (
         return$view->render('admin/organizations/form',[
             'title'=>'Editar franquia — '.$browserTitle,
             'organization'=>$organization,
+            'panelUser'=>$organizations->panelUser($id),
             'domains'=>$organizations->domains($id),
             'application'=>$application,
             'contracts'=>$contracts,
@@ -621,7 +623,7 @@ return static function (
     $router->get('/admin/organizations/{id:\d+}/finance',static function(Request$request,array$params)use($view,$organizations,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$organization=$organizations->findRecord((int)$params['id']);if($organization===null)return Response::text("Franquia não encontrada.\n",404);return$view->render('admin/organizations/finance',['title'=>'Asaas da franquia — '.$browserTitle,'organization'=>$organization,'message'=>$session->get('organizations.message'),'error'=>$session->get('organizations.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
     $router->post('/admin/organizations/{id:\d+}/finance',static function(Request$request,array$params)use($organizations,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);try{$organizations->saveFinanceSettings((int)$params['id'],['asaas_wallet_id'=>$request->input('asaas_wallet_id',''),'asaas_wallet_status'=>$request->input('asaas_wallet_status','not_configured'),'split_enabled'=>$request->input('split_enabled')==='1','asaas_finance_notes'=>$request->input('asaas_finance_notes','')]);$session->flash('organizations.message','Configuração financeira da franquia salva.');}catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());}return Response::redirect($basePath.'/admin/organizations/'.$params['id'].'/finance');},[$requireAuth,new RequirePermission($auth,'billing.manage')]);
     $router->get('/admin/organizations/{id:\d+}/contracts',static function(Request$request,array$params)use($view,$organizations,$franchiseApplications,$franchiseContracts,$platformAdmin,$session,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$organization=$organizations->findRecord((int)$params['id']);if($organization===null)return Response::text("Franquia não encontrada.\n",404);$application=$franchiseApplications->findByOrganization((int)$params['id']);if($application===null)return Response::text("Histórico contratual não inicializado. Aplique as migrações pendentes.\n",409);return$view->render('admin/organizations/contracts',['title'=>'Contratos da franquia — '.$browserTitle,'organization'=>$organization,'application'=>$application,'contracts'=>$franchiseContracts->forApplication((int)$application['id']),'message'=>$session->get('franchise_contracts.message'),'error'=>$session->get('franchise_contracts.error'),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $saveOrganization=static function(Request$request,?int$id=null)use($organizations,$organizationBranding,$spacesStorage,$platformAdmin,$session,$basePath):Response{
+    $saveOrganization=static function(Request$request,?int$id=null)use($organizations,$organizationBranding,$spacesStorage,$platformAdmin,$session,$basePath,$database):Response{
         if(!$platformAdmin())return Response::text("Acesso restrito ao Admin System central.\n",403);
         try{
             $current=$id===null?null:$organizations->findRecord($id);$currentDomains=$id===null?[]:$organizations->domains($id);$currentSiteDomain=[];foreach($currentDomains as$domain)if(($domain['purpose']??'')==='site'&&(int)($domain['is_primary']??0)===1){$currentSiteDomain=$domain;break;}$requestedStatus=$request->input('status','suspended');$safeStatus=$requestedStatus==='active'||$requestedStatus==='suspended'?$requestedStatus:(($current['status']??'suspended')==='active'?'active':'suspended');
@@ -631,6 +633,22 @@ return static function (
             $favicon=$request->file('favicon');if($favicon!==null&&!$favicon->isEmpty())$faviconPath=$organizationBranding->store($id,$favicon,'favicon');
             if($request->input('remove_logo')==='1')$logoPath=null;if($request->input('remove_favicon')==='1')$faviconPath=null;
             $organizations->updateBrandingPaths($id,is_string($logoPath)?$logoPath:null,is_string($faviconPath)?$faviconPath:null);
+            $panelLogin=strtolower(trim((string)$request->input('panel_login','')));$panelPassword=(string)$request->input('panel_password','');
+            if($panelLogin!==''&&filter_var($panelLogin,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido para o login do painel.');
+            if($panelLogin!==''){
+                $franchiseUsers=new UserRepository($database,(int)$id,false);
+                $roles=$franchiseUsers->availableRoles();$managerRole=null;foreach($roles as$role)if($role['code']==='manager')$managerRole=(int)$role['id'];
+                if($managerRole===null)throw new RuntimeException('Papel Gestor não encontrado.');
+                $panelName=trim((string)$request->input('manager_name',''))!==''?(string)$request->input('manager_name'):trim((string)$request->input('display_name',''));
+                $existing=$franchiseUsers->findByEmail($panelLogin);
+                if($existing!==null){
+                    if($panelPassword!==''&&strlen($panelPassword)<8)throw new RuntimeException('A senha do painel precisa de pelo menos 8 caracteres.');
+                    $franchiseUsers->updateManaged((int)$existing['id'],$panelName,$panelLogin,true,[$managerRole],[],$panelPassword!==''?(new PasswordHasher())->hash($panelPassword):null);
+                }else{
+                    if($panelPassword===''||strlen($panelPassword)<8)throw new RuntimeException('Defina uma senha de pelo menos 8 caracteres para o painel.');
+                    $franchiseUsers->createManaged($panelName,$panelLogin,(new PasswordHasher())->hash($panelPassword),true,[$managerRole],[]);
+                }
+            }
             try{$spacesStorage->provisionOrganization($id);}catch(Throwable$storageError){$session->flash('organizations.error','Franquia salva, mas a pasta externa não pôde ser preparada: '.$storageError->getMessage());}
             $session->flash('organizations.message','Franquia e identidade visual salvas.');return Response::redirect($basePath.'/admin/organizations');
         }catch(Throwable$e){$session->flash('organizations.error',$e->getMessage());return Response::redirect($basePath.($id===null?'/admin/organizations/create':"/admin/organizations/{$id}/edit"));}

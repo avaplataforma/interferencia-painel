@@ -1915,6 +1915,12 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'<option value="active"'));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'aguardando implantação'));
     assertTrue(str_contains($routes,"\$requestedStatus==='active'||\$requestedStatus==='suspended'"));
+    assertTrue(str_contains($routes,'panel_login'));
+    assertTrue(str_contains($routes,'panel_password'));
+    assertTrue(str_contains($routes,'new PasswordHasher()'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),'function panelUser'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="panel_login"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="panel_password"'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));

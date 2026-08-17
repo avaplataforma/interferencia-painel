@@ -79,6 +79,15 @@ final readonly class OrganizationRepository
         $s=$this->database->prepare('UPDATE organizations SET status=:status WHERE id=:id');$s->execute(['status'=>$status,'id'=>$id]);
         if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
     }
+
+    /** @return array<string,mixed>|null Usuário com papel Gestor vinculado à franquia. */
+    public function panelUser(int $organizationId):?array
+    {
+        $s=$this->database->prepare("SELECT u.id,u.name,u.email,u.is_active FROM users u INNER JOIN organization_users ou ON ou.user_id=u.id AND ou.status='active' INNER JOIN user_roles ur ON ur.user_id=u.id INNER JOIN roles r ON r.id=ur.role_id AND r.code='manager' WHERE ou.organization_id=:organization LIMIT 1");
+        $s->execute(['organization'=>$organizationId]);
+        $row=$s->fetch();
+        return is_array($row)?$row:null;
+    }
     public function financeIntegrationSummary():array
     {
         $row=$this->database->query("SELECT COUNT(*) total,SUM(asaas_wallet_id IS NOT NULL) configured,SUM(asaas_wallet_status='validated') validated,SUM(split_enabled=1) split_enabled FROM organizations")->fetch()?:[];
