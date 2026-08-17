@@ -13,7 +13,7 @@
    <div class="pole-fields">
     <label>Nome do polo *<input required maxlength="160" name="name" placeholder="Ex.: Polo Tijucas"></label>
     <label>Código permanente *<input required maxlength="100" name="code" pattern="[a-z0-9][a-z0-9-]{1,98}[a-z0-9]" placeholder="polo-tijucas"><small>Letras minúsculas, números e hífens.</small></label>
-    <label>Unidade correspondente<select name="unit_id"><option value="">Sem unidade vinculada</option><?php foreach($poleUnits as$unit):if(!empty($unit['pole_id']))continue;?><option value="<?= (int)$unit['id'] ?>"><?= $escape((string)$unit['name']) ?><?= !empty($unit['city'])?' · '.$escape((string)$unit['city']):'' ?></option><?php endforeach;?></select></label>
+    <label>Unidade correspondente<select name="unit_id"><option value="">Criar unidade automaticamente</option><?php foreach($poleUnits as$unit):if(!empty($unit['pole_id']))continue;?><option value="<?= (int)$unit['id'] ?>"><?= $escape((string)$unit['name']) ?><?= !empty($unit['city'])?' · '.$escape((string)$unit['city']):'' ?></option><?php endforeach;?></select><small>Sem escolha, o polo cria a unidade correspondente para a franquia.</small></label>
     <label>Valor antigo no Moodle<input maxlength="255" name="legacy_value" placeholder="Somente para migrar Polo Presencial"><small>Opcional e temporário.</small></label>
    </div>
    <div class="pole-form-footer"><label class="checkbox-row"><input type="checkbox" name="is_primary" value="1" <?= $poles===[]?'checked':'' ?>> Polo principal</label><label class="checkbox-row"><input type="checkbox" name="is_active" value="1" checked> Polo ativo</label><button class="button button-primary" type="submit"><i class="fa-solid fa-plus"></i> Cadastrar polo</button></div>

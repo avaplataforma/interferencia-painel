@@ -1936,6 +1936,11 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($userRepo,'is_master'));
     assertTrue(str_contains($routes,'Este usuário é gerido pela Central e não pode ser editado aqui'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/users/index.php'),'Gerido pela Central'));
+    $poleRepo=(string)file_get_contents($rootPath.'/modules/Organization/OrganizationPoleRepository.php');
+    assertTrue(str_contains($poleRepo,"INSERT INTO units(organization_id,code,name,city,is_active)"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/poles.php'),'Criar unidade automaticamente'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'<label for="student-unit">Polo '));
+    assertTrue(!str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'<label for="student-unit">Unidade '));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Identity/UserManager.php'),'roleGrantsAllUnits'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),"r.code='headquarters'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000090_grant_all_permissions_to_headquarters.php'));

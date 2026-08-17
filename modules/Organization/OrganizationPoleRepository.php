@@ -33,7 +33,17 @@ final readonly class OrganizationPoleRepository
         $code=strtolower(trim($code));$name=trim(preg_replace('/\s+/u',' ',$name)??'');$legacyValue=trim(preg_replace('/\s+/u',' ',$legacyValue)??'');
         if(preg_match('/^[a-z0-9][a-z0-9-]{1,98}[a-z0-9]$/',$code)!==1)throw new RuntimeException('Informe um código estável com letras minúsculas, números e hífens.');
         if(mb_strlen($name)<2||mb_strlen($name)>160)throw new RuntimeException('Informe o nome do polo.');
-        if($unitId!==null){$check=$this->database->prepare('SELECT COUNT(*) FROM units WHERE id=:unit AND organization_id=:organization');$check->execute(['unit'=>$unitId,'organization'=>$organizationId]);if((int)$check->fetchColumn()!==1)throw new RuntimeException('Selecione uma unidade desta franquia.');}
+        if($unitId===null&&$id!==null){$pole=$this->find($id,$organizationId);if($pole!==null)$unitId=(int)($pole['unit_id']??0)?:null;}
+        if($unitId===null){
+            $unitCode=$code;
+            $exists=$this->database->prepare('SELECT COUNT(*) FROM units WHERE code=:code');$exists->execute(['code'=>$unitCode]);
+            if((int)$exists->fetchColumn()>0)$unitCode=$code.'-'.$organizationId;
+            $unit=$this->database->prepare("INSERT INTO units(organization_id,code,name,city,is_active) VALUES(:organization,:code,:name,'',1)");
+            $unit->execute(['organization'=>$organizationId,'code'=>$unitCode,'name'=>$name]);
+            $unitId=(int)$this->database->lastInsertId();
+        }else{
+            $check=$this->database->prepare('SELECT COUNT(*) FROM units WHERE id=:unit AND organization_id=:organization');$check->execute(['unit'=>$unitId,'organization'=>$organizationId]);if((int)$check->fetchColumn()!==1)throw new RuntimeException('Selecione uma unidade desta franquia.');
+        }
         $this->database->beginTransaction();
         try{
             if($primary)$this->database->prepare('UPDATE organization_poles SET is_primary=0 WHERE organization_id=:organization')->execute(['organization'=>$organizationId]);
