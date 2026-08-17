@@ -4,6 +4,11 @@
 /sources/
 /AGENTS.md
 /vendor/
+# Chaves SSH de deploy nunca devem ser versionadas
+/.deployment_*
+# Artefatos de build e dependências locais
+/*.zip
+/tmp/
 /automation/node_modules/
 /.phpunit.cache/
 /.phpunit.result.cache
