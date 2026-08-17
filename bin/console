@@ -185,15 +185,15 @@ TEXT);
     if ($command === 'sitemap:ping') {
         $sitemapUrl = (string) ($argv[2] ?? '');
         if ($sitemapUrl === '') {
-            $url = rtrim((string) $config->get('app.url', ''), '/');
-            $sitemapUrl = $url . '/site/sitemap.xml';
+            $host = (string) $config->get('app.central_host', 'mundointer.com.br');
+            $path = rtrim((string) $config->path('app.base_path'), '/');
+            $sitemapUrl = 'https://' . $host . $path . '/site/sitemap.xml';
         }
         if (!preg_match('#^https?://#i', $sitemapUrl)) throw new RuntimeException('Informe a URL completa do sitemap.');
         $target = 'https://www.google.com/ping?sitemap=' . rawurlencode($sitemapUrl);
         $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
         $body = @file_get_contents($target, false, $context);
-        fwrite(STDOUT, sprintf("Google avisado sobre %s\n", $sitemapUrl));
-        if (is_string($body) && $body !== '') fwrite(STDOUT, trim(strip_tags($body)) . "\n");
+        fwrite(STDOUT, sprintf("Aviso enviado sobre %s (o ping do Google está descontinuado; o sitemap com lastmod atualizado segue sendo a forma oficial).\n", $sitemapUrl));
         exit(0);
     }
 
