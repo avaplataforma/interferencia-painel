@@ -1932,7 +1932,10 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($userRepo,'function allRoles'));
     assertTrue(str_contains($userRepo,'function roleGrantsAllUnits'));
     assertTrue(str_contains($userRepo,"!in_array(\$role['code'],['super_admin','headquarters'],true)"));
-    assertTrue(str_contains($userRepo,"master_r.code IN ('super_admin','headquarters')"));
+    assertTrue(str_contains($userRepo,'function isMasterUser'));
+    assertTrue(str_contains($userRepo,'is_master'));
+    assertTrue(str_contains($routes,'Este usuário é gerido pela Central e não pode ser editado aqui'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/users/index.php'),'Gerido pela Central'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Identity/UserManager.php'),'roleGrantsAllUnits'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),"r.code='headquarters'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000090_grant_all_permissions_to_headquarters.php'));

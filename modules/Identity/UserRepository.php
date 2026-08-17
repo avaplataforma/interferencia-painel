@@ -72,7 +72,7 @@ final readonly class UserRepository
             return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, 0 AS unit_count FROM platform_users u LEFT JOIN platform_user_roles ur ON ur.user_id = u.id LEFT JOIN platform_roles r ON r.id = ur.role_id GROUP BY u.id ORDER BY u.name")->fetchAll();
         }
         if($this->organizationId===null)return $this->database->query("SELECT u.id, u.name, u.email, u.is_active, u.last_login_at, GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') AS roles, COUNT(DISTINCT s.unit_id) AS unit_count FROM users u LEFT JOIN user_roles ur ON ur.user_id = u.id LEFT JOIN roles r ON r.id = ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id = u.id GROUP BY u.id ORDER BY u.name")->fetchAll();
-        $statement=$this->database->prepare("SELECT u.id,u.name,u.email,u.is_active,u.last_login_at,GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') roles,COUNT(DISTINCT scoped.id) unit_count FROM users u INNER JOIN organization_users membership ON membership.user_id=u.id AND membership.organization_id=? AND membership.status='active' LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id=u.id LEFT JOIN units scoped ON scoped.id=s.unit_id AND scoped.organization_id=membership.organization_id WHERE NOT EXISTS(SELECT 1 FROM user_roles master_ur INNER JOIN roles master_r ON master_r.id=master_ur.role_id WHERE master_ur.user_id=u.id AND master_r.code IN ('super_admin','headquarters')) GROUP BY u.id ORDER BY u.name");$statement->execute([$this->organizationId]);return$statement->fetchAll();
+        $statement=$this->database->prepare("SELECT u.id,u.name,u.email,u.is_active,u.last_login_at,GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') roles,COUNT(DISTINCT scoped.id) unit_count,EXISTS(SELECT 1 FROM user_roles master_ur INNER JOIN roles master_r ON master_r.id=master_ur.role_id WHERE master_ur.user_id=u.id AND master_r.code IN ('super_admin','headquarters')) is_master FROM users u INNER JOIN organization_users membership ON membership.user_id=u.id AND membership.organization_id=? AND membership.status='active' LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id LEFT JOIN user_unit_scopes s ON s.user_id=u.id LEFT JOIN units scoped ON scoped.id=s.unit_id AND scoped.organization_id=membership.organization_id GROUP BY u.id ORDER BY u.name");$statement->execute([$this->organizationId]);return$statement->fetchAll();
     }
 
     /** @param list<int> $unitIds @return list<array<string,mixed>> */
@@ -108,6 +108,14 @@ final readonly class UserRepository
         $marks=implode(',',array_fill(0,count($roleIds),'?'));
         $statement=$this->database->prepare("SELECT COUNT(*) FROM role_permissions rp INNER JOIN permissions p ON p.id=rp.permission_id WHERE p.code='units.access_all' AND rp.role_id IN ({$marks})");
         $statement->execute($roleIds);
+        return (int)$statement->fetchColumn()>0;
+    }
+
+    /** Usuário master da franquia (papel Gestor ou Admin), gerido somente pela Central. */
+    public function isMasterUser(int $userId): bool
+    {
+        $statement=$this->database->prepare("SELECT COUNT(*) FROM user_roles ur INNER JOIN roles r ON r.id=ur.role_id WHERE ur.user_id=:user AND r.code IN ('super_admin','headquarters')");
+        $statement->execute(['user'=>$userId]);
         return (int)$statement->fetchColumn()>0;
     }
 
