@@ -170,7 +170,7 @@ TEXT);
         if ($dryRun) {
             fwrite(STDOUT, sprintf("Prontos para liberação (qualidade mínima): %d. Nenhum item foi alterado.\n", $result['ready']));
         } else {
-            fwrite(STDOUT, sprintf("Liberados com qualidade mínima: %d de %d prontos no lote.\n", $result['released'], $result['ready']));
+            fwrite(STDOUT, sprintf("Liberados com qualidade mínima: %d de %d prontos; ofertas publicadas para as franquias: %d.\n", $result['released'], $result['ready'], $result['offers']));
         }
         exit(0);
     }

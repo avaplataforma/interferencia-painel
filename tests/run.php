@@ -1789,6 +1789,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($appConfig,"'analytics_ga4_id'"));
     assertTrue(str_contains($catalogRepo,'function releaseReadyCourses'));
     assertTrue(str_contains($catalogRepo,"course.release_status NOT IN ('released','published')"));
+    assertTrue(str_contains($catalogRepo,"course.review_status IN ('reviewed','approved')"));
+    assertTrue(str_contains($catalogRepo,'ON DUPLICATE KEY UPDATE is_visible=1'));
     $console=(string)file_get_contents($rootPath.'/bin/console');
     assertTrue(str_contains($console,'catalog:release-ready'));
     assertTrue(str_contains($routes,"'desired_course_other'"));

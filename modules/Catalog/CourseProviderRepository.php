@@ -1328,18 +1328,45 @@ final readonly class CourseProviderRepository
         return $affected;
     }
 
-    /** Libera em lote apenas cursos com qualidade mínima: texto IA, capa, carga horária e oferta com preço. */
+    /** Libera em lote apenas cursos com qualidade mínima (texto IA, capa e carga horária) e publica as ofertas das franquias com o catálogo habilitado. */
     public function releaseReadyCourses(string $providerCode, int $limit, bool $dryRun, ?int $userId): array
     {
         $limit = max(1, min(100, $limit));
-        $statement = $this->database->prepare("SELECT course.id FROM provider_courses course INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id WHERE provider.provider_code=:provider AND course.review_status='approved' AND course.release_status NOT IN ('released','published') AND course.is_available=1 AND TRIM(COALESCE(course.commercial_summary,''))<>'' AND TRIM(COALESCE(course.commercial_description,''))<>'' AND (EXISTS(SELECT 1 FROM catalog_media_assets cover WHERE cover.entity_type='course' AND cover.entity_id=course.id AND cover.purpose='cover' AND cover.generation_status='ready') OR TRIM(COALESCE(course.commercial_cover_url,''))<>'' OR TRIM(COALESCE(course.cover_url,''))<>'') AND CAST(COALESCE(NULLIF(course.commercial_workload,''),course.workload,catalog.central_default_module_workload) AS DECIMAL(10,1))>0 AND EXISTS(SELECT 1 FROM organization_provider_course_offers offer WHERE offer.provider_course_id=course.id AND offer.is_active=1 AND offer.is_visible=1 AND offer.price>=5) ORDER BY course.id LIMIT :limit");
-        $statement->execute(['provider' => $providerCode, 'limit' => $limit]);
+        $settings = $this->settingsForProvider($providerCode);
+        $catalogId = (int)($settings['catalog_id'] ?? 0);
+        $statement = $this->database->prepare("SELECT course.id FROM provider_courses course INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id INNER JOIN course_catalogs catalog ON catalog.id=course.catalog_id WHERE provider.provider_code=:provider AND course.review_status IN ('reviewed','approved') AND course.release_status NOT IN ('released','published') AND course.is_available=1 AND TRIM(COALESCE(course.commercial_summary,''))<>'' AND TRIM(COALESCE(course.commercial_description,''))<>'' AND (EXISTS(SELECT 1 FROM catalog_media_assets cover WHERE cover.entity_type='course' AND cover.entity_id=course.id AND cover.purpose='cover' AND cover.generation_status='ready') OR TRIM(COALESCE(course.commercial_cover_url,''))<>'' OR TRIM(COALESCE(course.cover_url,''))<>'') AND CAST(COALESCE(NULLIF(course.commercial_workload,''),course.workload,catalog.central_default_module_workload) AS DECIMAL(10,1))>0 ORDER BY course.id LIMIT :limit");
+        $statement->bindValue(':provider', $providerCode);
+        $statement->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
         $ids = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: []);
-        if ($dryRun || $ids === []) return ['ready' => count($ids), 'released' => 0];
+        if ($dryRun || $ids === []) return ['ready' => count($ids), 'released' => 0, 'offers' => 0];
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $update = $this->database->prepare("UPDATE provider_courses course SET course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW() WHERE course.id IN ({$placeholders})");
-        $update->execute(array_merge([$userId], $ids));
-        return ['ready' => count($ids), 'released' => $update->rowCount()];
+        $release = $this->database->prepare("UPDATE provider_courses course SET course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW() WHERE course.id IN ({$placeholders})");
+        $release->execute(array_merge([$userId], $ids));
+        $released = $release->rowCount();
+        $offers = 0;
+        if ($catalogId > 0) {
+            $organizations = $this->database->prepare("SELECT access.organization_id FROM organization_course_catalog_access access INNER JOIN course_catalogs catalog ON catalog.id=access.course_catalog_id AND catalog.is_globally_enabled=1 WHERE access.course_catalog_id=? AND access.is_enabled=1");
+            $organizations->execute([$catalogId]);
+            foreach (array_map('intval', $organizations->fetchAll(PDO::FETCH_COLUMN) ?: []) as $organizationId) {
+                $policy = $this->database->prepare("SELECT COALESCE(access.default_price,catalog.central_default_price) default_price,COALESCE(access.markup_percent,0) markup_percent,COALESCE(access.default_max_installments,catalog.central_default_max_installments,1) installments FROM organization_course_catalog_access access INNER JOIN course_catalogs catalog ON catalog.id=access.course_catalog_id WHERE access.organization_id=? AND access.course_catalog_id=? LIMIT 1");
+                $policy->execute([$organizationId, $catalogId]);
+                $row = $policy->fetch();
+                if (!is_array($row)) continue;
+                $defaultPrice = $row['default_price'] !== null ? (float)$row['default_price'] : null;
+                $markup = (float)$row['markup_percent'];
+                $installments = max(1, min(60, (int)$row['installments']));
+                $upsert = $this->database->prepare("INSERT INTO organization_provider_course_offers(organization_id,provider_course_id,commercial_name,commercial_description,price,max_installments,sale_mode,is_visible,is_active,created_by,updated_by)
+                    SELECT ?,course.id,COALESCE(NULLIF(course.commercial_name,''),course.name),course.commercial_description,
+                        CASE WHEN ? IS NOT NULL THEN ? ELSE ROUND(COALESCE(course.remote_promotional_price,course.remote_reference_price,0)*(1+(?/100)),2) END,?,'assisted',1,1,?,?
+                    FROM provider_courses course
+                    WHERE course.id IN ({$placeholders}) AND NOT EXISTS(SELECT 1 FROM organization_catalog_item_access item_access WHERE item_access.organization_id=? AND item_access.item_type='course' AND item_access.item_id=course.id AND item_access.is_enabled=0)
+                    ON DUPLICATE KEY UPDATE is_visible=1,is_active=1,price=VALUES(price),max_installments=VALUES(max_installments),updated_by=VALUES(updated_by)");
+                $upsert->execute(array_merge([$organizationId, $defaultPrice, $defaultPrice, $markup, $installments, $userId, $userId], $ids, [$organizationId]));
+                $offers += $upsert->rowCount();
+            }
+        }
+        return ['ready' => count($ids), 'released' => $released, 'offers' => $offers];
     }
 
     public function setOrganizationItemAvailability(int $organizationId, string $itemType, int $itemId, bool $enabled, ?int $userId): void
