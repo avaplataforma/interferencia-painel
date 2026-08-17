@@ -1738,6 +1738,12 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($courseView,'Sobre este Curso'));
     assertTrue(str_contains($courseView,'Quero fazer este Curso'));
     assertTrue(str_contains($courseView,'Cursos desta Trilha'));
+    assertTrue(str_contains($courseView,'Aula(s)'));
+    assertTrue(!str_contains($courseView,'unidade(s)'));
+    assertTrue(str_contains($courseView,'Certificação'));
+    assertTrue(str_contains($courseView,'fa-award'));
+    assertTrue(str_contains($courseView,'fa-headset'));
+    assertTrue(!str_contains($courseView,'Matrícula integrada ao ambiente do aluno'));
     assertTrue(!str_contains($courseView,'Sobre este Módulo'));
     assertTrue(!str_contains($courseView,'Módulos desta Trilha'));
     assertTrue(!str_contains($courseView,'fa-laptop'));
