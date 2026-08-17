@@ -22,48 +22,6 @@ final readonly class AvaCourseProvisioningService
         private IesdeLtiRobot $iesdeRobot,
     ) {}
 
-    /**
-     * Publishes or refreshes one MASTER module from the ADM Central using the
-     * same transient LTI bridge used by just-in-time enrollment provisioning.
-     * This keeps manual publication independent from expired Moodle module IDs.
-     *
-     * @return array<string,mixed>
-     */
-    public function publishProviderCourse(int $courseId, ?int $userId): array
-    {
-        if ($courseId < 1) {
-            throw new RuntimeException('Curso Individual inválido para a preparação do AVA.');
-        }
-
-        $context = $this->providers->coursePublicationContext($courseId);
-        if ($context === null || (string)($context['provider_code'] ?? '') !== 'iesde') {
-            throw new RuntimeException('Esta preparação automática está disponível somente para a Formação MASTER.');
-        }
-
-        $sourceName = trim((string)($context['effective_name'] ?? $context['name'] ?? ''));
-        if ($sourceName === '') {
-            throw new RuntimeException('Informe o nome do Módulo MASTER antes de publicá-lo.');
-        }
-
-        $snapshotId = 0;
-        try {
-            $prepared = $this->iesdeRobot->prepare($courseId, $sourceName);
-            $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
-            $result = $this->publisher->publishMasterCourse($courseId, $userId, (int)($prepared['source_cmid'] ?? 0));
-            $remoteCourseId = (int)($result['remote_course_id'] ?? 0);
-            if ($remoteCourseId < 1) {
-                throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
-            }
-            $result['staging_cleaned'] = $this->iesdeRobot->finalize($snapshotId, $remoteCourseId);
-            return $result;
-        } catch (Throwable $exception) {
-            if ($snapshotId > 0) {
-                $this->iesdeRobot->fail($snapshotId, $exception->getMessage());
-            }
-            throw $exception;
-        }
-    }
-
     /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
     public function ensureProviderCourseOffer(int $offerId, int $organizationId, ?int $userId): array
     {
@@ -89,51 +47,44 @@ final readonly class AvaCourseProvisioningService
             return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
         }
 
-        if ($providerCode !== 'iesde') {
-            $message = 'A criação automática ainda não está habilitada para esta Formação.';
-            $this->failJob($jobId, $message);
-            throw new RuntimeException($message);
+        return $this->processJob($jobId, $userId);
+    }
+
+    /** @return array{job_id:int,status:string} */
+    public function queueProviderCourse(int $courseId, ?int $userId): array
+    {
+        if ($courseId < 1) throw new RuntimeException('Módulo inválido para a fila do AVA.');
+
+        $course = $this->database->prepare("SELECT course.id,course.name,provider.provider_code
+            FROM provider_courses course
+            INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id
+            WHERE course.id=:course LIMIT 1");
+        $course->execute(['course' => $courseId]);
+        $target = $course->fetch();
+        if (!is_array($target) || (string)($target['provider_code'] ?? '') !== 'iesde') {
+            throw new RuntimeException('A publicação automática está disponível somente para Módulos da Formação MASTER.');
         }
 
-        $lockName = 'mi:ava:provider-course:'.$courseId;
-        $lock = $this->database->prepare('SELECT GET_LOCK(:lock_name,30)');
-        $lock->execute(['lock_name' => $lockName]);
-        if ((int)$lock->fetchColumn() !== 1) {
-            $message = 'O AVA já está preparando este curso. Aguarde alguns instantes e tente novamente.';
-            $this->failJob($jobId, $message);
-            throw new RuntimeException($message);
+        $organization = $this->database->prepare("SELECT organization_id
+            FROM organization_provider_course_offers
+            WHERE provider_course_id=:course AND is_active=1
+            ORDER BY id LIMIT 1");
+        $organization->execute(['course' => $courseId]);
+        $organizationId = (int)$organization->fetchColumn();
+        if ($organizationId < 1) {
+            $organizationId = (int)$this->database->query('SELECT id FROM organizations WHERE is_active=1 ORDER BY id LIMIT 1')->fetchColumn();
         }
+        if ($organizationId < 1) throw new RuntimeException('Nenhuma franquia ativa foi encontrada para registrar a publicação.');
 
-        try {
-            // Another request may have completed while this one waited for the lock.
-            $current = $this->publishedCourse($courseId, $organizationId);
-            if ($current !== null) {
-                $this->completeJob($jobId);
-                $this->recordReuse($jobId);
-                return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
-            }
-
-            $this->startJob($jobId);
-            $snapshotId = 0;
-            $prepared = $this->iesdeRobot->prepare($courseId, (string)($target['source_name'] ?? $target['name'] ?? ''), $jobId);
-            $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
-            $this->publisher->publishMasterCourse($courseId, $userId, (int)($prepared['source_cmid'] ?? 0));
-            $current = $this->publishedCourse($courseId, $organizationId);
-            if ($current === null) {
-                throw new RuntimeException('O AVA concluiu a preparação sem devolver o curso publicado.');
-            }
-            $this->iesdeRobot->finalize($snapshotId, (int)$current['remote_course_id']);
-            $this->completeJob($jobId);
-            return $current + ['course_id' => $courseId, 'created' => true, 'job_id' => $jobId];
-        } catch (Throwable $exception) {
-            $message = trim($exception->getMessage()) ?: 'Falha ao preparar automaticamente o curso no AVA.';
-            if (isset($snapshotId) && $snapshotId > 0) $this->iesdeRobot->fail($snapshotId, $message);
-            $this->failJob($jobId, $message);
-            throw new RuntimeException($message, 0, $exception);
-        } finally {
-            $release = $this->database->prepare('SELECT RELEASE_LOCK(:lock_name)');
-            $release->execute(['lock_name' => $lockName]);
-        }
+        $jobId = $this->upsertJob(
+            $courseId,
+            $organizationId,
+            'iesde',
+            $userId,
+            'queued',
+            'provider-course-sync:'.$courseId,
+        );
+        return ['job_id' => $jobId, 'status' => 'queued'];
     }
 
     /**
@@ -238,20 +189,72 @@ final readonly class AvaCourseProvisioningService
     public function retry(int $jobId, ?int $userId): array
     {
         if ($jobId < 1) throw new RuntimeException('Item inválido na fila de publicação.');
-        $statement = $this->database->prepare("SELECT job.organization_id,offer.id offer_id
+        return $this->processJob($jobId, $userId);
+    }
+
+    /** @return array{course_id:int,moodle_course_id:int,ava_connection_id:int,remote_course_id:int,created:bool,job_id:int} */
+    private function processJob(int $jobId, ?int $userId): array
+    {
+        $statement = $this->database->prepare("SELECT job.provider_course_id,job.organization_id,job.provider_code,job.request_key,job.requested_by,
+                course.name source_name
             FROM ava_course_provisioning_jobs job
-            INNER JOIN organization_provider_course_offers offer
-              ON offer.organization_id=job.organization_id AND offer.provider_course_id=job.provider_course_id AND offer.is_active=1
+            INNER JOIN provider_courses course ON course.id=job.provider_course_id
             WHERE job.id=:id LIMIT 1");
         $statement->execute(['id' => $jobId]);
-        $row = $statement->fetch();
-        if (!is_array($row)) {
-            $message = 'A oferta vinculada a esta publicação não está mais ativa.';
-            $this->startJob($jobId);
+        $job = $statement->fetch();
+        if (!is_array($job)) throw new RuntimeException('Item não encontrado na fila de publicação.');
+
+        $courseId = (int)$job['provider_course_id'];
+        $organizationId = (int)$job['organization_id'];
+        $userId ??= isset($job['requested_by']) ? (int)$job['requested_by'] : null;
+        $forceSync = str_starts_with((string)$job['request_key'], 'provider-course-sync:');
+        if ((string)$job['provider_code'] !== 'iesde') {
+            $message = 'A criação automática ainda não está habilitada para esta Formação.';
             $this->failJob($jobId, $message);
             throw new RuntimeException($message);
         }
-        return $this->ensureProviderCourseOffer((int)$row['offer_id'], (int)$row['organization_id'], $userId);
+
+        $current = $this->publishedCourse($courseId, $organizationId);
+        if ($current !== null && !$forceSync) {
+            $this->recordReuse($jobId);
+            return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
+        }
+
+        $lockName = 'mi:ava:provider-course:'.$courseId;
+        $lock = $this->database->prepare('SELECT GET_LOCK(:lock_name,30)');
+        $lock->execute(['lock_name' => $lockName]);
+        if ((int)$lock->fetchColumn() !== 1) {
+            $message = 'O AVA já está preparando este Módulo. A fila tentará novamente em seguida.';
+            $this->failJob($jobId, $message);
+            throw new RuntimeException($message);
+        }
+
+        try {
+            $current = $this->publishedCourse($courseId, $organizationId);
+            if ($current !== null && !$forceSync) {
+                $this->recordReuse($jobId);
+                return $current + ['course_id' => $courseId, 'created' => false, 'job_id' => $jobId];
+            }
+
+            $this->startJob($jobId);
+            $snapshotId = 0;
+            $prepared = $this->iesdeRobot->prepare($courseId, (string)$job['source_name'], $jobId);
+            $snapshotId = (int)($prepared['snapshot_id'] ?? 0);
+            $this->publisher->publishMasterCourse($courseId, $userId);
+            $published = $this->publishedCourse($courseId, $organizationId);
+            if ($published === null) throw new RuntimeException('O AVA concluiu a preparação sem devolver o Módulo publicado.');
+            $this->iesdeRobot->finalize($snapshotId, (int)$published['remote_course_id']);
+            $this->completeJob($jobId);
+            return $published + ['course_id' => $courseId, 'created' => $current === null, 'job_id' => $jobId];
+        } catch (Throwable $exception) {
+            $message = trim($exception->getMessage()) ?: 'Falha ao preparar automaticamente o Módulo no AVA.';
+            if (isset($snapshotId) && $snapshotId > 0) $this->iesdeRobot->fail($snapshotId, $message);
+            $this->failJob($jobId, $message);
+            throw new RuntimeException($message, 0, $exception);
+        } finally {
+            $release = $this->database->prepare('SELECT RELEASE_LOCK(:lock_name)');
+            $release->execute(['lock_name' => $lockName]);
+        }
     }
 
     /** @return array{moodle_course_id:int,ava_connection_id:int,remote_course_id:int}|null */
@@ -275,9 +278,9 @@ final readonly class AvaCourseProvisioningService
         ];
     }
 
-    private function upsertJob(int $courseId, int $organizationId, string $providerCode, ?int $userId, string $status): int
+    private function upsertJob(int $courseId, int $organizationId, string $providerCode, ?int $userId, string $status, ?string $requestKey = null): int
     {
-        $requestKey = 'provider-course:'.$courseId;
+        $requestKey ??= 'provider-course:'.$courseId;
         $statement = $this->database->prepare("INSERT INTO ava_course_provisioning_jobs(request_key,provider_course_id,organization_id,provider_code,status,requested_by)
             VALUES(:request_key,:course,:organization,:provider,:status,:user)
             ON DUPLICATE KEY UPDATE organization_id=VALUES(organization_id),provider_code=VALUES(provider_code),
@@ -324,4 +327,3 @@ final readonly class AvaCourseProvisioningService
             ->execute(['id' => $jobId, 'error' => mb_substr($message, 0, 2000)]);
     }
 }
-
