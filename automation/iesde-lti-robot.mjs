@@ -49,8 +49,15 @@ try {
   await providerFrame.getByText(/materiais complementares|selecionar todas/i).first().waitFor({ state: 'visible', timeout: 30000 });
 
   const review = providerFrame.getByRole('button', { name: /revisar e confirmar/i }).first();
-  const lessonResources = providerFrame.getByRole('button', { name: /^(material da aula|material interativo da aula)$/i });
-  const lessonResourceCount = await lessonResources.count();
+  // The provider counter counts lessons, not materials. Each lesson row may
+  // expose up to two material toggles ("Material da aula" and "Material
+  // interativo da aula"), so counting buttons overstates disciplines whose
+  // lessons offer both formats.
+  let lessonResourceCount = await providerFrame.locator('.lesson-row').count();
+  if (lessonResourceCount < 1) {
+    const lessonResources = providerFrame.getByRole('button', { name: /^(material da aula|material interativo da aula)$/i });
+    lessonResourceCount = await lessonResources.count();
+  }
   if (lessonResourceCount < 1) {
     throw new Error('O fornecedor abriu a disciplina sem disponibilizar aulas selecionáveis.');
   }

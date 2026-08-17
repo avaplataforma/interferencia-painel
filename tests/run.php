@@ -2662,6 +2662,7 @@ $tests['prepara curso MASTER automaticamente antes da matricula'] = static funct
     assertTrue(str_contains($robot,'curso incompleto'));
     assertTrue(str_contains($browserRobot,'waitForSelectionCount'));
     assertTrue(str_contains($browserRobot,'lessonResourceCount'));
+    assertTrue(str_contains($browserRobot,"providerFrame.locator('.lesson-row').count()"));
     assertTrue(str_contains($browserRobot,'beforeAssessment + 1'));
     assertTrue(str_contains($browserRobot,'os seguintes itens ser[aã]o adicionados ao seu curso'));
     assertTrue(str_contains($browserRobot,'linkedItemCount < expectedSelectionCount'));
