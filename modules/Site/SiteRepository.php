@@ -483,7 +483,7 @@ final readonly class SiteRepository
     /** @return list<array<string,mixed>> */
     public function trailProducts(int $organizationId):array
     {
-        $statement=$this->database->prepare("SELECT trail.id,trail.name,COALESCE(NULLIF(trail.short_description,''),NULLIF(trail.description,''),'Trilha com Módulos organizados para uma formação completa.') description,category.name category,trail.workload_hours,trail.default_price,COALESCE(access.price_override,trail.default_price) value,COALESCE(access.max_installments_override,trail.max_installments,1) max_installments,trail.cover_url,asset.id media_asset_id,publication.remote_course_id,(SELECT COUNT(*) FROM catalog_trail_items counted WHERE counted.catalog_trail_id=trail.id) lesson_count
+        $statement=$this->database->prepare("SELECT trail.id,trail.name,COALESCE(NULLIF(trail.short_description,''),NULLIF(trail.description,''),'Trilha com Cursos organizados para uma formação completa.') description,category.name category,trail.workload_hours,trail.default_price,COALESCE(access.price_override,trail.default_price) value,COALESCE(access.max_installments_override,trail.max_installments,1) max_installments,trail.cover_url,asset.id media_asset_id,publication.remote_course_id,(SELECT COUNT(*) FROM catalog_trail_items counted WHERE counted.catalog_trail_id=trail.id) lesson_count
             FROM catalog_trails trail
             INNER JOIN catalog_categories category ON category.id=trail.category_id AND category.is_active=1
             INNER JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id AND publication.publication_status='published' AND publication.remote_course_id IS NOT NULL
