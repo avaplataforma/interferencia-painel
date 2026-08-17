@@ -171,6 +171,14 @@
   filterCatalog();
   syncPills();
 
+  const backToTop = document.querySelector('[data-back-to-top]');
+  if (backToTop instanceof HTMLElement) {
+    const syncBackToTop = () => { backToTop.hidden = window.scrollY < 400; };
+    window.addEventListener('scroll', syncBackToTop, { passive: true });
+    backToTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    syncBackToTop();
+  }
+
   const mobileMenuButton = document.querySelector('[data-mobile-menu-open]');
   const mobileMenu = document.querySelector('[data-mobile-menu]');
   if (mobileMenuButton instanceof HTMLButtonElement && mobileMenu instanceof HTMLElement) {

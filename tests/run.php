@@ -1824,6 +1824,10 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(!str_contains($publicView,'formações disponíveis'));
     assertTrue(str_contains($publicView,'data-mobile-menu'));
     assertTrue(str_contains($publicView,'mobile-menu-button'));
+    assertTrue(str_contains($publicView,'data-back-to-top'));
+    assertTrue(strpos($publicView,'.mobile-menu-button{display:none}') !== false);
+    assertTrue(strpos($publicView,'.mobile-menu-button{display:none}') < strpos($publicView,'@media(max-width:1000px)'));
+    assertTrue(str_contains($siteJs,'data-back-to-top'));
     assertTrue(str_contains($siteJs,'data-mobile-menu'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/testimonials.php'),'data-mobile-menu'));
     assertTrue(str_contains($publicView,'course-rating'));

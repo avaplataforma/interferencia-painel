@@ -47,6 +47,6 @@ $listedCourses = [];
 <?php if ($privacyPolicy !== ''): ?><dialog class="legal-dialog" id="privacy-dialog"><h2 style="margin:0 0 .8rem;color:var(--ink)">Política de privacidade</h2><?= nl2br($escape($privacyPolicy)) ?><p><button type="button" data-legal-close>Fechar</button></p></dialog><?php endif; ?>
 <?php if ($termsText !== ''): ?><dialog class="legal-dialog" id="terms-dialog"><h2 style="margin:0 0 .8rem;color:var(--ink)">Termos de uso</h2><?= nl2br($escape($termsText)) ?><p><button type="button" data-legal-close>Fechar</button></p></dialog><?php endif; ?>
 <?php if ($cookieBannerEnabled): ?><aside class="cookie-consent" data-cookie-banner hidden><div class="cookie-row"><div class="cookie-copy"><strong>Privacidade e cookies</strong><p><?= $escape($cookieNotice !== '' ? $cookieNotice : 'Usamos cookies essenciais para o funcionamento do site e, com sua autorização, métricas para melhorar sua experiência.') ?></p></div><div class="cookie-actions"><button type="button" data-cookie-essential>Somente essenciais</button><button class="accept" type="button" data-cookie-accept>Aceitar métricas</button></div></div></aside><?php endif; ?>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=12" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=13" defer></script>
 </body>
 </html>
