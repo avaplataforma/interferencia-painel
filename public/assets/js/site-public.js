@@ -171,6 +171,20 @@
   filterCatalog();
   syncPills();
 
+  const mobileMenuButton = document.querySelector('[data-mobile-menu-open]');
+  const mobileMenu = document.querySelector('[data-mobile-menu]');
+  if (mobileMenuButton instanceof HTMLButtonElement && mobileMenu instanceof HTMLElement) {
+    const setMenu = (open) => {
+      mobileMenu.hidden = !open;
+      mobileMenuButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      mobileMenuButton.setAttribute('aria-label', open ? 'Fechar menu' : 'Abrir menu');
+      const icon = mobileMenuButton.querySelector('i');
+      if (icon) icon.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+    };
+    mobileMenuButton.addEventListener('click', () => setMenu(mobileMenu.hidden));
+    mobileMenu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenu(false)));
+  }
+
   const heroSearch = document.querySelector('[data-hero-search]');
   const heroSearchInput = document.querySelector('[data-hero-search-input]');
   if (heroSearch instanceof HTMLFormElement && heroSearchInput instanceof HTMLInputElement && catalogSearch instanceof HTMLInputElement) {
