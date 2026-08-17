@@ -109,6 +109,6 @@ if ($rating > 0 && $ratingCount > 0) $structuredData['@graph'][0]['aggregateRati
   <?php endif; ?>
  </aside>
 </main>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=5" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=11" defer></script>
 </body>
 </html>

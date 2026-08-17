@@ -1800,6 +1800,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($routes,"'website'"));
     assertTrue(str_contains($routes,"'site-contact-v2'"));
     assertTrue(str_contains($routes,"'/site/depoimento'"));
+    assertTrue(str_contains($routes,"'/site/depoimentos'"));
     assertTrue(str_contains($routes,"'/site/formacao/"));
     assertTrue(str_contains($routes,"'/admin/site/testimonials/"));
     assertTrue(str_contains($routes,"Cache-Control"));
@@ -1813,8 +1814,13 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(is_file($rootPath.'/scripts/smoke.sh'));
     assertTrue(str_contains($publicView,'data-catalog-pills'));
     assertTrue(str_contains($publicView,'data-catalog-init-formacao'));
-    assertTrue(str_contains($publicView,'id="depoimentos"'));
-    assertTrue(str_contains($publicView,'data-testimonial-form'));
+    assertTrue(str_contains($publicView,'/depoimentos'));
+    assertTrue(str_contains($publicView,'[hidden]{display:none!important}'));
+    assertTrue(!str_contains($publicView,'data-testimonial-form'));
+    $testimonialsView=(string)file_get_contents($rootPath.'/views/site/testimonials.php');
+    assertTrue(str_contains($testimonialsView,'data-testimonial-form'));
+    assertTrue(str_contains($testimonialsView,'page-hero'));
+    assertTrue(str_contains($testimonialsView,'testimonial-grid'));
     assertTrue(str_contains($siteJs,'data-category-pill'));
     assertTrue(str_contains($siteJs,'history.replaceState'));
     assertTrue(str_contains($siteJs,'catalogInitQ'));

@@ -225,13 +225,19 @@ return static function (
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
         $previewDevice=$preview&&$request->queryValue('device','desktop')==='mobile'?'mobile':'desktop';
         $catalogInit=['q'=>(string)$request->queryValue('q',''),'formacao'=>(string)$request->queryValue('formacao',''),'categoria'=>(string)$request->queryValue('categoria',''),'ordenar'=>(string)$request->queryValue('ordenar','featured')];
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'testimonialMessage'=>$session->get('site_testimonial.message'),'testimonialError'=>$session->get('site_testimonial.error'),'testimonials'=>$sites->publishedTestimonials($organizationId),'catalogInit'=>$catalogInit,'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'catalogInit'=>$catalogInit,'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
     });
 
     $router->get('/site/formacao/{code:[a-z0-9_-]+}',static function(Request$request,array$params)use($basePath):Response{return Response::redirect($basePath.'/site?formacao='.rawurlencode((string)$params['code']),301);});
 
+    $router->get('/site/depoimentos',static function(Request$request)use($view,$config,$sites,$organizationId,$session,$csrf,$basePath):Response{
+        $site=$sites->publicSite($organizationId);
+        if($site===null)return$view->renderStandalone('site/unavailable',[],404);
+        return$view->renderStandalone('site/testimonials',['site'=>$site,'testimonials'=>$sites->publishedTestimonials($organizationId),'testimonialMessage'=>$session->get('site_testimonial.message'),'testimonialError'=>$session->get('site_testimonial.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
+    });
+
     $router->post('/site/depoimento',static function(Request$request)use($sites,$contacts,$organizationId,$session,$basePath):Response{
-        if(trim((string)$request->input('website',''))!==''){return Response::redirect($basePath.'/site?depoimento=resultado#depoimentos');}
+        if(trim((string)$request->input('website',''))!==''){return Response::redirect($basePath.'/site/depoimentos');}
         try{
             $site=$sites->publicSite($organizationId);if($site===null)throw new RuntimeException('O formulário de depoimentos não está disponível.');
             $fingerprint=hash('sha256',$organizationId.'|testimonial|'.(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown')));if(!$contacts->allowExternalRequest($fingerprint,4))throw new RuntimeException('Muitas tentativas foram realizadas. Aguarde um minuto e tente novamente.');
@@ -239,7 +245,7 @@ return static function (
             $sites->submitTestimonial(['organization_id'=>$organizationId,'author_name'=>$request->input('author_name',''),'author_city'=>$request->input('author_city',''),'course_name'=>$request->input('course_name',''),'rating'=>$request->input('rating','0'),'testimonial_text'=>$request->input('testimonial_text','')]);
             $session->flash('site_testimonial.message','Depoimento recebido! Ele será publicado após a aprovação da equipe.');
         }catch(Throwable$e){$session->flash('site_testimonial.error',$e->getMessage());}
-        return Response::redirect($basePath.'/site?depoimento=resultado#depoimentos');
+        return Response::redirect($basePath.'/site/depoimentos');
     });
 
     $router->post('/site/bolsas',static function(Request$request)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -289,6 +295,7 @@ return static function (
         foreach(($site['external_products']??[])as$product){$kind=(string)($product['product_kind']??'provider_course');$path=$kind==='provider_content'?'/conteudo/':($kind==='trail'?'/trilha/':'/catalogo-pro/');$urls[]=[$root.$path.(int)$product['id'],date('Y-m-d'),'0.8'];}
         foreach(($site['formations']??[])as$formation)if(trim((string)($formation['code']??''))!=='')$urls[]=[$root.'?formacao='.rawurlencode((string)$formation['code']),date('Y-m-d'),'0.7'];
         foreach(($site['pages']??[])as$page)$urls[]=[$root.'/p/'.rawurlencode((string)$page['slug']),substr((string)($page['updated_at']??date('Y-m-d')),0,10),'0.6'];
+        $urls[]=[$root.'/depoimentos',date('Y-m-d'),'0.6'];
         $xml='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';foreach($urls as[$url,$updated,$priority])$xml.='<url><loc>'.htmlspecialchars($url,ENT_XML1|ENT_QUOTES,'UTF-8').'</loc><lastmod>'.htmlspecialchars($updated,ENT_XML1|ENT_QUOTES,'UTF-8').'</lastmod><priority>'.$priority.'</priority></url>';$xml.='</urlset>';
         return(new Response($xml,200))->withHeaders(['Content-Type'=>'application/xml; charset=UTF-8','Cache-Control'=>'public, max-age=3600']);
     });
