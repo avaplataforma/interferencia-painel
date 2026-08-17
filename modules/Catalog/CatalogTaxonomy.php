@@ -16,6 +16,9 @@ final class CatalogTaxonomy
         'metodologia do ensino' => 'Metodologia de Ensino',
         'eja - educacao de jovens e adultos' => 'EJA',
         'preparatorio aprova concursos' => 'Preparatórios',
+        'cursos livres' => 'Cursos Livres',
+        'graduacao' => 'Graduação',
+        'extensao universitaria' => 'Extensão Universitária',
     ];
 
     public static function clean(?string $value): ?string
