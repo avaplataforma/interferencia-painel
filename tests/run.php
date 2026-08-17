@@ -1724,7 +1724,13 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(!str_contains($admin,'Liberação por franquia'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos individuais e preços da franquia'));
     assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
-    assertTrue(str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
+    assertTrue(!str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
+    assertTrue(str_contains($public,'Carga Horária'));
+    assertTrue(str_contains($public,'Categoria: '));
+    assertTrue(str_contains($public,'course-facts'));
+    assertTrue(str_contains($public,'course-fact'));
+    assertTrue(!str_contains($public,'class="course-category"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php'),'catalog.central_default_module_workload) workload_text'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {
