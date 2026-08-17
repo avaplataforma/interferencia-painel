@@ -1823,8 +1823,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($publicView,'data-hero-search'));
     assertTrue(!str_contains($publicView,'formações disponíveis'));
     assertTrue(str_contains($publicView,'data-mobile-menu'));
-    assertTrue(str_contains($publicView,'Vantagens EXCLUSIVAS'));
-    assertTrue(str_contains($publicView,'advantage-grid'));
+    assertTrue(str_contains($publicView,'advantage-row'));
+    assertTrue(str_contains($publicView,'advantage-item'));
     assertTrue(str_contains($publicView,'Suporte Online com Tutores'));
     assertTrue(str_contains($publicView,'Certificado Premium'));
     assertTrue(str_contains($publicView,'mobile-menu-button'));
