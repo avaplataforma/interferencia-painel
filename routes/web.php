@@ -224,7 +224,7 @@ return static function (
         $site=$sites->publicSite($organizationId,$preview);
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
         $previewDevice=$preview&&$request->queryValue('device','desktop')==='mobile'?'mobile':'desktop';
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>$config->string('app.analytics_ga4_id')]);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')]);
     });
 
     $router->post('/site/bolsas',static function(Request$request)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -290,7 +290,7 @@ return static function (
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicCatalogProduct($organizationId,(int)$params['product']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
         $unitId=$product['unit_id']===null?null:(int)$product['unit_id'];
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>$config->string('app.analytics_ga4_id')]);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')]);
     });
 
     $router->post('/site/curso/{product:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -315,7 +315,7 @@ return static function (
     $router->get('/site/catalogo-pro/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalProduct($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>$config->string('app.analytics_ga4_id')]);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')]);
     });
 
     $router->post('/site/catalogo-pro/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -338,7 +338,7 @@ return static function (
     $router->get('/site/conteudo/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalContent($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>$config->string('app.analytics_ga4_id')]);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')]);
     });
 
     $router->post('/site/conteudo/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -361,7 +361,7 @@ return static function (
     $router->get('/site/trilha/{trail:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicTrail($organizationId,(int)$params['trail']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>$config->string('app.analytics_ga4_id')]);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')]);
     });
 
     $router->post('/site/trilha/{trail:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
