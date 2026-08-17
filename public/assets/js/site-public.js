@@ -85,6 +85,7 @@
   const catalogFormation = document.querySelector('[data-catalog-formation]');
   const catalogCategory = document.querySelector('[data-catalog-category]');
   const catalogSort = document.querySelector('[data-catalog-sort]');
+  const catalogSubmit = document.querySelector('[data-catalog-submit]');
   const catalogGrid = document.querySelector('[data-course-grid]');
   const catalogCards = Array.from(document.querySelectorAll('[data-course-card]'));
   const catalogEmpty = document.querySelector('[data-catalog-empty]');
@@ -115,6 +116,15 @@
   };
   catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
   [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', filterCatalog));
+  catalogSubmit?.addEventListener('click', () => {
+    filterCatalog();
+    catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  catalogSearch?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    catalogSubmit?.click();
+  });
   syncFavoriteButtons();
   filterCatalog();
 
