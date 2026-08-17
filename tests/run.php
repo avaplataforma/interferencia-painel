@@ -1825,6 +1825,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($publicView,'data-mobile-menu'));
     assertTrue(str_contains($publicView,'Vantagens EXCLUSIVAS'));
     assertTrue(str_contains($publicView,'advantage-grid'));
+    assertTrue(str_contains($publicView,'regular.min.css'));
+    assertTrue(is_file($rootPath.'/public/assets/vendor/fontawesome/webfonts/fa-regular-400.woff2'));
     assertTrue(str_contains($publicView,'Suporte Online com Tutores'));
     assertTrue(str_contains($publicView,'Certificado Premium'));
     assertTrue(str_contains($publicView,'mobile-menu-button'));

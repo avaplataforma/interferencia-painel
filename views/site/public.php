@@ -75,6 +75,7 @@ $testimonials = is_array($testimonials ?? null) ? $testimonials : [];
  <link rel="canonical" href="<?= $escape($canonicalUrl) ?>">
  <?php if ($favicon !== ''): ?><link rel="icon" href="<?= $escape($assetBasePath . $favicon) ?>"><?php endif; ?>
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/fontawesome.min.css">
+ <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/regular.min.css">
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/solid.min.css">
  <link rel="stylesheet" href="<?= $escape($assetBasePath) ?>/assets/vendor/fontawesome/css/brands.min.css">
  <style>
