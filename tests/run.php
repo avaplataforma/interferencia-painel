@@ -2419,7 +2419,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($publisher,"'book_ready'"));
     assertTrue(str_contains($providerRepository,'book_resource_count'));
     assertTrue(substr_count($providerRepository,"LIKE 'livro:%'") >= 2);
-    assertTrue(str_contains($routes,'A apostila oficial do IESDE também foi sincronizada.'));
+    assertTrue(str_contains($routes,'$avaCourseProvisioning->queueProviderCourse'));
     assertTrue(str_contains($routes,"' módulo(s) e '"));
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
     assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint, 'iesde')"));
@@ -2530,7 +2530,7 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(!str_contains($publisher,'Crie e salve a avaliação oficial no seletor do IESDE'));
     assertTrue(str_contains($publisher,"'provider_assessment_count'"));
     assertTrue(str_contains($publisher,'materializeLtiCourse'));
-    assertTrue(str_contains($routes,'avaliação oficial continua pendente'));
+    assertTrue(str_contains($routes,'Módulo adicionado à fila do AVA'));
     assertTrue(str_contains($providerView,'data-master-course-section="sync"'));
     assertTrue(str_contains($providerView,'Sincronizar com o AVA'));
     assertTrue(str_contains($moodleClient,"'assessmentjson'"));
