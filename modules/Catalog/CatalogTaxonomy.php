@@ -30,8 +30,8 @@ final class CatalogTaxonomy
         'TI' => ['algoritmo', 'programacao', 'informatic', 'inclusao digital', 'java', 'raciocinio logico', 'chat gpt'],
         'Saúde' => ['drogadicao', 'medicina legal', 'primeiros socorros', 'nr-1', 'psicossocial', 'assedio', 'discriminacao'],
         'Engenharia' => ['engenharia'],
-        'Negócios' => ['financas', 'financ', 'economi', 'gestao', 'marketing', 'negoci', 'investimentos', 'credito', 'lideranca', 'oratoria', 'canvas', 'balanced scorecard', 'soft skills', 'produtividade', 'empreendedora', 'empresarial', 'macroeconomica', 'politica e economia', 'projetos', 'metodologias ageis'],
-        'Educação' => ['educac', 'bncc', 'escola', 'escolar', 'pedagog', 'ensino', 'aprendizagem', 'professor', 'crianca', 'infantil', 'libras', 'lingua brasileira de sinais', 'ludico', 'jogos', 'bullying', 'abaco', 'novo ensino medio', 'nem', 'metodologias ativas', 'curriculo', 'esporte', 'ambiental', 'meio ambiente', 'sustentabilidade', 'tics', 'tecnologias na educacao', 'transtornos'],
+        'Negócios' => ['financas', 'financ', 'economi', 'gestao', 'marketing', 'negoci', 'investimentos', 'credito', 'lideranca', 'oratoria', 'canvas', 'balanced scorecard', 'soft skills', 'produtividade', 'empreendedora', 'empresarial', 'macroeconomica', 'politica e economia', 'politica', 'projetos', 'metodologias ageis'],
+        'Educação' => ['educac', 'bncc', 'escola', 'escolar', 'pedagog', 'ensino', 'aprendizagem', 'professor', 'crianca', 'infantil', 'libras', 'lingua brasileira de sinais', 'ludico', 'jogos', 'bullying', 'abaco', 'novo ensino medio', 'nem', 'metodologias ativas', 'curriculo', 'esporte', 'ambiental', 'meio ambiente', 'sustentabilidade', 'tics', 'tecnologias na educacao', 'transtornos', 'habilidades', 'anos iniciais', 'metodologia da ciencia'],
     ];
 
     public static function clean(?string $value): ?string
