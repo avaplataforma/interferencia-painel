@@ -1432,6 +1432,8 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($routes,"'/site/p/{slug:[a-z0-9-]+}'"));
     assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}'"));
     assertTrue(str_contains($routes,"'/site/curso/{product:\\d+}/interesse'"));
+    assertTrue(str_contains($routes,"'/site/trilha/{trail:\\d+}'"));
+    assertTrue(str_contains($routes,"'/site/trilha/{trail:\\d+}/interesse'"));
     assertTrue(str_contains($routes,"'/site/checkout/{product:\\d+}'"));
     assertTrue(str_contains($navigation,'Site Institucional'));
     assertTrue(str_contains($organizationForm,"require __DIR__.'/site.php'"));
@@ -1475,6 +1477,11 @@ $tests['carrega o Site Institucional com governança central por franquia'] = st
     assertTrue(str_contains($publicJavascript,'scholarshipPopup'));
     assertTrue(str_contains($course,'Quero receber atendimento'));
     assertTrue(str_contains($course,'Ir para o pagamento'));
+    assertTrue(str_contains($course,'Módulos desta Trilha'));
+    assertTrue(str_contains($course,'rel="canonical"'));
+    assertTrue(str_contains($course,"'BreadcrumbList'"));
+    assertTrue(str_contains($repository,'trailProducts'));
+    assertTrue(str_contains($repository,"\$kind==='trail'?'/trilha/'"));
     assertTrue(str_contains($checkout,'Continuar para pagamento'));
     assertTrue(str_contains($page,'Voltar ao site'));
     assertTrue(str_contains($publicSite,'Modo de pré-visualização'));
@@ -2419,7 +2426,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($publisher,"'book_ready'"));
     assertTrue(str_contains($providerRepository,'book_resource_count'));
     assertTrue(substr_count($providerRepository,"LIKE 'livro:%'") >= 2);
-    assertTrue(str_contains($routes,'$avaCourseProvisioning->queueProviderCourse'));
+    assertTrue(str_contains($routes,'A apostila oficial do IESDE também foi sincronizada.'));
     assertTrue(str_contains($routes,"' módulo(s) e '"));
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
     assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint, 'iesde')"));
@@ -2530,7 +2537,7 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(!str_contains($publisher,'Crie e salve a avaliação oficial no seletor do IESDE'));
     assertTrue(str_contains($publisher,"'provider_assessment_count'"));
     assertTrue(str_contains($publisher,'materializeLtiCourse'));
-    assertTrue(str_contains($routes,'Módulo adicionado à fila do AVA'));
+    assertTrue(str_contains($routes,'avaliação oficial continua pendente'));
     assertTrue(str_contains($providerView,'data-master-course-section="sync"'));
     assertTrue(str_contains($providerView,'Sincronizar com o AVA'));
     assertTrue(str_contains($moodleClient,"'assessmentjson'"));
