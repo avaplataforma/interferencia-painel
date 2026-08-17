@@ -98,6 +98,21 @@ final readonly class ImageGenerationRepository
         $this->database->prepare("UPDATE catalog_image_generation_jobs SET status='failed',finished_at=NOW(),error_message=:error WHERE id=:id")->execute(['id'=>$jobId,'error'=>mb_substr($error,0,3000)]);
     }
 
+    /**
+     * Devolve falhas à fila, por exemplo depois de créditos do provedor
+     * esgotados. Processamentos abandonados também voltam a aguardar.
+     *
+     * @return int Quantidade de itens reenfileirados.
+     */
+    public function requeueFailed(): int
+    {
+        $statement = $this->database->prepare("UPDATE catalog_image_generation_jobs
+            SET status='pending',error_message=NULL,started_at=NULL,finished_at=NULL
+            WHERE status IN ('failed','processing')");
+        $statement->execute();
+        return $statement->rowCount();
+    }
+
     /** @return array{pending:int,processing:int,ready:int,failed:int} */
     public function summary(): array
     {

@@ -2749,6 +2749,10 @@ $tests['preenche textos e capas da Loja MASTER com IA em lote'] = static functio
     assertTrue(str_contains($console,"queue('course'"));
     assertTrue(str_contains($console,'Loja MASTER sem pendências de texto ou capa.'));
     assertTrue(str_contains($console,'Ative a integração IA - OpenAI no ADM Central.'));
+    $images=(string)file_get_contents($rootPath.'/modules/Catalog/ImageGenerationRepository.php');
+    assertTrue(str_contains($images,'public function requeueFailed'));
+    assertTrue(str_contains($images,"status IN ('failed','processing')"));
+    assertTrue(str_contains($console,'--retry-failed'));
 };
 
 $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static function () use ($rootPath): void {
