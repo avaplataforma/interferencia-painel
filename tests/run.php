@@ -657,7 +657,7 @@ $tests['carrega personalização visual das organizações'] = static function (
     $routes = file_get_contents($rootPath . '/routes/web.php');
     assertTrue(is_string($repository) && str_contains($repository, 'primary_color') && str_contains($repository, 'login_welcome_text'));
     assertTrue(is_string($storage) && str_contains($storage, "['image/png' => 'png'"));
-    assertTrue(is_string($form) && !str_contains($form, 'name="favicon"') && str_contains($form, 'Geral e identidade'));
+    assertTrue(is_string($form) && str_contains($form, 'name="favicon"') && str_contains($form, 'Marca da franquia'));
     assertTrue(is_string($site) && str_contains($site, 'enctype="multipart/form-data"') && str_contains($site, 'name="logo"') && str_contains($site, 'name="favicon"'));
     assertTrue(is_string($routes) && str_contains($routes, '$organizationBranding->store($organizationId,$logo'));
 };
@@ -1921,6 +1921,10 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),'function panelUser'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="panel_login"'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="panel_password"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="logo"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="favicon"'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'),"r.code = 'manager'"));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));
