@@ -19,58 +19,37 @@ jobs:
       - name: Atualizar aplicação na VPS
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/mundointer"
           chmod 600 "$HOME/.ssh/mundointer"
 
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq sshpass
-
-          sshpass -e ssh \
-            -o PreferredAuthentications=password \
-            -o PubkeyAuthentication=no \
+          ssh \
+            -i "$HOME/.ssh/mundointer" \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=20 \
-            ubuntu@15.204.121.10 'bash -s' <<'REMOTE'
+            deploy@15.204.121.10 'bash -se' <<'REMOTE'
           set -euo pipefail
 
-          repo=''
-          for candidate in \
-            /home/*/web/*/private/interferencia-painel \
-            /var/www/*/interferencia-painel \
-            /opt/interferencia-painel \
-            /srv/interferencia-painel
-          do
-            if [ -d "$candidate/.git" ]; then
-              repo="$candidate"
-              break
-            fi
-          done
+          repo=/var/www/painel-inter
+          test -d "$repo/.git"
+          before="$(git -C "$repo" rev-parse --short HEAD)"
 
-          if [ -z "$repo" ]; then
-            echo 'Repositório de produção não localizado.' >&2
-            exit 1
-          fi
-
-          owner="$(stat -c '%U' "$repo")"
-          before="$(sudo -u "$owner" -H git -C "$repo" rev-parse --short HEAD)"
-
-          sudo -u "$owner" -H git -C "$repo" fetch origin main
-          sudo -u "$owner" -H git -C "$repo" pull --ff-only origin main
-          sudo -u "$owner" -H composer --working-dir="$repo" dump-autoload --classmap-authoritative
-          sudo -u "$owner" -H composer --working-dir="$repo" check
+          git -C "$repo" fetch origin main
+          git -C "$repo" pull --ff-only origin main
+          composer --working-dir="$repo" dump-autoload --classmap-authoritative
+          php "$repo/bin/console" migrate
+          composer --working-dir="$repo" check
 
           # O robô LTI MASTER usa um Chromium isolado para concluir o Deep
           # Linking sem depender de uma sessão manual no Moodle. Mantemos o
           # pacote e o navegador instalados no cache do próprio usuário da
           # aplicação; execuções futuras apenas conferem os arquivos locais.
           if [ -f "$repo/automation/package.json" ]; then
-            sudo -u "$owner" -H npm --prefix "$repo/automation" install --omit=dev --no-audit --no-fund
-            sudo -u "$owner" -H "$repo/automation/node_modules/.bin/playwright" install chromium
+            npm --prefix "$repo/automation" install --omit=dev --no-audit --no-fund
+            "$repo/automation/node_modules/.bin/playwright" install chromium
           fi
 
-          after="$(sudo -u "$owner" -H git -C "$repo" rev-parse --short HEAD)"
+          after="$(git -C "$repo" rev-parse --short HEAD)"
           echo "Publicação concluída: $before -> $after"
           REMOTE
