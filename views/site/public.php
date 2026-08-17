@@ -49,11 +49,19 @@ foreach (($site['offers'] ?? []) as $catalogProduct) {
 }
 $categories = array_keys($categories);
 sort($categories, SORT_NATURAL | SORT_FLAG_CASE);
+$areas = [];
+foreach (($site['offers'] ?? []) as $catalogProduct) {
+    $area = trim((string) ($catalogProduct['area'] ?? ''));
+    if ($area !== '') $areas[mb_strtolower($area)] = $area;
+}
+$areas = array_values($areas);
+sort($areas, SORT_NATURAL | SORT_FLAG_CASE);
 $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
 $catalogInit = is_array($catalogInit ?? null) ? $catalogInit : [];
 $initTerm = (string) ($catalogInit['q'] ?? '');
 $initFormation = (string) ($catalogInit['formacao'] ?? '');
 $initCategory = (string) ($catalogInit['categoria'] ?? '');
+$initArea = (string) ($catalogInit['area'] ?? '');
 $initSort = (string) ($catalogInit['ordenar'] ?? 'featured');
 $initFormationName = '';
 foreach ($formations as $formationItem) {
@@ -111,7 +119,7 @@ $testimonials = is_array($testimonials ?? null) ? $testimonials : [];
  <style>.course{overflow:hidden}.course-media{width:calc(100% + 2.7rem);height:10.5rem;margin:-1.35rem -1.35rem .2rem;object-fit:cover;background:linear-gradient(135deg,var(--secondary),color-mix(in srgb,var(--secondary) 70%,var(--primary)))}.contact-honeypot{position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none}</style>
 <style>.catalog-band{display:flex;align-items:center;gap:1rem;margin-bottom:1.25rem;padding:1rem 1.1rem;border:1px solid color-mix(in srgb,var(--primary) 24%,var(--line));border-radius:1rem;background:linear-gradient(120deg,color-mix(in srgb,var(--primary) 7%,#fff),#fff)}.catalog-band-icon{display:grid;place-items:center;width:3rem;height:3rem;flex:0 0 3rem;border-radius:.85rem;color:#fff;background:var(--primary);font-size:1.2rem}.catalog-band strong,.catalog-band small{display:block}.catalog-band small{margin-top:.2rem;color:var(--muted);line-height:1.45}</style>
 </head>
-<body class="site-template-<?= $escape($templateKey) ?><?= $previewDevice === 'mobile' ? ' site-preview-mobile' : '' ?>" data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="page_view" data-site-entity-type="site" data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-ga4="<?= $escape($ga4Id ?? '') ?>" data-catalog-init-q="<?= $escape($initTerm) ?>" data-catalog-init-formacao="<?= $escape($initFormation) ?>" data-catalog-init-categoria="<?= $escape($initCategory) ?>" data-catalog-init-sort="<?= $escape($initSort) ?>">
+<body class="site-template-<?= $escape($templateKey) ?><?= $previewDevice === 'mobile' ? ' site-preview-mobile' : '' ?>" data-site-organization="<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-event-url="<?= $escape($publicBase) ?>/events" data-site-event-type="page_view" data-site-entity-type="site" data-scholarship-popup="<?= $scholarshipPopup ? '1' : '0' ?>" data-scholarship-delay="<?= max(5, (int) ($site['scholarship_popup_delay_seconds'] ?? 15)) ?>" data-scholarship-repeat="<?= max(1, (int) ($site['scholarship_popup_repeat_hours'] ?? 24)) ?>" data-scholarship-key="site-scholarship-v2-<?= (int) ($site['organization_id'] ?? 0) ?>" data-site-ga4="<?= $escape($ga4Id ?? '') ?>" data-catalog-init-q="<?= $escape($initTerm) ?>" data-catalog-init-formacao="<?= $escape($initFormation) ?>" data-catalog-init-categoria="<?= $escape($initCategory) ?>" data-catalog-init-area="<?= $escape($initArea) ?>" data-catalog-init-sort="<?= $escape($initSort) ?>">
 <?php if ($socialBarEnabled && ($socialLinks !== [] || $searchEnabled)): ?>
 <div class="utility"><div class="shell utility-row"><nav class="socials" aria-label="Redes sociais"><?php foreach ($socialLinks as $social): ?><a class="social-link" href="<?= $escape($social['url']) ?>" <?= str_starts_with($social['url'], 'http') ? 'target="_blank" rel="noopener"' : '' ?> title="<?= $escape($social['label']) ?>" aria-label="<?= $escape($social['label']) ?>"><i class="<?= $escape($social['icon']) ?>"></i></a><?php endforeach; ?></nav><div class="utility-actions"><?php if ($searchEnabled): ?><button class="utility-button" type="button" data-site-search-open aria-label="Pesquisar no site" title="Pesquisar"><i class="fa-solid fa-magnifying-glass"></i></button><?php endif; ?></div></div></div>
 <?php endif; ?>
@@ -143,13 +151,16 @@ $testimonials = is_array($testimonials ?? null) ? $testimonials : [];
      <label>Buscar curso<input type="search" placeholder="Nome, área ou modalidade" data-catalog-search></label>
      <label>Formação<select data-catalog-formation><option value="">Todas as Formações</option><?php foreach ($formations as $formation): ?><option value="<?= $escape($formation['code']) ?>"><?= $escape($formation['name']) ?> (<?= (int)$formation['count'] ?>)</option><?php endforeach; ?></select></label>
      <label>Categoria<select data-catalog-category><option value="">Todas as categorias</option><?php foreach ($categories as $category): ?><option value="<?= $escape(mb_strtolower($category)) ?>"><?= $escape($category) ?></option><?php endforeach; ?></select></label>
+     <label>Área<select data-catalog-area><option value="">Todas as áreas</option><?php foreach ($areas as $areaOption): ?><option value="<?= $escape(mb_strtolower($areaOption)) ?>"><?= $escape($areaOption) ?></option><?php endforeach; ?></select></label>
      <label>Ordenar<select data-catalog-sort><option value="featured">Destaques</option><option value="name">Nome</option><option value="price-asc">Menor preço</option><option value="price-desc">Maior preço</option><option value="favorites">Meus favoritos</option></select></label>
      <button class="catalog-search-button" type="button" data-catalog-submit><i class="fa-solid fa-magnifying-glass"></i> Pesquisar</button>
     </div>
     <div class="catalog-pills" data-catalog-pills><?php foreach ($categories as $pillCategory): ?><button type="button" class="catalog-pill" data-category-pill data-category="<?= $escape(mb_strtolower($pillCategory)) ?>" aria-pressed="false"><i class="fa-solid fa-tag"></i> <?= $escape($pillCategory) ?></button><?php endforeach; ?></div>
+    <div class="catalog-pills" data-catalog-area-pills hidden></div>
     <div class="courses" data-course-grid>
      <?php foreach ($site['offers'] as $product):
       $category=trim((string)($product['category']??''))?:'Outros cursos';
+      $area=trim((string)($product['area']??''));
       $kind=(string)($product['product_kind']??'finance_product');
       $isExternal=(int)($product['is_external']??0)===1;
       $isContent=$kind==='provider_content';
@@ -157,16 +168,17 @@ $testimonials = is_array($testimonials ?? null) ? $testimonials : [];
       $cover=!empty($product['media_asset_id'])?$basePath.'/catalog-media/'.(int)$product['media_asset_id']:(string)($product['cover_url']??'');
       $buttonLabel=$isTrail?'Ver detalhes da Trilha':($isExternal?'Saiba mais':($store?'Ver curso e comprar':'Conhecer o curso'));
      ?>
-      <article class="course<?= $isExternal?' provider-course':'' ?>" data-course-card data-course-id="<?= $escape($product['offer_key']) ?>" data-course-name="<?= $escape(mb_strtolower((string)$product['name'])) ?>" data-course-formation="<?= $escape($product['formation_code']) ?>" data-course-category="<?= $escape(mb_strtolower($category)) ?>" data-course-price="<?= $escape((string)(float)$product['value']) ?>">
+      <article class="course<?= $isExternal?' provider-course':'' ?>" data-course-card data-course-id="<?= $escape($product['offer_key']) ?>" data-course-name="<?= $escape(mb_strtolower((string)$product['name'])) ?>" data-course-formation="<?= $escape($product['formation_code']) ?>" data-course-category="<?= $escape(mb_strtolower($category)) ?>" data-course-area="<?= $escape(mb_strtolower($area)) ?>" data-course-price="<?= $escape((string)(float)$product['value']) ?>">
        <button class="course-favorite" type="button" data-course-favorite aria-pressed="false" title="Adicionar aos favoritos" aria-label="Adicionar <?= $escape($product['name']) ?> aos favoritos"><i class="fa-regular fa-heart"></i></button>
        <?php if($cover!==''):?><img class="course-media" width="400" height="168" src="<?= $escape($cover) ?>" alt="Capa de <?= $escape($product['name']) ?>" loading="lazy"><?php else:?><span class="course-icon"><i class="fa-solid <?= $isTrail?'fa-route':($isContent?'fa-puzzle-piece':'fa-graduation-cap') ?>"></i></span><?php endif;?>
          <span class="course-trail"><i class="fa-solid fa-layer-group"></i>&nbsp; Formação <?= $escape($product['formation_name']) ?></span>
          <h3><?= $escape($product['name']) ?></h3>
          <?php $rating=(float)($product['rating_average']??0);$ratingCount=(int)($product['rating_count']??0);if($rating<=0&&isset($testimonialRatings[mb_strtolower((string)$product['name'])])){$rating=(float)$testimonialRatings[mb_strtolower((string)$product['name'])]['avg'];$ratingCount=(int)$testimonialRatings[mb_strtolower((string)$product['name'])]['count'];}if($rating>0):?><span class="course-rating" aria-label="Nota <?= number_format($rating,1,',','.') ?> de 5"><i class="fa-solid fa-star"></i> <?= number_format($rating,1,',','.') ?><?php if($ratingCount>0):?><small>(<?= $ratingCount ?>)</small><?php endif;?></span><?php endif;?>
-         <div class="course-facts">
-          <?php $workload=(int)($product['workload_hours']??0);if($workload>0):?><span class="course-fact"><i class="fa-regular fa-clock"></i> Carga Horária: <?= $workload ?>h</span><?php endif;?>
-          <span class="course-fact"><i class="fa-solid fa-tag"></i> Categoria: <?= $escape($category) ?></span>
-         </div>
+          <div class="course-facts">
+           <?php $workload=(int)($product['workload_hours']??0);if($workload>0):?><span class="course-fact"><i class="fa-regular fa-clock"></i> Carga Horária: <?= $workload ?>h</span><?php endif;?>
+           <span class="course-fact"><i class="fa-solid fa-tag"></i> Categoria: <?= $escape($category) ?></span>
+           <?php if($area!==''&&mb_strtolower($area)!==mb_strtolower($category)):?><span class="course-fact"><i class="fa-solid fa-layer-group"></i> Área: <?= $escape($area) ?></span><?php endif;?>
+          </div>
          <p class="course-description"><?= $escape($product['description'] ?? 'Formação disponível nesta trilha.') ?></p>
         <div class="course-bottom">
          <?php if($isTrail): ?><span class="provider-course-note"><i class="fa-solid fa-list-check"></i><span>Trilha completa com <?= (int)($product['lesson_count']??0) ?> Curso(s) no AVA Cursos.</span></span><?php elseif($isContent): ?><span class="provider-course-note"><i class="fa-solid fa-play"></i><span>Curso com acesso à unidade contratada.</span></span><?php endif; ?>
@@ -198,6 +210,6 @@ $testimonials = is_array($testimonials ?? null) ? $testimonials : [];
 <?php if ($privacyPolicy !== ''): ?><dialog class="legal-dialog" id="privacy-dialog"><header class="search-head"><div><small>LGPD</small><h2>Política de privacidade</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($privacyPolicy)) ?></div></dialog><?php endif; ?>
 <?php if ($termsText !== ''): ?><dialog class="legal-dialog" id="terms-dialog"><header class="search-head"><div><small>Regras do site</small><h2>Termos de uso</h2></div><button class="dialog-close" type="button" data-legal-close aria-label="Fechar">×</button></header><div class="legal-content"><?= nl2br($escape($termsText)) ?></div></dialog><?php endif; ?>
 <?php if ($cookieBannerEnabled): ?><aside class="cookie-consent" data-cookie-banner hidden><div class="cookie-row"><div class="cookie-copy"><strong>Privacidade e cookies</strong><p><?= $escape($cookieNotice !== '' ? $cookieNotice : 'Usamos cookies essenciais para o funcionamento do site e, com sua autorização, métricas para melhorar sua experiência.') ?></p></div><div class="cookie-actions"><button type="button" data-cookie-essential>Somente essenciais</button><button class="accept" type="button" data-cookie-accept>Aceitar métricas</button></div></div></aside><?php endif; ?>
-<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=13" defer></script>
+<script src="<?= $escape($assetBasePath) ?>/assets/js/site-public.js?v=14" defer></script>
 </body>
 </html>

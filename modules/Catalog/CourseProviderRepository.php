@@ -1162,21 +1162,29 @@ final readonly class CourseProviderRepository
         $statement->execute(['id' => $itemId]);
         $item = $statement->fetch();
         if (!is_array($item)) return;
-        $commercialCategory = trim((string)($item['commercial_category'] ?? ''));
-        if ($commercialCategory === '') {
-            $commercialCategory = trim((string)($item['subcategory'] ?? ''));
-            if ($commercialCategory === '') $commercialCategory = trim((string)($item['category'] ?? ''));
-        }
-        $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments) WHERE id=:course")->execute([
+        $commercialCategory = $this->cleanCategory((string)($item['commercial_category'] ?? ''));
+        if ($commercialCategory === '') $commercialCategory = $this->cleanCategory((string)($item['category'] ?? ''));
+        $commercialArea = $this->cleanCategory((string)($item['subcategory'] ?? ''));
+        $this->database->prepare("UPDATE provider_courses SET commercial_name=COALESCE(NULLIF(:name,''),commercial_name),commercial_summary=COALESCE(NULLIF(:summary,''),commercial_summary),commercial_description=COALESCE(NULLIF(:description,''),commercial_description),commercial_category=COALESCE(NULLIF(:category,''),commercial_category),commercial_area=COALESCE(NULLIF(:area,''),commercial_area),commercial_cover_url=COALESCE(NULLIF(:cover,''),commercial_cover_url),remote_reference_price=COALESCE(:price,remote_reference_price),remote_installments=COALESCE(:installments,remote_installments) WHERE id=:course")->execute([
             'name' => trim((string)($item['commercial_name'] ?? '')),
             'summary' => trim((string)($item['commercial_summary'] ?? '')),
             'description' => trim((string)($item['commercial_description'] ?? '')),
             'category' => $commercialCategory,
+            'area' => $commercialArea,
             'cover' => trim((string)($item['cover_url'] ?? '')),
             'price' => $item['default_price'] ?? null,
             'installments' => $item['max_installments'] ?? null,
             'course' => $courseId,
         ]);
+    }
+
+    /** Limpa nomes compostos do fornecedor ("X | Y | Z" vira "X") e normaliza espaços. */
+    private function cleanCategory(string $value): string
+    {
+        $value = trim((string) preg_replace('/\s+/', ' ', $value));
+        if ($value === '') return '';
+        $first = trim(explode('|', $value)[0]);
+        return $first === '' ? $value : $first;
     }
 
     private function catalogDateOrNull(mixed $value): ?string

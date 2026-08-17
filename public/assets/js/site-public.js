@@ -84,6 +84,7 @@
   const catalogSearch = document.querySelector('[data-catalog-search]');
   const catalogFormation = document.querySelector('[data-catalog-formation]');
   const catalogCategory = document.querySelector('[data-catalog-category]');
+  const catalogArea = document.querySelector('[data-catalog-area]');
   const catalogSort = document.querySelector('[data-catalog-sort]');
   const catalogSubmit = document.querySelector('[data-catalog-submit]');
   const catalogGrid = document.querySelector('[data-course-grid]');
@@ -102,10 +103,11 @@
     const term = normalizeCatalog(catalogSearch?.value || '');
     const formation = normalizeCatalog(catalogFormation?.value || '');
     const category = normalizeCatalog(catalogCategory?.value || '');
+    const area = normalizeCatalog(catalogArea?.value || '');
     const sort = catalogSort?.value || 'featured';
     const matching = catalogCards.filter((card) => {
       const searchable = normalizeCatalog(card.textContent || '');
-      return (!term || searchable.includes(term)) && (!formation || normalizeCatalog(card.dataset.courseFormation) === formation) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
+      return (!term || searchable.includes(term)) && (!formation || normalizeCatalog(card.dataset.courseFormation) === formation) && (!category || normalizeCatalog(card.dataset.courseCategory) === category) && (!area || normalizeCatalog(card.dataset.courseArea) === area) && (sort !== 'favorites' || favorites.has(String(card.dataset.courseId || '')));
     });
     const sorted = [...matching].sort((a, b) => {
       if (sort === 'name') return String(a.dataset.courseName).localeCompare(String(b.dataset.courseName), 'pt-BR');
@@ -126,7 +128,7 @@
   };
   const syncUrl = () => {
     const params = new URLSearchParams(location.search);
-    const values = { q: catalogSearch?.value || '', formacao: catalogFormation?.value || '', categoria: catalogCategory?.value || '', ordenar: catalogSort?.value || '' };
+    const values = { q: catalogSearch?.value || '', formacao: catalogFormation?.value || '', categoria: catalogCategory?.value || '', area: catalogArea?.value || '', ordenar: catalogSort?.value || '' };
     Object.entries(values).forEach(([key, value]) => {
       if (value && value !== 'featured') params.set(key, value);
       else params.delete(key);
@@ -134,19 +136,55 @@
     const search = params.toString();
     history.replaceState(null, '', `${location.pathname}${search ? `?${search}` : ''}${location.hash}`);
   };
+  const areaPillsContainer = document.querySelector('[data-catalog-area-pills]');
+  const escapeHtml = (value) => value.replace(/[<>&"]/g, (char) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[char]);
+  const syncAreaPills = () => {
+    if (!(areaPillsContainer instanceof HTMLElement)) return;
+    const activeCategory = normalizeCatalog(catalogCategory?.value || '');
+    const options = new Map();
+    catalogCards.forEach((card) => {
+      const cardCategory = normalizeCatalog(card.dataset.courseCategory || '');
+      const cardArea = normalizeCatalog(card.dataset.courseArea || '');
+      if (cardArea && (!activeCategory || cardCategory === activeCategory)) {
+        if (!options.has(cardArea)) options.set(cardArea, String(card.dataset.courseArea || '').trim());
+      }
+    });
+    areaPillsContainer.innerHTML = '';
+    areaPillsContainer.hidden = activeCategory === '' || options.size === 0;
+    const activeArea = normalizeCatalog(catalogArea?.value || '');
+    Array.from(options.entries()).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR')).forEach(([key, label]) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'catalog-pill';
+      pill.dataset.area = key;
+      pill.setAttribute('aria-pressed', key === activeArea ? 'true' : 'false');
+      pill.innerHTML = `<i class="fa-solid fa-layer-group"></i> ${escapeHtml(label)}`;
+      pill.addEventListener('click', () => {
+        if (catalogArea instanceof HTMLSelectElement) catalogArea.value = catalogArea.value === key ? '' : key;
+        catalogVisible = catalogBatch;
+        filterCatalog();
+        syncPills();
+        syncAreaPills();
+        syncUrl();
+      });
+      areaPillsContainer.append(pill);
+    });
+  };
   const applyCatalogInit = () => {
     let changed = false;
     if (body.dataset.catalogInitQ && catalogSearch instanceof HTMLInputElement) { catalogSearch.value = body.dataset.catalogInitQ; changed = true; }
     if (body.dataset.catalogInitFormacao && catalogFormation instanceof HTMLSelectElement) { catalogFormation.value = body.dataset.catalogInitFormacao; changed = true; }
     if (body.dataset.catalogInitCategoria && catalogCategory instanceof HTMLSelectElement) { catalogCategory.value = body.dataset.catalogInitCategoria; changed = true; }
+    if (body.dataset.catalogInitArea && catalogArea instanceof HTMLSelectElement) { catalogArea.value = body.dataset.catalogInitArea; changed = true; }
     if (body.dataset.catalogInitSort && catalogSort instanceof HTMLSelectElement) { catalogSort.value = body.dataset.catalogInitSort; changed = true; }
     if (changed) { catalogVisible = catalogBatch; }
   };
-  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', () => { catalogVisible = catalogBatch; filterCatalog(); syncPills(); syncUrl(); }));
+  [catalogSearch, catalogFormation, catalogCategory, catalogArea, catalogSort].forEach((field) => field?.addEventListener('input', () => { catalogVisible = catalogBatch; filterCatalog(); syncPills(); syncAreaPills(); syncUrl(); }));
   catalogSubmit?.addEventListener('click', () => {
     catalogVisible = catalogBatch;
     filterCatalog();
     syncPills();
+    syncAreaPills();
     syncUrl();
     catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -158,6 +196,7 @@
     catalogVisible = catalogBatch;
     filterCatalog();
     syncPills();
+    syncAreaPills();
     syncUrl();
     catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }));
@@ -170,6 +209,7 @@
   applyCatalogInit();
   filterCatalog();
   syncPills();
+  syncAreaPills();
 
   const backToTop = document.querySelector('[data-back-to-top]');
   if (backToTop instanceof HTMLElement) {

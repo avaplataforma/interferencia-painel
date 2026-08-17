@@ -1889,8 +1889,15 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($iesdeClient,"'subAreas'"));
     assertTrue(str_contains($iesdeClient,"'teachingAreas'"));
     assertTrue(str_contains($iesdeClient,"'productionCategories'"));
-    assertTrue(str_contains($catalogRepo,"trim((string)(\$item['subcategory'] ?? ''))"));
+    assertTrue(str_contains($catalogRepo,'function cleanCategory'));
+    assertTrue(str_contains($catalogRepo,'commercial_area=COALESCE'));
     assertTrue(!str_contains($catalogRepo,'review_status=:review'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000060_add_commercial_area_to_provider_courses.php'));
+    assertTrue(str_contains($publicView,'data-catalog-area'));
+    assertTrue(str_contains($publicView,'data-course-area'));
+    assertTrue(str_contains($publicView,'data-catalog-area-pills'));
+    assertTrue(str_contains($siteJs,'syncAreaPills'));
+    assertTrue(str_contains($routes,"'area'=>(string)\$request->queryValue('area'"));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

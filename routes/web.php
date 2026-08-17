@@ -224,7 +224,7 @@ return static function (
         $site=$sites->publicSite($organizationId,$preview);
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
         $previewDevice=$preview&&$request->queryValue('device','desktop')==='mobile'?'mobile':'desktop';
-        $catalogInit=['q'=>(string)$request->queryValue('q',''),'formacao'=>(string)$request->queryValue('formacao',''),'categoria'=>(string)$request->queryValue('categoria',''),'ordenar'=>(string)$request->queryValue('ordenar','featured')];
+        $catalogInit=['q'=>(string)$request->queryValue('q',''),'formacao'=>(string)$request->queryValue('formacao',''),'categoria'=>(string)$request->queryValue('categoria',''),'area'=>(string)$request->queryValue('area',''),'ordenar'=>(string)$request->queryValue('ordenar','featured')];
         return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'catalogInit'=>$catalogInit,'testimonialRatings'=>$sites->testimonialRatings($organizationId),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>trim((string)($site['analytics_ga4_id']??''))!==''?(string)$site['analytics_ga4_id']:(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
     });
 
