@@ -19,13 +19,18 @@ jobs:
       - name: Atualizar aplicação na VPS
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/mundointer"
           chmod 600 "$HOME/.ssh/mundointer"
 
-          ssh \
-            -i "$HOME/.ssh/mundointer" \
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sshpass
+
+          sshpass -e ssh \
+            -o PreferredAuthentications=password \
+            -o PubkeyAuthentication=no \
             -o StrictHostKeyChecking=accept-new \
             -o ConnectTimeout=20 \
             ubuntu@15.204.121.10 'bash -s' <<'REMOTE'
