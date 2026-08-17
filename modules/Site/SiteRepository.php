@@ -81,6 +81,7 @@ final readonly class SiteRepository
             'scholarship_repeat'=>$this->limit($data['scholarship_popup_repeat_hours']??24,1,720,'horas para repetir o formulário de bolsas'),
             'scholarship_title'=>$this->text($data['scholarship_title']??'',160,'título do formulário de bolsas',true),'scholarship_subtitle'=>$this->text($data['scholarship_subtitle']??'',250,'subtítulo do formulário de bolsas'),'scholarship_button'=>$this->text($data['scholarship_button_label']??'',80,'texto do botão de bolsas',true),
             'seo_title'=>$this->text($data['seo_title']??'',190,'título de busca'),'seo_description'=>$this->text($data['seo_description']??'',320,'descrição de busca'),
+            'ga4_id'=>$this->text($data['analytics_ga4_id']??'',64,'ID do Google Analytics'),
             'privacy_policy'=>$this->text($data['privacy_policy']??'',50000,'política de privacidade'),
             'cookie_notice'=>$this->text($data['cookie_notice']??'',2000,'aviso de cookies'),
             'terms_text'=>$this->text($data['terms_text']??'',50000,'termos de uso'),
@@ -89,7 +90,7 @@ final readonly class SiteRepository
         ];
         $this->database->beginTransaction();
         try{
-            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,template_key=:template,site_primary_color=:site_primary_color,site_secondary_color=:site_secondary_color,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,privacy_policy=:privacy_policy,cookie_notice=:cookie_notice,terms_text=:terms_text,cookie_banner_enabled=:cookie_banner_enabled,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
+            $statement=$this->database->prepare("UPDATE organization_sites SET selected_mode=:mode,publication_status=:status,template_key=:template,site_primary_color=:site_primary_color,site_secondary_color=:site_secondary_color,site_title=:site_title,hero_title=:hero_title,hero_text=:hero_text,about_title=:about_title,about_text=:about_text,contact_email=:email,contact_phone=:phone,whatsapp=:whatsapp,instagram_url=:instagram,facebook_url=:facebook,youtube_url=:youtube,linkedin_url=:linkedin,tiktok_url=:tiktok,classroom_url=:classroom_url,classroom_label=:classroom_label,webmail_url=:webmail_url,social_bar_enabled=:social_bar_enabled,site_search_enabled=:site_search_enabled,footer_text=:footer_text,footer_show_legal_data=:footer_show_legal_data,whatsapp_button_enabled=:whatsapp_enabled,whatsapp_button_label=:whatsapp_label,whatsapp_button_message=:whatsapp_message,scholarship_form_enabled=:scholarship_enabled,scholarship_display_mode=:scholarship_mode,scholarship_popup_delay_seconds=:scholarship_delay,scholarship_popup_repeat_hours=:scholarship_repeat,scholarship_title=:scholarship_title,scholarship_subtitle=:scholarship_subtitle,scholarship_button_label=:scholarship_button,seo_title=:seo_title,seo_description=:seo_description,analytics_ga4_id=:ga4_id,privacy_policy=:privacy_policy,cookie_notice=:cookie_notice,terms_text=:terms_text,cookie_banner_enabled=:cookie_banner_enabled,published_at=CASE WHEN :status_value='published' THEN COALESCE(published_at,NOW()) ELSE published_at END WHERE organization_id=:organization");
             $statement->execute($values);
             $this->database->prepare('DELETE FROM organization_site_products WHERE organization_id=:organization')->execute(['organization'=>$organizationId]);
             $insert=$this->database->prepare('INSERT INTO organization_site_products(organization_id,finance_product_id,sort_order) VALUES(:organization,:product,:sort_order)');
@@ -638,7 +639,7 @@ final readonly class SiteRepository
     private function link(mixed$value):?string{$link=trim((string)$value);if($link==='')return null;if(str_starts_with($link,'#')||str_starts_with($link,'/'))return$link;return$this->url($link,'o botão do banner');}
     private function slug(string$value):string{$ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',trim($value));$slug=strtolower(is_string($ascii)?$ascii:$value);$slug=trim(preg_replace('/[^a-z0-9]+/','-',$slug)??'','-');if($slug===''||strlen($slug)>120)throw new RuntimeException('Informe um endereço válido para a página.');return$slug;}
     /** @return array<string,mixed> */
-    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','youtube_url'=>'','linkedin_url'=>'','tiktok_url'=>'','classroom_url'=>'','classroom_label'=>'Sala de Aula','webmail_url'=>'','social_bar_enabled'=>1,'site_search_enabled'=>1,'footer_text'=>'','footer_show_legal_data'=>1,'whatsapp_button_enabled'=>1,'whatsapp_button_label'=>'Fale pelo WhatsApp','whatsapp_button_message'=>'Olá! Gostaria de saber mais sobre os cursos.','scholarship_form_enabled'=>0,'scholarship_display_mode'=>'floating','scholarship_popup_delay_seconds'=>15,'scholarship_popup_repeat_hours'=>24,'scholarship_title'=>'GANHE BOLSAS DE ESTUDOS','scholarship_subtitle'=>'Preencha e participe!','scholarship_button_label'=>'Ganhe uma bolsa','seo_title'=>'','seo_description'=>'','privacy_policy'=>'','cookie_notice'=>'Usamos cookies essenciais e de medição para melhorar sua experiência.','terms_text'=>'','cookie_banner_enabled'=>1,'live_version'=>null,'scheduled_publish_at'=>null,'published_at'=>null];}
+    private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','youtube_url'=>'','linkedin_url'=>'','tiktok_url'=>'','classroom_url'=>'','classroom_label'=>'Sala de Aula','webmail_url'=>'','social_bar_enabled'=>1,'site_search_enabled'=>1,'footer_text'=>'','footer_show_legal_data'=>1,'whatsapp_button_enabled'=>1,'whatsapp_button_label'=>'Fale pelo WhatsApp','whatsapp_button_message'=>'Olá! Gostaria de saber mais sobre os cursos.','scholarship_form_enabled'=>0,'scholarship_display_mode'=>'floating','scholarship_popup_delay_seconds'=>15,'scholarship_popup_repeat_hours'=>24,'scholarship_title'=>'GANHE BOLSAS DE ESTUDOS','scholarship_subtitle'=>'Preencha e participe!','scholarship_button_label'=>'Ganhe uma bolsa','seo_title'=>'','seo_description'=>'','analytics_ga4_id'=>'','privacy_policy'=>'','cookie_notice'=>'Usamos cookies essenciais e de medição para melhorar sua experiência.','terms_text'=>'','cookie_banner_enabled'=>1,'live_version'=>null,'scheduled_publish_at'=>null,'published_at'=>null];}
 
     public function submitTestimonial(array $input): void
     {
@@ -688,6 +689,43 @@ final readonly class SiteRepository
         $statement=$this->database->prepare('DELETE FROM site_testimonials WHERE id=:id AND organization_id=:organization');
         $statement->execute(['id'=>$id,'organization'=>$organizationId]);
         if($statement->rowCount()!==1)throw new RuntimeException('Depoimento não encontrado.');
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function publishedTestimonialsForCourse(int $organizationId,string $courseName):array
+    {
+        $name=trim($courseName);
+        if($name==='')return [];
+        $statement=$this->database->prepare("SELECT id,author_name,author_city,course_name,rating,testimonial_text,created_at FROM site_testimonials WHERE organization_id=:organization AND status='published' AND course_name=:name ORDER BY created_at DESC,id DESC LIMIT 6");
+        $statement->execute(['organization'=>$organizationId,'name'=>$name]);
+        return $statement->fetchAll()?:[];
+    }
+
+    /** @return array{host:?string,count:int,recent:list<array<string,mixed>>} */
+    public function notFoundReport(int $organizationId,int $limit=100):array
+    {
+        $limit=max(1,min(500,$limit));
+        $domain=$this->database->prepare("SELECT d.host FROM organization_domains d WHERE d.organization_id=:organization AND d.purpose='site' AND d.is_primary=1 LIMIT 1");
+        $domain->execute(['organization'=>$organizationId]);
+        $host=$domain->fetchColumn();
+        if(!is_string($host)||$host==='')return ['host'=>null,'count'=>0,'recent'=>[]];
+        $countStatement=$this->database->prepare('SELECT COUNT(*) FROM site_404_logs WHERE host=:host');
+        $countStatement->execute(['host'=>$host]);
+        $count=(int)$countStatement->fetchColumn();
+        $statement=$this->database->prepare("SELECT id,path,referer,ip,user_agent,created_at FROM site_404_logs WHERE host=:host ORDER BY created_at DESC,id DESC LIMIT {$limit}");
+        $statement->execute(['host'=>$host]);
+        return ['host'=>$host,'count'=>$count,'recent'=>$statement->fetchAll()?:[]];
+    }
+
+    public function clearNotFoundLogs(int $organizationId):int
+    {
+        $domain=$this->database->prepare("SELECT d.host FROM organization_domains d WHERE d.organization_id=:organization AND d.purpose='site' AND d.is_primary=1 LIMIT 1");
+        $domain->execute(['organization'=>$organizationId]);
+        $host=$domain->fetchColumn();
+        if(!is_string($host)||$host==='')return 0;
+        $statement=$this->database->prepare('DELETE FROM site_404_logs WHERE host=:host');
+        $statement->execute(['host'=>$host]);
+        return $statement->rowCount();
     }
 
     /** @return array<string,array{avg:float,count:int}> Média de avaliações publicadas por nome de curso (normalizado). */

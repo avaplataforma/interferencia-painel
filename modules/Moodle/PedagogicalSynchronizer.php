@@ -12,6 +12,7 @@ final readonly class PedagogicalSynchronizer
         private MoodleClient $fallbackClient,
         private MoodleRepository $repository,
         private AvaConnectionRepository $connections,
+        private ?CompletionTestimonialInviter $testimonialInviter = null,
     ) {}
 
     /** @param list<int> $unitIds @return array{updated:int,failed:int,last_error:?string} */
@@ -65,6 +66,7 @@ final readonly class PedagogicalSynchronizer
                 }
 
                 $this->repository->saveAcademicSnapshot($studentEnrollmentId, $moodleEnrollmentId, $snapshot);
+                $this->testimonialInviter?->maybeInvite($item, $snapshot);
                 $updated++;
             } catch (Throwable $error) {
                 $message = mb_substr($error->getMessage(), 0, 500);

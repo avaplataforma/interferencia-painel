@@ -21,9 +21,13 @@ use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleClient;
 use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
+use Interferencia\Modules\Moodle\CompletionTestimonialInviter;
 use Interferencia\Modules\Moodle\AvaConnectionRepository;
 use Interferencia\Modules\Crm\FollowUpRepository;
 use Interferencia\Modules\Site\SiteRecoveryService;
+use Interferencia\Modules\Site\SiteRepository;
+use Interferencia\Modules\Email\CentralEmailRepository;
+use Interferencia\Modules\Email\CentralEmailService;
 use Interferencia\Kernel\Security\SecretCipher;
 use Interferencia\Modules\Catalog\CourseProviderRepository;
 use Interferencia\Modules\Catalog\ImageGenerationRepository;
@@ -68,6 +72,9 @@ Comandos disponíveis:
   ava-courses:link-catalog  Vincula itens pendentes da Loja MASTER a cursos individuais (sem tocar o AVA)
   catalog-ai:complete  Preenche textos e capas pendentes da Loja MASTER com IA (lote de 25 por execução)
   catalog:release-ready  Libera cursos prontos da Loja MASTER em lotes (texto IA, capa, carga e preço)
+  sitemap:ping  Avisa o Google sobre o sitemap do site
+  catalog:duplicates  Audita itens duplicados pendentes da Loja MASTER (--retire para arquivá-los)
+  catalog:covers:audit  Audita capas: prontas, pendentes, falhas e liberadas sem capa (--requeue-failed reenfileira falhas)
 
 TEXT);
         exit(0);
@@ -156,7 +163,7 @@ TEXT);
     if ($command === 'moodle:pedagogical:sync') {
         $lockPath=$rootPath.'/storage/pedagogical-sync.lock';$lock=fopen($lockPath,'c');
         if($lock===false||!flock($lock,LOCK_EX|LOCK_NB))throw new RuntimeException('A sincronização pedagógica já está em execução.');
-        try{$database=$connection->pdo();$cipher=new SecretCipher((string)$config->get('app.encryption_key'));$settings=(new MoodleIntegrationRepository($database,$cipher))->settings();$client=new MoodleClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']);$repository=new MoodleRepository($database);$connections=new AvaConnectionRepository($database,$cipher);$unitIds=array_map('intval',$database->query('SELECT id FROM units WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN));$result=(new PedagogicalSynchronizer($client,$repository,$connections))->sync($unitIds,300);fwrite(STDOUT,sprintf("Acompanhamento atualizado: %d matrícula(s); falhas: %d.\n",$result['updated'],$result['failed']));if($result['last_error']!==null)fwrite(STDERR,"Última falha: ".$result['last_error']."\n");exit($result['updated']===0&&$result['failed']>0?1:0);}
+        try{$database=$connection->pdo();$cipher=new SecretCipher((string)$config->get('app.encryption_key'));$settings=(new MoodleIntegrationRepository($database,$cipher))->settings();$client=new MoodleClient((string)$settings['base_url'],(string)$settings['token'],(bool)$settings['is_active']);$repository=new MoodleRepository($database);$connections=new AvaConnectionRepository($database,$cipher);$unitIds=array_map('intval',$database->query('SELECT id FROM units WHERE is_active=1')->fetchAll(PDO::FETCH_COLUMN));$emailRepository=new CentralEmailRepository($database,$cipher);$emailService=new CentralEmailService($emailRepository,$config->string('app.url'));$siteRepository=new SiteRepository($database);$inviter=new CompletionTestimonialInviter($database,$emailService,$siteRepository,$config->string('app.url'));$result=(new PedagogicalSynchronizer($client,$repository,$connections,$inviter))->sync($unitIds,300);fwrite(STDOUT,sprintf("Acompanhamento atualizado: %d matrícula(s); falhas: %d.\n",$result['updated'],$result['failed']));if($result['last_error']!==null)fwrite(STDERR,"Última falha: ".$result['last_error']."\n");exit($result['updated']===0&&$result['failed']>0?1:0);}
         finally{flock($lock,LOCK_UN);fclose($lock);}
     }
 
@@ -171,6 +178,64 @@ TEXT);
             fwrite(STDOUT, sprintf("Prontos para liberação (qualidade mínima): %d. Nenhum item foi alterado.\n", $result['ready']));
         } else {
             fwrite(STDOUT, sprintf("Liberados com qualidade mínima: %d de %d prontos; ofertas publicadas para as franquias: %d.\n", $result['released'], $result['ready'], $result['offers']));
+        }
+        exit(0);
+    }
+
+    if ($command === 'sitemap:ping') {
+        $sitemapUrl = (string) ($argv[2] ?? '');
+        if ($sitemapUrl === '') {
+            $url = rtrim((string) $config->get('app.url', ''), '/');
+            $sitemapUrl = $url . '/site/sitemap.xml';
+        }
+        if (!preg_match('#^https?://#i', $sitemapUrl)) throw new RuntimeException('Informe a URL completa do sitemap.');
+        $target = 'https://www.google.com/ping?sitemap=' . rawurlencode($sitemapUrl);
+        $context = stream_context_create(['http' => ['timeout' => 20, 'ignore_errors' => true]]);
+        $body = @file_get_contents($target, false, $context);
+        fwrite(STDOUT, sprintf("Google avisado sobre %s\n", $sitemapUrl));
+        if (is_string($body) && $body !== '') fwrite(STDOUT, trim(strip_tags($body)) . "\n");
+        exit(0);
+    }
+
+    if ($command === 'catalog:duplicates') {
+        $database = $connection->pdo();
+        $pending = $database->query("SELECT id,name,sync_status FROM provider_commercial_catalog_items WHERE provider_id=4 AND sync_status='pending_lti' AND is_available=1 ORDER BY name,id")->fetchAll();
+        $groups = [];
+        foreach ($pending as $row) $groups[(string) $row['name']][] = (int) $row['id'];
+        $duplicates = array_filter($groups, static fn (array $ids): bool => count($ids) > 1);
+        $totalIds = 0;
+        foreach ($duplicates as $ids) $totalIds += count($ids);
+        fwrite(STDOUT, sprintf("Itens pendentes de vínculo: %d; nomes repetidos: %d (abrangendo %d itens).\n", count($pending), count($duplicates), $totalIds));
+        if (in_array('--retire', $argv, true)) {
+            $ids = array_merge(...array_values($duplicates));
+            if ($ids === []) { fwrite(STDOUT, "Nada para arquivar.\n"); exit(0); }
+            $marks = implode(',', array_fill(0, count($ids), '?'));
+            $statement = $database->prepare("UPDATE provider_commercial_catalog_items SET is_available=0 WHERE id IN ({$marks})");
+            $statement->execute($ids);
+            fwrite(STDOUT, sprintf("Arquivados (is_available=0): %d itens com nome repetido.\n", $statement->rowCount()));
+            exit(0);
+        }
+        $shown = 0;
+        foreach ($duplicates as $name => $ids) {
+            fwrite(STDOUT, sprintf("- %s (%d itens)\n", mb_substr($name, 0, 80), count($ids)));
+            if (++$shown >= 40) { fwrite(STDOUT, "... e mais " . (count($duplicates) - $shown) . " nomes repetidos.\n"); break; }
+        }
+        fwrite(STDOUT, "Use --retire para arquivar todos os repetidos de uma vez.\n");
+        exit(0);
+    }
+
+    if ($command === 'catalog:covers:audit') {
+        $database = $connection->pdo();
+        $cipher = new SecretCipher((string) $config->get('app.encryption_key'));
+        $images = new ImageGenerationRepository($database, $cipher);
+        $ready = (int) $database->query("SELECT COUNT(*) FROM catalog_media_assets WHERE entity_type='course' AND purpose='cover' AND generation_status='ready'")->fetchColumn();
+        $failed = (int) $database->query("SELECT COUNT(*) FROM catalog_media_assets WHERE entity_type='course' AND purpose='cover' AND generation_status='failed'")->fetchColumn();
+        $pending = (int) $database->query("SELECT COUNT(*) FROM catalog_media_assets WHERE entity_type='course' AND purpose='cover' AND generation_status IN ('pending','queued','processing')")->fetchColumn();
+        $releasedWithout = (int) $database->query("SELECT COUNT(*) FROM provider_courses course INNER JOIN course_provider_integrations provider ON provider.id=course.provider_id LEFT JOIN catalog_media_assets asset ON asset.entity_type='course' AND asset.entity_id=course.id AND asset.purpose='cover' AND asset.generation_status='ready' WHERE provider.provider_code='iesde' AND course.release_status IN ('released','published') AND course.is_available=1 AND asset.id IS NULL")->fetchColumn();
+        fwrite(STDOUT, sprintf("Capas de curso: %d prontas, %d pendentes, %d falhas. Liberados sem capa pronta: %d.\n", $ready, $pending, $failed, $releasedWithout));
+        if (in_array('--requeue-failed', $argv, true)) {
+            $requeued = $images->requeueFailed();
+            fwrite(STDOUT, sprintf("Falhas reenfileiradas: %d.\n", $requeued));
         }
         exit(0);
     }
