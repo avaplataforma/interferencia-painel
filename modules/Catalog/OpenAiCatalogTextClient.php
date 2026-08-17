@@ -95,7 +95,7 @@ final readonly class OpenAiCatalogTextClient
             throw new RuntimeException('Configure a chave da API da OpenAI em ADM Central > Integrações > IA - OpenAI.');
         }
 
-        $prompt = "Crie a apresentação comercial de um Módulo educacional para uma loja de cursos brasileira.\nNome: {$name}\nCategoria: {$category}\n";
+        $prompt = "Crie a apresentação comercial de um Curso para uma loja de cursos brasileira.\nNome: {$name}\nCategoria: {$category}\n";
         if (trim($sourceDescription) !== '') {
             $prompt .= 'Informações oficiais disponíveis: '.mb_substr(trim(strip_tags($sourceDescription)), 0, 5000)."\n";
         }
