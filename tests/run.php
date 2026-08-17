@@ -1957,6 +1957,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php'),'o.ava_access_url'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/public.php'),'franquia.php?slug='));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/admin.php'),'link central da aba Formações/AVA'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'site_primary_color'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'LEFT JOIN organization_sites st'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));
