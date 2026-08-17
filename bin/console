@@ -199,7 +199,7 @@ TEXT);
 
     if ($command === 'catalog:duplicates') {
         $database = $connection->pdo();
-        $pending = $database->query("SELECT id,name,sync_status FROM provider_commercial_catalog_items WHERE provider_id=4 AND sync_status='pending_lti' AND is_available=1 ORDER BY name,id")->fetchAll();
+        $pending = $database->query("SELECT id,title AS name,sync_status FROM provider_commercial_catalog_items WHERE provider_id=4 AND sync_status='pending_lti' AND is_available=1 ORDER BY title,id")->fetchAll();
         $groups = [];
         foreach ($pending as $row) $groups[(string) $row['name']][] = (int) $row['id'];
         $duplicates = array_filter($groups, static fn (array $ids): bool => count($ids) > 1);
