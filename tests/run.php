@@ -1723,7 +1723,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($admin,'Conexão e API'));
     assertTrue(!str_contains($admin,'Liberação por franquia'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos individuais e preços da franquia'));
-    assertTrue(str_contains($public,'Conhecer e solicitar matrícula'));
+    assertTrue(str_contains($public,'Saiba mais'));
     assertTrue(!str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
     assertTrue(str_contains($public,'Carga Horária'));
     assertTrue(str_contains($public,'Categoria: '));
