@@ -268,7 +268,7 @@ return static function (
         $site=$sites->publicSite($organizationId);if($site===null)return Response::text("Site indisponível.\n",404);
         $host=preg_replace('/[^a-z0-9.:-]/i','',(string)$request->header('host',''))?:'mundointer.com.br';$root='https://'.$host.rtrim($basePath,'/').'/site';$urls=[[$root,date('Y-m-d'),'1.0']];
         foreach(($site['products']??[])as$product)$urls[]=[$root.'/curso/'.(int)$product['id'],date('Y-m-d'),'0.8'];
-        foreach(($site['external_products']??[])as$product)$urls[]=[$root.(($product['product_kind']??'')==='provider_content'?'/conteudo/':'/catalogo-pro/').(int)$product['id'],date('Y-m-d'),'0.8'];
+        foreach(($site['external_products']??[])as$product){$kind=(string)($product['product_kind']??'');$path=$kind==='provider_content'?'/conteudo/':($kind==='catalog_trail'?'/trilha/':'/catalogo-pro/');$urls[]=[$root.$path.(int)$product['id'],date('Y-m-d'),'0.8'];}
         foreach(($site['pages']??[])as$page)$urls[]=[$root.'/p/'.rawurlencode((string)$page['slug']),substr((string)($page['updated_at']??date('Y-m-d')),0,10),'0.6'];
         $xml='<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';foreach($urls as[$url,$updated,$priority])$xml.='<url><loc>'.htmlspecialchars($url,ENT_XML1|ENT_QUOTES,'UTF-8').'</loc><lastmod>'.htmlspecialchars($updated,ENT_XML1|ENT_QUOTES,'UTF-8').'</lastmod><priority>'.$priority.'</priority></url>';$xml.='</urlset>';
         return(new Response($xml,200))->withHeaders(['Content-Type'=>'application/xml; charset=UTF-8','Cache-Control'=>'public, max-age=3600']);
@@ -330,6 +330,29 @@ return static function (
             $trackSiteConversion($request,'lead_provider_course',$contactId,$unitId,null,$offerId);$session->flash('site_interest.message','Recebemos seu interesse. A equipe confirmará matrícula, pagamento e acesso ao AVA parceiro.');
         }catch(Throwable$e){$session->flash('site_interest.error',$e->getMessage());}
         return Response::redirect($basePath.'/site/catalogo-pro/'.$offerId);
+    });
+
+    $router->get('/site/trilha/{trail:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath):Response{
+        $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicCatalogTrail($organizationId,(int)$params['trail']);
+        if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);
+    });
+
+    $router->post('/site/trilha/{trail:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
+        $trailId=(int)$params['trail'];
+        try{
+            $product=$sites->publicCatalogTrail($organizationId,$trailId);if($product===null)throw new RuntimeException('Esta Trilha não está disponível.');
+            $fingerprint=hash('sha256',$organizationId.'|trail-interest|'.(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown')));if(!$contacts->allowExternalRequest($fingerprint,12))throw new RuntimeException('Muitas tentativas foram realizadas. Aguarde um minuto e tente novamente.');
+            $name=trim((string)$request->input('name',''));$email=strtolower(trim((string)$request->input('email','')));$phone=preg_replace('/\D/','',(string)$request->input('phone',''))??'';$document=preg_replace('/\D/','',(string)$request->input('document',''))??'';$unitId=(int)$request->input('unit_id','0');
+            if(mb_strlen($name)<2||mb_strlen($name)>160)throw new RuntimeException('Informe o nome completo.');if(filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido.');if(strlen($phone)<10||strlen($phone)>11)throw new RuntimeException('Informe um celular válido.');if($document!==''&&!in_array(strlen($document),[11,14],true))throw new RuntimeException('Informe um CPF ou CNPJ válido.');if((string)$request->input('privacy_consent','')!=='1')throw new RuntimeException('Confirme o uso dos dados para atendimento.');
+            $units=$sites->publicUnits($organizationId,null);$unit=null;foreach($units as$item)if((int)$item['id']===$unitId)$unit=$item;if($unit===null)throw new RuntimeException('Selecione um polo disponível.');
+            $existing=$document!==''?$contacts->findByDocument($document):null;if($existing!==null&&(int)$existing['unit_id']!==$unitId)throw new RuntimeException('Este CPF já está vinculado a outro polo. Fale com nossa equipe para continuar.');
+            $contactId=$existing===null?$contacts->externalDuplicate('site-trail-interest-'.bin2hex(random_bytes(12)),$unitId,$phone,$email):(int)$existing['id'];
+            if($contactId===null)$contactId=$contacts->createExternal(['unit_id'=>$unitId,'name'=>$name,'phone'=>$phone,'email'=>$email,'document'=>$document!==''?$document:null,'course'=>(string)$product['name'],'interest_score'=>null,'origin_city'=>(string)$unit['name'],'external_submission_id'=>'site-trail-interest-'.bin2hex(random_bytes(16)),'consent_at'=>date('Y-m-d H:i:s'),'privacy_notice_version'=>'site-trail-v1','registered_at'=>date('Y-m-d H:i:s'),'notes'=>'Interesse em Trilha recebido pelo site. A equipe confirmará pagamento, matrícula e acesso ao AVA Cursos.']+$siteAttribution($request));
+            else $contacts->recordEvent($contactId,null,'site_trail_interest','Novo interesse recebido na Trilha '.(string)$product['name'].'.');
+            $trackSiteConversion($request,'lead_catalog_trail',$contactId,$unitId,null,$trailId);$session->flash('site_interest.message','Recebemos seu interesse. A equipe confirmará matrícula, pagamento e acesso à Trilha.');
+        }catch(Throwable$e){$session->flash('site_interest.error',$e->getMessage());}
+        return Response::redirect($basePath.'/site/trilha/'.$trailId);
     });
 
     $router->get('/site/conteudo/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath):Response{
