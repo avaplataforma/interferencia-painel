@@ -1341,7 +1341,7 @@ final readonly class CourseProviderRepository
         $ids = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN) ?: []);
         if ($dryRun || $ids === []) return ['ready' => count($ids), 'released' => 0, 'offers' => 0];
         $placeholders = implode(',', array_fill(0, count($ids), '?'));
-        $release = $this->database->prepare("UPDATE provider_courses course SET course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW() WHERE course.id IN ({$placeholders})");
+        $release = $this->database->prepare("UPDATE provider_courses course SET course.review_status='approved',course.release_status='released',course.is_globally_enabled=1,course.reviewed_by=?,course.reviewed_at=NOW() WHERE course.id IN ({$placeholders})");
         $release->execute(array_merge([$userId], $ids));
         $released = $release->rowCount();
         $offers = 0;
