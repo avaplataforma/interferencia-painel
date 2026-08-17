@@ -93,10 +93,7 @@ final readonly class AvaEnrollmentReleaser
                 $parts = preg_split('/\s+/', trim((string) $context['name'])) ?: [];
                 $first = array_shift($parts) ?: 'Aluno';
                 $last = trim(implode(' ', $parts)) ?: 'Interferência';
-                $username = $document;
-                if ($client->usersByField('username', $username) !== []) {
-                    throw new RuntimeException('Já existe outro usuário com este CPF como login no AVA. Revise o cadastro antes de continuar.');
-                }
+                $username = $this->uniqueUsername($client, $document, (int) $context['organization_id']);
                 $payload = [
                     'username' => $username,
                     'firstname' => $first,
@@ -217,5 +214,19 @@ final readonly class AvaEnrollmentReleaser
         return $url !== ''
             && filter_var($url, FILTER_VALIDATE_URL) !== false
             && strtolower((string)parse_url($url, PHP_URL_SCHEME)) === 'https';
+    }
+
+    /** Gera um login único no AVA: CPF na primeira franquia e CPF-{franquia} nas demais. */
+    private function uniqueUsername(MoodleClient $client, string $document, int $organizationId): string
+    {
+        if ($client->usersByField('username', $document) === []) return $document;
+        $candidate = $document . '-' . $organizationId;
+        $attempt = 2;
+        while ($client->usersByField('username', $candidate) !== []) {
+            $candidate = $document . '-' . $organizationId . '-' . $attempt;
+            $attempt++;
+            if ($attempt > 60) throw new RuntimeException('Não foi possível gerar um login único no AVA.');
+        }
+        return $candidate;
     }
 }
