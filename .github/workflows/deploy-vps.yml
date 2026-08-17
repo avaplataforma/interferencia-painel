@@ -43,11 +43,13 @@ jobs:
 
           # O robô LTI MASTER usa um Chromium isolado para concluir o Deep
           # Linking sem depender de uma sessão manual no Moodle. Mantemos o
-          # pacote e o navegador instalados no cache do próprio usuário da
-          # aplicação; execuções futuras apenas conferem os arquivos locais.
+          # pacote e o navegador instalados dentro da própria aplicação, para
+          # que o usuário web e o usuário de deploy compartilhem o executável.
           if [ -f "$repo/automation/package.json" ]; then
             npm --prefix "$repo/automation" install --omit=dev --no-audit --no-fund
-            "$repo/automation/node_modules/.bin/playwright" install chromium
+            PLAYWRIGHT_BROWSERS_PATH="$repo/automation/.playwright-browsers" \
+              "$repo/automation/node_modules/.bin/playwright" install chromium
+            chmod -R a+rX "$repo/automation/.playwright-browsers"
           fi
 
           after="$(git -C "$repo" rev-parse --short HEAD)"
