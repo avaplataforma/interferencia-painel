@@ -1941,6 +1941,11 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/poles.php'),'Criar unidade automaticamente'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'<label for="student-unit">Polo '));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'<label for="student-unit">Unidade '));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'data-mask="postal"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'student-form-error'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/finance/customers/create.php'),'postal.length !== 8'));
+    assertTrue(str_contains($routes,"'finance_customers.create_old'"));
+    assertTrue(str_contains($routes,"'old'=>\$session->get('finance_customers.create_old',[])"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Identity/UserManager.php'),'roleGrantsAllUnits'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),"r.code='headquarters'"));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000090_grant_all_permissions_to_headquarters.php'));
