@@ -1773,15 +1773,27 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($publicView,'rel="canonical"'));
     assertTrue(str_contains($publicView,'data-site-ga4'));
     assertTrue(str_contains($courseView,'data-site-ga4'));
+    assertTrue(str_contains($publicView,'data-desired-course'));
+    assertTrue(str_contains($publicView,'data-desired-course-other'));
+    assertTrue(str_contains($publicView,'name="website"'));
+    assertTrue(str_contains($publicView,'contact-honeypot'));
+    assertTrue(str_contains($publicView,'name="subject"'));
+    assertTrue(str_contains($publicView,'Mensagem (opcional)'));
+    assertTrue(str_contains($publicView,'data-legal-open="privacy-dialog"'));
     $siteJs=(string)file_get_contents($rootPath.'/public/assets/js/site-public.js');
     assertTrue(str_contains($siteJs,'data-site-ga4-script'));
     assertTrue(str_contains($siteJs,"window.gtag('config', ga4Id)"));
+    assertTrue(str_contains($siteJs,'input[name="phone"]'));
+    assertTrue(str_contains($siteJs,'__outro__'));
     $appConfig=(string)file_get_contents($rootPath.'/config/app.php');
     assertTrue(str_contains($appConfig,"'analytics_ga4_id'"));
     assertTrue(str_contains($catalogRepo,'function releaseReadyCourses'));
     assertTrue(str_contains($catalogRepo,"course.release_status NOT IN ('released','published')"));
     $console=(string)file_get_contents($rootPath.'/bin/console');
     assertTrue(str_contains($console,'catalog:release-ready'));
+    assertTrue(str_contains($routes,"'desired_course_other'"));
+    assertTrue(str_contains($routes,"'website'"));
+    assertTrue(str_contains($routes,"'site-contact-v2'"));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

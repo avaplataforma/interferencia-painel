@@ -186,4 +186,30 @@
     if (metricsAllowed()) loadGa4();
     document.querySelectorAll('[data-cookie-accept]').forEach((button) => button.addEventListener('click', loadGa4));
   }
+
+  document.querySelectorAll('input[name="phone"]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const digits = input.value.replace(/\D/g, '').slice(0, 11);
+      if (digits.length === 0) { input.value = ''; return; }
+      input.value = digits.length <= 2 ? `(${digits}` : digits.length <= 7 ? `(${digits.slice(0, 2)}) ${digits.slice(2)}` : `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    });
+  });
+
+  const desiredSelect = document.querySelector('[data-desired-course]');
+  const desiredOther = document.querySelector('[data-desired-course-other]');
+  if (desiredSelect instanceof HTMLSelectElement && desiredOther instanceof HTMLInputElement) {
+    const syncDesiredOther = () => {
+      const show = desiredSelect.value === '__outro__';
+      desiredOther.hidden = !show;
+      desiredOther.required = show;
+    };
+    desiredSelect.addEventListener('change', syncDesiredOther);
+    const prefill = (query.get('curso') || '').trim();
+    if (prefill) {
+      const match = Array.from(desiredSelect.options).find((option) => option.value.toLowerCase() === prefill.toLowerCase());
+      if (match) desiredSelect.value = match.value;
+      else { desiredSelect.value = '__outro__'; desiredOther.value = prefill; }
+    }
+    syncDesiredOther();
+  }
 })();
