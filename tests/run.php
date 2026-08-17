@@ -1925,6 +1925,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/form.php'),'name="favicon"'));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'),"r.code = 'manager'"));
+    assertTrue(str_contains($routes,'$franchiseUsers->updateManaged($existing->id'));
+    assertTrue(!str_contains($routes,"\$existing['id']"));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));

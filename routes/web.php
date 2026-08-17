@@ -643,7 +643,7 @@ return static function (
                 $existing=$franchiseUsers->findByEmail($panelLogin);
                 if($existing!==null){
                     if($panelPassword!==''&&strlen($panelPassword)<8)throw new RuntimeException('A senha do painel precisa de pelo menos 8 caracteres.');
-                    $franchiseUsers->updateManaged((int)$existing['id'],$panelName,$panelLogin,true,[$managerRole],[],$panelPassword!==''?(new PasswordHasher())->hash($panelPassword):null);
+                    $franchiseUsers->updateManaged($existing->id,$panelName,$panelLogin,true,[$managerRole],[],$panelPassword!==''?(new PasswordHasher())->hash($panelPassword):null);
                 }else{
                     if($panelPassword===''||strlen($panelPassword)<8)throw new RuntimeException('Defina uma senha de pelo menos 8 caracteres para o painel.');
                     $franchiseUsers->createManaged($panelName,$panelLogin,(new PasswordHasher())->hash($panelPassword),true,[$managerRole],[]);
