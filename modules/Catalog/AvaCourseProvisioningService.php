@@ -208,7 +208,8 @@ final readonly class AvaCourseProvisioningService
         $organizationId = (int)$job['organization_id'];
         $userId ??= isset($job['requested_by']) ? (int)$job['requested_by'] : null;
         $forceSync = str_starts_with((string)$job['request_key'], 'provider-course-sync:');
-        if ((string)$job['provider_code'] !== 'iesde') {
+        $providerCode = (string)$job['provider_code'];
+        if ($providerCode !== 'iesde') {
             $message = 'A criação automática ainda não está habilitada para esta Formação.';
             $this->failJob($jobId, $message);
             throw new RuntimeException($message);
