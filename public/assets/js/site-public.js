@@ -119,20 +119,57 @@
     if (catalogMore instanceof HTMLButtonElement) catalogMore.hidden = matching.length <= catalogVisible;
   };
   catalogCards.forEach((card) => card.querySelector('[data-course-favorite]')?.addEventListener('click', () => { const id = String(card.dataset.courseId || ''); favorites.has(id) ? favorites.delete(id) : favorites.add(id); localStorage.setItem(favoritesKey, JSON.stringify([...favorites])); syncFavoriteButtons(); filterCatalog(); }));
-  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', () => { catalogVisible = catalogBatch; filterCatalog(); }));
+  const catalogPills = Array.from(document.querySelectorAll('[data-category-pill]'));
+  const syncPills = () => {
+    const active = normalizeCatalog(catalogCategory?.value || '');
+    catalogPills.forEach((pill) => { pill.setAttribute('aria-pressed', normalizeCatalog(pill.dataset.category || '') === active ? 'true' : 'false'); });
+  };
+  const syncUrl = () => {
+    const params = new URLSearchParams(location.search);
+    const values = { q: catalogSearch?.value || '', formacao: catalogFormation?.value || '', categoria: catalogCategory?.value || '', ordenar: catalogSort?.value || '' };
+    Object.entries(values).forEach(([key, value]) => {
+      if (value && value !== 'featured') params.set(key, value);
+      else params.delete(key);
+    });
+    const search = params.toString();
+    history.replaceState(null, '', `${location.pathname}${search ? `?${search}` : ''}${location.hash}`);
+  };
+  const applyCatalogInit = () => {
+    let changed = false;
+    if (body.dataset.catalogInitQ && catalogSearch instanceof HTMLInputElement) { catalogSearch.value = body.dataset.catalogInitQ; changed = true; }
+    if (body.dataset.catalogInitFormacao && catalogFormation instanceof HTMLSelectElement) { catalogFormation.value = body.dataset.catalogInitFormacao; changed = true; }
+    if (body.dataset.catalogInitCategoria && catalogCategory instanceof HTMLSelectElement) { catalogCategory.value = body.dataset.catalogInitCategoria; changed = true; }
+    if (body.dataset.catalogInitSort && catalogSort instanceof HTMLSelectElement) { catalogSort.value = body.dataset.catalogInitSort; changed = true; }
+    if (changed) { catalogVisible = catalogBatch; }
+  };
+  [catalogSearch, catalogFormation, catalogCategory, catalogSort].forEach((field) => field?.addEventListener('input', () => { catalogVisible = catalogBatch; filterCatalog(); syncPills(); syncUrl(); }));
   catalogSubmit?.addEventListener('click', () => {
     catalogVisible = catalogBatch;
     filterCatalog();
+    syncPills();
+    syncUrl();
     catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   catalogMore?.addEventListener('click', () => { catalogVisible += catalogBatch; filterCatalog(); });
+  catalogPills.forEach((pill) => pill.addEventListener('click', () => {
+    const value = normalizeCatalog(pill.dataset.category || '');
+    const current = normalizeCatalog(catalogCategory?.value || '');
+    if (catalogCategory instanceof HTMLSelectElement) catalogCategory.value = current === value ? '' : value;
+    catalogVisible = catalogBatch;
+    filterCatalog();
+    syncPills();
+    syncUrl();
+    catalogGrid?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
   catalogSearch?.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
     catalogSubmit?.click();
   });
   syncFavoriteButtons();
+  applyCatalogInit();
   filterCatalog();
+  syncPills();
 
   const searchDialog = document.querySelector('#site-search-dialog');
   const searchInput = searchDialog?.querySelector('[data-site-search-input]');

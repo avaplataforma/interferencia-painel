@@ -1799,6 +1799,30 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($routes,"'desired_course_other'"));
     assertTrue(str_contains($routes,"'website'"));
     assertTrue(str_contains($routes,"'site-contact-v2'"));
+    assertTrue(str_contains($routes,"'/site/depoimento'"));
+    assertTrue(str_contains($routes,"'/site/formacao/"));
+    assertTrue(str_contains($routes,"'/admin/site/testimonials/"));
+    assertTrue(str_contains($routes,"Cache-Control"));
+    assertTrue(str_contains($routes,"?formacao='"));
+    $siteRepository=(string)file_get_contents($rootPath.'/modules/Site/SiteRepository.php');
+    assertTrue(str_contains($siteRepository,'function submitTestimonial'));
+    assertTrue(str_contains($siteRepository,'function publishedTestimonials'));
+    assertTrue(str_contains($siteRepository,'function allTestimonials'));
+    assertTrue(str_contains($siteRepository,'function updateTestimonialStatus'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000020_create_site_testimonials.php'));
+    assertTrue(is_file($rootPath.'/scripts/smoke.sh'));
+    assertTrue(str_contains($publicView,'data-catalog-pills'));
+    assertTrue(str_contains($publicView,'data-catalog-init-formacao'));
+    assertTrue(str_contains($publicView,'id="depoimentos"'));
+    assertTrue(str_contains($publicView,'data-testimonial-form'));
+    assertTrue(str_contains($siteJs,'data-category-pill'));
+    assertTrue(str_contains($siteJs,'history.replaceState'));
+    assertTrue(str_contains($siteJs,'catalogInitQ'));
+    $adminSite=(string)file_get_contents($rootPath.'/views/site/admin.php');
+    assertTrue(str_contains($adminSite,'data-site-panel="depoimentos"'));
+    $htaccess=(string)file_get_contents($rootPath.'/public/.htaccess');
+    assertTrue(str_contains($htaccess,'mod_expires'));
+    assertTrue(str_contains($htaccess,'image/webp'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

@@ -639,4 +639,54 @@ final readonly class SiteRepository
     private function slug(string$value):string{$ascii=iconv('UTF-8','ASCII//TRANSLIT//IGNORE',trim($value));$slug=strtolower(is_string($ascii)?$ascii:$value);$slug=trim(preg_replace('/[^a-z0-9]+/','-',$slug)??'','-');if($slug===''||strlen($slug)>120)throw new RuntimeException('Informe um endereço válido para a página.');return$slug;}
     /** @return array<string,mixed> */
     private function defaults(int$organizationId):array{return['organization_id'=>$organizationId,'is_enabled'=>0,'template_key'=>'modern','allow_catalog'=>1,'allow_store'=>0,'checkout_fulfillment_mode'=>'manual_review','allow_custom_pages'=>0,'max_banners'=>3,'max_pages'=>5,'max_featured_courses'=>6,'selected_mode'=>'catalog','publication_status'=>'draft','site_title'=>'','hero_title'=>'','hero_text'=>'','about_title'=>'','about_text'=>'','contact_email'=>'','contact_phone'=>'','whatsapp'=>'','instagram_url'=>'','facebook_url'=>'','youtube_url'=>'','linkedin_url'=>'','tiktok_url'=>'','classroom_url'=>'','classroom_label'=>'Sala de Aula','webmail_url'=>'','social_bar_enabled'=>1,'site_search_enabled'=>1,'footer_text'=>'','footer_show_legal_data'=>1,'whatsapp_button_enabled'=>1,'whatsapp_button_label'=>'Fale pelo WhatsApp','whatsapp_button_message'=>'Olá! Gostaria de saber mais sobre os cursos.','scholarship_form_enabled'=>0,'scholarship_display_mode'=>'floating','scholarship_popup_delay_seconds'=>15,'scholarship_popup_repeat_hours'=>24,'scholarship_title'=>'GANHE BOLSAS DE ESTUDOS','scholarship_subtitle'=>'Preencha e participe!','scholarship_button_label'=>'Ganhe uma bolsa','seo_title'=>'','seo_description'=>'','privacy_policy'=>'','cookie_notice'=>'Usamos cookies essenciais e de medição para melhorar sua experiência.','terms_text'=>'','cookie_banner_enabled'=>1,'live_version'=>null,'scheduled_publish_at'=>null,'published_at'=>null];}
+
+    public function submitTestimonial(array $input): void
+    {
+        $name=trim((string)($input['author_name']??''));
+        $city=trim((string)($input['author_city']??''));
+        $course=trim((string)($input['course_name']??''));
+        $rating=(int)($input['rating']??0);
+        $text=trim((string)($input['testimonial_text']??''));
+        $organizationId=(int)($input['organization_id']??0);
+        if($organizationId<1)throw new RuntimeException('Franquia não encontrada.');
+        if(mb_strlen($name)<2||mb_strlen($name)>160)throw new RuntimeException('Informe seu nome completo.');
+        if($city!==''&&mb_strlen($city)>190)throw new RuntimeException('Informe uma cidade válida.');
+        if(mb_strlen($course)<2||mb_strlen($course)>190)throw new RuntimeException('Informe o curso concluído.');
+        if($rating<1||$rating>5)throw new RuntimeException('Informe uma nota de 1 a 5 estrelas.');
+        if(mb_strlen($text)<10||mb_strlen($text)>2000)throw new RuntimeException('Escreva um depoimento entre 10 e 2.000 caracteres.');
+        $statement=$this->database->prepare('INSERT INTO site_testimonials(organization_id,author_name,author_city,course_name,rating,testimonial_text,status) VALUES(:organization,:name,:city,:course,:rating,:text,\'pending\')');
+        $statement->execute(['organization'=>$organizationId,'name'=>$name,'city'=>$city!==''?$city:null,'course'=>$course,'rating'=>$rating,'text'=>$text]);
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function publishedTestimonials(int $organizationId,int $limit=12):array
+    {
+        $limit=max(1,min(24,$limit));
+        $statement=$this->database->prepare("SELECT id,author_name,author_city,course_name,rating,testimonial_text,created_at FROM site_testimonials WHERE organization_id=:organization AND status='published' ORDER BY created_at DESC,id DESC LIMIT {$limit}");
+        $statement->execute(['organization'=>$organizationId]);
+        return $statement->fetchAll()?:[];
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function allTestimonials(int $organizationId):array
+    {
+        $statement=$this->database->prepare("SELECT id,author_name,author_city,course_name,rating,testimonial_text,status,created_at FROM site_testimonials WHERE organization_id=:organization ORDER BY CASE status WHEN 'pending' THEN 0 ELSE 1 END,created_at DESC,id DESC LIMIT 200");
+        $statement->execute(['organization'=>$organizationId]);
+        return $statement->fetchAll()?:[];
+    }
+
+    public function updateTestimonialStatus(int $organizationId,int $id,string $status):void
+    {
+        if(!in_array($status,['pending','published'],true))throw new RuntimeException('Status inválido.');
+        $statement=$this->database->prepare('UPDATE site_testimonials SET status=:status WHERE id=:id AND organization_id=:organization');
+        $statement->execute(['status'=>$status,'id'=>$id,'organization'=>$organizationId]);
+        if($statement->rowCount()!==1)throw new RuntimeException('Depoimento não encontrado.');
+    }
+
+    public function deleteTestimonial(int $organizationId,int $id):void
+    {
+        $statement=$this->database->prepare('DELETE FROM site_testimonials WHERE id=:id AND organization_id=:organization');
+        $statement->execute(['id'=>$id,'organization'=>$organizationId]);
+        if($statement->rowCount()!==1)throw new RuntimeException('Depoimento não encontrado.');
+    }
 }
