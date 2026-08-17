@@ -1114,7 +1114,7 @@ final readonly class CourseProviderRepository
                 :provider,:catalog,:external,:remote,:name,:slug,:summary,:description,:category,
                 NULL,NULL,'LTI 1.3',NULL,:lessons,:cover,
                 NULL,NULL,NULL,NULL,
-                1,:raw,:hash,'new',:now,:now,:now)");
+                1,:raw,:hash,'new',:changed_at,:first_seen_at,:last_seen_at)");
         $statement->execute([
             'provider' => $providerId,
             'catalog' => $catalogId,
@@ -1129,7 +1129,9 @@ final readonly class CourseProviderRepository
             'cover' => $this->nullIfEmpty((string) ($item['cover_url'] ?? '')),
             'raw' => $rawPayload !== '' ? $rawPayload : null,
             'hash' => $contentHash,
-            'now' => $now,
+            'changed_at' => $now,
+            'first_seen_at' => $now,
+            'last_seen_at' => $now,
         ]);
 
         return (int) $this->database->lastInsertId();
