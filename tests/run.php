@@ -1926,7 +1926,16 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/database/migrations/20260817_000080_grant_all_permissions_to_manager.php'),"r.code = 'manager'"));
     assertTrue(str_contains($routes,'$franchiseUsers->updateManaged($existing->id'));
-    assertTrue(!str_contains($routes,"\$existing['id']"));
+    assertTrue(str_contains($routes,"if(\$role['code']==='headquarters')"));
+    assertTrue(str_contains($routes,'$franchiseUsers->allRoles()'));
+    $userRepo=(string)file_get_contents($rootPath.'/modules/Identity/UserRepository.php');
+    assertTrue(str_contains($userRepo,'function allRoles'));
+    assertTrue(str_contains($userRepo,'function roleGrantsAllUnits'));
+    assertTrue(str_contains($userRepo,"!in_array(\$role['code'],['super_admin','headquarters'],true)"));
+    assertTrue(str_contains($userRepo,"master_r.code IN ('super_admin','headquarters')"));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Identity/UserManager.php'),'roleGrantsAllUnits'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),"r.code='headquarters'"));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000090_grant_all_permissions_to_headquarters.php'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));

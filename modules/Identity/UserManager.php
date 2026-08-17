@@ -42,6 +42,8 @@ final readonly class UserManager
         $validRoles = array_map(static fn (array $r): int => (int) $r['id'], $this->users->availableRoles());
         $validUnits = array_map(static fn (array $u): int => (int) $u['id'], $this->users->availableUnits());
         if ($roles === [] || array_diff($roles, $validRoles) !== []) throw new RuntimeException('Selecione ao menos um papel válido.');
-        if ($this->users->requiresUnits() && ($units === [] || array_diff($units, $validUnits) !== [])) throw new RuntimeException('Selecione ao menos uma unidade válida.');
+        $fullAccess = $this->users->roleGrantsAllUnits($roles);
+        $needsUnits = $this->users->requiresUnits() && !$fullAccess;
+        if ($needsUnits && ($units === [] || array_diff($units, $validUnits) !== [])) throw new RuntimeException('Selecione ao menos uma unidade válida.');
     }
 }

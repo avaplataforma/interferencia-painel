@@ -637,7 +637,7 @@ return static function (
             if($panelLogin!==''&&filter_var($panelLogin,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail válido para o login do painel.');
             if($panelLogin!==''){
                 $franchiseUsers=new UserRepository($database,(int)$id,false);
-                $roles=$franchiseUsers->availableRoles();$managerRole=null;foreach($roles as$role)if($role['code']==='manager')$managerRole=(int)$role['id'];
+                $roles=$franchiseUsers->allRoles();$managerRole=null;foreach($roles as$role)if($role['code']==='headquarters')$managerRole=(int)$role['id'];
                 if($managerRole===null)throw new RuntimeException('Papel Gestor não encontrado.');
                 $panelName=trim((string)$request->input('manager_name',''))!==''?(string)$request->input('manager_name'):trim((string)$request->input('display_name',''));
                 $existing=$franchiseUsers->findByEmail($panelLogin);
