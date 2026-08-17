@@ -2717,6 +2717,8 @@ $tests['agenda publicacao MASTER pela fila sem depender de metodo removido'] = s
     assertTrue(!str_contains($routes,'publishProviderCourse('));
     assertTrue(str_contains($service,'public function queueProviderCourse'));
     assertTrue(!str_contains($service,'public function publishProviderCourse'));
+    assertTrue(str_contains($service,"FROM organizations WHERE status='active' ORDER BY id LIMIT 1"));
+    assertTrue(!str_contains($service,'organizations WHERE is_active=1'));
 };
 
 $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static function () use ($rootPath): void {

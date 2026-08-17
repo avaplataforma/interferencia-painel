@@ -72,7 +72,7 @@ final readonly class AvaCourseProvisioningService
         $organization->execute(['course' => $courseId]);
         $organizationId = (int)$organization->fetchColumn();
         if ($organizationId < 1) {
-            $organizationId = (int)$this->database->query('SELECT id FROM organizations WHERE is_active=1 ORDER BY id LIMIT 1')->fetchColumn();
+            $organizationId = (int)$this->database->query("SELECT id FROM organizations WHERE status='active' ORDER BY id LIMIT 1")->fetchColumn();
         }
         if ($organizationId < 1) throw new RuntimeException('Nenhuma franquia ativa foi encontrada para registrar a publicação.');
 
