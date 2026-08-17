@@ -23,3 +23,6 @@
 !/storage/logs/.gitkeep
 !/storage/sessions/.gitkeep
 !/storage/whatsapp/media/.gitkeep
+
+/automation/
+
