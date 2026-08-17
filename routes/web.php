@@ -225,7 +225,7 @@ return static function (
         if($site===null)return$view->renderStandalone('site/unavailable',[],503);
         $previewDevice=$preview&&$request->queryValue('device','desktop')==='mobile'?'mobile':'desktop';
         $catalogInit=['q'=>(string)$request->queryValue('q',''),'formacao'=>(string)$request->queryValue('formacao',''),'categoria'=>(string)$request->queryValue('categoria',''),'ordenar'=>(string)$request->queryValue('ordenar','featured')];
-        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'catalogInit'=>$catalogInit,'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/public',['site'=>$site,'preview'=>$preview,'previewDevice'=>$previewDevice,'scholarshipUnits'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_scholarship.message'),'error'=>$session->get('site_scholarship.error'),'contactMessage'=>$session->get('site_contact.message'),'contactError'=>$session->get('site_contact.error'),'catalogInit'=>$catalogInit,'testimonialRatings'=>$sites->testimonialRatings($organizationId),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>$preview?'private, no-store':'public, max-age=300, s-maxage=0']);
     });
 
     $router->get('/site/formacao/{code:[a-z0-9_-]+}',static function(Request$request,array$params)use($basePath):Response{return Response::redirect($basePath.'/site?formacao='.rawurlencode((string)$params['code']),301);});
@@ -313,7 +313,7 @@ return static function (
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicCatalogProduct($organizationId,(int)$params['product']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
         $unitId=$product['unit_id']===null?null:(int)$product['unit_id'];
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,$unitId),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'testimonialRatings'=>$sites->testimonialRatings($organizationId),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/curso/{product:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -338,7 +338,7 @@ return static function (
     $router->get('/site/catalogo-pro/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalProduct($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'testimonialRatings'=>$sites->testimonialRatings($organizationId),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/catalogo-pro/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -361,7 +361,7 @@ return static function (
     $router->get('/site/conteudo/{offer:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicExternalContent($organizationId,(int)$params['offer']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'testimonialRatings'=>$sites->testimonialRatings($organizationId),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/conteudo/{offer:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -384,7 +384,7 @@ return static function (
     $router->get('/site/trilha/{trail:\d+}',static function(Request$request,array$params)use($view,$sites,$organizationId,$session,$csrf,$basePath,$config):Response{
         $site=$sites->publicSite($organizationId);$product=$site===null?null:$sites->publicTrail($organizationId,(int)$params['trail']);
         if($site===null||$product===null)return$view->renderStandalone('site/unavailable',[],404);
-        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
+        return$view->renderStandalone('site/course',['site'=>$site,'product'=>$product,'units'=>$sites->publicUnits($organizationId,null),'message'=>$session->get('site_interest.message'),'error'=>$session->get('site_interest.error'),'csrfField'=>$csrf->field(),'testimonialRatings'=>$sites->testimonialRatings($organizationId),'basePath'=>$basePath,'ga4Id'=>(string)$config->get('app.analytics_ga4_id','')])->withHeaders(['Cache-Control'=>'public, max-age=300, s-maxage=0']);
     });
 
     $router->post('/site/trilha/{trail:\d+}/interesse',static function(Request$request,array$params)use($sites,$contacts,$siteAttribution,$trackSiteConversion,$organizationId,$session,$basePath):Response{
@@ -1568,6 +1568,21 @@ return static function (
     $router->postWithoutCsrf('/api/v1/external-contacts',static function(Request $request)use($externalIntake):Response{
         $authorization=(string)$request->header('authorization','');$key=str_starts_with($authorization,'Bearer ')?substr($authorization,7):(string)$request->header('x-form-key','');
         $data=json_decode($request->body(),true);if(!is_array($data))return Response::json(['ok'=>false,'error'=>'JSON inválido.'],400);
-        try{$source=(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown'));$result=$externalIntake->receive($key,$data,$source);return Response::json(['ok'=>true]+$result,$result['duplicate']?200:201);}catch(Throwable $exception){$status=in_array($exception->getCode(),[401,422,429],true)?$exception->getCode():500;return Response::json(['ok'=>false,'error'=>$status===500?'Erro interno.':$exception->getMessage()],$status);}
+        try{$source=(string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','unknown'));$result=$externalIntake->receive($key,$data,$source);return Response::json(['ok'=>true]+$result,200);}catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
+    });
+
+    $router->get('/health',static function()use($platformSettingsRepository):Response{
+        $database=true;$status='ok';$http=200;
+        try{$platformSettingsRepository->settings();}catch(Throwable){$database=false;$status='degraded';$http=503;}
+        return(new Response(json_encode(['status'=>$status,'database'=>$database,'time'=>date('c')],JSON_UNESCAPED_UNICODE),$http))->withHeaders(['Content-Type'=>'application/json; charset=UTF-8','Cache-Control'=>'no-store']);
+    });
+
+    $router->get('/{path:.*}',static function(Request$request)use($database):Response{
+        $path=(string)$request->path();
+        $skip=preg_match('#\.(?:css|js|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|map|txt|xml|json)(?:\?|$)#i',$path)===1||str_starts_with($path,'/wp-')||str_starts_with($path,'/favicon');
+        if(!$skip){
+            try{$statement=$database->prepare('INSERT INTO site_404_logs(host,path,referer,ip,user_agent) VALUES(:host,:path,:referer,:ip,:agent)');$statement->execute(['host'=>mb_substr((string)$request->header('host',''),0,190),'path'=>mb_substr($path,0,500),'referer'=>mb_substr((string)$request->header('referer',''),0,500),'ip'=>mb_substr((string)$request->header('cf-connecting-ip',$request->header('x-forwarded-for','')),0,64),'agent'=>mb_substr((string)$request->header('user-agent',''),0,255)]);}catch(Throwable){}
+        }
+        return Response::text("Página não encontrada.\n",404);
     });
 };

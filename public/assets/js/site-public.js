@@ -171,6 +171,19 @@
   filterCatalog();
   syncPills();
 
+  const heroSearch = document.querySelector('[data-hero-search]');
+  const heroSearchInput = document.querySelector('[data-hero-search-input]');
+  if (heroSearch instanceof HTMLFormElement && heroSearchInput instanceof HTMLInputElement && catalogSearch instanceof HTMLInputElement) {
+    heroSearch.addEventListener('submit', (event) => {
+      event.preventDefault();
+      catalogSearch.value = heroSearchInput.value;
+      catalogVisible = catalogBatch;
+      filterCatalog();
+      syncPills();
+      syncUrl();
+      document.querySelector('#cursos')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
   const searchDialog = document.querySelector('#site-search-dialog');
   const searchInput = searchDialog?.querySelector('[data-site-search-input]');
   const items = Array.from(searchDialog?.querySelectorAll('[data-site-search-item]') || []);

@@ -689,4 +689,18 @@ final readonly class SiteRepository
         $statement->execute(['id'=>$id,'organization'=>$organizationId]);
         if($statement->rowCount()!==1)throw new RuntimeException('Depoimento não encontrado.');
     }
+
+    /** @return array<string,array{avg:float,count:int}> Média de avaliações publicadas por nome de curso (normalizado). */
+    public function testimonialRatings(int $organizationId):array
+    {
+        $statement=$this->database->prepare("SELECT course_name,ROUND(AVG(rating),1) avg_rating,COUNT(*) rating_count FROM site_testimonials WHERE organization_id=:organization AND status='published' GROUP BY course_name");
+        $statement->execute(['organization'=>$organizationId]);
+        $map=[];
+        foreach($statement->fetchAll()?:[]as$row){
+            $name=mb_strtolower(trim((string)$row['course_name']));
+            if($name==='')continue;
+            $map[$name]=['avg'=>(float)$row['avg_rating'],'count'=>(int)$row['rating_count']];
+        }
+        return $map;
+    }
 }
