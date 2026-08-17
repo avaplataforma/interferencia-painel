@@ -1,6 +1,24 @@
 'use strict';
 
 document.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-master-course-section]');
+  if (!tab) return;
+  const detail = tab.closest('[data-master-course-detail]');
+  if (!detail) return;
+
+  event.preventDefault();
+  const section = tab.dataset.masterCourseSection || 'curation';
+  detail.querySelectorAll('[data-master-course-section]').forEach((item) => {
+    const active = item.dataset.masterCourseSection === section;
+    item.classList.toggle('is-active', active);
+    item.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  detail.querySelectorAll('[data-master-course-panel]').forEach((panel) => {
+    panel.hidden = panel.dataset.masterCoursePanel !== section;
+  });
+}, true);
+
+document.addEventListener('click', (event) => {
   const button = event.target.closest('[data-print-page]');
   if (!button) return;
   event.preventDefault();
