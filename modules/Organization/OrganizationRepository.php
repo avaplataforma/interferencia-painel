@@ -126,15 +126,17 @@ final readonly class OrganizationRepository
     }
     public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath):void
     {$s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');}
-    public function updateAvaCommunication(int$id,string$loginTitle,string$poloName,string$welcome,string$email,string$phone,string$avaAccessUrl=''):void
+    public function updateAvaCommunication(int$id,string$loginTitle,string$poloName,string$welcome,string$email,string$phone,string$avaAccessUrl='',string$avaPrimaryColor='',string$avaSecondaryColor=''):void
     {
-        $loginTitle=trim($loginTitle);$poloName=trim(preg_replace('/\s+/u',' ',$poloName)??'');$welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);$avaAccessUrl=trim($avaAccessUrl);
+        $loginTitle=trim($loginTitle);$poloName=trim(preg_replace('/\s+/u',' ',$poloName)??'');$welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);$avaAccessUrl=trim($avaAccessUrl);$avaPrimaryColor=strtolower(trim($avaPrimaryColor));$avaSecondaryColor=strtolower(trim($avaSecondaryColor));
         if($this->findRecord($id)===null)throw new RuntimeException('Franquia não encontrada.');
         if($email!==''&&filter_var($email,FILTER_VALIDATE_EMAIL)===false)throw new RuntimeException('Informe um e-mail de suporte válido.');
         if($avaAccessUrl!==''&&filter_var($avaAccessUrl,FILTER_VALIDATE_URL)===false)throw new RuntimeException('Informe um endereço HTTPS válido para o acesso ao AVA.');
+        if($avaPrimaryColor!==''&&preg_match('/^#[0-9a-f]{6}$/',$avaPrimaryColor)!==1)throw new RuntimeException('Informe uma cor primária válida em hexadecimal.');
+        if($avaSecondaryColor!==''&&preg_match('/^#[0-9a-f]{6}$/',$avaSecondaryColor)!==1)throw new RuntimeException('Informe uma cor secundária válida em hexadecimal.');
         if(mb_strlen($loginTitle)>160||mb_strlen($poloName)>255||mb_strlen($welcome)>500||mb_strlen($phone)>30||mb_strlen($avaAccessUrl)>500)throw new RuntimeException('Um dos textos de identidade ou comunicação do AVA excede o tamanho permitido.');
-        $s=$this->database->prepare('UPDATE organizations SET login_title=:login_title,ava_polo_name=:polo_name,login_welcome_text=:welcome,support_email=:email,support_phone=:phone,ava_access_url=:ava_access WHERE id=:id');
-        $s->execute(['login_title'=>$loginTitle!==''?$loginTitle:null,'polo_name'=>$poloName!==''?$poloName:null,'welcome'=>$welcome!==''?$welcome:null,'email'=>$email!==''?$email:null,'phone'=>$phone!==''?$phone:null,'ava_access'=>$avaAccessUrl!==''?$avaAccessUrl:null,'id'=>$id]);
+        $s=$this->database->prepare('UPDATE organizations SET login_title=:login_title,ava_polo_name=:polo_name,login_welcome_text=:welcome,support_email=:email,support_phone=:phone,ava_access_url=:ava_access,ava_primary_color=:ava_primary,ava_secondary_color=:ava_secondary WHERE id=:id');
+        $s->execute(['login_title'=>$loginTitle!==''?$loginTitle:null,'polo_name'=>$poloName!==''?$poloName:null,'welcome'=>$welcome!==''?$welcome:null,'email'=>$email!==''?$email:null,'phone'=>$phone!==''?$phone:null,'ava_access'=>$avaAccessUrl!==''?$avaAccessUrl:null,'ava_primary'=>$avaPrimaryColor!==''?$avaPrimaryColor:null,'ava_secondary'=>$avaSecondaryColor!==''?$avaSecondaryColor:null,'id'=>$id]);
     }
     public function saveFinanceSettings(int$id,array$data):void
     {

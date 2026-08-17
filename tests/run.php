@@ -1958,7 +1958,13 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/public.php'),'franquia.php?slug='));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/site/admin.php'),'link central da aba Formações/AVA'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'site_primary_color'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'LEFT JOIN organization_sites st'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'ava_primary_color'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'name="ava_primary_color"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'name="ava_logo"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'enctype="multipart/form-data"'));
+    assertTrue(str_contains($routes,'ava_primary_color'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Organization/OrganizationRepository.php'),'ava_primary_color=:ava_primary'));
+    assertTrue(is_file($rootPath.'/database/migrations/20260817_000110_add_ava_colors_to_organizations.php'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));
