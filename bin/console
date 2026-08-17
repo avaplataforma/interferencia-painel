@@ -32,6 +32,7 @@ use Interferencia\Modules\Catalog\CatalogCoverGenerator;
 use Interferencia\Modules\Catalog\LearningCatalogRepository;
 use Interferencia\Modules\Catalog\AvaCatalogPublisher;
 use Interferencia\Modules\Catalog\AvaCourseProvisioningService;
+use Interferencia\Modules\Catalog\OpenAiCatalogTextClient;
 
 $rootPath = dirname(__DIR__);
 $autoload = $rootPath . '/vendor/autoload.php';
@@ -65,6 +66,7 @@ Comandos disponíveis:
   catalog-images:process  Gera capas pendentes e salva a versão final no Spaces
   ava-courses:process  Processa a fila automática de criação de cursos no AVA
   ava-courses:link-catalog  Vincula itens pendentes da Loja MASTER a cursos individuais (sem tocar o AVA)
+  catalog-ai:complete  Preenche textos e capas pendentes da Loja MASTER com IA (lote de 25 por execução)
 
 TEXT);
         exit(0);
@@ -219,6 +221,68 @@ TEXT);
             $result['created'],
             $result['skipped_duplicates'],
             $result['skipped_ambiguous'],
+        ));
+        exit(0);
+    }
+
+    if ($command === 'catalog-ai:complete') {
+        $database = $connection->pdo();
+        $cipher = new SecretCipher((string) $config->get('app.encryption_key'));
+        $providers = new CourseProviderRepository($database, $cipher);
+        $images = new ImageGenerationRepository($database, $cipher);
+        $spaces = new SpacesStorageManager(new SpacesIntegrationRepository($database, $cipher));
+        $media = new CatalogMediaStorage($spaces);
+        $coverGenerator = new CatalogCoverGenerator($images, $providers, $media, $spaces);
+
+        $settings = $images->settings(true);
+        if (!(bool)($settings['configured'] ?? false) || !(bool)($settings['is_active'] ?? false)) {
+            throw new RuntimeException('Ative a integração IA - OpenAI no ADM Central.');
+        }
+        $client = new OpenAiCatalogTextClient((string) $settings['api_key']);
+
+        $batch = max(1, min(25, (int) ($argv[2] ?? 25)));
+        $candidates = $providers->commercialAiCandidates('iesde', $batch);
+        if ($candidates === []) {
+            fwrite(STDOUT, "Loja MASTER sem pendências de texto ou capa.\n");
+            exit(0);
+        }
+
+        $texts = 0;
+        $queued = 0;
+        $failures = 0;
+        foreach ($candidates as $candidate) {
+            $id = (int) $candidate['id'];
+            try {
+                if (trim((string) $candidate['commercial_summary']) === '' || trim((string) $candidate['commercial_description']) === '') {
+                    $resources = [];
+                    foreach ($providers->courseResourcesForCourse($id) as $resource) {
+                        $name = trim((string) ($resource['discipline_name'] ?? $resource['name'] ?? ''));
+                        if ($name !== '') $resources[mb_strtolower($name)] = $name;
+                    }
+                    $copy = $resources !== []
+                        ? $client->generateMasterCopy((string) $candidate['effective_name'], (string) $candidate['effective_category'], array_values($resources))
+                        : $client->generateCourseCopy((string) $candidate['effective_name'], (string) $candidate['effective_category'], (string) $candidate['source_description']);
+                    $providers->fillMissingCourseCopy($id, $copy['short_description'], $copy['description'], null);
+                    $texts++;
+                }
+                if ((int) $candidate['has_cover'] !== 1) {
+                    try {
+                        $coverGenerator->queue('course', $id, '', null);
+                        $queued++;
+                    } catch (Throwable) {
+                    }
+                }
+            } catch (Throwable) {
+                $failures++;
+            }
+        }
+
+        fwrite(STDOUT, sprintf(
+            "IA comercial MASTER: %d texto(s) preenchido(s), %d capa(s) enfileirada(s), %d falha(s). %d candidato(s) restante(s) para a próxima execução.\n",
+            $texts,
+            $queued,
+            $failures,
+            max(0, count($candidates) - $texts),
         ));
         exit(0);
     }

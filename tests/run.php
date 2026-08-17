@@ -2739,6 +2739,18 @@ $tests['vincula itens pendentes da Loja MASTER sem criar cursos no AVA'] = stati
     assertTrue(str_contains($console,'--dry-run'));
 };
 
+$tests['preenche textos e capas da Loja MASTER com IA em lote'] = static function () use ($rootPath): void {
+    $console=(string)file_get_contents($rootPath.'/bin/console');
+    assertTrue(str_contains($console,'catalog-ai:complete'));
+    assertTrue(str_contains($console,"commercialAiCandidates('iesde'"));
+    assertTrue(str_contains($console,'new OpenAiCatalogTextClient('));
+    assertTrue(str_contains($console,'generateMasterCopy'));
+    assertTrue(str_contains($console,'fillMissingCourseCopy'));
+    assertTrue(str_contains($console,"queue('course'"));
+    assertTrue(str_contains($console,'Loja MASTER sem pendências de texto ou capa.'));
+    assertTrue(str_contains($console,'Ative a integração IA - OpenAI no ADM Central.'));
+};
+
 $tests['organiza loja modulos trilhas e politica comercial ampliada'] = static function () use ($rootPath): void {
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $repository=(string)file_get_contents($rootPath.'/modules/Catalog/CourseProviderRepository.php');
