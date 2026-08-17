@@ -466,71 +466,6 @@ final readonly class SiteRepository
         unset($product);return$products;
     }
 
-    /** @return list<array<string,mixed>> */
-    public function catalogTrailProducts(int $organizationId): array
-    {
-        if ($organizationId < 1) return [];
-        $statement = $this->database->prepare("SELECT trail.id,COALESCE(access.price_override,trail.default_price) value,
-            COALESCE(access.max_installments_override,trail.max_installments,1) max_installments,
-            'catalog' sale_mode,trail.name,
-            COALESCE(NULLIF(trail.short_description,''),NULLIF(trail.description,''),'Trilha de formação disponível para matrícula.') description,
-            COALESCE(NULLIF(category.name,''),'Trilhas') category,
-            trail.workload_hours,trail.cover_url,asset.id media_asset_id,
-            COALESCE(
-                (SELECT course_catalog.name FROM catalog_trail_items item INNER JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id INNER JOIN course_catalogs course_catalog ON course_catalog.id=course.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                (SELECT content_catalog.name FROM catalog_trail_items item INNER JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id INNER JOIN course_catalogs content_catalog ON content_catalog.id=content.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                'Trilhas Mundo Inter'
-            ) catalog_name,
-            COALESCE(
-                (SELECT course_catalog.code FROM catalog_trail_items item INNER JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id INNER JOIN course_catalogs course_catalog ON course_catalog.id=course.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                (SELECT content_catalog.code FROM catalog_trail_items item INNER JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id INNER JOIN course_catalogs content_catalog ON content_catalog.id=content.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                'trilhas-mundo-inter'
-            ) catalog_code,
-            COALESCE(
-                (SELECT course_catalog.execution_environment FROM catalog_trail_items item INNER JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id INNER JOIN course_catalogs course_catalog ON course_catalog.id=course.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                (SELECT content_catalog.execution_environment FROM catalog_trail_items item INNER JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id INNER JOIN course_catalogs content_catalog ON content_catalog.id=content.catalog_id WHERE item.catalog_trail_id=trail.id ORDER BY item.sort_order,item.id LIMIT 1),
-                'shared_ava'
-            ) execution_environment,
-            trail.slug external_key,
-            (SELECT COUNT(*) FROM catalog_trail_items item WHERE item.catalog_trail_id=trail.id) item_count
-            FROM catalog_trails trail
-            INNER JOIN catalog_categories category ON category.id=trail.category_id AND category.is_active=1
-            INNER JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id AND publication.publication_status='published' AND publication.moodle_course_id IS NOT NULL AND publication.remote_course_id IS NOT NULL
-            INNER JOIN ava_connections connection ON connection.id=publication.ava_connection_id AND connection.is_active=1
-            LEFT JOIN organization_catalog_trail_access access ON access.organization_id=:organization_access AND access.catalog_trail_id=trail.id
-            LEFT JOIN catalog_media_assets asset ON asset.entity_type='trail' AND asset.entity_id=trail.id AND asset.purpose='cover' AND asset.generation_status='ready'
-            WHERE trail.is_active=1
-              AND (connection.connection_type='shared' OR connection.organization_id=:organization_connection)
-              AND COALESCE(access.is_enabled,1)=1
-              AND COALESCE(access.is_visible,1)=1
-              AND COALESCE(access.price_override,trail.default_price,0)>=5
-            ORDER BY catalog_name,trail.name");
-        $statement->execute(['organization_access'=>$organizationId,'organization_connection'=>$organizationId]);
-        $products=$statement->fetchAll()?:[];
-        foreach($products as&$product){
-            $product['value']=(float)($product['value']??0);
-            $product['is_external']=1;
-            $product['product_kind']='catalog_trail';
-            $product['modality']='AVA Cursos';
-            $product['lesson_count']=(int)($product['item_count']??0);
-            $product['workload_hours']=(int)round((float)($product['workload_hours']??0));
-            $product['workload_text']=$product['workload_hours']>0?$product['workload_hours'].'h':'';
-            $product['billing_types']='[]';
-            $product['minutes_to_expire']=0;
-            $product['seo_title']=$product['name'];
-            $product['seo_description']=$product['description'];
-        }
-        unset($product);
-        return $products;
-    }
-
-    /** @return array<string,mixed>|null */
-    public function publicCatalogTrail(int $organizationId,int $trailId): ?array
-    {
-        foreach($this->catalogTrailProducts($organizationId) as $product) if((int)$product['id']===$trailId) return $product;
-        return null;
-    }
-
     /** @return array<string,mixed>|null */
     public function publicExternalProduct(int $organizationId,int $offerId):?array
     {
@@ -543,6 +478,56 @@ final readonly class SiteRepository
     {
         foreach($this->externalContentProducts($organizationId)as$product)if((int)$product['id']===$offerId)return$product;
         return null;
+    }
+
+    /** @return list<array<string,mixed>> */
+    public function trailProducts(int $organizationId):array
+    {
+        $statement=$this->database->prepare("SELECT trail.id,trail.name,COALESCE(NULLIF(trail.short_description,''),NULLIF(trail.description,''),'Trilha com Módulos organizados para uma formação completa.') description,category.name category,trail.workload_hours,trail.default_price,COALESCE(access.price_override,trail.default_price) value,COALESCE(access.max_installments_override,trail.max_installments,1) max_installments,trail.cover_url,asset.id media_asset_id,publication.remote_course_id,(SELECT COUNT(*) FROM catalog_trail_items counted WHERE counted.catalog_trail_id=trail.id) lesson_count
+            FROM catalog_trails trail
+            INNER JOIN catalog_categories category ON category.id=trail.category_id AND category.is_active=1
+            INNER JOIN catalog_ava_publications publication ON publication.entity_type='trail' AND publication.entity_id=trail.id AND publication.publication_status='published' AND publication.remote_course_id IS NOT NULL
+            INNER JOIN ava_connections connection ON connection.id=publication.ava_connection_id AND connection.is_active=1
+            LEFT JOIN organization_catalog_trail_access access ON access.organization_id=:organization_access AND access.catalog_trail_id=trail.id
+            LEFT JOIN catalog_media_assets asset ON asset.entity_type='trail' AND asset.entity_id=trail.id AND asset.purpose='cover' AND asset.generation_status='ready'
+            WHERE trail.is_active=1 AND (connection.connection_type='shared' OR connection.organization_id=:organization_connection) AND COALESCE(access.is_enabled,1)=1 AND COALESCE(access.is_visible,1)=1 AND COALESCE(access.price_override,trail.default_price,0)>=5
+            ORDER BY category.name,trail.name");
+        $statement->execute(['organization_access'=>$organizationId,'organization_connection'=>$organizationId]);
+        $products=$statement->fetchAll()?:[];
+        foreach($products as&$product){
+            $items=$this->publicTrailItems((int)$product['id']);
+            $catalogs=[];
+            foreach($items as$item){$code=(string)($item['catalog_code']??'');if($code!=='')$catalogs[$code]=(string)($item['catalog_name']??$code);}
+            $catalogCode=count($catalogs)===1?(string)array_key_first($catalogs):'mundo-inter';
+            $catalogName=count($catalogs)===1?(string)reset($catalogs):'Mundo Inter';
+            $product['is_external']=1;$product['product_kind']='trail';$product['catalog_code']=$catalogCode;$product['catalog_name']=$catalogName;$product['execution_environment']='shared_ava';$product['modality']='AVA Cursos';$product['billing_types']='[]';$product['minutes_to_expire']=0;$product['seo_title']=$product['name'];$product['seo_description']=$product['description'];$product['curriculum']=implode("\n",array_map(static fn(array$item):string=>(string)$item['name'],$items));$product['trail_items']=$items;$product['certificate_text']='Certificado disponível conforme as regras acadêmicas da Trilha.';
+        }
+        unset($product);return$products;
+    }
+
+    /** @return array<string,mixed>|null */
+    public function publicTrail(int $organizationId,int $trailId):?array
+    {
+        foreach($this->trailProducts($organizationId)as$product)if((int)$product['id']===$trailId)return$product;
+        return null;
+    }
+
+    /** @return list<array<string,mixed>> */
+    private function publicTrailItems(int $trailId):array
+    {
+        $statement=$this->database->prepare("SELECT item.item_type,item.item_id,item.sort_order,
+            CASE item.item_type WHEN 'finance_product' THEN product.name WHEN 'provider_course' THEN COALESCE(NULLIF(course.commercial_name,''),course.name) ELSE COALESCE(NULLIF(content.commercial_name,''),content.name) END name,
+            CASE item.item_type WHEN 'finance_product' THEN 'INTER' ELSE COALESCE(course_catalog.name,content_catalog.name,'Mundo Inter') END catalog_name,
+            CASE item.item_type WHEN 'finance_product' THEN 'ava-cursos' ELSE COALESCE(course_catalog.code,content_catalog.code,'mundo-inter') END catalog_code
+            FROM catalog_trail_items item
+            LEFT JOIN finance_products product ON item.item_type='finance_product' AND product.id=item.item_id
+            LEFT JOIN provider_courses course ON item.item_type='provider_course' AND course.id=item.item_id
+            LEFT JOIN course_catalogs course_catalog ON course_catalog.id=course.catalog_id
+            LEFT JOIN provider_catalog_contents content ON item.item_type='provider_content' AND content.id=item.item_id
+            LEFT JOIN course_catalogs content_catalog ON content_catalog.id=content.catalog_id
+            WHERE item.catalog_trail_id=:trail ORDER BY item.sort_order,item.id");
+        $statement->execute(['trail'=>$trailId]);
+        return array_values(array_filter($statement->fetchAll()?:[],static fn(array$item):bool=>trim((string)($item['name']??''))!==''));
     }
 
     /**
@@ -575,7 +560,7 @@ final readonly class SiteRepository
             $product['formation_code']=$this->publicFormationCode((string)($product['catalog_code']??$formationName));
             $product['formation_name']=mb_strtoupper($formationName);
             $product['offer_key']=$kind.'-'.(int)$product['id'];
-            $product['detail_path']=($kind==='provider_content'?'/conteudo/':($kind==='catalog_trail'?'/trilha/':'/catalogo-pro/')).(int)$product['id'];
+            $product['detail_path']=($kind==='provider_content'?'/conteudo/':($kind==='trail'?'/trilha/':'/catalogo-pro/')).(int)$product['id'];
             $offers[]=$product;
         }
         return$offers;
@@ -615,7 +600,7 @@ final readonly class SiteRepository
         $ids=$live!==null&&isset($live['product_ids'])&&is_array($live['product_ids'])?array_map('intval',$live['product_ids']):$this->selectedProductIds($organizationId);$products=[];
         if($ids!==[]){$marks=implode(',',array_fill(0,count($ids),'?'));$query=$this->database->prepare("SELECT p.id,p.unit_id,p.name,p.description,p.value,p.max_installments,p.billing_types,p.minutes_to_expire FROM finance_products p INNER JOIN organization_finance_products scope ON scope.finance_product_id=p.id AND scope.organization_id=? AND scope.is_visible=1 WHERE p.id IN ($marks) AND p.is_active=1 AND (scope.source<>'ava' OR EXISTS(SELECT 1 FROM course_catalogs catalog LEFT JOIN organization_course_catalog_access access ON access.course_catalog_id=catalog.id AND access.organization_id=? WHERE catalog.code='ava-cursos' AND catalog.is_active=1 AND catalog.is_globally_enabled=1 AND COALESCE(access.is_enabled,1)=1))");$query->execute([$organizationId,...$ids,$organizationId]);$byId=[];foreach($query->fetchAll()as$row)$byId[(int)$row['id']]=$row;foreach($ids as$id)if(isset($byId[$id]))$products[]=$byId[$id];}
         $seo=$this->productSeo($organizationId);$details=$this->productDetails($organizationId);foreach($products as&$product){$id=(int)$product['id'];if(isset($seo[$id]))$product=array_replace($product,$seo[$id]);if(isset($details[$id]))$product=array_replace($product,$details[$id]);}unset($product);
-        $externalProducts=array_merge($this->externalProducts($organizationId),$this->externalContentProducts($organizationId),$this->catalogTrailProducts($organizationId));
+        $externalProducts=array_merge($this->externalProducts($organizationId),$this->externalContentProducts($organizationId),$this->trailProducts($organizationId));
         $offers=$this->publicOffers($products,$externalProducts);
         $site['products']=$products;
         $site['external_products']=$externalProducts;
