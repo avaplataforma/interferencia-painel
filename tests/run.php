@@ -1889,7 +1889,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($iesdeClient,"'subAreas'"));
     assertTrue(str_contains($iesdeClient,"'teachingAreas'"));
     assertTrue(str_contains($iesdeClient,"'productionCategories'"));
-    assertTrue(str_contains($catalogRepo,'function cleanCategory'));
+    assertTrue(str_contains($catalogRepo,'CatalogTaxonomy::category'));
     assertTrue(str_contains($catalogRepo,'commercial_area=COALESCE'));
     assertTrue(!str_contains($catalogRepo,'review_status=:review'));
     assertTrue(is_file($rootPath.'/database/migrations/20260817_000060_add_commercial_area_to_provider_courses.php'));
@@ -1898,6 +1898,13 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($publicView,'data-catalog-area-pills'));
     assertTrue(str_contains($siteJs,'syncAreaPills'));
     assertTrue(str_contains($routes,"'area'=>(string)\$request->queryValue('area'"));
+    $taxonomy=(string)file_get_contents($rootPath.'/modules/Catalog/CatalogTaxonomy.php');
+    assertTrue(str_contains($taxonomy,"'administracao geral' => 'Administração'"));
+    assertTrue(str_contains($taxonomy,'Metodologia de Ensino'));
+    assertTrue(str_contains($catalogRepo,'CatalogTaxonomy::category'));
+    assertTrue(str_contains($iesdeClient,'CatalogTaxonomy::area'));
+    assertTrue(str_contains($publicView,'$categoryCounts'));
+    assertTrue(str_contains($publicView,'$areaCounts'));
 };
 
 $tests['controla catalogos comerciais pela aba AVA da franquia'] = static function () use ($rootPath): void {

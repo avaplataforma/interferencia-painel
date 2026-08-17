@@ -63,9 +63,9 @@ final class IesdeCommercialCatalogClient
         $author = $this->textValue($record['author'] ?? $record['authors'] ?? $record['autor'] ?? '');
         $summary = $this->scalar($record, ['summary', 'synopsis', 'resumo', 'ementa', 'shortDescription']);
         $description = $this->scalar($record, ['description', 'descricao', 'content']);
-        $category = $this->firstName($record, ['teachingAreas', 'teaching_area', 'academicLevel', 'academic_level', 'category', 'categoria']);
-        $subcategory = $this->firstName($record, ['subAreas', 'sub_area', 'teachingArea', 'subcategory', 'subArea']);
-        $materialType = $this->firstName($record, ['productionCategories', 'production_category', 'materialType', 'type']);
+        $category = CatalogTaxonomy::category($this->firstName($record, ['teachingAreas', 'teaching_area', 'academicLevel', 'academic_level', 'category', 'categoria'])) ?? '';
+        $subcategory = CatalogTaxonomy::area($this->firstName($record, ['subAreas', 'sub_area', 'teachingArea', 'subcategory', 'subArea'])) ?? '';
+        $materialType = CatalogTaxonomy::clean($this->firstName($record, ['productionCategories', 'production_category', 'materialType', 'type'])) ?? '';
         $cover = $this->urlValue($record['coverUrl'] ?? $record['cover_url'] ?? $record['imageUrl'] ?? $record['image'] ?? $record['thumbnail'] ?? $record['cover'] ?? '');
         $slug = $this->scalar($record, ['slug']);
         if ($slug === '') $slug = $this->slug($title);
