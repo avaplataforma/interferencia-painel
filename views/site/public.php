@@ -124,18 +124,19 @@ $formations = is_array($site['formations'] ?? null) ? $site['formations'] : [];
       $kind=(string)($product['product_kind']??'finance_product');
       $isExternal=(int)($product['is_external']??0)===1;
       $isContent=$kind==='provider_content';
+      $isTrail=$kind==='trail';
       $cover=!empty($product['media_asset_id'])?$basePath.'/catalog-media/'.(int)$product['media_asset_id']:(string)($product['cover_url']??'');
-      $buttonLabel=$isExternal?'Conhecer e solicitar matrícula':($store?'Ver curso e comprar':'Conhecer o curso');
+      $buttonLabel=$isTrail?'Ver detalhes da Trilha':($isExternal?'Conhecer e solicitar matrícula':($store?'Ver curso e comprar':'Conhecer o curso'));
      ?>
       <article class="course<?= $isExternal?' provider-course':'' ?>" data-course-card data-course-id="<?= $escape($product['offer_key']) ?>" data-course-name="<?= $escape(mb_strtolower((string)$product['name'])) ?>" data-course-formation="<?= $escape($product['formation_code']) ?>" data-course-category="<?= $escape(mb_strtolower($category)) ?>" data-course-price="<?= $escape((string)(float)$product['value']) ?>">
        <button class="course-favorite" type="button" data-course-favorite aria-pressed="false" title="Adicionar aos favoritos" aria-label="Adicionar <?= $escape($product['name']) ?> aos favoritos"><i class="fa-regular fa-heart"></i></button>
-       <?php if($cover!==''):?><img class="course-media" src="<?= $escape($cover) ?>" alt="Capa de <?= $escape($product['name']) ?>" loading="lazy"><?php else:?><span class="course-icon"><i class="fa-solid <?= $isContent?'fa-puzzle-piece':'fa-graduation-cap' ?>"></i></span><?php endif;?>
+       <?php if($cover!==''):?><img class="course-media" src="<?= $escape($cover) ?>" alt="Capa de <?= $escape($product['name']) ?>" loading="lazy"><?php else:?><span class="course-icon"><i class="fa-solid <?= $isTrail?'fa-route':($isContent?'fa-puzzle-piece':'fa-graduation-cap') ?>"></i></span><?php endif;?>
        <span class="course-trail"><i class="fa-solid fa-layer-group"></i>&nbsp; Formação <?= $escape($product['formation_name']) ?></span>
        <span class="course-category"><?= $escape($category) ?><?= !empty($product['modality'])?' · '.$escape($product['modality']):'' ?></span>
        <h3><?= $escape($product['name']) ?></h3>
         <p class="course-description"><?= $escape($product['description'] ?? 'Formação disponível nesta trilha.') ?></p>
        <div class="course-bottom">
-        <?php if($isExternal): ?><span class="provider-course-note"><i class="fa-solid <?= $isContent?'fa-play':'fa-arrow-up-right-from-square' ?>"></i><span><?= $isContent?'Curso individual com acesso à unidade contratada.':'Acesso pelo ambiente acadêmico definido para esta Formação.' ?></span></span><?php endif; ?>
+        <?php if($isExternal): ?><span class="provider-course-note"><i class="fa-solid <?= $isTrail?'fa-list-check':($isContent?'fa-play':'fa-arrow-up-right-from-square') ?>"></i><span><?= $isTrail?'Trilha completa com '.(int)($product['lesson_count']??0).' Módulo(s) no AVA Cursos.':($isContent?'Módulo com acesso à unidade contratada.':'Acesso pelo ambiente acadêmico definido para esta Formação.') ?></span></span><?php endif; ?>
         <span class="course-price">R$ <?= number_format((float)$product['value'],2,',','.') ?><?php if ((int)$product['max_installments']>1): ?><small>em até <?= (int)$product['max_installments'] ?>x</small><?php endif; ?></span>
         <a class="button" data-site-offer="<?= $escape($product['offer_key']) ?>" data-offer-kind="<?= $escape($kind) ?>" data-offer-id="<?= (int)$product['id'] ?>" href="<?= $escape($publicBase.(string)$product['detail_path']) ?>"><?= $buttonLabel ?></a>
        </div>
