@@ -24,6 +24,8 @@ body.pagelayout-login .login-form-forgotpassword a:hover,
 body.pagelayout-login .login-signup a:hover {
     color: #2f3b46 !important;
 }
+a.aalink.focus,
+a.aalink:focus,
 a:not([class]):focus,
 .activityinstance > a:focus {
     outline: .2rem solid transparent !important;
@@ -165,6 +167,13 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     color: var(--mundointer-primary);
     font-weight: 700;
     text-decoration: none;
+}
+.mundointer-activity-play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--mundointer-primary);
+    font-size: 1.3rem;
 }
 .mundointer-portal-float {
     display: none;
@@ -2237,6 +2246,23 @@ function hideMundoInterCourseExtras() {
     mountMundoInterCoursesHero();
   }
   [600, 1600].forEach(function (delay) { window.setTimeout(mountMundoInterCoursesHero, delay); });
+
+  function swapMundoInterActivityIcons() {
+    document.querySelectorAll(".activity-icon img.activityicon, .activityiconcontainer img.activityicon").forEach(function (img) {
+      if (img.closest(".mundointer-activity-play")) return;
+      var play = document.createElement("span");
+      play.className = "mundointer-activity-play";
+      play.setAttribute("aria-hidden", "true");
+      play.innerHTML = "<i class=\"fa-solid fa-circle-play\"></i>";
+      img.parentNode.replaceChild(play, img);
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", swapMundoInterActivityIcons);
+  } else {
+    swapMundoInterActivityIcons();
+  }
+  [800, 2000].forEach(function (delay) { window.setTimeout(swapMundoInterActivityIcons, delay); });
   
   if (document.body.classList.contains("pagelayout-mydashboard") && brand.getAttribute("data-welcome") === "1" && !document.querySelector(".mundointer-welcome")) {
     var main = document.querySelector("#region-main") || document.querySelector(".drawercontent");

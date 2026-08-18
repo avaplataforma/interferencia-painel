@@ -760,6 +760,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // progresso da Jornada calculado ao vivo no Moodle.
         upgrade_plugin_savepoint(true, 2026081858, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081859) {
+        // Sem mudança de esquema. Foco neutro também nos links .aalink das
+        // atividades e ícones das atividades trocados por play na cor da marca.
+        upgrade_plugin_savepoint(true, 2026081859, 'local', 'mundointer');
+    }
     return true;
 }
 
