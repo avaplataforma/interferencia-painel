@@ -50,8 +50,8 @@ $announcements=$announcements??[];
      <p class="announcement-body"><?= $escape((string)$item['body']) ?></p>
      <div class="announcement-meta"><i class="fa-regular fa-calendar"></i> Criado em <?= $escape(substr((string)$item['created_at'],0,10)) ?><?= !empty($item['expires_at'])?' · <i class="fa-regular fa-clock"></i> expira em '.$escape((string)$item['expires_at']):'' ?></div>
      <div class="announcement-actions">
-      <form method="post" action="<?= $escape($basePath) ?>/admin/portal/<?= (int)$item['id'] ?>/toggle"><?= $csrfField ?><input type="hidden" name="active" value="<?= !empty($item['is_active'])?'0':'1' ?>"><button class="button button-secondary button-sm" type="submit"><?= !empty($item['is_active'])?'Pausar':'Reativar' ?></button></form>
-      <form method="post" action="<?= $escape($basePath) ?>/admin/portal/<?= (int)$item['id'] ?>/delete" onsubmit="return confirm('Remover este comunicado?');"><?= $csrfField ?><button class="button button-danger button-sm" type="submit">Remover</button></form>
+      <form method="post" action="<?= $escape($basePath) ?>/admin/portal/<?= (int)$item['id'] ?>/toggle"><?= $csrfField ?><input type="hidden" name="active" value="<?= !empty($item['is_active'])?'0':'1' ?>"><button type="submit" style="width:7.5rem;height:2.6rem;display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0;border:1px solid #bcc6ce;border-radius:.55rem;background:#fff;color:#172129;font-weight:700;font-size:.9rem;cursor:pointer"><?= !empty($item['is_active'])?'Pausar':'Reativar' ?></button></form>
+      <form method="post" action="<?= $escape($basePath) ?>/admin/portal/<?= (int)$item['id'] ?>/delete" onsubmit="return confirm('Remover este comunicado?');"><?= $csrfField ?><button type="submit" style="width:7.5rem;height:2.6rem;display:inline-flex;align-items:center;justify-content:center;margin:0;padding:0;border:0;border-radius:.55rem;background:#b4232c;color:#fff;font-weight:700;font-size:.9rem;cursor:pointer">Remover</button></form>
      </div>
     </article>
     <?php endforeach;?>
