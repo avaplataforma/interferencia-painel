@@ -23,8 +23,8 @@ $announcements=$announcements??[];
 .announcement-meta{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;color:var(--inter-muted);font-size:.78rem;margin-top:auto;padding-top:.35rem}
 .announcement-meta i{color:#c4cdd5}
 .announcement-actions{display:flex;gap:.5rem;flex-wrap:wrap;padding-top:.7rem;border-top:1px solid #f0f4f7}
-.announcement-actions form{display:flex;margin:0}
-.announcement-actions .button{flex:1;max-width:8.5rem;justify-content:center}
+.announcement-actions form{display:flex;margin:0;flex:1 1 8rem;max-width:8.5rem}
+.announcement-actions .button{width:100%;justify-content:center}
 @media(max-width:1000px){.portal-layout{grid-template-columns:1fr}.portal-form-card{position:static}}
 </style>
 <div class="portal-page">
