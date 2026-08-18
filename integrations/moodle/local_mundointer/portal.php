@@ -198,10 +198,9 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   </nav>
  <div class="mi-dash-kpis">
   <div class="mi-dash-kpi"><i class="fa-solid fa-route" style="background:#2563eb"></i><div><strong><?php echo (int) $data['journey']['matriculas']; ?></strong><small>Matrículas</small></div></div>
-  <div class="mi-dash-kpi"><i class="fa-solid fa-check-circle" style="background:#16a34a"></i><div><strong><?php echo (int) $data['journey']['liberadas']; ?></strong><small>Liberadas no AVA</small></div></div>
-  <div class="mi-dash-kpi"><i class="fa-solid fa-award" style="background:#8b5cf6"></i><div><strong><?php echo (int) $data['journey']['certificados']; ?></strong><small>Certificados</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-file-invoice-dollar" style="background:#f59e0b"></i><div><strong><?php echo (int) $data['journey']['pagamentos_abertos']; ?></strong><small>Parcelas a pagar</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-ticket" style="background:#0ea5e9"></i><div><strong><?php echo (int) $data['journey']['tickets_abertos']; ?></strong><small>Tickets abertos</small></div></div>
+  <div class="mi-dash-kpi"><i class="fa-solid fa-award" style="background:#8b5cf6"></i><div><strong><?php echo (int) $data['journey']['certificados']; ?></strong><small>Certificados</small></div></div>
  </div>
   <?php if (!empty($tabs['journey'])): ?>
   <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="<?php echo $firstTab==='journey'?'1':'0'; ?>">

@@ -658,6 +658,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // os comunicados respeitam a data de expiração.
         upgrade_plugin_savepoint(true, 2026081838, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081839) {
+        // Sem mudança de esquema. KPIs: removida Liberadas no AVA e Certificados
+        // movido para o final.
+        upgrade_plugin_savepoint(true, 2026081839, 'local', 'mundointer');
+    }
     return true;
 }
 
