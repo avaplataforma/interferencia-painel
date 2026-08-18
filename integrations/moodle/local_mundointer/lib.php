@@ -1292,7 +1292,7 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
  */
 function local_mundointer_before_standard_top_of_body_html(): string
 {
-    global $USER;
+    global $USER, $PAGE;
     $isCourseView = $PAGE !== null && $PAGE->url !== null && (str_starts_with((string) $PAGE->pagetype, 'course-view') || str_contains((string) $PAGE->url->get_path(), '/course/view.php'));
     $floatButton = '';
     if ($isCourseView && isloggedin() && !isguestuser()) {

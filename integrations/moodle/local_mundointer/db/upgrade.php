@@ -586,6 +586,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // flutuante e logo da franquia agora leva ao Portal do Aluno.
         upgrade_plugin_savepoint(true, 2026081824, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081825) {
+        // Sem mudança de esquema. Hook do body agora declara global $PAGE,
+        // corrigindo a detecção de páginas de curso e de Meus cursos.
+        upgrade_plugin_savepoint(true, 2026081825, 'local', 'mundointer');
+    }
     return true;
 }
 
