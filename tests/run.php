@@ -2011,9 +2011,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/bootstrap/app.php'),"app.ava_auto_release_from'),(string)\$config->get('app.encryption_key')"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/db/caches.php'),'sso_sessions'));
     assertTrue(!str_contains((string)file_get_contents($pluginDir.'/lib.php'),'getAttribute("data-support-float") === "1"'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mundointer-home-redirected'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mundointer-mycourses-hero'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'window.location.replace(basePath + "my/courses.php")'));
+    assertTrue(!str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mundointer-home-redirected'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'Voltar ao site da franquia'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/sso_login.php'),"new moodle_url('/my/courses.php')"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/instituicao.php'),"new moodle_url('/my/courses.php')"));
