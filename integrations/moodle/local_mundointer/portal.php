@@ -175,7 +175,6 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-alert-overdue strong,.mi-alert-overdue small{display:block}
 .mi-alert-overdue small{margin-top:.2rem;opacity:.85}
 .mi-alert-go{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:#b4232c;color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.mi-nps{display:none}
 .mi-dash-tab.certificates{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
 .mi-dash-tab.materials{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
 .mi-dash-panel.certificates{border-top-color:#8b5cf6}
