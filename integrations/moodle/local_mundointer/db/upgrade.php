@@ -503,6 +503,13 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // identidade visual e dos ajustes de experiência da franquia.
         upgrade_plugin_savepoint(true, 2026081808, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081809) {
+        require_once(__DIR__ . '/field_helpers.php');
+        local_mundointer_ensure_identity_fields();
+        // Sem mudança de esquema adicional. Adiciona a página Meu espaço com
+        // Jornada, Matrículas, Financeiro, Tickets e Documentos do aluno.
+        upgrade_plugin_savepoint(true, 2026081809, 'local', 'mundointer');
+    }
     return true;
 }
 

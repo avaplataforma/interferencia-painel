@@ -10,6 +10,7 @@ function local_mundointer_ensure_identity_fields(): void
     $definitions=[
         'mundointer_franchise'=>'Franquia Mundo Inter',
         'mundointer_pole'=>'Polo Mundo Inter',
+        'mundointer_portal_token'=>'Token do Portal do Aluno',
     ];
     foreach($definitions as$shortname=>$name){
         if($DB->record_exists('user_info_field',['shortname'=>$shortname]))continue;

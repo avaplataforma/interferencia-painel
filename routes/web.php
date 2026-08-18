@@ -1632,6 +1632,33 @@ return static function (
         return Response::redirect((string)($sso['loginurl']??''));
     },[$requireAuth]);
 
+    $router->get('/portal/aluno',static function(Request$request)use($database,$config):Response{
+        $cpf=preg_replace('/\D/','',(string)$request->queryValue('cpf',''))??'';
+        $token=(string)$request->queryValue('token','');
+        $key=(string)$config->get('app.encryption_key');
+        $expected=hash_hmac('sha256','student-portal|'.$cpf,$key);
+        if($cpf===''||$key===''||!hash_equals($expected,$token))return Response::json(['ok'=>false,'error'=>'token inválido'],403);
+        $customerStatement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.cpf_cnpj,c.phone,c.mobile_phone,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 ORDER BY c.id DESC LIMIT 1");
+        $customerStatement->execute(['cpf'=>$cpf]);
+        $customer=$customerStatement->fetch();
+        if(!is_array($customer))return Response::json(['ok'=>false,'error'=>'aluno não encontrado'],404);
+        $customerId=(int)$customer['id'];
+        $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.academic_progress_percent,e.academic_progress_status,e.academic_certificate_status,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
+        $enrollmentsStatement->execute(['customer'=>$customerId]);
+        $enrollments=$enrollmentsStatement->fetchAll()?:[];
+        $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
+        $paymentsStatement->execute(['customer'=>$customerId]);
+        $payments=$paymentsStatement->fetchAll()?:[];
+        $ticketsStatement=$database->prepare("SELECT id,subject,status,priority,created_at,resolved_at FROM tickets WHERE finance_customer_id=:customer ORDER BY created_at DESC LIMIT 10");
+        $ticketsStatement->execute(['customer'=>$customerId]);
+        $tickets=$ticketsStatement->fetchAll()?:[];
+        $documentsStatement=$database->prepare("SELECT id,title,category,original_name,mime_type,created_at FROM managed_documents WHERE entity_type='student' AND entity_id=:customer AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 20");
+        $documentsStatement->execute(['customer'=>$customerId]);
+        $documents=$documentsStatement->fetchAll()?:[];
+        $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents]);
+    });
+
     $router->get('/health',static function()use($platformSettings):Response{
         $database=true;$status='ok';$http=200;
         try{$platformSettings->settings();}catch(Throwable){$database=false;$status='degraded';$http=503;}

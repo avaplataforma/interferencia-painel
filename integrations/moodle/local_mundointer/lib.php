@@ -2043,7 +2043,7 @@ function hideMundoInterCourseExtras() {
       var studentName = brand.getAttribute("data-student-name") || "";
       var welcome = brand.getAttribute("data-welcome-text") || "";
       var siteUrl = brand.getAttribute("data-site-url") || "";
-      var contacts = "";
+      var contacts = "<a href=\"" + basePath + "local/mundointer/portal.php\">Meu espaço</a>";
       if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
       hero.innerHTML = heroLogo
         + "<div class=\"mundointer-mycourses-copy\"><strong>" + brandName + "</strong>"

@@ -11,6 +11,7 @@ final readonly class OrganizationPoleRepository
 {
     public const FRANCHISE_FIELD = 'mundointer_franchise';
     public const POLE_FIELD = 'mundointer_pole';
+    public const PORTAL_TOKEN_FIELD = 'mundointer_portal_token';
 
     public function __construct(private PDO $database) {}
 

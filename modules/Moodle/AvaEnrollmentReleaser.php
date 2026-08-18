@@ -21,6 +21,7 @@ final readonly class AvaEnrollmentReleaser
         private CourseProviderRepository $courseProviders,
         private AcademicOrganizationRepository $academicOrganization,
         private string $automaticFrom,
+        private string $portalSecret = '',
     ) {}
 
     /** @return array{status:string,ava_user_id?:int,course_id?:int,connection?:string,academic_organization?:string} */
@@ -68,6 +69,9 @@ final readonly class AvaEnrollmentReleaser
                 ['type'=>OrganizationPoleRepository::FRANCHISE_FIELD,'value'=>$identity['franchise_code']],
                 ['type'=>OrganizationPoleRepository::POLE_FIELD,'value'=>$identity['pole_code']],
             ];
+            if($this->portalSecret!==''&&strlen($document)===11){
+                $customFields[]=['type'=>OrganizationPoleRepository::PORTAL_TOKEN_FIELD,'value'=>hash_hmac('sha256','student-portal|'.$document,$this->portalSecret)];
+            }
             $unitField=(string)$connection['connection_type']==='shared'?$this->moodle->unitCustomFieldForUnit((int)$context['unit_id']):null;
             if($unitField!==null)$customFields[]=$unitField;
 
