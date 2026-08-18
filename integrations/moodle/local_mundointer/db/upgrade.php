@@ -632,6 +632,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // botão flutuante fica centralizado horizontalmente.
         upgrade_plugin_savepoint(true, 2026081833, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081834) {
+        // Sem mudança de esquema. A testeira de Meus cursos agora é posicionada
+        // dentro do conteúdo após o carregamento da página (e fica oculta até lá).
+        upgrade_plugin_savepoint(true, 2026081834, 'local', 'mundointer');
+    }
     return true;
 }
 

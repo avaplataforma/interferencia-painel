@@ -112,6 +112,9 @@ a.mundointer-link,
 .mundointer-mycourses-contacts a:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
 }
+body:not(.mundointer-mycourses) #mundointer-mycourses-hero {
+    display: none !important;
+}
 body.mundointer-mycourses #region-main h1,
 body.mundointer-mycourses #region-main .page-header-headings h1,
 body.mundointer-mycourses #region-main > .card > .card-body > h1 {
@@ -2137,14 +2140,17 @@ function hideMundoInterCourseExtras() {
   }
   [800, 2000].forEach(function (delay) { window.setTimeout(hideMundoInterCourseExtras, delay); });
 
-  var miHero = document.getElementById("mundointer-mycourses-hero");
-    var miRegion = document.querySelector("#region-main") || document.querySelector(".drawercontent");
-    if (miHero && miRegion && miHero.parentNode !== miRegion) {
+  function mountMundoInterCoursesHero() {
+    var miHero = document.getElementById("mundointer-mycourses-hero");
+    if (!miHero || document.body.classList.contains("mundointer-mycourses")) {
+      return;
+    }
+    var miRegion = document.querySelector("#region-main") || document.querySelector("#page-content") || document.querySelector(".drawercontent");
+    if (miRegion) {
       miRegion.insertBefore(miHero, miRegion.firstChild);
       document.body.classList.add("mundointer-mycourses");
     }
-    }
-  };
+  }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", mountMundoInterCoursesHero);
   } else {
