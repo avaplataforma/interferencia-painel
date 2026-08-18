@@ -13,4 +13,4 @@ echo "== 3/4 Migrações (se houver) =="
 php /var/www/painel-inter/bin/console migrate || true
 
 echo "== 4/4 Smoke =="
-bash /var/www/painel-inter/scripts/smoke.sh
+bash /var/www/painel-inter/scripts/smoke.s
