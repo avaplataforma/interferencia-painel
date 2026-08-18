@@ -515,6 +515,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // o aluno pelo nome (Olá, Nome!).
         upgrade_plugin_savepoint(true, 2026081810, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081811) {
+        // Sem mudança de esquema. A saudação usa o primeiro nome do usuário
+        // diretamente do perfil, evitando falhas de fullname() no hook.
+        upgrade_plugin_savepoint(true, 2026081811, 'local', 'mundointer');
+    }
     return true;
 }
 
