@@ -520,6 +520,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // diretamente do perfil, evitando falhas de fullname() no hook.
         upgrade_plugin_savepoint(true, 2026081811, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081812) {
+        // Sem mudança de esquema. Meu espaço identifica a franquia pelo código
+        // da marca para mostrar os dados corretos em CPFs de múltiplas franquias.
+        upgrade_plugin_savepoint(true, 2026081812, 'local', 'mundointer');
+    }
     return true;
 }
 

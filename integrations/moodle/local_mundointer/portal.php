@@ -16,6 +16,7 @@ if ($cpf !== '') {
     }
 }
 $central = rtrim((string) get_config('local_mundointer', 'centralurl'), '/');
+$orgCode = $brand !== null ? (string) ($brand['code'] ?? '') : '';
 
 $PAGE->set_url('/local/mundointer/portal.php');
 $PAGE->set_context(context_system::instance());
@@ -29,7 +30,9 @@ if ($cpf === '' || $token === '') {
     $error = 'Seu acesso ainda não está vinculado ao Mundo Inter. Fale com a franquia.';
 } else {
     $curl = new \curl();
-    $response = $curl->get($central . '/portal/aluno', ['cpf' => $cpf, 'token' => $token], ['CURLOPT_TIMEOUT' => 20, 'CURLOPT_CONNECTTIMEOUT' => 10]);
+    $params = ['cpf' => $cpf, 'token' => $token];
+    if ($orgCode !== '') $params['org'] = $orgCode;
+    $response = $curl->get($central . '/portal/aluno', $params, ['CURLOPT_TIMEOUT' => 20, 'CURLOPT_CONNECTTIMEOUT' => 10]);
     $decoded = json_decode((string) $response, true);
     if (is_array($decoded) && !empty($decoded['ok'])) {
         $data = $decoded;

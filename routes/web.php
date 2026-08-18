@@ -1638,8 +1638,14 @@ return static function (
         $key=(string)$config->get('app.encryption_key');
         $expected=hash_hmac('sha256','student-portal|'.$cpf,$key);
         if($cpf===''||$key===''||!hash_equals($expected,$token))return Response::json(['ok'=>false,'error'=>'token inválido'],403);
-        $customerStatement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.cpf_cnpj,c.phone,c.mobile_phone,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 ORDER BY c.id DESC LIMIT 1");
-        $customerStatement->execute(['cpf'=>$cpf]);
+        $orgCode=trim((string)$request->queryValue('org',''));
+        if($orgCode!==''){
+            $customerStatement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.cpf_cnpj,c.phone,c.mobile_phone,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 AND o.code=:org ORDER BY (SELECT COUNT(*) FROM student_enrollments e WHERE e.finance_customer_id=c.id) DESC, c.id DESC LIMIT 1");
+            $customerStatement->execute(['cpf'=>$cpf,'org'=>$orgCode]);
+        }else{
+            $customerStatement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.cpf_cnpj,c.phone,c.mobile_phone,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 ORDER BY (SELECT COUNT(*) FROM student_enrollments e WHERE e.finance_customer_id=c.id) DESC, c.id DESC LIMIT 1");
+            $customerStatement->execute(['cpf'=>$cpf]);
+        }
         $customer=$customerStatement->fetch();
         if(!is_array($customer))return Response::json(['ok'=>false,'error'=>'aluno não encontrado'],404);
         $customerId=(int)$customer['id'];
