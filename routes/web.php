@@ -1693,6 +1693,10 @@ return static function (
         $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.ava_course_id,e.academic_progress_percent,e.academic_progress_status,e.academic_grade_percent,e.academic_grade_status,e.academic_certificate_status,e.academic_certificate_url,e.academic_last_access_at,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
         $enrollmentsStatement->execute(['customer'=>$customerId]);
         $enrollments=$enrollmentsStatement->fetchAll()?:[];
+        $ratedStatement=$database->prepare("SELECT DISTINCT enrollment_id FROM portal_satisfaction_responses WHERE finance_customer_id=:customer AND enrollment_id IS NOT NULL AND created_at>=NOW()-INTERVAL 90 DAY");
+        $ratedStatement->execute(['customer'=>$customerId]);
+        $ratedIds=[];foreach($ratedStatement->fetchAll()as$row)$ratedIds[(int)$row['enrollment_id']]=true;
+        foreach($enrollments as&$enrollmentRow){$enrollmentRow['satisfaction_rated']=isset($ratedIds[(int)($enrollmentRow['id']??0)]);}unset($enrollmentRow);
         $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
         $paymentsStatement->execute(['customer'=>$customerId]);
         $payments=$paymentsStatement->fetchAll()?:[];
@@ -1784,12 +1788,14 @@ return static function (
         }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
     });
 
-    $router->postWithoutCsrf('/portal/aluno/satisfaction',static function(Request$request)use($portalCustomer,$organizationSatisfaction):Response{
+    $router->postWithoutCsrf('/portal/aluno/satisfaction',static function(Request$request)use($portalCustomer,$organizationSatisfaction,$database):Response{
         try{
             $customer=$portalCustomer($request);
             $rating=(int)($request->input('rating')??0);
             if($rating<1||$rating>5)throw new RuntimeException('Selecione uma avaliação de 1 a 5 estrelas.');
-            $organizationSatisfaction->submit((int)$customer['organization_id'],(int)$customer['id'],$rating,(string)$request->input('comment',''));
+            $enrollmentId=(int)($request->input('enrollment_id')??0);
+            if($enrollmentId>0){$s=$database->prepare('SELECT COUNT(*) FROM student_enrollments WHERE id=:id AND finance_customer_id=:customer');$s->execute(['id'=>$enrollmentId,'customer'=>(int)$customer['id']]);if((int)$s->fetchColumn()<1)throw new RuntimeException('Matrícula não encontrada.');}
+            $organizationSatisfaction->submit((int)$customer['organization_id'],(int)$customer['id'],$rating,(string)$request->input('comment',''),$enrollmentId>0?$enrollmentId:null);
             return Response::json(['ok'=>true]);
         }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
     });

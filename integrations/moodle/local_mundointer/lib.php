@@ -116,18 +116,6 @@ a.mundointer-link,
 body:not(.mundointer-mycourses):not(.mundointer-hero-course) #mundointer-hero-block {
     display: none !important;
 }
-.mundointer-nps{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:.9rem;align-items:center;margin-top:1rem;padding:1.05rem 1.15rem;border:1px solid #e4e0f7;border-left:5px solid #8b5cf6;border-radius:.8rem;background:#f8f7ff}
-.mundointer-nps-copy strong,.mundointer-nps-copy small{display:block}
-.mundointer-nps-copy small{color:#647482;margin-top:.2rem}
-.mundointer-nps-stars{display:flex;gap:.2rem}
-.mundointer-nps-stars button{border:0;background:none;color:#d4d4e0;font-size:1.35rem;cursor:pointer;padding:.1rem .2rem}
-.mundointer-nps-stars button.active{color:#f59e0b}
-.mundointer-nps-comment{width:100%;min-height:2.6rem;padding:.5rem .7rem;border:1px solid #c8d4dc;border-radius:.6rem;font:inherit;font-size:.85rem;background:#fff;resize:vertical}
-.mundointer-nps-send{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.mundointer-nps-feedback{grid-column:1/-1;margin:.2rem 0 0;font-size:.85rem}
-.mundointer-nps-feedback.ok{color:#176b3a}
-.mundointer-nps-feedback.err{color:#a3271e}
-@media(max-width:900px){.mundointer-nps{grid-template-columns:1fr 1fr}.mundointer-nps-comment{grid-column:1/-1}}
 body.mundointer-mycourses #region-main h1,
 body.mundointer-mycourses #region-main .page-header-headings h1,
 body.mundointer-mycourses #region-main > .card > .card-body > h1 {
@@ -1331,29 +1319,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-user-graduate"></i> Portal do Aluno</a>'
             . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
             . '</div></header>';
-        $nps = '';
-        $cpfNps = preg_replace('/\D/', '', (string) ($USER->idnumber ?? ''));
-        if ($cpfNps !== '' && isloggedin() && !isguestuser()) {
-            $fieldNps = $DB->get_record('user_info_field', ['shortname' => 'mundointer_portal_token']);
-            $tokenNps = $fieldNps ? (string) ($DB->get_field('user_info_data', 'data', ['userid' => (int) $USER->id, 'fieldid' => (int) $fieldNps->id]) ?: '') : '';
-            $centralNps = rtrim((string) get_config('local_mundointer', 'centralurl'), '/');
-            if ($tokenNps !== '' && $centralNps !== '') {
-                $nps = '<section class="mundointer-nps" data-mi-nps data-central="' . s($centralNps) . '" data-cpf="' . s($cpfNps) . '" data-token="' . s($tokenNps) . '" data-org="' . s((string) ($brand['code'] ?? '')) . '" hidden>'
-                    . '<div class="mundointer-nps-copy"><strong>Como você avalia sua experiência?</strong><small>Sua opinião ajuda a melhorar o atendimento da franquia.</small></div>'
-                    . '<div class="mundointer-nps-stars">'
-                    . '<button type="button" data-mi-nps-star="1" aria-label="1 estrela"><i class="fa-solid fa-star"></i></button>'
-                    . '<button type="button" data-mi-nps-star="2" aria-label="2 estrelas"><i class="fa-solid fa-star"></i></button>'
-                    . '<button type="button" data-mi-nps-star="3" aria-label="3 estrelas"><i class="fa-solid fa-star"></i></button>'
-                    . '<button type="button" data-mi-nps-star="4" aria-label="4 estrelas"><i class="fa-solid fa-star"></i></button>'
-                    . '<button type="button" data-mi-nps-star="5" aria-label="5 estrelas"><i class="fa-solid fa-star"></i></button>'
-                    . '</div>'
-                    . '<textarea class="mundointer-nps-comment" data-mi-nps-comment maxlength="1000" rows="2" placeholder="Comentário (opcional)"></textarea>'
-                    . '<button class="mundointer-nps-send" type="button" data-mi-nps-send><i class="fa-solid fa-paper-plane"></i> Enviar avaliação</button>'
-                    . '<p class="mundointer-nps-feedback" data-mi-nps-feedback hidden></p>'
-                    . '</section>';
-            }
-        }
-        $html .= '<div id="mundointer-hero-block">' . $hero . $nps . '</div>';
+        $html .= '<div id="mundointer-hero-block">' . $hero . '</div>';
     }
 
     return $html.'<script>
@@ -2164,60 +2130,6 @@ function hideMundoInterCourseExtras() {
     mountMundoInterCoursesHero();
   }
   [600, 1600].forEach(function (delay) { window.setTimeout(mountMundoInterCoursesHero, delay); });
-
-  var npsBlock = document.querySelector("[data-mi-nps]");
-  if (npsBlock) {
-    var npsCentral = npsBlock.getAttribute("data-central") || "";
-    var npsCpf = npsBlock.getAttribute("data-cpf") || "";
-    var npsToken = npsBlock.getAttribute("data-token") || "";
-    var npsOrg = npsBlock.getAttribute("data-org") || "";
-    var npsCacheKey = "mi-nps-rated-" + npsCpf;
-    var npsRating = 0;
-    if (!sessionStorage.getItem(npsCacheKey) && npsCentral !== "" && npsCpf !== "" && npsToken !== "") {
-      var npsQuery = "cpf=" + encodeURIComponent(npsCpf) + "&token=" + encodeURIComponent(npsToken) + (npsOrg !== "" ? "&org=" + encodeURIComponent(npsOrg) : "");
-      fetch(npsCentral + "/portal/aluno?" + npsQuery, { headers: { "Accept": "application/json" }, credentials: "omit" })
-        .then(function (response) { return response.json(); })
-        .then(function (data) {
-          if (data && data.ok && data.satisfaction_rated) { sessionStorage.setItem(npsCacheKey, "1"); return; }
-          npsBlock.hidden = false;
-        })
-        .catch(function () {});
-    }
-    npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (starButton) {
-      starButton.addEventListener("click", function () {
-        npsRating = parseInt(starButton.getAttribute("data-mi-nps-star"), 10);
-        npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (other) {
-          other.classList.toggle("active", parseInt(other.getAttribute("data-mi-nps-star"), 10) <= npsRating);
-        });
-      });
-    });
-    var npsSend = npsBlock.querySelector("[data-mi-nps-send]");
-    var npsFeedback = npsBlock.querySelector("[data-mi-nps-feedback]");
-    npsSend.addEventListener("click", function () {
-      if (npsRating < 1) {
-        npsFeedback.hidden = false;
-        npsFeedback.className = "mundointer-nps-feedback err";
-        npsFeedback.textContent = "Selecione de 1 a 5 estrelas.";
-        return;
-      }
-      npsFeedback.hidden = true;
-      var body = new URLSearchParams();
-      body.set("cpf", npsCpf);
-      body.set("token", npsToken);
-      if (npsOrg !== "") body.set("org", npsOrg);
-      body.set("rating", String(npsRating));
-      body.set("comment", (npsBlock.querySelector("[data-mi-nps-comment]") || { value: "" }).value || "");
-      fetch(npsCentral + "/portal/aluno/satisfaction", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString(), credentials: "omit" })
-        .then(function (response) { return response.json(); })
-        .then(function (result) {
-          npsFeedback.hidden = false;
-          npsFeedback.className = "mundointer-nps-feedback " + (result.ok ? "ok" : "err");
-          npsFeedback.textContent = result.ok ? "Obrigado pela sua avaliação! 💜" : (result.error || "Não foi possível enviar.");
-          if (result.ok) { sessionStorage.setItem(npsCacheKey, "1"); npsBlock.style.display = "none"; }
-        })
-        .catch(function () { npsFeedback.hidden = false; npsFeedback.className = "mundointer-nps-feedback err"; npsFeedback.textContent = "Falha de conexão. Tente novamente."; });
-    });
-  }
   
   if (document.body.classList.contains("pagelayout-mydashboard") && brand.getAttribute("data-welcome") === "1" && !document.querySelector(".mundointer-welcome")) {
     var main = document.querySelector("#region-main") || document.querySelector(".drawercontent");

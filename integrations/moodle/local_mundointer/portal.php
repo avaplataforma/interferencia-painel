@@ -59,14 +59,21 @@ $statusTone = static function (string $status): string {
 $statusFor = static function (array $enrollment): string {
     return (string) ($enrollment['moodle_enrolment_status'] ?? '') === 'released' ? 'released' : (string) ($enrollment['status'] ?? '');
 };
-$lastAccessText = static function (array $enrollment): string {
+$lastAccessCache = [];
+$lastAccessText = function (array $enrollment) use (&$lastAccessCache, $DB, $USER): string {
     $raw = (string) ($enrollment['academic_last_access_at'] ?? '');
     $parts = explode(' ', trim($raw), 2);
-    if (!isset($parts[0]) || $parts[0] === '' || $parts[0] === '0000-00-00') {
-        return '';
+    if (isset($parts[0]) && $parts[0] !== '' && $parts[0] !== '0000-00-00') {
+        $date = DateTime::createFromFormat('Y-m-d', $parts[0]);
+        return $date !== false ? 'Último acesso: ' . $date->format('d/m/Y') : '';
     }
-    $date = DateTime::createFromFormat('Y-m-d', $parts[0]);
-    return $date !== false ? 'Último acesso: ' . $date->format('d/m/Y') : '';
+    $courseId = (int) ($enrollment['ava_course_id'] ?? 0);
+    if ($courseId < 1) return '';
+    if (!array_key_exists($courseId, $lastAccessCache)) {
+        $time = (int) $DB->get_field('user_lastaccess', 'timeaccess', ['userid' => (int) $USER->id, 'courseid' => $courseId]);
+        $lastAccessCache[$courseId] = $time > 0 ? date('d/m/Y', $time) : '';
+    }
+    return $lastAccessCache[$courseId] !== '' ? 'Último acesso: ' . $lastAccessCache[$courseId] : '';
 };
 $canAccess = static function (array $enrollment): bool {
     return (int) ($enrollment['ava_course_id'] ?? 0) > 0 && (string) ($enrollment['moodle_enrolment_status'] ?? '') === 'released';
@@ -98,6 +105,8 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-dash{max-width:76rem;margin:0 auto;padding:0 1rem 2rem}
 .mi-dash-hero{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:0 0 1.3rem;padding:1.4rem 1.5rem;border-radius:1rem;color:#fff;background:linear-gradient(120deg,var(--mundointer-primary),var(--mundointer-secondary));box-shadow:0 .7rem 1.8rem color-mix(in srgb,var(--mundointer-primary) 25%,transparent)}
 .mi-dash-hero strong,.mi-dash-hero small{display:block}
+.mi-dash-hero .mi-dash-brandline{display:inline-flex;align-items:center;gap:.45rem;margin-bottom:.45rem;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.92}
+#region-main h1,#region-main .page-header-headings h1,#page-header h1{display:none}
 .mi-dash-hero strong{font-size:1.45rem}
 .mi-dash-hero small{opacity:.9;margin-top:.2rem}
 .mi-dash-hero .mi-dash-hero-actions{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
@@ -179,11 +188,15 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-dash-tab.materials{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
 .mi-dash-panel.certificates{border-top-color:#8b5cf6}
 .mi-dash-panel.materials{border-top-color:#0ea5e9}
+.mi-stars-inline{display:inline-flex;gap:.05rem;margin-left:.55rem;vertical-align:middle}
+.mi-stars-inline button{border:0;background:none;padding:0 .05rem;color:#d4d4e0;cursor:pointer;font-size:.95rem;line-height:1}
+.mi-stars-inline button.active,.mi-stars-inline[data-rated="1"] button{color:#f59e0b}
+.mi-stars-inline[data-rated="1"] button{cursor:default}
 @media(max-width:900px){.mi-dash-tabs,.mi-dash-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 <div class="mi-dash">
  <header class="mi-dash-hero">
-  <div><strong>Olá, <?php echo $firstName; ?>! 👋</strong><small><?php echo $brandName !== '' ? $brandName : ''; ?><?php echo $data !== null ? ' · ' . s((string) ($data['student']['unit'] ?? '')) : ''; ?></small></div>
+  <div><span class="mi-dash-brandline"><i class="fa-solid fa-user-graduate"></i> Portal do Aluno</span><strong>Olá, <?php echo $firstName; ?>! 👋</strong><small><?php echo $brandName !== '' ? $brandName : ''; ?><?php echo $data !== null ? ' · ' . s((string) ($data['student']['unit'] ?? '')) : ''; ?></small></div>
   <div class="mi-dash-hero-actions">
    <?php if ($site !== ''): ?><a href="<?php echo $site; ?>" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i> Site da franquia</a><?php endif; ?>
   </div>
@@ -220,9 +233,9 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="<?php echo $firstTab==='journey'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
-  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); ?>
-  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
-   <?php endforeach; ?>
+  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); $ratedCourse=!empty($enrollment['satisfaction_rated']); ?>
+  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rated="<?php echo $ratedCourse?'1':'0'; ?>" title="<?php echo $ratedCourse?'Avaliado!':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" <?php echo $ratedCourse?'disabled':''; ?> aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
+  <?php endforeach; ?>
   </section>
   <?php endif; ?>
   <?php if (!empty($tabs['enrollments'])): ?>
@@ -372,6 +385,30 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
     if (openFinance) {
       openFinance.addEventListener("click", function () { activate("finance"); });
     }
+
+    document.querySelectorAll("[data-mi-course-stars]").forEach(function (group) {
+      if (group.dataset.rated === "1") return;
+      var enrollmentId = parseInt(group.dataset.enrollment, 10);
+      group.querySelectorAll("[data-star]").forEach(function (starButton) {
+        starButton.addEventListener("click", function () {
+          var rating = parseInt(starButton.dataset.star, 10);
+          var body = new URLSearchParams(portalParams);
+          body.set("rating", String(rating));
+          body.set("enrollment_id", String(enrollmentId));
+          fetch(baseUrl + "/satisfaction", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
+            .then(function (response) { return response.json(); })
+            .then(function (result) {
+              if (!result.ok) return;
+              group.dataset.rated = "1";
+              group.querySelectorAll("[data-star]").forEach(function (other) {
+                other.classList.toggle("active", parseInt(other.dataset.star, 10) <= rating);
+                other.disabled = true;
+              });
+            })
+            .catch(function () {});
+        });
+      });
+    });
 
    var documentForm = document.querySelector("[data-mi-document-form]");
    var documentFeedback = document.querySelector("[data-mi-document-feedback]");

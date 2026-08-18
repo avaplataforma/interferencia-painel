@@ -673,6 +673,17 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // dentro dos cursos, abaixo da testeira da marca.
         upgrade_plugin_savepoint(true, 2026081841, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081842) {
+        // Sem mudança de esquema. Avaliação rápida por estrelas na Jornada do
+        // Portal do Aluno, ao lado do nome de cada curso.
+        upgrade_plugin_savepoint(true, 2026081842, 'local', 'mundointer');
+    }
+    if ($oldversion < 2026081843) {
+        // Sem mudança de esquema. Jornada: ícone de livro no nome do curso e
+        // último acesso com fallback para o registro do Moodle; título do portal
+        // com ícone de capelo.
+        upgrade_plugin_savepoint(true, 2026081843, 'local', 'mundointer');
+    }
     return true;
 }
 
