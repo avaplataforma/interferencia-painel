@@ -3,4 +3,4 @@
 require_once(__DIR__ . '/../../config.php');
 
 require_login();
-redirect(new moodle_url('/my/courses.php'));
+redirect(new moodle_url('/local/mundointer/portal.php'));

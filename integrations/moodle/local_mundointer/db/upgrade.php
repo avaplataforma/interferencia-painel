@@ -555,6 +555,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // renderizada no servidor e apenas posicionada pelo navegador.
         upgrade_plugin_savepoint(true, 2026081818, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081819) {
+        // Sem mudança de esquema. A home do aluno passa a ser a Secretaria
+        // Digital logo após o login, deixando Meus cursos como listagem nativa.
+        upgrade_plugin_savepoint(true, 2026081819, 'local', 'mundointer');
+    }
     return true;
 }
 
