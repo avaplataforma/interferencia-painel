@@ -525,6 +525,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // da marca para mostrar os dados corretos em CPFs de múltiplas franquias.
         upgrade_plugin_savepoint(true, 2026081812, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081813) {
+        // Sem mudança de esquema. Meu espaço ganha abas coloridas, segunda via
+        // de parcelas, abertura de tickets e envio de documentos.
+        upgrade_plugin_savepoint(true, 2026081813, 'local', 'mundointer');
+    }
     return true;
 }
 

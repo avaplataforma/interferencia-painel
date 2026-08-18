@@ -1632,7 +1632,7 @@ return static function (
         return Response::redirect((string)($sso['loginurl']??''));
     },[$requireAuth]);
 
-    $router->get('/portal/aluno',static function(Request$request)use($database,$config):Response{
+    $router->get('/portal/aluno',static function(Request$request)use($database,$config,$documents):Response{
         $cpf=preg_replace('/\D/','',(string)$request->queryValue('cpf',''))??'';
         $token=(string)$request->queryValue('token','');
         $key=(string)$config->get('app.encryption_key');
@@ -1652,7 +1652,7 @@ return static function (
         $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.academic_progress_percent,e.academic_progress_status,e.academic_certificate_status,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
         $enrollmentsStatement->execute(['customer'=>$customerId]);
         $enrollments=$enrollmentsStatement->fetchAll()?:[];
-        $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
+        $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
         $paymentsStatement->execute(['customer'=>$customerId]);
         $payments=$paymentsStatement->fetchAll()?:[];
         $ticketsStatement=$database->prepare("SELECT id,subject,status,priority,created_at,resolved_at FROM tickets WHERE finance_customer_id=:customer ORDER BY created_at DESC LIMIT 10");
@@ -1662,7 +1662,59 @@ return static function (
         $documentsStatement->execute(['customer'=>$customerId]);
         $documents=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents,'document_categories'=>$documentsManager->categories('franchise')]);
+    });
+
+    $portalCustomer=static function(Request$request)use($database,$config):array{
+        $cpf=preg_replace('/\D/','',(string)$request->queryValue('cpf',''))??'';
+        $token=(string)$request->queryValue('token','');
+        $key=(string)$config->get('app.encryption_key');
+        $expected=hash_hmac('sha256','student-portal|'.$cpf,$key);
+        if($cpf===''||$key===''||!hash_equals($expected,$token))throw new RuntimeException('token inválido');
+        $orgCode=trim((string)$request->queryValue('org',''));
+        if($orgCode!==''){
+            $statement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.unit_id,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 AND o.code=:org ORDER BY (SELECT COUNT(*) FROM student_enrollments e WHERE e.finance_customer_id=c.id) DESC, c.id DESC LIMIT 1");
+            $statement->execute(['cpf'=>$cpf,'org'=>$orgCode]);
+        }else{
+            $statement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.unit_id,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 ORDER BY (SELECT COUNT(*) FROM student_enrollments e WHERE e.finance_customer_id=c.id) DESC, c.id DESC LIMIT 1");
+            $statement->execute(['cpf'=>$cpf]);
+        }
+        $customer=$statement->fetch();
+        if(!is_array($customer))throw new RuntimeException('aluno não encontrado');
+        return $customer;
+    };
+
+    $router->post('/portal/aluno/ticket',static function(Request$request)use($portalCustomer,$tickets,$organizations,$ticketDepartments):Response{
+        try{
+            $customer=$portalCustomer($request);
+            $subject=trim((string)$request->input('subject',''));
+            $description=trim((string)$request->input('description',''));
+            if(mb_strlen($subject)<3||mb_strlen($subject)>180)throw new RuntimeException('Informe um assunto entre 3 e 180 caracteres.');
+            if(mb_strlen($description)<3||mb_strlen($description)>10000)throw new RuntimeException('Descreva a demanda em até 10.000 caracteres.');
+            $master=$organizations->panelUser((int)$customer['organization_id']);
+            if($master===null)throw new RuntimeException('A franquia ainda não possui um operador responsável.');
+            $department=$ticketDepartments->firstActiveId();
+            if($department===null)throw new RuntimeException('Nenhum setor ativo para receber chamados.');
+            $id=$tickets->create((int)$customer['unit_id'],(int)$master['id'],$department,(int)$customer['id'],$subject,"Aberto pelo aluno no AVA.\n\n".$description,'normal',null);
+            return Response::json(['ok'=>true,'id'=>$id]);
+        }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
+    });
+
+    $router->post('/portal/aluno/document',static function(Request$request)use($portalCustomer,$documents,$organizations):Response{
+        try{
+            $customer=$portalCustomer($request);
+            $master=$organizations->panelUser((int)$customer['organization_id']);
+            if($master===null)throw new RuntimeException('A franquia ainda não possui um operador responsável.');
+            $file=$request->file('document');
+            if($file===null)throw new RuntimeException('Selecione um arquivo.');
+            $category=trim((string)$request->input('category',''));
+            $categories=$documents->categories('franchise');
+            if(!isset($categories[$category]))throw new RuntimeException('Selecione um tipo de documento válido.');
+            $title=trim((string)$request->input('title',''));
+            if($title==='')$title=(string)$file->originalName;
+            $id=$documents->upload('franchise',(int)$customer['organization_id'],$file,$title,$category,trim((string)$request->input('description','')),null,(int)$master['id'],'student',(int)$customer['id']);
+            return Response::json(['ok'=>true,'id'=>$id]);
+        }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
     });
 
     $router->get('/health',static function()use($platformSettings):Response{

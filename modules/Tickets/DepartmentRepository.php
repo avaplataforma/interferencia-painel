@@ -11,6 +11,13 @@ final readonly class DepartmentRepository
 {
     public function __construct(private PDO $db) {}
     public function all(bool $activeOnly=false):array{return$this->db->query('SELECT d.*,COUNT(du.user_id) user_count FROM ticket_departments d LEFT JOIN ticket_department_users du ON du.department_id=d.id'.($activeOnly?' WHERE d.is_active=1':'').' GROUP BY d.id ORDER BY d.is_active DESC,d.name')->fetchAll();}
+
+    /** Primeiro setor ativo, usado para chamados abertos pelo aluno no AVA. */
+    public function firstActiveId(): ?int
+    {
+        $id=$this->db->query('SELECT id FROM ticket_departments WHERE is_active=1 ORDER BY id LIMIT 1')->fetchColumn();
+        return $id!==false?(int)$id:null;
+    }
     public function find(int$id):?array{$s=$this->db->prepare('SELECT * FROM ticket_departments WHERE id=:id');$s->execute(['id'=>$id]);$row=$s->fetch();return is_array($row)?$row:null;}
     public function users():array{return$this->db->query('SELECT id,name,email FROM users WHERE is_active=1 ORDER BY name')->fetchAll();}
     public function selectedUsers(int$id):array{$s=$this->db->prepare('SELECT user_id FROM ticket_department_users WHERE department_id=:id');$s->execute(['id'=>$id]);return array_map('intval',$s->fetchAll(PDO::FETCH_COLUMN));}
