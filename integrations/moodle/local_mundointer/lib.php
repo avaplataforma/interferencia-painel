@@ -23,7 +23,14 @@ body.pagelayout-login .login-form-forgotpassword a:hover,
 body.pagelayout-login .login-signup a:hover {
     color: #2f3b46 !important;
 }
-</style>';
+</style><script>
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".login-form-forgotpassword a, .login-signup a").forEach(function (link) {
+        link.style.setProperty("color", "#5b6874", "important");
+        link.style.setProperty("font-weight", "600");
+    });
+});
+</script>';
     if (is_siteadmin()) {
         return $neutralLogin;
     }

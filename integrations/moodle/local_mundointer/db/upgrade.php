@@ -725,6 +725,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // para todos os estados (:link, :visited, :hover, :active).
         upgrade_plugin_savepoint(true, 2026081851, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081852) {
+        // Sem mudança de esquema. Cor neutra do link aplicada também via estilo
+        // inline por JavaScript (imune a qualquer conflito de cascata).
+        upgrade_plugin_savepoint(true, 2026081852, 'local', 'mundointer');
+    }
     return true;
 }
 
