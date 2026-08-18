@@ -23,6 +23,13 @@ body.pagelayout-login .login-form-forgotpassword a:hover,
 body.pagelayout-login .login-signup a:hover {
     color: #2f3b46 !important;
 }
+a:not([class]):focus,
+.activityinstance > a:focus {
+    outline: .2rem solid transparent;
+    color: #212529;
+    background-color: #eef2f5;
+    box-shadow: 0 -.2rem #5b6874, 0 .2rem #373a3c;
+}
 </style><script>
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".login-form-forgotpassword a, .login-signup a").forEach(function (link) {
