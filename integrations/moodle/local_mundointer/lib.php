@@ -108,6 +108,18 @@ body.mundointer-mycourses #page-header,
 body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     display: none !important;
 }
+body.mundointer-brand-active #usermenu a[href*="/user/profile.php"],
+body.mundointer-brand-active #usermenu a[href*="/calendar/view.php"],
+body.mundointer-brand-active #usermenu a[href*="/user/files.php"],
+body.mundointer-brand-active #usermenu a[href*="/user/preferences.php"],
+body.mundointer-brand-active #usermenu a[href*="/report/"],
+body.mundointer-brand-active #usermenu a[href*="/grade/report/"],
+body.mundointer-brand-active a.dropdown-item[href*="/user/profile.php"],
+body.mundointer-brand-active a.dropdown-item[href*="/calendar/view.php"],
+body.mundointer-brand-active a.dropdown-item[href*="/user/files.php"],
+body.mundointer-brand-active a.dropdown-item[href*="/user/preferences.php"],
+body.mundointer-brand-active a.dropdown-item[href*="/report/"],
+body.mundointer-brand-active nav a[href*="/report/"],
 body.mundointer-mycourses #usermenu a[href*="/user/profile.php"],
 body.mundointer-mycourses #usermenu a[href*="/calendar/view.php"],
 body.mundointer-mycourses #usermenu a[href*="/user/files.php"],
@@ -1991,6 +2003,22 @@ document.addEventListener("click", function (event) {
     window.location.href = basePath + "local/mundointer/logout.php?slug=" + encodeURIComponent(slug);
   });
 
+function hideMundoInterCourseExtras() {
+
+    document.querySelectorAll("#usermenu a, .dropdown-menu a, nav a, .moremenu a").forEach(function (link) {
+      var label = (link.textContent || "").replace(/\s+/g, " ").trim();
+      if (label === "Relatórios" || label === "Reports") {
+        link.style.display = "none";
+      }
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", hideMundoInterCourseExtras);
+  } else {
+    hideMundoInterCourseExtras();
+  }
+  [800, 2000].forEach(function (delay) { window.setTimeout(hideMundoInterCourseExtras, delay); });
+
   var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
   var mountMundoInterCoursesHero = function () {
     if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
@@ -1998,16 +2026,7 @@ document.addEventListener("click", function (event) {
     document.querySelectorAll("#region-main h1, #region-main .page-context-header, #region-main .page-header-headings, #page-header h1").forEach(function (heading) {
       heading.style.display = "none";
     });
-    document.querySelectorAll("h1, h2, h3, h4, .card-title, .block-title, .page-header-headings").forEach(function (node) {
-      if ((node.textContent || "").replace(/\s+/g, " ").trim() === "Resumo dos cursos") {
-        node.style.display = "none";
-        var card = node.closest(".card, .block, .coursebox");
-        if (card && card !== node) {
-          var title = card.querySelector(".card-title, .block-title");
-          if (title) title.style.display = "none";
-        }
-      }
-    });
+
     var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
     if (region) {
       var hero = document.createElement("header");

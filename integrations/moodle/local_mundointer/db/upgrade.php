@@ -493,6 +493,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // usuário e o bloco Resumo dos cursos na página Meus cursos.
         upgrade_plugin_savepoint(true, 2026081806, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081807) {
+        // Sem mudança de esquema. Atalhos do menu e Resumo dos cursos ficam
+        // ocultos em todas as páginas da marca, inclusive dentro dos cursos.
+        upgrade_plugin_savepoint(true, 2026081807, 'local', 'mundointer');
+    }
     return true;
 }
 
