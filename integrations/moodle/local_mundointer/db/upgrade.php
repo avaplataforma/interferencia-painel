@@ -715,6 +715,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // fluxos (login direto, admin e página da franquia).
         upgrade_plugin_savepoint(true, 2026081849, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081850) {
+        // Sem mudança de esquema. Regra neutra dos links do login também no
+        // fluxo com marca da franquia.
+        upgrade_plugin_savepoint(true, 2026081850, 'local', 'mundointer');
+    }
     return true;
 }
 

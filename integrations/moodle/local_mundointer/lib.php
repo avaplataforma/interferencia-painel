@@ -33,7 +33,7 @@ $brand = \local_mundointer\local\brand_resolver::current();
     $favicon = s((string)$brand['favicon_url']);
     $faviconhtml = $favicon !== '' ? '<link rel="icon" href="'.$favicon.'">' : '';
 
-    return $faviconhtml.'<meta name="theme-color" content="'.$primary.'"><style>
+    return $faviconhtml.$neutralLogin.'<meta name="theme-color" content="'.$primary.'"><style>
 :root {
     --mundointer-primary: '.$primary.';
     --mundointer-secondary: '.$secondary.';
