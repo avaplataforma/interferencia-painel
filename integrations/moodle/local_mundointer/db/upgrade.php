@@ -596,6 +596,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // franquia no navbar (substitui o botão flutuante do curso).
         upgrade_plugin_savepoint(true, 2026081826, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081827) {
+        // Sem mudança de esquema. Botão Portal do Aluno movido para o lado
+        // direito do navbar (fim da barra), ao lado do logo.
+        upgrade_plugin_savepoint(true, 2026081827, 'local', 'mundointer');
+    }
     return true;
 }
 

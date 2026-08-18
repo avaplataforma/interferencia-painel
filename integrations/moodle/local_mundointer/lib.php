@@ -134,7 +134,7 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     display: inline-flex;
     align-items: center;
     gap: .45rem;
-    margin-left: .6rem;
+    margin: 0 0 0 .6rem;
     padding: .5rem .85rem;
     border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
     border-radius: 999px;
@@ -145,6 +145,7 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     text-decoration: none;
     box-shadow: 0 .3rem .8rem rgb(20 40 70 / 14%);
     white-space: nowrap;
+    flex: 0 0 auto;
 }
 .mundointer-navbar-portal:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
@@ -2032,7 +2033,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
                 portalButton.className = "mundointer-navbar-portal";
                 portalButton.href = moodleBase + "local/mundointer/portal.php";
                 portalButton.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Portal do Aluno";
-                navbar.insertAdjacentElement("afterend", portalButton);
+                var navBar = navbar.closest("nav.navbar") || navbar.parentNode;
+                navBar.appendChild(portalButton);
             }
             return;
         }
