@@ -1293,12 +1293,18 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
 function local_mundointer_before_standard_top_of_body_html(): string
 {
     global $USER;
+    $isCourseView = $PAGE !== null && $PAGE->url !== null && (str_starts_with((string) $PAGE->pagetype, 'course-view') || str_contains((string) $PAGE->url->get_path(), '/course/view.php'));
+    $floatButton = '';
+    if ($isCourseView && isloggedin() && !isguestuser()) {
+        $baseurl = s((string) (new moodle_url('/'))->out(false));
+        $floatButton = '<a class="mundointer-course-portal-float" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
+    }
     if (is_siteadmin()) {
-        return '';
+        return $floatButton;
     }
     $brand = \local_mundointer\local\brand_resolver::current();
     if ($brand === null) {
-        return '';
+        return $floatButton;
     }
 
     $logo = s((string)$brand['logo_url']);
@@ -1333,13 +1339,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '</div></header>';
     }
 
-    $isCourseView = $PAGE !== null && $PAGE->url !== null && str_starts_with((string) $PAGE->pagetype, 'course-view');
-    if ($isCourseView) {
-        $baseurl = s((string) (new moodle_url('/'))->out(false));
-        $html .= '<a class="mundointer-course-portal-float" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
-    }
-
-    return $html.'<script>
+    return $html . $floatButton . '<script>
 (function() {
     function setMundoInterCourseIndexSection(section, open) {
         if (!section) {
@@ -2038,6 +2038,10 @@ function local_mundointer_before_standard_top_of_body_html(): string
             if (faviconUrl && brandImage) {
                 brandImage.src = faviconUrl;
                 brandImage.removeAttribute("srcset");
+            }
+            var moodleBase = brand.getAttribute("data-moodle-base") || "";
+            if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
+                navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
             }
             return;
         }

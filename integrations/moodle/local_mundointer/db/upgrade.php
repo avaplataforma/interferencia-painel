@@ -581,6 +581,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // das páginas de curso (course-view).
         upgrade_plugin_savepoint(true, 2026081823, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081824) {
+        // Sem mudança de esquema. Detecção robusta de curso para o atalho
+        // flutuante e logo da franquia agora leva ao Portal do Aluno.
+        upgrade_plugin_savepoint(true, 2026081824, 'local', 'mundointer');
+    }
     return true;
 }
 
