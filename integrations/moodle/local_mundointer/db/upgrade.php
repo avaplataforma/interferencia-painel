@@ -750,6 +750,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // cartões, alvos de toque maiores e botão Acessar no lugar de Continuar.
         upgrade_plugin_savepoint(true, 2026081856, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081857) {
+        // Sem mudança de esquema. Botão Acessar abre a página principal do curso,
+        // não a última atividade.
+        upgrade_plugin_savepoint(true, 2026081857, 'local', 'mundointer');
+    }
     return true;
 }
 
