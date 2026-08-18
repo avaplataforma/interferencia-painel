@@ -565,6 +565,17 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // aos cursos liberados (Iniciar curso / Acessar curso).
         upgrade_plugin_savepoint(true, 2026081820, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081821) {
+        // Sem mudança de esquema. Portal: botão Acessar curso com contraste,
+        // status Acesso liberado com progresso e último acesso; botão Iniciar
+        // curso removido da testeira.
+        upgrade_plugin_savepoint(true, 2026081821, 'local', 'mundointer');
+    }
+    if ($oldversion < 2026081822) {
+        // Sem mudança de esquema. A tela Secretaria Digital foi renomeada
+        // para Portal do Aluno.
+        upgrade_plugin_savepoint(true, 2026081822, 'local', 'mundointer');
+    }
     return true;
 }
 
