@@ -19,4 +19,4 @@ if ($brand !== null && !empty($brand['slug'])) {
     \local_mundointer\local\brand_resolver::remember((string) $brand['slug']);
 }
 $courseid = (int) ($session['courseid'] ?? 0);
-redirect($courseid > 0 ? new moodle_url('/course/view.php', ['id' => $courseid]) : new moodle_url('/local/mundointer/instituicao.php'));
+redirect($courseid > 0 ? new moodle_url('/course/view.php', ['id' => $courseid]) : new moodle_url('/my/courses.php'));

@@ -468,6 +468,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // instituição e o logout preserva a marca da franquia.
         upgrade_plugin_savepoint(true, 2026081801, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081802) {
+        // Sem mudança de esquema. A experiência do aluno passa a usar a página
+        // nativa Meus cursos (/my/courses.php) com o cabeçalho da franquia.
+        upgrade_plugin_savepoint(true, 2026081802, 'local', 'mundointer');
+    }
     return true;
 }
 

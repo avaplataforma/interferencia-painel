@@ -53,6 +53,54 @@ a.mundointer-link,
     border-bottom-color: var(--mundointer-primary) !important;
     color: var(--mundointer-primary) !important;
 }
+.mundointer-mycourses-hero {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 1.2rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 22%, #dce3e8);
+    border-left: 5px solid var(--mundointer-primary);
+    border-radius: .9rem;
+    background: linear-gradient(135deg, #fff, var(--mundointer-primary-soft));
+}
+.mundointer-mycourses-hero img {
+    width: 3.6rem;
+    height: 3.6rem;
+    object-fit: contain;
+}
+.mundointer-mycourses-copy strong,
+.mundointer-mycourses-copy small {
+    display: block;
+}
+.mundointer-mycourses-copy strong {
+    color: var(--mundointer-secondary);
+    font-size: 1.15rem;
+}
+.mundointer-mycourses-copy small {
+    color: #647482;
+    margin-top: .15rem;
+}
+.mundointer-mycourses-contacts {
+    margin-left: auto;
+    display: flex;
+    gap: .45rem;
+    flex-wrap: wrap;
+}
+.mundointer-mycourses-contacts a {
+    display: inline-flex;
+    align-items: center;
+    padding: .45rem .8rem;
+    border-radius: .6rem;
+    background: var(--mundointer-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+.mundointer-mycourses-contacts a:hover {
+    background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
+}
 .mundointer-welcome {
     display: flex;
     align-items: center;
@@ -1167,7 +1215,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $pagetitle = s((string)$brand['login_title'].' | AVA');
     $logohtml = $logo !== '' ? '<img src="'.$logo.'" alt="">' : '';
 
-    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
+    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-brand-logo="'.s((string)($brand['logo_url'] ?? '')).'" data-student-name="'.s((string)(isloggedin()&&!isguestuser()?(fullname($USER)):'')).'" data-welcome-text="'.s((string)($brand['welcome_text'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
@@ -1904,11 +1952,38 @@ function local_mundointer_before_standard_top_of_body_html(): string
     }
   }
 
+  var isMyCourses = document.body.classList.contains("pagelayout-mycourses");
+  if (isMyCourses && !document.querySelector(".mundointer-mycourses-hero")) {
+    var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
+    if (region) {
+      var hero = document.createElement("header");
+      hero.className = "mundointer-mycourses-hero";
+      var heroLogo = "";
+      var logoUrl = brand.getAttribute("data-brand-logo");
+      if (logoUrl) heroLogo = "<img src=\"" + logoUrl + "\" alt=\"\">";
+      var studentName = brand.getAttribute("data-student-name") || "";
+      var welcome = brand.getAttribute("data-welcome-text") || "";
+      var supportEmail = brand.getAttribute("data-support-email") || "";
+      var supportPhone = brand.getAttribute("data-support-phone") || "";
+      var siteUrl = brand.getAttribute("data-site-url") || "";
+      var phoneDigits = supportPhone.replace(/\D/g, "");
+      var whatsapp = phoneDigits.length >= 10 ? "https://wa.me/55" + phoneDigits : "";
+      var contacts = "";
+      if (supportEmail) contacts += "<a href=\"mailto:" + supportEmail + "\">E-mail</a>";
+      if (whatsapp) contacts += "<a href=\"" + whatsapp + "\" target=\"_blank\" rel=\"noopener\">WhatsApp</a>";
+      if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
+      hero.innerHTML = heroLogo
+        + "<div class=\"mundointer-mycourses-copy\"><strong>" + brandName + "</strong>"
+        + "<small>" + (studentName || welcome || "") + "</small></div>"
+        + (contacts ? "<div class=\"mundointer-mycourses-contacts\">" + contacts + "</div>" : "");
+      region.insertBefore(hero, region.firstChild);
+    }
+  }
   if (document.body.classList.contains("pagelayout-mydashboard")) {
     try {
       if (!sessionStorage.getItem("mundointer-home-redirected")) {
         sessionStorage.setItem("mundointer-home-redirected", "1");
-        window.location.replace(basePath + "local/mundointer/instituicao.php");
+        window.location.replace(basePath + "my/courses.php");
       }
     } catch (error) {}
   }
