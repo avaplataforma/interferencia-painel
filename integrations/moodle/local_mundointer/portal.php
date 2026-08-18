@@ -30,7 +30,7 @@ if ($cpf === '' || $token === '') {
     $error = 'Seu acesso ainda não está vinculado ao Mundo Inter. Fale com a franquia.';
 } else {
     $curl = new \curl();
-    $params = ['cpf' => $cpf, 'token' => $token];
+    $params = ['cpf' => $cpf, 'token' => $token, 'pix' => '1'];
     if ($orgCode !== '') $params['org'] = $orgCode;
     $response = $curl->get($central . '/portal/aluno', $params, ['CURLOPT_TIMEOUT' => 20, 'CURLOPT_CONNECTTIMEOUT' => 10]);
     $decoded = json_decode((string) $response, true);
@@ -73,6 +73,25 @@ $canAccess = static function (array $enrollment): bool {
 };
 $courseUrl = static function (array $enrollment): string {
     return (new moodle_url('/course/view.php', ['id' => (int) $enrollment['ava_course_id']]))->out(false);
+};
+$gradeLabel = static function (array $enrollment): string {
+    $percent = (float) ($enrollment['academic_grade_percent'] ?? 0);
+    if ($percent <= 0) return '';
+    return 'Nota: ' . number_format($percent / 10, 1, ',', '.');
+};
+$continueCache = [];
+$continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): string {
+    $courseId = (int) ($enrollment['ava_course_id'] ?? 0);
+    if ($courseId < 1) return '';
+    if (array_key_exists($courseId, $continueCache)) return $continueCache[$courseId];
+    $url = '';
+    $cm = $DB->get_record_sql(
+        "SELECT cm.id cmid, m.name modname FROM {course_modules} cm JOIN {modules} m ON m.id=cm.module JOIN {logstore_standard_log} l ON l.contextinstanceid=cm.id WHERE l.userid=:userid AND l.courseid=:courseid AND l.component LIKE 'mod_%' AND l.action='viewed' AND l.target='course_module' ORDER BY l.timecreated DESC, l.id DESC LIMIT 1",
+        ['userid' => (int) $USER->id, 'courseid' => $courseId]
+    );
+    if ($cm) $url = (new moodle_url('/mod/' . $cm->modname . '/view.php', ['id' => (int) $cm->cmid]))->out(false);
+    $continueCache[$courseId] = $url;
+    return $url;
 };
 ?>
 <style>
@@ -132,6 +151,25 @@ $courseUrl = static function (array $enrollment): string {
 .mi-dash-form-feedback.ok{color:#176b3a}
 .mi-dash-form-feedback.err{color:#a3271e}
 .mi-dash-empty{color:#647482;padding:.4rem 0}
+.mi-aviso-list{display:grid;gap:.6rem;margin-bottom:1.2rem}
+.mi-aviso{display:flex;gap:.8rem;align-items:flex-start;padding:.9rem 1.1rem;border:1px solid #f2dfa8;border-left:5px solid #f59e0b;border-radius:.8rem;background:#fffaf0}
+.mi-aviso i{color:#d97706;margin-top:.15rem}
+.mi-aviso strong,.mi-aviso small{display:block}
+.mi-aviso strong{font-size:.95rem}
+.mi-aviso small{color:#7a6a35;margin-top:.3rem;white-space:pre-line}
+.mi-aviso time{display:block;color:#a08c50;font-size:.74rem;margin-top:.45rem}
+.mi-course-progress{display:flex;gap:.9rem;align-items:center;min-width:0}
+.mi-course-progress .mi-course-text{min-width:0}
+.mi-course-progress .mi-course-text strong,.mi-course-progress .mi-course-text small{display:block}
+.mi-donut-wrap{position:relative;display:grid;place-items:center;flex:0 0 auto}
+.mi-donut{--p:0;width:3.6rem;height:3.6rem;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--mundointer-primary) calc(var(--p)*1%),#e9eef2 0)}
+.mi-donut::before{content:"";width:2.6rem;height:2.6rem;border-radius:50%;background:#fff}
+.mi-donut span{position:absolute;font-size:.78rem;font-weight:800;color:#405267}
+.mi-pix-box{margin-top:.6rem;padding:.9rem;border:1px dashed #cfd8df;border-radius:.8rem;background:#f8fafb;display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap}
+.mi-pix-box img{width:9rem;height:9rem;border-radius:.6rem;background:#fff;border:1px solid #e3e8ec}
+.mi-pix-payload{flex:1;min-width:16rem}
+.mi-pix-payload textarea{width:100%;min-height:4.5rem;padding:.55rem .7rem;border:1px solid #c8d4dc;border-radius:.6rem;font:inherit;font-size:.8rem;background:#fff}
+.mi-pix-payload .mi-dash-actions{justify-content:flex-start;margin-top:.5rem}
 @media(max-width:900px){.mi-dash-tabs,.mi-dash-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 <div class="mi-dash">
@@ -141,8 +179,15 @@ $courseUrl = static function (array $enrollment): string {
    <?php if ($site !== ''): ?><a href="<?php echo $site; ?>" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i> Site da franquia</a><?php endif; ?>
   </div>
  </header>
- <?php if ($error !== ''): ?><div class="mi-dash-error"><?php echo s($error); ?></div><?php endif; ?>
- <?php if ($data !== null): ?>
+  <?php if ($error !== ''): ?><div class="mi-dash-error"><?php echo s($error); ?></div><?php endif; ?>
+  <?php if ($data !== null): ?>
+  <?php if (($data['announcements'] ?? []) !== []): ?>
+  <section class="mi-aviso-list" aria-label="Avisos da franquia">
+   <?php foreach ($data['announcements'] as $announcement): ?>
+   <div class="mi-aviso"><i class="fa-solid fa-bullhorn"></i><div><strong><?php echo s((string) ($announcement['title'] ?? 'Aviso')); ?></strong><small><?php echo s((string) ($announcement['body'] ?? '')); ?></small><time><?php echo s(substr((string) ($announcement['created_at'] ?? ''), 0, 10)); ?></time></div></div>
+   <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
  <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Portal do Aluno">
   <button class="mi-dash-tab journey" type="button" role="tab" data-mi-tab="journey" aria-selected="true"><i class="fa-solid fa-route"></i> Jornada</button>
   <button class="mi-dash-tab enroll" type="button" role="tab" data-mi-tab="enroll" aria-selected="false"><i class="fa-solid fa-graduation-cap"></i> Matrículas</button>
@@ -160,8 +205,8 @@ $courseUrl = static function (array $enrollment): string {
  <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="1">
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
-  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); ?>
-  <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo s($statusLabel($status)); ?><?php echo $progress > 0 ? ' · Progresso: ' . round($progress, 1) . '%' : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small><?php if ($progress > 0): ?><div class="mi-dash-progress"><span style="width:<?php echo round($progress, 1); ?>%"></span></div><?php endif; ?></div><div class="mi-dash-actions"><?php if ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?><span class="mi-dash-badge <?php echo $statusTone($status); ?>"><?php echo s($statusLabel($status)); ?></span></div></div>
+  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); ?>
+  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
   <?php endforeach; ?>
  </section>
  <section class="mi-dash-panel enroll" data-mi-panel="enroll">
@@ -174,9 +219,21 @@ $courseUrl = static function (array $enrollment): string {
  <section class="mi-dash-panel finance" data-mi-panel="finance">
   <h2><i class="fa-solid fa-wallet" style="color:#f59e0b"></i> Financeiro</h2>
   <?php if (($data['payments'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum pagamento registrado.</p><?php endif; ?>
-  <?php foreach (($data['payments'] ?? []) as $payment): $open=in_array((string)$payment['status'],['PENDING','OVERDUE'],true); ?>
-  <div class="mi-dash-row"><div><strong>R$ <?php echo number_format((float) $payment['value'], 2, ',', '.'); ?></strong><small><?php echo s((string) ($payment['description'] ?? '')) ?: 'Cobrança'; ?> · vencimento <?php echo s((string) substr((string) ($payment['due_date'] ?? ''), 0, 10)); ?><?php echo (string) ($payment['payment_date'] ?? '') !== '' ? ' · pago em ' . s((string) substr((string) $payment['payment_date'], 0, 10)) : ''; ?></small></div><div class="mi-dash-actions"><?php if ($open && !empty($payment['bank_slip_url'])): ?><a class="slip" href="<?php echo s((string) $payment['bank_slip_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-barcode"></i> 2ª via</a><?php endif; ?><?php if (!empty($payment['invoice_url'])): ?><a class="invoice" href="<?php echo s((string) $payment['invoice_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-file-invoice"></i> Nota</a><?php endif; ?><span class="mi-dash-badge <?php echo in_array((string) $payment['status'], ['CONFIRMED', 'RECEIVED'], true) ? 'good' : ($open ? 'warn' : 'neutral'); ?>"><?php echo s((string) $payment['status']); ?></span></div></div>
+  <?php foreach (($data['payments'] ?? []) as $payment): $open=in_array((string)$payment['status'],['PENDING','OVERDUE'],true); $pixImage=(string)($payment['pix_image']??''); $pixPayload=(string)($payment['pix_payload']??''); ?>
+  <div class="mi-dash-row"><div><strong>R$ <?php echo number_format((float) $payment['value'], 2, ',', '.'); ?></strong><small><?php echo s((string) ($payment['description'] ?? '')) ?: 'Cobrança'; ?> · vencimento <?php echo s((string) substr((string) ($payment['due_date'] ?? ''), 0, 10)); ?><?php echo (string) ($payment['payment_date'] ?? '') !== '' ? ' · pago em ' . s((string) substr((string) $payment['payment_date'], 0, 10)) : ''; ?></small></div><div class="mi-dash-actions"><?php if ($open && $pixImage !== ''): ?><button class="invoice" type="button" data-mi-pix-toggle="pix-<?php echo (int) $payment['id']; ?>"><i class="fa-solid fa-qrcode"></i> PIX</button><?php endif; ?><?php if ($open && !empty($payment['bank_slip_url'])): ?><a class="slip" href="<?php echo s((string) $payment['bank_slip_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-barcode"></i> 2ª via</a><?php endif; ?><?php if (!empty($payment['invoice_url'])): ?><a class="invoice" href="<?php echo s((string) $payment['invoice_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-file-invoice"></i> Nota</a><?php endif; ?><span class="mi-dash-badge <?php echo in_array((string) $payment['status'], ['CONFIRMED', 'RECEIVED'], true) ? 'good' : ($open ? 'warn' : 'neutral'); ?>"><?php echo s((string) $payment['status']); ?></span></div></div>
+  <?php if ($open && $pixImage !== ''): ?>
+  <div class="mi-pix-box" id="pix-<?php echo (int) $payment['id']; ?>" hidden><img src="data:image/png;base64,<?php echo s($pixImage); ?>" alt="QR Code PIX"><div class="mi-pix-payload"><textarea readonly><?php echo s($pixPayload); ?></textarea><div class="mi-dash-actions"><button class="new" type="button" data-mi-pix-copy><i class="fa-solid fa-copy"></i> Copiar código PIX</button></div></div></div>
+  <?php endif; ?>
   <?php endforeach; ?>
+  <?php if (($data['upcoming_payments'] ?? []) !== []): ?>
+  <div class="mi-dash-row"><div><strong>Próximas parcelas</strong><small>Agenda de cobranças vincendas.</small></div></div>
+  <?php foreach ($data['upcoming_payments'] as $payment): $open=in_array((string)$payment['status'],['PENDING','OVERDUE'],true); $pixImage=(string)($payment['pix_image']??''); $pixPayload=(string)($payment['pix_payload']??''); ?>
+  <div class="mi-dash-row"><div><strong>R$ <?php echo number_format((float) $payment['value'], 2, ',', '.'); ?></strong><small><?php echo s((string) ($payment['description'] ?? '')) ?: 'Cobrança'; ?> · vencimento <?php echo s((string) substr((string) ($payment['due_date'] ?? ''), 0, 10)); ?></small></div><div class="mi-dash-actions"><?php if ($open && $pixImage !== ''): ?><button class="invoice" type="button" data-mi-pix-toggle="pixu-<?php echo (int) $payment['id']; ?>"><i class="fa-solid fa-qrcode"></i> PIX</button><?php endif; ?><?php if ($open && !empty($payment['bank_slip_url'])): ?><a class="slip" href="<?php echo s((string) $payment['bank_slip_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-barcode"></i> 2ª via</a><?php endif; ?></div></div>
+  <?php if ($open && $pixImage !== ''): ?>
+  <div class="mi-pix-box" id="pixu-<?php echo (int) $payment['id']; ?>" hidden><img src="data:image/png;base64,<?php echo s($pixImage); ?>" alt="QR Code PIX"><div class="mi-pix-payload"><textarea readonly><?php echo s($pixPayload); ?></textarea><div class="mi-dash-actions"><button class="new" type="button" data-mi-pix-copy><i class="fa-solid fa-copy"></i> Copiar código PIX</button></div></div></div>
+  <?php endif; ?>
+  <?php endforeach; ?>
+  <?php endif; ?>
  </section>
  <section class="mi-dash-panel tickets" data-mi-panel="tickets">
   <h2><i class="fa-solid fa-headset" style="color:#8b5cf6"></i> Tickets</h2>
@@ -214,7 +271,30 @@ $courseUrl = static function (array $enrollment): string {
      tabs.forEach(function (tab) { tab.setAttribute("aria-selected", tab.dataset.miTab === name ? "true" : "false"); });
      panels.forEach(function (panel) { panel.dataset.active = panel.dataset.miPanel === name ? "1" : "0"; });
    }
-   tabs.forEach(function (tab) { tab.addEventListener("click", function () { activate(tab.dataset.miTab); }); });
+    tabs.forEach(function (tab) { tab.addEventListener("click", function () { activate(tab.dataset.miTab); }); });
+
+    document.querySelectorAll("[data-mi-pix-toggle]").forEach(function (toggle) {
+      toggle.addEventListener("click", function () {
+        var box = document.getElementById(toggle.dataset.miPixToggle);
+        if (box) box.hidden = !box.hidden;
+      });
+    });
+    document.querySelectorAll("[data-mi-pix-copy]").forEach(function (copyButton) {
+      copyButton.addEventListener("click", function () {
+        var box = copyButton.closest(".mi-pix-box");
+        var textarea = box ? box.querySelector("textarea") : null;
+        if (!textarea) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textarea.value).then(function () {
+            copyButton.innerHTML = "<i class=\"fa-solid fa-check\"></i> Copiado!";
+          });
+        } else {
+          textarea.select();
+          document.execCommand("copy");
+          copyButton.innerHTML = "<i class=\"fa-solid fa-check\"></i> Copiado!";
+        }
+      });
+    });
 
    var baseUrl = "<?php echo s($central); ?>/portal/aluno";
    var portalParams = { cpf: "<?php echo s($cpf); ?>", token: "<?php echo s($token); ?>"<?php if ($orgCode !== ''): ?>, org: "<?php echo s($orgCode); ?>"<?php endif; ?> };

@@ -21,6 +21,7 @@ use Interferencia\Modules\Identity\RoleRepository;
 use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
+use Interferencia\Modules\Organization\OrganizationAnnouncements;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Organization\OrganizationPoleRepository;
@@ -154,6 +155,7 @@ return static function (
     TicketRepository $tickets,
     DepartmentRepository $ticketDepartments,
     MediaStorage $ticketFiles,
+    OrganizationAnnouncements $organizationAnnouncements,
     AvaConnectionRepository $avaConnections,
     AvaBrandCatalog $avaBrands,
     AvaPoloMappingRepository $avaPoloMappings,
@@ -188,6 +190,11 @@ return static function (
     $saveDocumentType=static function(Request$request,?int$id=null)use($documentTypes,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);try{$documentTypes->save($id,(string)$request->input('name',''),$request->input('is_required')==='1',$request->input('is_active')==='1',(int)$request->input('sort_order','100'));$session->flash('document_types.message',$id===null?'Tipo de documento cadastrado.':'Tipo de documento atualizado.');}catch(Throwable$e){$session->flash('document_types.error',$e->getMessage());}return Response::redirect($basePath.'/admin/document-types'.($id!==null?'?edit='.$id:''));};
     $router->post('/admin/document-types',static fn(Request$request):Response=>$saveDocumentType($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/document-types/{id:\d+}',static fn(Request$request,array$params):Response=>$saveDocumentType($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
+
+    $router->get('/admin/announcements',static function(Request$request)use($view,$organizationAnnouncements,$organizationId,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('admin/announcements',['title'=>'Comunicados — '.$browserTitle,'announcements'=>$organizationAnnouncements->list($organizationId),'message'=>$session->get('announcements.message'),'error'=>$session->get('announcements.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/announcements',static function(Request$request)use($organizationAnnouncements,$organizationId,$auth,$session,$basePath):Response{try{$organizationAnnouncements->create($organizationId,(string)$request->input('title',''),(string)$request->input('body',''),$auth->user()?->id);$session->flash('announcements.message','Comunicado publicado. Ele já aparece no Portal do Aluno.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/announcements/{id:\d+}/toggle',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->toggle((int)$params['id'],$organizationId,$request->input('active')==='1');$session->flash('announcements.message','Comunicado atualizado.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/announcements/{id:\d+}/delete',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->delete((int)$params['id'],$organizationId);$session->flash('announcements.message','Comunicado removido.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $documentResponse=static function(Request$request,array$document)use($documents):Response{
         try{$body=$documents->read($document);$mime=(string)$document['mime_type'];$inline=$request->queryValue('inline')==='1'&&($mime==='application/pdf'||str_starts_with($mime,'image/'));$name=preg_replace('/[^\pL\pN._ -]+/u','_',basename((string)$document['original_name']))?:'documento';return(new Response($body,200))->withHeaders(['Content-Type'=>$mime,'Content-Length'=>(string)strlen($body),'Content-Disposition'=>($inline?'inline':'attachment').'; filename="'.str_replace('"','',$name).'"','X-Content-Type-Options'=>'nosniff','Cache-Control'=>'private, no-store','Content-Security-Policy'=>"default-src 'none'; sandbox"]);}catch(Throwable){return Response::text("Documento indisponível.\n",404);}
@@ -1653,7 +1660,7 @@ return static function (
         return Response::redirect((string)($sso['loginurl']??''));
     },[$requireAuth]);
 
-    $router->get('/portal/aluno',static function(Request$request)use($database,$config,$documents):Response{
+    $router->get('/portal/aluno',static function(Request$request)use($database,$config,$documents,$organizationFinanceIntegrations,$asaas,$organizationAnnouncements):Response{
         $cpf=preg_replace('/\D/','',(string)$request->queryValue('cpf',''))??'';
         $token=(string)$request->queryValue('token','');
         $key=(string)$config->get('app.encryption_key');
@@ -1670,12 +1677,39 @@ return static function (
         $customer=$customerStatement->fetch();
         if(!is_array($customer))return Response::json(['ok'=>false,'error'=>'aluno não encontrado'],404);
         $customerId=(int)$customer['id'];
-        $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.ava_course_id,e.academic_progress_percent,e.academic_progress_status,e.academic_certificate_status,e.academic_last_access_at,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
+        $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.ava_course_id,e.academic_progress_percent,e.academic_progress_status,e.academic_grade_percent,e.academic_grade_status,e.academic_certificate_status,e.academic_last_access_at,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
         $enrollmentsStatement->execute(['customer'=>$customerId]);
         $enrollments=$enrollmentsStatement->fetchAll()?:[];
-        $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
+        $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
         $paymentsStatement->execute(['customer'=>$customerId]);
         $payments=$paymentsStatement->fetchAll()?:[];
+        $upcomingStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 AND status IN ('PENDING','OVERDUE') AND due_date>=CURDATE() ORDER BY due_date ASC LIMIT 12");
+        $upcomingStatement->execute(['customer'=>$customerId]);
+        $upcomingPayments=$upcomingStatement->fetchAll()?:[];
+        $announcementsStatement=$database->prepare("SELECT id,title,body,created_at FROM organization_announcements WHERE organization_id=:org AND is_active=1 ORDER BY created_at DESC,id DESC LIMIT 5");
+        $announcementsStatement->execute(['org'=>(int)$customer['organization_id']]);
+        $announcements=$announcementsStatement->fetchAll()?:[];
+        $pixClient=null;
+        if($request->queryValue('pix','')==='1'){
+            try{
+                $orgAsaas=$organizationFinanceIntegrations->asaas((int)$customer['organization_id']);
+                if($orgAsaas['account_mode']==='exclusive'&&$orgAsaas['configured']&&$orgAsaas['is_active']){
+                    $pixClient=new AsaasClient((string)$orgAsaas['environment'],(string)$orgAsaas['api_key'],false);
+                }else{
+                    $pixClient=$asaas;
+                }
+            }catch(Throwable){$pixClient=null;}
+            if($pixClient!==null){
+                foreach([&$payments,&$upcomingPayments]as&$paymentList){
+                    foreach($paymentList as&$payment){
+                        if(!in_array((string)$payment['status'],['PENDING','OVERDUE'],true)||(string)($payment['asaas_payment_id']??'')===''){continue;}
+                        try{$pix=$pixClient->pixQrCode((string)$payment['asaas_payment_id']);$payment['pix_image']=$pix['encodedImage']??'';$payment['pix_payload']=$pix['payload']??'';}catch(Throwable){$payment['pix_image']='';$payment['pix_payload']='';}
+                    }
+                    unset($payment);
+                }
+                unset($paymentList);
+            }
+        }
         $ticketsStatement=$database->prepare("SELECT id,subject,status,priority,created_at,resolved_at FROM tickets WHERE finance_customer_id=:customer ORDER BY created_at DESC LIMIT 10");
         $ticketsStatement->execute(['customer'=>$customerId]);
         $tickets=$ticketsStatement->fetchAll()?:[];
@@ -1683,7 +1717,7 @@ return static function (
         $documentsStatement->execute(['customer'=>$customerId]);
         $documentRows=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{

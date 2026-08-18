@@ -647,6 +647,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // espaçamento entre ícone e texto.
         upgrade_plugin_savepoint(true, 2026081836, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081837) {
+        // Sem mudança de esquema. Portal do Aluno: avisos da franquia, jornada
+        // com progresso e nota, continuar de onde parou, próximas parcelas e PIX.
+        upgrade_plugin_savepoint(true, 2026081837, 'local', 'mundointer');
+    }
     return true;
 }
 
