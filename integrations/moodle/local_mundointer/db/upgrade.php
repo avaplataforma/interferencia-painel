@@ -668,6 +668,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // da franquia, alerta de parcelas vencidas, anexos em tickets e NPS.
         upgrade_plugin_savepoint(true, 2026081840, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081841) {
+        // Sem mudança de esquema. O bloco de avaliação (NPS) passa a aparecer
+        // dentro dos cursos, abaixo da testeira da marca.
+        upgrade_plugin_savepoint(true, 2026081841, 'local', 'mundointer');
+    }
     return true;
 }
 

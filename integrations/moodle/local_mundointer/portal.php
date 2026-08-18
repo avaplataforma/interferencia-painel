@@ -175,16 +175,7 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-alert-overdue strong,.mi-alert-overdue small{display:block}
 .mi-alert-overdue small{margin-top:.2rem;opacity:.85}
 .mi-alert-go{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:#b4232c;color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.mi-nps{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:.9rem;align-items:center;margin-bottom:1.2rem;padding:1.05rem 1.15rem;border:1px solid #e4e0f7;border-left:5px solid #8b5cf6;border-radius:.8rem;background:#f8f7ff}
-.mi-nps-copy strong,.mi-nps-copy small{display:block}
-.mi-nps-copy small{color:#647482;margin-top:.2rem}
-.mi-nps-stars{display:flex;gap:.2rem}
-.mi-nps-stars button{border:0;background:none;color:#d4d4e0;font-size:1.35rem;cursor:pointer;padding:.1rem .2rem}
-.mi-nps-stars button.active{color:#f59e0b}
-.mi-nps-comment{width:100%;min-height:2.6rem;padding:.5rem .7rem;border:1px solid #c8d4dc;border-radius:.6rem;font:inherit;font-size:.85rem;background:#fff;resize:vertical}
-.mi-nps-send{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.mi-nps .mi-dash-form-feedback{grid-column:1/-1}
-@media(max-width:900px){.mi-nps{grid-template-columns:1fr 1fr;}.mi-nps-comment{grid-column:1/-1}.mi-alert-go{margin-left:0}}
+.mi-nps{display:none}
 .mi-dash-tab.certificates{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
 .mi-dash-tab.materials{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
 .mi-dash-panel.certificates{border-top-color:#8b5cf6}
@@ -210,17 +201,6 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <?php endif; ?>
   <?php $financeAlert=$data['finance_alert']??['count'=>0,'total'=>0.0]; if((int)$financeAlert['count']>0): ?>
   <div class="mi-alert-overdue"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Você tem <?php echo (int)$financeAlert['count']; ?> parcela(s) vencida(s) — R$ <?php echo number_format((float)$financeAlert['total'], 2, ',', '.'); ?></strong><small>Clique em Ver financeiro para consultar e pagar com PIX ou boleto.</small></div><?php if (!empty($tabs['finance'])): ?><button class="mi-alert-go" type="button" data-mi-open-finance><i class="fa-solid fa-wallet"></i> Ver financeiro</button><?php endif; ?></div>
-  <?php endif; ?>
-  <?php if (!empty($tabs['satisfaction']) && empty($data['satisfaction_rated'])): ?>
-  <section class="mi-nps" aria-label="Pesquisa de satisfação">
-   <div class="mi-nps-copy"><strong>Como você avalia sua experiência?</strong><small>Sua opinião ajuda a melhorar o atendimento da franquia.</small></div>
-   <div class="mi-nps-stars" data-mi-nps-stars>
-    <?php for($star=1;$star<=5;$star++): ?><button type="button" data-mi-nps-star="<?php echo $star; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?>
-   </div>
-   <textarea class="mi-nps-comment" data-mi-nps-comment maxlength="1000" rows="2" placeholder="Comentário (opcional)"></textarea>
-   <button class="mi-nps-send" type="button" data-mi-nps-send><i class="fa-solid fa-paper-plane"></i> Enviar avaliação</button>
-   <p class="mi-dash-form-feedback" data-mi-nps-feedback hidden></p>
-  </section>
   <?php endif; ?>
   <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Portal do Aluno">
    <?php if (!empty($tabs['journey'])): ?><button class="mi-dash-tab journey" type="button" role="tab" data-mi-tab="journey" aria-selected="<?php echo $firstTab==='journey'?'true':'false'; ?>"><i class="fa-solid fa-route"></i> Jornada</button><?php endif; ?>
@@ -392,42 +372,6 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
     var openFinance = document.querySelector("[data-mi-open-finance]");
     if (openFinance) {
       openFinance.addEventListener("click", function () { activate("finance"); });
-    }
-
-    var npsBlock = document.querySelector("[data-mi-nps-stars]");
-    if (npsBlock) {
-      var npsRating = 0;
-      var npsSend = document.querySelector("[data-mi-nps-send]");
-      var npsFeedback = document.querySelector("[data-mi-nps-feedback]");
-      npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (starButton) {
-        starButton.addEventListener("click", function () {
-          npsRating = parseInt(starButton.dataset.miNpsStar, 10);
-          npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (other) {
-            other.classList.toggle("active", parseInt(other.dataset.miNpsStar, 10) <= npsRating);
-          });
-        });
-      });
-      npsSend.addEventListener("click", function () {
-        if (npsRating < 1) {
-          npsFeedback.hidden = false;
-          npsFeedback.className = "mi-dash-form-feedback err";
-          npsFeedback.textContent = "Selecione de 1 a 5 estrelas.";
-          return;
-        }
-        npsFeedback.hidden = true;
-        var body = new URLSearchParams(portalParams);
-        body.set("rating", String(npsRating));
-        body.set("comment", (document.querySelector("[data-mi-nps-comment]") || {}).value || "");
-        fetch(baseUrl + "/satisfaction", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
-          .then(function (response) { return response.json(); })
-          .then(function (result) {
-            npsFeedback.hidden = false;
-            npsFeedback.className = "mi-dash-form-feedback " + (result.ok ? "ok" : "err");
-            npsFeedback.textContent = result.ok ? "Obrigado pela sua avaliação! 💜" : (result.error || "Não foi possível enviar.");
-            if (result.ok) { var nps = document.querySelector(".mi-nps"); if (nps) nps.style.display = "none"; }
-          })
-          .catch(function () { npsFeedback.hidden = false; npsFeedback.className = "mi-dash-form-feedback err"; npsFeedback.textContent = "Falha de conexão. Tente novamente."; });
-      });
     }
 
    var documentForm = document.querySelector("[data-mi-document-form]");
