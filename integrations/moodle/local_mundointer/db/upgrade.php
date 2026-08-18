@@ -705,6 +705,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // de suporte do login.
         upgrade_plugin_savepoint(true, 2026081847, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081848) {
+        // Sem mudança de esquema. Links auxiliares do login (Perdeu a senha,
+        // criar conta) com cor neutra, independente da cor da franquia.
+        upgrade_plugin_savepoint(true, 2026081848, 'local', 'mundointer');
+    }
     return true;
 }
 
