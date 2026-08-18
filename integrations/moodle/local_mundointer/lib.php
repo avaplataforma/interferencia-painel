@@ -338,30 +338,74 @@ body.mundointer-mycourses a.dropdown-item[href*="/report/"] {
     margin-top: .25rem;
     line-height: 1.35;
 }
+body.pagelayout-login .btn-cookie{display:none!important}
 .mundointer-login-support {
+    display: grid;
+    gap: .7rem;
+    margin-top: 1rem;
+    padding: 1rem 1.1rem;
+    border: 1px solid #e3e8ec;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 .4rem 1.2rem rgb(20 40 70 / 8%);
+}
+.mundointer-login-support-head {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: .35rem .75rem;
-    flex-wrap: wrap;
-    margin-top: .7rem;
-    padding: .6rem .75rem 0;
-    border-top: 1px solid #dfe5ea;
+    gap: .7rem;
+}
+.mundointer-support-badge {
+    display: grid;
+    place-items: center;
+    width: 2.6rem;
+    height: 2.6rem;
+    flex: 0 0 2.6rem;
+    border-radius: .8rem;
+    background: color-mix(in srgb, var(--mundointer-primary) 12%, #fff);
+    color: var(--mundointer-primary);
+    font-size: 1.05rem;
+}
+.mundointer-login-support-head strong,
+.mundointer-login-support-head small {
+    display: block;
+}
+.mundointer-login-support-head strong {
+    color: #172129;
+    font-size: .95rem;
+}
+.mundointer-login-support-head small {
     color: #647482;
-    font-size: .82rem;
-    line-height: 1.2;
-    text-align: center;
+    margin-top: .15rem;
+    font-size: .78rem;
 }
-.mundointer-login-support strong {
-    color: var(--mundointer-secondary);
+.mundointer-login-support-actions {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
 }
-.mundointer-login-support a {
+.mundointer-support-pill {
     display: inline-flex;
     align-items: center;
-    gap: .3rem;
-    color: var(--mundointer-primary);
-    font-weight: 600;
-    overflow-wrap: anywhere;
+    gap: .45rem;
+    padding: .5rem .85rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .84rem;
+    text-decoration: none;
+}
+.mundointer-support-pill.email {
+    background: #eef2f5;
+    color: #405267;
+}
+.mundointer-support-pill.email:hover {
+    background: #e2e8ee;
+}
+.mundointer-support-pill.whatsapp {
+    background: #25d366;
+    color: #fff;
+}
+.mundointer-support-pill.whatsapp:hover {
+    background: #1eb356;
 }
 .mundointer-support-whatsapp-icon {
     display: inline-flex;
@@ -1978,17 +2022,35 @@ function local_mundointer_before_standard_top_of_body_html(): string
                 if ((supportEmail || supportPhone) && !loginContainer.querySelector(".mundointer-login-support")) {
                     var support = document.createElement("div");
                     support.className = "mundointer-login-support";
+                    var supportHead = document.createElement("div");
+                    supportHead.className = "mundointer-login-support-head";
+                    var supportBadge = document.createElement("span");
+                    supportBadge.className = "mundointer-support-badge";
+                    supportBadge.setAttribute("aria-hidden", "true");
+                    supportBadge.innerHTML = "<i class=\"fa-solid fa-headset\"></i>";
+                    var supportCopy = document.createElement("div");
                     var supportLabel = document.createElement("strong");
                     supportLabel.textContent = "Suporte";
-                    support.appendChild(supportLabel);
+                    var supportHint = document.createElement("small");
+                    supportHint.textContent = "Fale com a nossa equipe";
+                    supportCopy.appendChild(supportLabel);
+                    supportCopy.appendChild(supportHint);
+                    supportHead.appendChild(supportBadge);
+                    supportHead.appendChild(supportCopy);
+                    support.appendChild(supportHead);
+                    var supportActions = document.createElement("div");
+                    supportActions.className = "mundointer-login-support-actions";
                     if (supportEmail) {
                         var emailLink = document.createElement("a");
+                        emailLink.className = "mundointer-support-pill email";
                         emailLink.href = "mailto:" + supportEmail;
-                        emailLink.textContent = supportEmail;
-                        support.appendChild(emailLink);
+                        emailLink.title = supportEmail;
+                        emailLink.innerHTML = "<i class=\"fa-solid fa-envelope\"></i> E-mail";
+                        supportActions.appendChild(emailLink);
                     }
                     if (supportPhone) {
                         var phoneLink = document.createElement("a");
+                        phoneLink.className = "mundointer-support-pill whatsapp";
                         var whatsappNumber = supportPhone.replace(/[^0-9]/g, "");
                         if (whatsappNumber.length === 10 || whatsappNumber.length === 11) {
                             whatsappNumber = "55" + whatsappNumber;
@@ -1998,14 +2060,10 @@ function local_mundointer_before_standard_top_of_body_html(): string
                         phoneLink.rel = "noopener noreferrer";
                         phoneLink.setAttribute("aria-label", "Falar com o suporte pelo WhatsApp: " + supportPhone);
                         phoneLink.title = "Falar pelo WhatsApp";
-                        var whatsappIcon = document.createElement("span");
-                        whatsappIcon.className = "mundointer-support-whatsapp-icon";
-                        whatsappIcon.setAttribute("aria-hidden", "true");
-                        whatsappIcon.innerHTML = "<svg viewBox=\"0 0 448 512\" focusable=\"false\"><path d=\"M380.9 97.1C339 55.1 283.2 32 223.9 32 101.5 32 1.9 131.6 1.9 254c0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.8l-6.7-4-69.8 18.3L72 359.1l-4.4-7c-18.5-29.4-28.2-63.4-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.7-186.6 184.7zm101.2-138.4c-5.5-2.8-32.8-16.1-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8s-14.3 18-17.6 21.8c-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z\"/></svg>";
-                        phoneLink.appendChild(whatsappIcon);
-                        phoneLink.appendChild(document.createTextNode(supportPhone));
-                        support.appendChild(phoneLink);
+                        phoneLink.innerHTML = "<span class=\"mundointer-support-whatsapp-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 448 512\" focusable=\"false\"><path d=\"M380.9 97.1C339 55.1 283.2 32 223.9 32 101.5 32 1.9 131.6 1.9 254c0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.8l-6.7-4-69.8 18.3L72 359.1l-4.4-7c-18.5-29.4-28.2-63.4-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.7-186.6 184.7zm101.2-138.4c-5.5-2.8-32.8-16.1-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8s-14.3 18-17.6 21.8c-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z\"/></svg></span> WhatsApp";
+                        supportActions.appendChild(phoneLink);
                     }
+                    support.appendChild(supportActions);
                     (loginContainer.querySelector("[role=\"main\"]") || loginContainer.querySelector("main") || loginContainer).appendChild(support);
                 }
                 return;

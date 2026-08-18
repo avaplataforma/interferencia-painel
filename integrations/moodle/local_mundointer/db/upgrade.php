@@ -695,6 +695,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // permitem reavaliar o curso.
         upgrade_plugin_savepoint(true, 2026081845, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081846) {
+        // Sem mudança de esquema. Login: aviso de cookies oculto e bloco de
+        // suporte redesenhado em cartão moderno com pílulas de contato.
+        upgrade_plugin_savepoint(true, 2026081846, 'local', 'mundointer');
+    }
     return true;
 }
 
