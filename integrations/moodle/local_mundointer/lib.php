@@ -102,7 +102,23 @@ a.mundointer-link,
     background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
 }
 body.mundointer-mycourses #region-main h1,
-body.mundointer-mycourses #region-main .page-context-header {
+body.mundointer-mycourses #region-main .page-context-header,
+body.mundointer-mycourses #region-main .page-header-headings,
+body.mundointer-mycourses #page-header,
+body.mundointer-mycourses #region-main > .card > .card-body > h1 {
+    display: none !important;
+}
+body.mundointer-mycourses #usermenu a[href*="/user/profile.php"],
+body.mundointer-mycourses #usermenu a[href*="/calendar/view.php"],
+body.mundointer-mycourses #usermenu a[href*="/user/files.php"],
+body.mundointer-mycourses #usermenu a[href*="/user/preferences.php"],
+body.mundointer-mycourses #usermenu a[href*="/report/"],
+body.mundointer-mycourses #usermenu a[href*="/grade/report/"],
+body.mundointer-mycourses a.dropdown-item[href*="/user/profile.php"],
+body.mundointer-mycourses a.dropdown-item[href*="/calendar/view.php"],
+body.mundointer-mycourses a.dropdown-item[href*="/user/files.php"],
+body.mundointer-mycourses a.dropdown-item[href*="/user/preferences.php"],
+body.mundointer-mycourses a.dropdown-item[href*="/report/"] {
     display: none !important;
 }
 .mundointer-welcome {
@@ -1979,6 +1995,19 @@ document.addEventListener("click", function (event) {
   var mountMundoInterCoursesHero = function () {
     if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
     document.body.classList.add("mundointer-mycourses");
+    document.querySelectorAll("#region-main h1, #region-main .page-context-header, #region-main .page-header-headings, #page-header h1").forEach(function (heading) {
+      heading.style.display = "none";
+    });
+    document.querySelectorAll("h1, h2, h3, h4, .card-title, .block-title, .page-header-headings").forEach(function (node) {
+      if ((node.textContent || "").replace(/\s+/g, " ").trim() === "Resumo dos cursos") {
+        node.style.display = "none";
+        var card = node.closest(".card, .block, .coursebox");
+        if (card && card !== node) {
+          var title = card.querySelector(".card-title, .block-title");
+          if (title) title.style.display = "none";
+        }
+      }
+    });
     var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
     if (region) {
       var hero = document.createElement("header");
