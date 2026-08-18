@@ -7,12 +7,25 @@ defined('MOODLE_INTERNAL') || die();
  */
 function local_mundointer_before_standard_html_head(): string
 {
+    $neutralLogin = '<style>
+body.pagelayout-login .btn-cookie{display:none!important}
+body.pagelayout-login .login-form-forgotpassword a,
+body.pagelayout-login .login-signup a,
+body.pagelayout-login .login-identityproviders a {
+    color: #5b6874 !important;
+    font-weight: 600;
+}
+body.pagelayout-login .login-form-forgotpassword a:hover,
+body.pagelayout-login .login-signup a:hover {
+    color: #2f3b46 !important;
+}
+</style>';
     if (is_siteadmin()) {
-        return '';
+        return $neutralLogin;
     }
 $brand = \local_mundointer\local\brand_resolver::current();
     if ($brand === null) {
-        return '';
+        return $neutralLogin;
     }
 
     $primary = s((string)$brand['primary_color']);
@@ -339,16 +352,6 @@ body.mundointer-mycourses a.dropdown-item[href*="/report/"] {
     line-height: 1.35;
 }
 body.pagelayout-login .btn-cookie{display:none!important}
-body.pagelayout-login .login-form-forgotpassword a,
-body.pagelayout-login .login-signup a,
-body.pagelayout-login .login-identityproviders a {
-    color: #5b6874 !important;
-    font-weight: 600;
-}
-body.pagelayout-login .login-form-forgotpassword a:hover,
-body.pagelayout-login .login-signup a:hover {
-    color: #2f3b46 !important;
-}
 .mundointer-login-support {
     display: grid;
     gap: .7rem;

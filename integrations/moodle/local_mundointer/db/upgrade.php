@@ -710,6 +710,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // criar conta) com cor neutra, independente da cor da franquia.
         upgrade_plugin_savepoint(true, 2026081848, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081849) {
+        // Sem mudança de esquema. Links auxiliares do login neutros em todos os
+        // fluxos (login direto, admin e página da franquia).
+        upgrade_plugin_savepoint(true, 2026081849, 'local', 'mundointer');
+    }
     return true;
 }
 
