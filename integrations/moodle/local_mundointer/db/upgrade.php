@@ -545,6 +545,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // com fundo branco, ao lado do link nativo Meus cursos.
         upgrade_plugin_savepoint(true, 2026081816, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081817) {
+        // Sem mudança de esquema. Fim do redirecionamento em JS (loop) e
+        // botão único Secretaria Digital na testeira com fundo branco.
+        upgrade_plugin_savepoint(true, 2026081817, 'local', 'mundointer');
+    }
     return true;
 }
 
