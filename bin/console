@@ -19,6 +19,7 @@ use Interferencia\Modules\Finance\AsaasSynchronizer;
 use Interferencia\Modules\Finance\FinanceRepository;
 use Interferencia\Modules\Moodle\MoodleRepository;
 use Interferencia\Modules\Moodle\MoodleClient;
+use Interferencia\Modules\Organization\OrganizationPoleRepository;
 use Interferencia\Modules\Moodle\IntegrationRepository as MoodleIntegrationRepository;
 use Interferencia\Modules\Moodle\PedagogicalSynchronizer;
 use Interferencia\Modules\Moodle\CompletionTestimonialInviter;
@@ -247,6 +248,34 @@ TEXT);
             $requeued = $images->requeueFailed();
             fwrite(STDOUT, sprintf("Falhas reenfileiradas: %d.\n", $requeued));
         }
+        exit(0);
+    }
+
+    if ($command === 'ava:backfill-portal-tokens') {
+        $database = $connection->pdo();
+        $cipher = new SecretCipher((string) $config->get('app.encryption_key'));
+        $avaConnections = new AvaConnectionRepository($database, $cipher);
+        $shared = $avaConnections->shared();
+        if (!(bool) ($shared['configured'] ?? false) || !(bool) ($shared['is_active'] ?? false)) throw new RuntimeException('A integração global AVA Cursos não está ativa.');
+        $client = new MoodleClient((string) $shared['base_url'], (string) $shared['token'], true);
+        $key = (string) $config->get('app.encryption_key');
+        $limit = max(1, min(500, (int) ($argv[2] ?? 200)));
+        $statement = $database->prepare("SELECT e.ava_user_id,f.cpf_cnpj FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id WHERE e.moodle_enrolment_status='released' AND e.ava_user_id IS NOT NULL AND e.ava_user_id>0 AND f.is_deleted=0 AND LENGTH(REPLACE(REPLACE(REPLACE(f.cpf_cnpj,'.',''),'-',''),'/',''))=11 GROUP BY e.ava_user_id,f.cpf_cnpj LIMIT {$limit}");
+        $statement->execute();
+        $processed = 0;
+        $failed = 0;
+        foreach ($statement->fetchAll() ?: [] as $row) {
+            $cpf = preg_replace('/\D/', '', (string) $row['cpf_cnpj']) ?? '';
+            if ($cpf === '') continue;
+            $token = hash_hmac('sha256', 'student-portal|' . $cpf, $key);
+            try {
+                $client->updateUserCustomFields((int) $row['ava_user_id'], [['type' => OrganizationPoleRepository::PORTAL_TOKEN_FIELD, 'value' => $token]]);
+                $processed++;
+            } catch (Throwable) {
+                $failed++;
+            }
+        }
+        fwrite(STDOUT, sprintf("Tokens do portal gravados: %d; falhas: %d.\n", $processed, $failed));
         exit(0);
     }
 
