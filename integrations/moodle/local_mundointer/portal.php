@@ -56,6 +56,16 @@ $statusLabel = static function (string $status): string {
 $statusTone = static function (string $status): string {
     return in_array($status, ['released', 'payment_confirmed', 'payment_waived'], true) ? 'good' : (in_array($status, ['payment_pending'], true) ? 'warn' : 'neutral');
 };
+$canAccess = static function (array $enrollment): bool {
+    return (int) ($enrollment['ava_course_id'] ?? 0) > 0 && (string) ($enrollment['moodle_enrolment_status'] ?? '') === 'released';
+};
+$courseUrl = static function (array $enrollment): string {
+    return (new moodle_url('/course/view.php', ['id' => (int) $enrollment['ava_course_id']]))->out(false);
+};
+$firstCourse = null;
+foreach (($data['enrollments'] ?? []) as $enrollment) {
+    if ($canAccess($enrollment)) { $firstCourse = $enrollment; break; }
+}
 ?>
 <style>
 .mi-dash{max-width:76rem;margin:0 auto;padding:0 1rem 2rem}
@@ -120,7 +130,7 @@ $statusTone = static function (string $status): string {
  <header class="mi-dash-hero">
   <div><strong>Olá, <?php echo $firstName; ?>! 👋</strong><small><?php echo $brandName !== '' ? $brandName : ''; ?><?php echo $data !== null ? ' · ' . s((string) ($data['student']['unit'] ?? '')) : ''; ?></small></div>
   <div class="mi-dash-hero-actions">
-   <a href="<?php echo (new moodle_url('/my/courses.php'))->out(false); ?>"><i class="fa-solid fa-graduation-cap"></i> Meus cursos</a>
+   <?php if ($firstCourse !== null): ?><a href="<?php echo $courseUrl($firstCourse); ?>"><i class="fa-solid fa-play"></i> Iniciar curso</a><?php endif; ?>
    <?php if ($site !== ''): ?><a href="<?php echo $site; ?>" target="_blank" rel="noopener"><i class="fa-solid fa-globe"></i> Site da franquia</a><?php endif; ?>
   </div>
  </header>
@@ -144,14 +154,14 @@ $statusTone = static function (string $status): string {
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
   <?php foreach (($data['enrollments'] ?? []) as $enrollment): ?>
-  <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?><?php echo (float) ($enrollment['academic_progress_percent'] ?? 0) > 0 ? ' · Progresso: ' . round((float) $enrollment['academic_progress_percent'], 1) . '%' : ''; ?></small><?php if ((float) ($enrollment['academic_progress_percent'] ?? 0) > 0): ?><div class="mi-dash-progress"><span style="width:<?php echo round((float) $enrollment['academic_progress_percent'], 1); ?>%"></span></div><?php endif; ?></div><span class="mi-dash-badge <?php echo $statusTone((string) ($enrollment['status'] ?? '')); ?>"><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?></span></div>
+  <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?><?php echo (float) ($enrollment['academic_progress_percent'] ?? 0) > 0 ? ' · Progresso: ' . round((float) $enrollment['academic_progress_percent'], 1) . '%' : ''; ?></small><?php if ((float) ($enrollment['academic_progress_percent'] ?? 0) > 0): ?><div class="mi-dash-progress"><span style="width:<?php echo round((float) $enrollment['academic_progress_percent'], 1); ?>%"></span></div><?php endif; ?></div><div class="mi-dash-actions"><?php if ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?><span class="mi-dash-badge <?php echo $statusTone((string) ($enrollment['status'] ?? '')); ?>"><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?></span></div></div>
   <?php endforeach; ?>
  </section>
  <section class="mi-dash-panel enroll" data-mi-panel="enroll">
   <h2><i class="fa-solid fa-graduation-cap" style="color:#16a34a"></i> Matrículas</h2>
   <?php if (($data['enrollments'] ?? []) === []): ?><p class="mi-dash-empty">Nenhuma matrícula encontrada.</p><?php endif; ?>
   <?php foreach (($data['enrollments'] ?? []) as $enrollment): ?>
-  <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small>Matrícula em <?php echo s((string) substr((string) ($enrollment['created_at'] ?? ''), 0, 10)); ?><?php echo (string) ($enrollment['academic_certificate_status'] ?? '') === 'available' ? ' · Certificado disponível' : ''; ?></small></div><span class="mi-dash-badge <?php echo $statusTone((string) ($enrollment['status'] ?? '')); ?>"><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?></span></div>
+  <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small>Matrícula em <?php echo s((string) substr((string) ($enrollment['created_at'] ?? ''), 0, 10)); ?><?php echo (string) ($enrollment['academic_certificate_status'] ?? '') === 'available' ? ' · Certificado disponível' : ''; ?></small></div><div class="mi-dash-actions"><?php if ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?><span class="mi-dash-badge <?php echo $statusTone((string) ($enrollment['status'] ?? '')); ?>"><?php echo s($statusLabel((string) ($enrollment['status'] ?? ''))); ?></span></div></div>
   <?php endforeach; ?>
  </section>
  <section class="mi-dash-panel finance" data-mi-panel="finance">

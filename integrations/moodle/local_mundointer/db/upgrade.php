@@ -560,6 +560,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // Digital logo após o login, deixando Meus cursos como listagem nativa.
         upgrade_plugin_savepoint(true, 2026081819, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081820) {
+        // Sem mudança de esquema. A Secretaria Digital ganhou acesso direto
+        // aos cursos liberados (Iniciar curso / Acessar curso).
+        upgrade_plugin_savepoint(true, 2026081820, 'local', 'mundointer');
+    }
     return true;
 }
 
