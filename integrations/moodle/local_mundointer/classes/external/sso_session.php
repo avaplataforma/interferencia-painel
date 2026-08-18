@@ -21,14 +21,15 @@ class sso_session extends external_api
         return new external_function_parameters([
             'username' => new external_value(PARAM_USERNAME, 'Login (username) do usuário no Moodle', VALUE_REQUIRED),
             'courseid' => new external_value(PARAM_INT, 'Curso opcional para redirecionamento após o login', VALUE_OPTIONAL, 0),
+            'slug' => new external_value(PARAM_ALPHANUMEXT, 'Marca (franquia) a vincular na sessão', VALUE_OPTIONAL, ''),
         ]);
     }
 
     /** @return array{token:string,loginurl:string} */
-    public static function execute(string $username, int $courseid = 0): array
+    public static function execute(string $username, int $courseid = 0, string $slug = ''): array
     {
         global $DB;
-        $params = self::validate_parameters(self::execute_parameters(), ['username' => $username, 'courseid' => $courseid]);
+        $params = self::validate_parameters(self::execute_parameters(), ['username' => $username, 'courseid' => $courseid, 'slug' => $slug]);
         require_capability('local/mundointer:manage', context_system::instance());
         if (!get_config('local_mundointer', 'ssoenabled')) {
             throw new \moodle_exception('O login automático está desativado nesta instalação.', 'local_mundointer');
@@ -39,6 +40,7 @@ class sso_session extends external_api
         $cache->set(hash('sha256', $token), [
             'userid' => (int) $user->id,
             'courseid' => max(0, (int) $params['courseid']),
+            'slug' => (string) $params['slug'],
             'expiresat' => time() + 120,
         ]);
         return [

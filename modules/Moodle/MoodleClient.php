@@ -26,10 +26,11 @@ final readonly class MoodleClient
     }
 
     /** @return array{token:string,loginurl:string} */
-    public function createSsoSession(string $username,int $courseId=0):array
+    public function createSsoSession(string $username,int $courseId=0,string $slug=''):array
     {
         $parameters=['username'=>$username];
         if($courseId>0)$parameters['courseid']=$courseId;
+        if($slug!=='')$parameters['slug']=$slug;
         return$this->call('local_mundointer_create_sso_session',$parameters);
     }
 

@@ -1194,7 +1194,7 @@ $tests['distribui e monitora versoes do plugin Mundo Inter'] = static function (
     assertTrue(str_contains($view,'Histórico de verificações'));
     $manager=new \Interferencia\Modules\Moodle\PluginReleaseManager($rootPath.'/integrations/moodle/local_mundointer');
     $metadata=$manager->metadata();
-    assertSame('1.0.28',$metadata['release']);
+    assertSame('1.0.29',$metadata['release']);
     $package=$manager->package();
     assertTrue(str_starts_with($package['body'],'PK'));
     assertTrue($package['size']>0);
@@ -1214,7 +1214,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     $ping=(string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/classes/external/ping.php');
     $routes=(string)file_get_contents($rootPath.'/routes/web.php');
     $view=(string)file_get_contents($rootPath.'/views/admin/platform/painel-inter.php');
-    assertTrue(str_contains($version,"\$plugin->release = '1.0.28'"));
+    assertTrue(str_contains($version,"\$plugin->release = '1.0.29'"));
     assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),"a[href*='/mod/']"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'/franquia.php?slug='));
     assertTrue(str_contains($services,'local_mundointer_sync_brands'));
@@ -1971,6 +1971,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'site_url'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/AvaBrandCatalog.php'),'organization_domains dom'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php'),'function createSsoSession'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php'),'$parameters[\'slug\']=$slug'));
     assertTrue(str_contains($routes,"'/ava-sso'"));
     assertTrue(str_contains($routes,"'/students/{id:\\d+}/ava-sso'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/students/show.php'),'ava-sso'));
@@ -1979,8 +1980,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(is_file($pluginDir.'/sso_login.php'));
     assertTrue(is_file($pluginDir.'/classes/external/sso_session.php'));
     assertTrue(is_file($pluginDir.'/instituicao.php'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),'2026081828'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),"'1.0.28'"));
+    assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),'2026081829'));
+    assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),"'1.0.29'"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'global $USER, $PAGE;'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mi-secretaria'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'Portal do Aluno</a>'));
@@ -2018,7 +2019,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/instituicao.php'),"new moodle_url('/local/mundointer/portal.php')"));
     assertTrue(!str_contains((string)file_get_contents($pluginDir.'/instituicao.php'),'Meu perfil'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/settings.php'),'ssoenabled'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/db/upgrade.php'),'2026081828'));
+    assertTrue(str_contains((string)file_get_contents($pluginDir.'/db/upgrade.php'),'2026081829'));
     assertTrue(str_contains($publicView,'mvv-grid'));
     assertTrue(str_contains($publicView,'>Missão<'));
     assertTrue(str_contains($publicView,'>Visão<'));
@@ -2197,7 +2198,7 @@ $tests['migra o Catalogo MASTER para LTI 1.3 sem perder o legado'] = static func
     assertTrue(str_contains($pluginServices,"'local_mundointer_lti_selections'"));
     assertTrue(str_contains($pluginSelections,"\$isassessment ? 'assessment' : 'lti'"));
     assertTrue(str_contains($pluginSelections,'is_assessment'));
-    assertTrue(str_contains($pluginVersion,'1.0.28'));
+    assertTrue(str_contains($pluginVersion,'1.0.29'));
     assertTrue(is_file($rootPath.'/integrations/moodle/local_mundointer/classes/external/lti_selections.php'));
 };
 
@@ -2567,7 +2568,7 @@ $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] =
     assertTrue(str_contains($pluginService,"'local_mundointer_organize_enrollment'"));
     assertTrue(str_contains($pluginExternal,'cohort_add_member'));
     assertTrue(str_contains($pluginExternal,'groups_add_member'));
-    assertTrue(str_contains($pluginVersion,"release = '1.0.28'"));
+    assertTrue(str_contains($pluginVersion,"release = '1.0.29'"));
     assertTrue(str_contains($view,'Grupos no AVA'));
     assertTrue(str_contains($view,'Organização acadêmica automática'));
     assertTrue(str_contains($view,'Coortes de franquia'));
@@ -2733,7 +2734,7 @@ $tests['transforma disciplina master em curso individual reutilizavel'] = static
     assertTrue(str_contains($pluginExternal,"str_starts_with((string) \$course->idnumber, 'mi-master-content-')"));
     assertTrue(str_contains($pluginExternal,"str_contains(\$fingerprint, 'iesde')"));
     assertTrue(str_contains($pluginExternal,"'completionview' => 1"));
-    assertTrue(str_contains($pluginVersion,"release = '1.0.28'"));
+    assertTrue(str_contains($pluginVersion,"release = '1.0.29'"));
     assertTrue(str_contains($pluginUpgrade,"upgrade_plugin_savepoint(true, 2026081618"));
     assertTrue(str_contains($pluginUpgrade,"functionlink.functionname = :ping"));
     assertTrue(str_contains($pluginUpgrade,"'local_mundointer_materialize_lti_course', 'local_mundointer_sync_trail_sections'"));
@@ -2853,7 +2854,7 @@ $tests['fecha piloto master com curadoria avaliacao e publicacao revisada'] = st
     assertTrue(str_contains($pluginShared,"'courseshowtileprogress'=>'2'"));
     assertTrue(str_contains($moodleClient,"'format'=>'tiles'"));
     assertTrue(str_contains($pluginUpgrade,'upgrade_plugin_savepoint(true, 2026081332'));
-    assertTrue(str_contains($pluginVersion,"release = '1.0.28'"));
+    assertTrue(str_contains($pluginVersion,"release = '1.0.29'"));
 };
 
 $tests['monta trilhas em tela ampla com filtros e assistencia por IA'] = static function () use ($rootPath): void {

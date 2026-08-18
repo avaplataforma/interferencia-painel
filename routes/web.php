@@ -1615,7 +1615,7 @@ return static function (
 
     $router->post('/admin/site/not-found/clear',static function(Request$request)use($sites,$organizationId,$session,$basePath):Response{try{$removed=$sites->clearNotFoundLogs($organizationId);$session->flash('site.message',$removed.' registro(s) de 404 removido(s).');}catch(Throwable$e){$session->flash('site.error',$e->getMessage());}return Response::redirect($basePath.'/admin/site/not-found');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
-    $router->get('/ava-sso',static function(Request$request)use($avaConnections,$auth,$session,$basePath):Response{
+    $router->get('/ava-sso',static function(Request$request)use($avaConnections,$auth,$session,$basePath,$organizations,$organizationId):Response{
         $shared=$avaConnections->shared();
         if(!(bool)($shared['configured']??false)||!(bool)($shared['is_active']??false)){throw new RuntimeException('A integração global AVA Cursos não está ativa.');}
         $client=new MoodleClient((string)$shared['base_url'],(string)$shared['token'],true);
@@ -1628,14 +1628,16 @@ return static function (
             if(isset($matches[0]['username'])&&(string)$matches[0]['username']!=='')$username=(string)$matches[0]['username'];
         }
         if($username==='')throw new RuntimeException('Nenhum usuário do AVA corresponde a este acesso. Verifique com o suporte.');
+        $orgSlug='';
+        if($organizationId>0){$org=$organizations->findRecord($organizationId);$orgSlug=trim((string)($org['panel_slug']??''));}
         $session->set('ava_sso_flash_errors',[]);
-        $sso=$client->createSsoSession($username);
+        $sso=$client->createSsoSession($username,0,$orgSlug);
         return Response::redirect((string)($sso['loginurl']??''));
     },[$requireAuth]);
 
-    $router->get('/students/{id:\d+}/ava-sso',static function(Request$request,array$params)use($avaConnections,$studentEnrollments,$unitContext,$basePath):Response{
+    $router->get('/students/{id:\d+}/ava-sso',static function(Request$request,array$params)use($avaConnections,$studentEnrollments,$unitContext,$basePath,$organizations):Response{
         $id=(int)$params['id'];
-        $unitIds=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());
+        $unitIds=array_map(static fn(array $unit):int=>(int)$unit['id'],$unitContext->available());
         $context=$studentEnrollments->accessCommunicationContext($id,$unitIds);
         if($context===null)return Response::text("Matrícula não encontrada.\n",404);
         if((string)($context['moodle_enrolment_status']??'')!=='released')throw new RuntimeException('Esta matrícula ainda não está liberada no AVA.');
@@ -1644,7 +1646,9 @@ return static function (
         $connection=$avaConnections->find((int)($context['ava_connection_id']??0));
         if($connection===null||!(bool)($connection['configured']??false)||!(bool)($connection['is_active']??false))throw new RuntimeException('O AVA desta matrícula não está ativo.');
         $client=new MoodleClient((string)$connection['base_url'],(string)$connection['token'],true);
-        $sso=$client->createSsoSession($username,(int)($context['ava_course_id']??0));
+        $org=$organizations->findRecord((int)($context['organization_id']??0));
+        $orgSlug=trim((string)($org['panel_slug']??''));
+        $sso=$client->createSsoSession($username,(int)($context['ava_course_id']??0),$orgSlug);
         return Response::redirect((string)($sso['loginurl']??''));
     },[$requireAuth]);
 

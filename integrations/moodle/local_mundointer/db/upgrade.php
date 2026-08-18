@@ -606,6 +606,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // no servidor dentro do bloco da marca, ficando ao lado do logo.
         upgrade_plugin_savepoint(true, 2026081828, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081829) {
+        // Sem mudança de esquema. O SSO carrega a marca da franquia na sessão,
+        // garantindo logo, cores e botão do Portal do Aluno para todos os alunos.
+        upgrade_plugin_savepoint(true, 2026081829, 'local', 'mundointer');
+    }
     return true;
 }
 
