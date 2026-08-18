@@ -9,6 +9,7 @@ function local_mundointer_before_standard_html_head(): string
 {
     $neutralLogin = '<style>
 body.pagelayout-login .btn-cookie{display:none!important}
+body.not_siteadmin button.navbar-toggler[data-toggler="drawers"]{display:none!important}
 body.pagelayout-login .login-form-forgotpassword a,
 body.pagelayout-login .login-form-forgotpassword a:link,
 body.pagelayout-login .login-form-forgotpassword a:visited,

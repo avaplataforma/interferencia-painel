@@ -755,6 +755,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // não a última atividade.
         upgrade_plugin_savepoint(true, 2026081857, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081858) {
+        // Sem mudança de esquema. Mobile: botão sanduíche oculto para alunos e
+        // progresso da Jornada calculado ao vivo no Moodle.
+        upgrade_plugin_savepoint(true, 2026081858, 'local', 'mundointer');
+    }
     return true;
 }
 

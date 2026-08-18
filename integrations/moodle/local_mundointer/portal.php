@@ -86,6 +86,26 @@ $gradeLabel = static function (array $enrollment): string {
     if ($percent <= 0) return '';
     return 'Nota: ' . number_format($percent / 10, 1, ',', '.');
 };
+$liveProgressCache = [];
+$liveProgress = function (array $enrollment) use (&$liveProgressCache, $DB, $USER, $CFG): float {
+    $courseId = (int) ($enrollment['ava_course_id'] ?? 0);
+    if ($courseId < 1) return 0.0;
+    if (!array_key_exists($courseId, $liveProgressCache)) {
+        $percent = 0.0;
+        $course = $DB->get_record('course', ['id' => $courseId], '*', IGNORE_MISSING);
+        if ($course) {
+            try {
+                require_once($CFG->dirroot . '/lib/completionlib.php');
+                $completion = new \core_completion\progress($course);
+                $percent = (float) $completion->get_course_progress_percentage($USER);
+            } catch (\Throwable) {
+                $percent = 0.0;
+            }
+        }
+        $liveProgressCache[$courseId] = $percent;
+    }
+    return $liveProgressCache[$courseId];
+};
 ?>
 <style>
 .mi-dash{max-width:76rem;margin:0 auto;padding:0 1rem 2rem}
@@ -250,7 +270,7 @@ $gradeLabel = static function (array $enrollment): string {
   <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="<?php echo $firstTab==='journey'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
-  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $courseRating=(int)($enrollment['satisfaction_rating']??0); ?>
+  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $apiProgress=(float) ($enrollment['academic_progress_percent'] ?? 0); $progress=max($apiProgress,$liveProgress($enrollment)); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $courseRating=(int)($enrollment['satisfaction_rating']??0); ?>
   <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rating="<?php echo $courseRating; ?>" title="<?php echo $courseRating>0?'Sua avaliação: '.$courseRating.' estrela(s). Clique para mudar.':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" class="<?php echo $courseRating>=$star?'active':''; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-circle-play"></i> Acessar</a><?php endif; ?></div></div>
   <?php endforeach; ?>
   </section>
