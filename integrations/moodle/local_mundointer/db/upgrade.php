@@ -745,6 +745,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // seções do portal, KPIs compactos e jornada logo após a testeira.
         upgrade_plugin_savepoint(true, 2026081855, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081856) {
+        // Sem mudança de esquema. Mobile: KPIs ocultos, jornada em carrossel de
+        // cartões, alvos de toque maiores e botão Acessar no lugar de Continuar.
+        upgrade_plugin_savepoint(true, 2026081856, 'local', 'mundointer');
+    }
     return true;
 }
 

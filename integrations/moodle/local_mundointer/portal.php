@@ -201,10 +201,21 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
     .mi-dash-tab.documents{color:#0ea5e9!important}
     .mi-dash-tab.certificates{color:#8b5cf6!important}
     .mi-dash-tab.materials{color:#0ea5e9!important}
-    .mi-dash-kpis{display:flex;overflow-x:auto;gap:.45rem;margin-bottom:1rem;padding-bottom:.2rem;grid-template-columns:none}
-    .mi-dash-kpi{flex:0 0 auto;min-width:8.5rem}
+    .mi-dash-kpis{display:none}
     .mi-dash-hero{flex-direction:column;align-items:flex-start}
     .mi-dash-hero .mi-dash-hero-actions{margin-left:0}
+    .mi-dash-actions a,.mi-dash-actions button{min-height:2.75rem}
+    .mi-alert-go{min-height:2.75rem}
+    .mi-stars-inline{display:flex;margin-left:0;margin-top:.4rem}
+    .mi-stars-inline button{display:grid;place-items:center;width:2.75rem;height:2.75rem;font-size:1.35rem}
+    .mi-pix-payload .mi-dash-actions button{min-height:2.75rem}
+    .mi-dash-panel.journey[data-active="1"]{display:flex}
+    .mi-dash-panel.journey{flex-direction:row;flex-wrap:wrap;overflow-x:auto;gap:.7rem;scroll-snap-type:x mandatory;padding-bottom:.6rem}
+    .mi-dash-panel.journey h2{flex:0 0 100%}
+    .mi-dash-panel.journey .mi-dash-row:first-of-type{display:none}
+    .mi-dash-panel.journey .mi-dash-row{flex:0 0 min(86%,19rem);scroll-snap-align:start;flex-direction:column;gap:.6rem;border:1px solid #e3e8ec;border-radius:1rem;padding:.9rem;background:#fff;box-shadow:0 .3rem .9rem rgb(20 40 70 / 7%)}
+    .mi-dash-panel.journey .mi-dash-actions{width:100%}
+    .mi-dash-panel.journey .mi-dash-actions a{width:100%;justify-content:center}
 }
 .mi-stars-inline{display:inline-flex;gap:.05rem;margin-left:.55rem;vertical-align:middle}
 .mi-stars-inline button{border:0;background:none;padding:0 .05rem;color:#d4d4e0;cursor:pointer;font-size:.95rem;line-height:1}
@@ -254,7 +265,7 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
   <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); $courseRating=(int)($enrollment['satisfaction_rating']??0); ?>
-  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rating="<?php echo $courseRating; ?>" title="<?php echo $courseRating>0?'Sua avaliação: '.$courseRating.' estrela(s). Clique para mudar.':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" class="<?php echo $courseRating>=$star?'active':''; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
+  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rating="<?php echo $courseRating; ?>" title="<?php echo $courseRating>0?'Sua avaliação: '.$courseRating.' estrela(s). Clique para mudar.':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" class="<?php echo $courseRating>=$star?'active':''; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Acessar</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar</a><?php endif; ?></div></div>
   <?php endforeach; ?>
   </section>
   <?php endif; ?>
