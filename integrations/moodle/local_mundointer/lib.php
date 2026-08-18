@@ -2038,14 +2038,32 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
         var navbar = document.querySelector("#page-wrapper nav.navbar .navbar-brand");
         if (navbar) {
+            var brandImage = brand.querySelector("img");
+            if (!brandImage) {
+                brand.classList.add("mundointer-brand-ribbon");
+                brand.style.display = "flex";
+                return;
+            }
             brand.classList.add("mundointer-navbar-brand");
             navbar.textContent = "";
             navbar.appendChild(brand);
             var faviconUrl = brand.getAttribute("data-favicon");
-            var brandImage = brand.querySelector("img");
+            var logoUrl = brand.getAttribute("data-brand-logo");
             if (faviconUrl && brandImage) {
                 brandImage.src = faviconUrl;
                 brandImage.removeAttribute("srcset");
+                var brandImageAttempts = 0;
+                brandImage.addEventListener("error", function () {
+                    brandImageAttempts++;
+                    if (brandImageAttempts === 1 && logoUrl) {
+                        brandImage.src = logoUrl;
+                        brandImage.removeAttribute("srcset");
+                        return;
+                    }
+                    brandImage.style.display = "none";
+                    var copy = brand.querySelector(".mundointer-brand-copy");
+                    if (copy) copy.style.display = "";
+                });
             }
             return;
         }

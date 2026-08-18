@@ -617,6 +617,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // em todas as páginas, sem depender da marca da sessão.
         upgrade_plugin_savepoint(true, 2026081830, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081831) {
+        // Sem mudança de esquema. Navbar só é alterado quando existe imagem da
+        // marca; em falha, restaura a logo original e preserva a logo nativa.
+        upgrade_plugin_savepoint(true, 2026081831, 'local', 'mundointer');
+    }
     return true;
 }
 
