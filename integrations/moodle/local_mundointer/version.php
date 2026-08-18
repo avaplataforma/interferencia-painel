@@ -3,7 +3,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_mundointer';
-$plugin->version = 2026081834;
+$plugin->version = 2026081835;
 $plugin->requires = 2022041900;
 $plugin->maturity = MATURITY_ALPHA;
-$plugin->release = '1.0.34';
+$plugin->release = '1.0.35';

@@ -637,6 +637,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // dentro do conteúdo após o carregamento da página (e fica oculta até lá).
         upgrade_plugin_savepoint(true, 2026081834, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081835) {
+        // Sem mudança de esquema. A testeira da marca passou a aparecer também
+        // dentro dos cursos e o botão flutuante foi removido.
+        upgrade_plugin_savepoint(true, 2026081835, 'local', 'mundointer');
+    }
     return true;
 }
 

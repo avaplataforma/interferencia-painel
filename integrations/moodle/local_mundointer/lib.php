@@ -112,7 +112,7 @@ a.mundointer-link,
 .mundointer-mycourses-contacts a:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
 }
-body:not(.mundointer-mycourses) #mundointer-mycourses-hero {
+body:not(.mundointer-mycourses):not(.mundointer-hero-course) #mundointer-mycourses-hero {
     display: none !important;
 }
 body.mundointer-mycourses #region-main h1,
@@ -134,36 +134,7 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     text-decoration: none;
 }
 .mundointer-portal-float {
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 1rem;
-    z-index: 9999;
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    padding: .65rem 1rem;
-    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
-    border-radius: 999px;
-    background: #fff;
-    color: var(--mundointer-primary);
-    font-weight: 800;
-    font-size: .9rem;
-    text-decoration: none;
-    box-shadow: 0 .5rem 1.2rem rgb(20 40 70 / 18%);
-}
-.mundointer-portal-float:hover {
-    background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
-}
-body.pagelayout-login .mundointer-portal-float {
     display: none;
-}
-@media (max-width: 768px) {
-    .mundointer-portal-float {
-        bottom: .6rem;
-        padding: .55rem .8rem;
-        font-size: .82rem;
-    }
 }
 .mundointer-navbar-portal:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
@@ -1332,7 +1303,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
         .'</span>';
 
     $isMyCourses = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/my/courses.php');
-    if ($isMyCourses) {
+    $isCourseView = $PAGE !== null && $PAGE->url !== null && (str_starts_with((string) $PAGE->pagetype, 'course-view') || str_contains((string) $PAGE->url->get_path(), '/course/view.php'));
+    if ($isMyCourses || $isCourseView) {
         $firstname = s((string) (isloggedin() && !isguestuser() ? ($USER->firstname ?? '') : ''));
         $greeting = $firstname !== '' ? 'Olá, ' . $firstname . '! 👋' : 'Olá! 👋';
         $heroSub = s((string) $brand['name']) . ($welcome !== '' ? ' · ' . $welcome : '');
@@ -1346,12 +1318,6 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</a>'
             . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
             . '</div></header>';
-    }
-
-    $isPortal = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/local/mundointer/portal.php');
-    if (isloggedin() && !isguestuser() && !$isPortal) {
-        $portalUrl = s((string) (new moodle_url('/local/mundointer/portal.php'))->out(false));
-        $html .= '<a class="mundointer-portal-float" href="' . $portalUrl . '"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
     }
 
     return $html.'<script>
@@ -2142,13 +2108,18 @@ function hideMundoInterCourseExtras() {
 
   function mountMundoInterCoursesHero() {
     var miHero = document.getElementById("mundointer-mycourses-hero");
-    if (!miHero || document.body.classList.contains("mundointer-mycourses")) {
+    if (!miHero) {
+      return;
+    }
+    var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
+    var doneClass = isMyCourses ? "mundointer-mycourses" : "mundointer-hero-course";
+    if (document.body.classList.contains(doneClass)) {
       return;
     }
     var miRegion = document.querySelector("#region-main") || document.querySelector("#page-content") || document.querySelector(".drawercontent");
     if (miRegion) {
       miRegion.insertBefore(miHero, miRegion.firstChild);
-      document.body.classList.add("mundointer-mycourses");
+      document.body.classList.add(doneClass);
     }
   }
   if (document.readyState === "loading") {
