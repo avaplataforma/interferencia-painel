@@ -23,6 +23,8 @@ use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\OrganizationAnnouncements;
 use Interferencia\Modules\Organization\OrganizationPortalSettings;
+use Interferencia\Modules\Organization\OrganizationMaterials;
+use Interferencia\Modules\Organization\OrganizationSatisfaction;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Organization\OrganizationPoleRepository;
@@ -158,6 +160,9 @@ return static function (
     MediaStorage $ticketFiles,
     OrganizationAnnouncements $organizationAnnouncements,
     OrganizationPortalSettings $organizationPortalSettings,
+    OrganizationMaterials $organizationMaterials,
+    OrganizationSatisfaction $organizationSatisfaction,
+    MediaStorage $materialFiles,
     AvaConnectionRepository $avaConnections,
     AvaBrandCatalog $avaBrands,
     AvaPoloMappingRepository $avaPoloMappings,
@@ -198,7 +203,11 @@ return static function (
     $router->post('/admin/portal',static function(Request$request)use($organizationAnnouncements,$organizationId,$auth,$session,$basePath):Response{try{$organizationAnnouncements->create($organizationId,(string)$request->input('title',''),(string)$request->input('body',''),(string)$request->input('expires_at',''),$auth->user()?->id);$session->flash('announcements.message','Comunicado publicado. Ele já aparece no Portal do Aluno.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/portal/{id:\d+}/toggle',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->toggle((int)$params['id'],$organizationId,$request->input('active')==='1');$session->flash('announcements.message','Comunicado atualizado.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/portal/{id:\d+}/delete',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->delete((int)$params['id'],$organizationId);$session->flash('announcements.message','Comunicado removido.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $router->post('/admin/portal/tabs',static function(Request$request)use($organizationPortalSettings,$organizationId,$session,$basePath):Response{try{$organizationPortalSettings->save($organizationId,['journey'=>$request->input('tab_journey')==='1','enrollments'=>$request->input('tab_enrollments')==='1','finance'=>$request->input('tab_finance')==='1','tickets'=>$request->input('tab_tickets')==='1','documents'=>$request->input('tab_documents')==='1']);$session->flash('announcements.message','Abas do Portal do Aluno atualizadas.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal/tabs');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/tabs',static function(Request$request)use($organizationPortalSettings,$organizationId,$session,$basePath):Response{try{$organizationPortalSettings->save($organizationId,['journey'=>$request->input('tab_journey')==='1','enrollments'=>$request->input('tab_enrollments')==='1','finance'=>$request->input('tab_finance')==='1','tickets'=>$request->input('tab_tickets')==='1','documents'=>$request->input('tab_documents')==='1','certificates'=>$request->input('tab_certificates')==='1','materials'=>$request->input('tab_materials')==='1','satisfaction'=>$request->input('tab_satisfaction')==='1']);$session->flash('announcements.message','Abas do Portal do Aluno atualizadas.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal/tabs');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/portal/materials',static function(Request$request)use($view,$organizationMaterials,$organizationId,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('admin/portal-materials',['title'=>'Materiais — '.$browserTitle,'materials'=>$organizationMaterials->list($organizationId),'message'=>$session->get('announcements.message'),'error'=>$session->get('announcements.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/materials',static function(Request$request)use($organizationMaterials,$materialFiles,$organizationId,$auth,$session,$basePath):Response{try{$file=$materialFiles->storeUploaded($request->file('file'));if($file===null)throw new RuntimeException('Selecione um arquivo (PDF, imagem, Word ou áudio).');$organizationMaterials->create($organizationId,(string)$request->input('title',''),$file,$auth->user()?->id);$session->flash('announcements.message','Material publicado no Portal do Aluno.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal/materials');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/materials/{id:\d+}/delete',static function(Request$request,array$params)use($organizationMaterials,$organizationId,$session,$basePath):Response{try{$organizationMaterials->delete((int)$params['id'],$organizationId);$session->flash('announcements.message','Material removido.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal/materials');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/portal/satisfaction',static function(Request$request)use($view,$organizationSatisfaction,$organizationId,$session,$basePath,$browserTitle):Response{return$view->render('admin/portal-satisfaction',['title'=>'Satisfação — '.$browserTitle,'summary'=>$organizationSatisfaction->summary($organizationId),'responses'=>$organizationSatisfaction->recent($organizationId),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $documentResponse=static function(Request$request,array$document)use($documents):Response{
         try{$body=$documents->read($document);$mime=(string)$document['mime_type'];$inline=$request->queryValue('inline')==='1'&&($mime==='application/pdf'||str_starts_with($mime,'image/'));$name=preg_replace('/[^\pL\pN._ -]+/u','_',basename((string)$document['original_name']))?:'documento';return(new Response($body,200))->withHeaders(['Content-Type'=>$mime,'Content-Length'=>(string)strlen($body),'Content-Disposition'=>($inline?'inline':'attachment').'; filename="'.str_replace('"','',$name).'"','X-Content-Type-Options'=>'nosniff','Cache-Control'=>'private, no-store','Content-Security-Policy'=>"default-src 'none'; sandbox"]);}catch(Throwable){return Response::text("Documento indisponível.\n",404);}
@@ -1681,7 +1690,7 @@ return static function (
         $customer=$customerStatement->fetch();
         if(!is_array($customer))return Response::json(['ok'=>false,'error'=>'aluno não encontrado'],404);
         $customerId=(int)$customer['id'];
-        $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.ava_course_id,e.academic_progress_percent,e.academic_progress_status,e.academic_grade_percent,e.academic_grade_status,e.academic_certificate_status,e.academic_last_access_at,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
+        $enrollmentsStatement=$database->prepare("SELECT e.id,e.status,e.moodle_enrolment_status,e.ava_course_id,e.academic_progress_percent,e.academic_progress_status,e.academic_grade_percent,e.academic_grade_status,e.academic_certificate_status,e.academic_certificate_url,e.academic_last_access_at,e.created_at,COALESCE(mc.fullname,pco.commercial_name,pc.commercial_name,pc.name,pio.commercial_name,pci.commercial_name,pci.name,fp.name) course_name FROM student_enrollments e LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN organization_provider_content_offers pio ON pio.id=e.provider_content_offer_id LEFT JOIN provider_catalog_contents pci ON pci.id=pio.provider_content_id LEFT JOIN finance_products fp ON fp.id=e.finance_product_id WHERE e.finance_customer_id=:customer ORDER BY e.created_at DESC");
         $enrollmentsStatement->execute(['customer'=>$customerId]);
         $enrollments=$enrollmentsStatement->fetchAll()?:[];
         $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
@@ -1693,10 +1702,20 @@ return static function (
         $announcementsStatement=$database->prepare("SELECT id,title,body,created_at,expires_at FROM organization_announcements WHERE organization_id=:org AND is_active=1 AND (expires_at IS NULL OR expires_at>=CURDATE()) ORDER BY created_at DESC,id DESC LIMIT 5");
         $announcementsStatement->execute(['org'=>(int)$customer['organization_id']]);
         $announcements=$announcementsStatement->fetchAll()?:[];
-        $tabsStatement=$database->prepare("SELECT show_journey,show_enrollments,show_finance,show_tickets,show_documents FROM organization_portal_settings WHERE organization_id=:org LIMIT 1");
+        $tabsStatement=$database->prepare("SELECT show_journey,show_enrollments,show_finance,show_tickets,show_documents,show_certificates,show_materials,show_satisfaction FROM organization_portal_settings WHERE organization_id=:org LIMIT 1");
         $tabsStatement->execute(['org'=>(int)$customer['organization_id']]);
         $tabsRow=$tabsStatement->fetch()?:[];
-        $tabs=['journey'=>!isset($tabsRow['show_journey'])||(int)$tabsRow['show_journey']===1,'enrollments'=>!isset($tabsRow['show_enrollments'])||(int)$tabsRow['show_enrollments']===1,'finance'=>!isset($tabsRow['show_finance'])||(int)$tabsRow['show_finance']===1,'tickets'=>!isset($tabsRow['show_tickets'])||(int)$tabsRow['show_tickets']===1,'documents'=>!isset($tabsRow['show_documents'])||(int)$tabsRow['show_documents']===1];
+        $tabs=['journey'=>!isset($tabsRow['show_journey'])||(int)$tabsRow['show_journey']===1,'enrollments'=>!isset($tabsRow['show_enrollments'])||(int)$tabsRow['show_enrollments']===1,'finance'=>!isset($tabsRow['show_finance'])||(int)$tabsRow['show_finance']===1,'tickets'=>!isset($tabsRow['show_tickets'])||(int)$tabsRow['show_tickets']===1,'documents'=>!isset($tabsRow['show_documents'])||(int)$tabsRow['show_documents']===1,'certificates'=>!isset($tabsRow['show_certificates'])||(int)$tabsRow['show_certificates']===1,'materials'=>!isset($tabsRow['show_materials'])||(int)$tabsRow['show_materials']===1,'satisfaction'=>!isset($tabsRow['show_satisfaction'])||(int)$tabsRow['show_satisfaction']===1];
+        $materialsStatement=$database->prepare("SELECT id,title,file_name,file_size,created_at FROM organization_materials WHERE organization_id=:org AND is_active=1 ORDER BY created_at DESC,id DESC LIMIT 30");
+        $materialsStatement->execute(['org'=>(int)$customer['organization_id']]);
+        $materials=$materialsStatement->fetchAll()?:[];
+        $overdueStatement=$database->prepare("SELECT COUNT(*) c,COALESCE(SUM(value),0) t FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 AND status IN ('PENDING','OVERDUE') AND due_date<=CURDATE()");
+        $overdueStatement->execute(['customer'=>$customerId]);
+        $overdueRow=$overdueStatement->fetch()?:[];
+        $financeAlert=['count'=>(int)($overdueRow['c']??0),'total'=>(float)($overdueRow['t']??0)];
+        $satisfactionRatedStatement=$database->prepare("SELECT COUNT(*) FROM portal_satisfaction_responses WHERE finance_customer_id=:customer AND created_at>=NOW()-INTERVAL 90 DAY");
+        $satisfactionRatedStatement->execute(['customer'=>$customerId]);
+        $satisfactionRated=(int)$satisfactionRatedStatement->fetchColumn()>0;
         $pixClient=null;
         if($request->queryValue('pix','')==='1'){
             try{
@@ -1725,7 +1744,7 @@ return static function (
         $documentsStatement->execute(['customer'=>$customerId]);
         $documentRows=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'materials'=>$materials,'finance_alert'=>$financeAlert,'satisfaction_rated'=>$satisfactionRated,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{
@@ -1747,7 +1766,7 @@ return static function (
         return $customer;
     };
 
-    $router->postWithoutCsrf('/portal/aluno/ticket',static function(Request$request)use($portalCustomer,$tickets,$organizations,$ticketDepartments):Response{
+    $router->postWithoutCsrf('/portal/aluno/ticket',static function(Request$request)use($portalCustomer,$tickets,$organizations,$ticketDepartments,$ticketFiles):Response{
         try{
             $customer=$portalCustomer($request);
             $subject=trim((string)$request->input('subject',''));
@@ -1758,9 +1777,32 @@ return static function (
             if($master===null)throw new RuntimeException('A franquia ainda não possui um operador responsável.');
             $department=$ticketDepartments->firstActiveId();
             if($department===null)throw new RuntimeException('Nenhum setor ativo para receber chamados.');
+            $file=$ticketFiles->storeUploaded($request->file('attachment'));
             $id=$tickets->create((int)$customer['unit_id'],(int)$master['id'],$department,(int)$customer['id'],$subject,"Aberto pelo aluno no AVA.\n\n".$description,'normal',null);
+            if($file!==null)$tickets->addAttachment($id,(int)$master['id'],$file);
             return Response::json(['ok'=>true,'id'=>$id]);
         }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
+    });
+
+    $router->postWithoutCsrf('/portal/aluno/satisfaction',static function(Request$request)use($portalCustomer,$organizationSatisfaction):Response{
+        try{
+            $customer=$portalCustomer($request);
+            $rating=(int)($request->input('rating')??0);
+            if($rating<1||$rating>5)throw new RuntimeException('Selecione uma avaliação de 1 a 5 estrelas.');
+            $organizationSatisfaction->submit((int)$customer['organization_id'],(int)$customer['id'],$rating,(string)$request->input('comment',''));
+            return Response::json(['ok'=>true]);
+        }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
+    });
+
+    $router->get('/portal/aluno/material/{id:\d+}/download',static function(Request$request,array$params)use($portalCustomer,$organizationMaterials,$materialFiles):Response{
+        try{
+            $customer=$portalCustomer($request);
+            $material=$organizationMaterials->find((int)$params['id'],(int)$customer['organization_id']);
+            if($material===null||(int)$material['is_active']!==1)return Response::text("Material não encontrado.\n",404);
+            $body=$materialFiles->read((string)$material['storage_path']);
+            $name=preg_replace('/[^\pL\pN._ -]+/u','_',basename((string)$material['file_name']))?:'material';
+            return(new Response($body,200))->withHeaders(['Content-Type'=>(string)$material['mime_type'],'Content-Length'=>(string)strlen($body),'Content-Disposition'=>'attachment; filename="'.str_replace('"','',$name).'"','X-Content-Type-Options'=>'nosniff','Cache-Control'=>'private, no-store','Content-Security-Policy'=>"default-src 'none'; sandbox"]);
+        }catch(Throwable){return Response::text("Material indisponível.\n",404);}
     });
 
     $router->postWithoutCsrf('/portal/aluno/document',static function(Request$request)use($portalCustomer,$documents,$organizations):Response{

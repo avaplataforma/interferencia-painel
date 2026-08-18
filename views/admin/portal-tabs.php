@@ -16,6 +16,9 @@ $tabs=$tabs??[];
     <label class="tab-option"><input type="checkbox" name="tab_finance" value="1" <?= !empty($tabs['finance'])?'checked':'' ?>><span><strong>Financeiro</strong><small>Cobranças, 2ª via, PIX e parcelas futuras.</small></span></label>
     <label class="tab-option"><input type="checkbox" name="tab_tickets" value="1" <?= !empty($tabs['tickets'])?'checked':'' ?>><span><strong>Tickets</strong><small>Abertura e acompanhamento de chamados.</small></span></label>
     <label class="tab-option"><input type="checkbox" name="tab_documents" value="1" <?= !empty($tabs['documents'])?'checked':'' ?>><span><strong>Documentos</strong><small>Envio de documentos para a franquia.</small></span></label>
+    <label class="tab-option"><input type="checkbox" name="tab_certificates" value="1" <?= !empty($tabs['certificates'])?'checked':'' ?>><span><strong>Certificados</strong><small>Certificados emitidos com download.</small></span></label>
+    <label class="tab-option"><input type="checkbox" name="tab_materials" value="1" <?= !empty($tabs['materials'])?'checked':'' ?>><span><strong>Materiais</strong><small>Manuais e PDFs publicados pela franquia.</small></span></label>
+    <label class="tab-option"><input type="checkbox" name="tab_satisfaction" value="1" <?= !empty($tabs['satisfaction'])?'checked':'' ?>><span><strong>Pesquisa de satisfação</strong><small>Avaliação por estrelas no portal.</small></span></label>
    </div>
    <div class="form-actions"><button class="button button-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Salvar seções</button></div>
   </form>

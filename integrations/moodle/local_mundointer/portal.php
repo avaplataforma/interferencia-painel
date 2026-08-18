@@ -170,6 +170,25 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-pix-payload{flex:1;min-width:16rem}
 .mi-pix-payload textarea{width:100%;min-height:4.5rem;padding:.55rem .7rem;border:1px solid #c8d4dc;border-radius:.6rem;font:inherit;font-size:.8rem;background:#fff}
 .mi-pix-payload .mi-dash-actions{justify-content:flex-start;margin-top:.5rem}
+.mi-alert-overdue{display:flex;align-items:center;gap:.9rem;margin-bottom:1.2rem;padding:.95rem 1.1rem;border:1px solid #f0c9cc;border-left:5px solid #d92525;border-radius:.8rem;background:#fdf0f1;color:#8f1d1d}
+.mi-alert-overdue>i{font-size:1.3rem}
+.mi-alert-overdue strong,.mi-alert-overdue small{display:block}
+.mi-alert-overdue small{margin-top:.2rem;opacity:.85}
+.mi-alert-go{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:#b4232c;color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.mi-nps{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:.9rem;align-items:center;margin-bottom:1.2rem;padding:1.05rem 1.15rem;border:1px solid #e4e0f7;border-left:5px solid #8b5cf6;border-radius:.8rem;background:#f8f7ff}
+.mi-nps-copy strong,.mi-nps-copy small{display:block}
+.mi-nps-copy small{color:#647482;margin-top:.2rem}
+.mi-nps-stars{display:flex;gap:.2rem}
+.mi-nps-stars button{border:0;background:none;color:#d4d4e0;font-size:1.35rem;cursor:pointer;padding:.1rem .2rem}
+.mi-nps-stars button.active{color:#f59e0b}
+.mi-nps-comment{width:100%;min-height:2.6rem;padding:.5rem .7rem;border:1px solid #c8d4dc;border-radius:.6rem;font:inherit;font-size:.85rem;background:#fff;resize:vertical}
+.mi-nps-send{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border:0;border-radius:.6rem;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
+.mi-nps .mi-dash-form-feedback{grid-column:1/-1}
+@media(max-width:900px){.mi-nps{grid-template-columns:1fr 1fr;}.mi-nps-comment{grid-column:1/-1}.mi-alert-go{margin-left:0}}
+.mi-dash-tab.certificates{background:linear-gradient(135deg,#8b5cf6,#7c3aed)}
+.mi-dash-tab.materials{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
+.mi-dash-panel.certificates{border-top-color:#8b5cf6}
+.mi-dash-panel.materials{border-top-color:#0ea5e9}
 @media(max-width:900px){.mi-dash-tabs,.mi-dash-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 <div class="mi-dash">
@@ -181,12 +200,26 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
  </header>
   <?php if ($error !== ''): ?><div class="mi-dash-error"><?php echo s($error); ?></div><?php endif; ?>
   <?php if ($data !== null): ?>
-  <?php $tabs=$data['tabs']??['journey'=>true,'enrollments'=>true,'finance'=>true,'tickets'=>true,'documents'=>true]; $firstTab='journey'; foreach(['journey','enrollments','finance','tickets','documents'] as $tabKey){if(!empty($tabs[$tabKey])){$firstTab=$tabKey;break;}} ?>
+  <?php $tabs=$data['tabs']??['journey'=>true,'enrollments'=>true,'finance'=>true,'tickets'=>true,'documents'=>true,'certificates'=>true,'materials'=>true,'satisfaction'=>true]; $firstTab='journey'; foreach(['journey','enrollments','finance','tickets','documents','certificates','materials'] as $tabKey){if(!empty($tabs[$tabKey])){$firstTab=$tabKey;break;}} ?>
   <?php if (($data['announcements'] ?? []) !== []): ?>
   <section class="mi-aviso-list" aria-label="Avisos da franquia">
    <?php foreach ($data['announcements'] as $announcement): ?>
    <div class="mi-aviso"><i class="fa-solid fa-bullhorn"></i><div><strong><?php echo s((string) ($announcement['title'] ?? 'Aviso')); ?></strong><small><?php echo s((string) ($announcement['body'] ?? '')); ?></small><time><?php echo s(substr((string) ($announcement['created_at'] ?? ''), 0, 10)); ?></time></div></div>
    <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+  <?php $financeAlert=$data['finance_alert']??['count'=>0,'total'=>0.0]; if((int)$financeAlert['count']>0): ?>
+  <div class="mi-alert-overdue"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>Você tem <?php echo (int)$financeAlert['count']; ?> parcela(s) vencida(s) — R$ <?php echo number_format((float)$financeAlert['total'], 2, ',', '.'); ?></strong><small>Clique em Ver financeiro para consultar e pagar com PIX ou boleto.</small></div><?php if (!empty($tabs['finance'])): ?><button class="mi-alert-go" type="button" data-mi-open-finance><i class="fa-solid fa-wallet"></i> Ver financeiro</button><?php endif; ?></div>
+  <?php endif; ?>
+  <?php if (!empty($tabs['satisfaction']) && empty($data['satisfaction_rated'])): ?>
+  <section class="mi-nps" aria-label="Pesquisa de satisfação">
+   <div class="mi-nps-copy"><strong>Como você avalia sua experiência?</strong><small>Sua opinião ajuda a melhorar o atendimento da franquia.</small></div>
+   <div class="mi-nps-stars" data-mi-nps-stars>
+    <?php for($star=1;$star<=5;$star++): ?><button type="button" data-mi-nps-star="<?php echo $star; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?>
+   </div>
+   <textarea class="mi-nps-comment" data-mi-nps-comment maxlength="1000" rows="2" placeholder="Comentário (opcional)"></textarea>
+   <button class="mi-nps-send" type="button" data-mi-nps-send><i class="fa-solid fa-paper-plane"></i> Enviar avaliação</button>
+   <p class="mi-dash-form-feedback" data-mi-nps-feedback hidden></p>
   </section>
   <?php endif; ?>
   <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Portal do Aluno">
@@ -195,6 +228,8 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    <?php if (!empty($tabs['finance'])): ?><button class="mi-dash-tab finance" type="button" role="tab" data-mi-tab="finance" aria-selected="<?php echo $firstTab==='finance'?'true':'false'; ?>"><i class="fa-solid fa-wallet"></i> Financeiro</button><?php endif; ?>
    <?php if (!empty($tabs['tickets'])): ?><button class="mi-dash-tab tickets" type="button" role="tab" data-mi-tab="tickets" aria-selected="<?php echo $firstTab==='tickets'?'true':'false'; ?>"><i class="fa-solid fa-headset"></i> Tickets</button><?php endif; ?>
    <?php if (!empty($tabs['documents'])): ?><button class="mi-dash-tab documents" type="button" role="tab" data-mi-tab="documents" aria-selected="<?php echo $firstTab==='documents'?'true':'false'; ?>"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif; ?>
+   <?php if (!empty($tabs['certificates'])): ?><button class="mi-dash-tab certificates" type="button" role="tab" data-mi-tab="certificates" aria-selected="<?php echo $firstTab==='certificates'?'true':'false'; ?>"><i class="fa-solid fa-award"></i> Certificados</button><?php endif; ?>
+   <?php if (!empty($tabs['materials'])): ?><button class="mi-dash-tab materials" type="button" role="tab" data-mi-tab="materials" aria-selected="<?php echo $firstTab==='materials'?'true':'false'; ?>"><i class="fa-solid fa-book-open"></i> Materiais</button><?php endif; ?>
   </nav>
  <div class="mi-dash-kpis">
   <div class="mi-dash-kpi"><i class="fa-solid fa-route" style="background:#2563eb"></i><div><strong><?php echo (int) $data['journey']['matriculas']; ?></strong><small>Matrículas</small></div></div>
@@ -248,12 +283,13 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <?php foreach (($data['tickets'] ?? []) as $ticket): ?>
   <div class="mi-dash-row"><div><strong><?php echo s((string) $ticket['subject']); ?></strong><small>Aberto em <?php echo s((string) substr((string) ($ticket['created_at'] ?? ''), 0, 10)); ?></small></div><span class="mi-dash-badge <?php echo in_array((string) $ticket['status'], ['resolved', 'closed'], true) ? 'good' : 'warn'; ?>"><?php echo s((string) $ticket['status']); ?></span></div>
   <?php endforeach; ?>
-  <form class="mi-dash-form" data-mi-ticket-form>
-   <label>Assunto<input name="subject" required minlength="3" maxlength="180" placeholder="Ex.: Dúvida sobre meu acesso"></label>
-   <label>Descrição<textarea name="description" required minlength="3" maxlength="10000" rows="4" placeholder="Descreva sua necessidade..."></textarea></label>
-   <div class="mi-dash-actions"><button class="new" type="submit"><i class="fa-solid fa-paper-plane"></i> Abrir ticket</button></div>
-   <p class="mi-dash-form-feedback" data-mi-ticket-feedback hidden></p>
-  </form>
+   <form class="mi-dash-form" data-mi-ticket-form enctype="multipart/form-data">
+    <label>Assunto<input name="subject" required minlength="3" maxlength="180" placeholder="Ex.: Dúvida sobre meu acesso"></label>
+    <label>Descrição<textarea name="description" required minlength="3" maxlength="10000" rows="4" placeholder="Descreva sua necessidade..."></textarea></label>
+    <label>Anexo (opcional — PDF, imagem, Word ou áudio)<input type="file" name="attachment"></label>
+    <div class="mi-dash-actions"><button class="new" type="submit"><i class="fa-solid fa-paper-plane"></i> Abrir ticket</button></div>
+    <p class="mi-dash-form-feedback" data-mi-ticket-feedback hidden></p>
+   </form>
  </section>
  <?php endif; ?>
  <?php if (!empty($tabs['documents'])): ?>
@@ -271,6 +307,24 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    <div class="mi-dash-actions"><button class="new" type="submit"><i class="fa-solid fa-upload"></i> Enviar documento</button></div>
    <p class="mi-dash-form-feedback" data-mi-document-feedback hidden></p>
   </form>
+ </section>
+ <?php endif; ?>
+ <?php if (!empty($tabs['certificates'])): ?>
+ <section class="mi-dash-panel certificates" data-mi-panel="certificates" data-active="<?php echo $firstTab==='certificates'?'1':'0'; ?>">
+  <h2><i class="fa-solid fa-award" style="color:#8b5cf6"></i> Certificados</h2>
+  <?php $certificates=array_values(array_filter(($data['enrollments']??[]),static fn(array$item):bool=>(string)($item['academic_certificate_status']??'')==='available')); if($certificates===[]): ?><p class="mi-dash-empty">Nenhum certificado disponível ainda.</p><?php endif; ?>
+  <?php foreach($certificates as$enrollment): ?>
+  <div class="mi-dash-row"><div><strong><i class="fa-solid fa-award" style="color:#8b5cf6"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small>Certificado disponível para download.</small></div><div class="mi-dash-actions"><?php if ((string) ($enrollment['academic_certificate_url'] ?? '') !== ''): ?><a class="new" href="<?php echo s((string) $enrollment['academic_certificate_url']); ?>" target="_blank" rel="noopener"><i class="fa-solid fa-download"></i> Baixar certificado</a><?php endif; ?></div></div>
+  <?php endforeach; ?>
+ </section>
+ <?php endif; ?>
+ <?php if (!empty($tabs['materials'])): ?>
+ <section class="mi-dash-panel materials" data-mi-panel="materials" data-active="<?php echo $firstTab==='materials'?'1':'0'; ?>">
+  <h2><i class="fa-solid fa-book-open" style="color:#2563eb"></i> Materiais</h2>
+  <?php if (($data['materials'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum material publicado pela franquia.</p><?php endif; ?>
+  <?php foreach (($data['materials'] ?? []) as $material): $download=$central.'/portal/aluno/material/'.(int)$material['id'].'/download?cpf='.rawurlencode($cpf).'&token='.rawurlencode($token).($orgCode!==''?'&org='.rawurlencode($orgCode):''); ?>
+  <div class="mi-dash-row"><div><strong><i class="fa-solid fa-file-pdf" style="color:#2563eb"></i> <?php echo s((string) ($material['title'] ?? 'Material')); ?></strong><small><?php echo s((string) ($material['file_name'] ?? '')); ?> · <?php echo number_format((int)($material['file_size']??0)/1024,0,',','.'); ?> KB</small></div><div class="mi-dash-actions"><a class="new" href="<?php echo s($download); ?>"><i class="fa-solid fa-download"></i> Baixar</a></div></div>
+  <?php endforeach; ?>
  </section>
  <?php endif; ?>
  <script>
@@ -309,26 +363,72 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    var baseUrl = "<?php echo s($central); ?>/portal/aluno";
    var portalParams = { cpf: "<?php echo s($cpf); ?>", token: "<?php echo s($token); ?>"<?php if ($orgCode !== ''): ?>, org: "<?php echo s($orgCode); ?>"<?php endif; ?> };
 
-   var ticketForm = document.querySelector("[data-mi-ticket-form]");
-   var ticketFeedback = document.querySelector("[data-mi-ticket-feedback]");
-   if (ticketForm) {
-     ticketForm.addEventListener("submit", function (event) {
-       event.preventDefault();
-       ticketFeedback.hidden = true;
-       var body = new URLSearchParams(portalParams);
-       body.set("subject", ticketForm.querySelector("[name=subject]").value);
-       body.set("description", ticketForm.querySelector("[name=description]").value);
-       fetch(baseUrl + "/ticket", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
-         .then(function (response) { return response.json(); })
-         .then(function (result) {
-           ticketFeedback.hidden = false;
-           ticketFeedback.className = "mi-dash-form-feedback " + (result.ok ? "ok" : "err");
-           ticketFeedback.textContent = result.ok ? "Ticket aberto! Nossa equipe já pode acompanhar." : (result.error || "Não foi possível abrir o ticket.");
-           if (result.ok) { ticketForm.reset(); setTimeout(function () { window.location.reload(); }, 1200); }
-         })
-         .catch(function () { ticketFeedback.hidden = false; ticketFeedback.className = "mi-dash-form-feedback err"; ticketFeedback.textContent = "Falha de conexão. Tente novamente."; });
-     });
-   }
+    var ticketForm = document.querySelector("[data-mi-ticket-form]");
+    var ticketFeedback = document.querySelector("[data-mi-ticket-feedback]");
+    if (ticketForm) {
+      ticketForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        ticketFeedback.hidden = true;
+        var body = new FormData();
+        Object.keys(portalParams).forEach(function (key) { body.set(key, portalParams[key]); });
+        body.set("subject", ticketForm.querySelector("[name=subject]").value);
+        body.set("description", ticketForm.querySelector("[name=description]").value);
+        var attachment = ticketForm.querySelector("[name=attachment]");
+        if (attachment && attachment.files && attachment.files[0]) {
+          body.set("attachment", attachment.files[0]);
+        }
+        fetch(baseUrl + "/ticket", { method: "POST", body: body })
+          .then(function (response) { return response.json(); })
+          .then(function (result) {
+            ticketFeedback.hidden = false;
+            ticketFeedback.className = "mi-dash-form-feedback " + (result.ok ? "ok" : "err");
+            ticketFeedback.textContent = result.ok ? "Ticket aberto! Nossa equipe já pode acompanhar." : (result.error || "Não foi possível abrir o ticket.");
+            if (result.ok) { ticketForm.reset(); setTimeout(function () { window.location.reload(); }, 1200); }
+          })
+          .catch(function () { ticketFeedback.hidden = false; ticketFeedback.className = "mi-dash-form-feedback err"; ticketFeedback.textContent = "Falha de conexão. Tente novamente."; });
+      });
+    }
+
+    var openFinance = document.querySelector("[data-mi-open-finance]");
+    if (openFinance) {
+      openFinance.addEventListener("click", function () { activate("finance"); });
+    }
+
+    var npsBlock = document.querySelector("[data-mi-nps-stars]");
+    if (npsBlock) {
+      var npsRating = 0;
+      var npsSend = document.querySelector("[data-mi-nps-send]");
+      var npsFeedback = document.querySelector("[data-mi-nps-feedback]");
+      npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (starButton) {
+        starButton.addEventListener("click", function () {
+          npsRating = parseInt(starButton.dataset.miNpsStar, 10);
+          npsBlock.querySelectorAll("[data-mi-nps-star]").forEach(function (other) {
+            other.classList.toggle("active", parseInt(other.dataset.miNpsStar, 10) <= npsRating);
+          });
+        });
+      });
+      npsSend.addEventListener("click", function () {
+        if (npsRating < 1) {
+          npsFeedback.hidden = false;
+          npsFeedback.className = "mi-dash-form-feedback err";
+          npsFeedback.textContent = "Selecione de 1 a 5 estrelas.";
+          return;
+        }
+        npsFeedback.hidden = true;
+        var body = new URLSearchParams(portalParams);
+        body.set("rating", String(npsRating));
+        body.set("comment", (document.querySelector("[data-mi-nps-comment]") || {}).value || "");
+        fetch(baseUrl + "/satisfaction", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
+          .then(function (response) { return response.json(); })
+          .then(function (result) {
+            npsFeedback.hidden = false;
+            npsFeedback.className = "mi-dash-form-feedback " + (result.ok ? "ok" : "err");
+            npsFeedback.textContent = result.ok ? "Obrigado pela sua avaliação! 💜" : (result.error || "Não foi possível enviar.");
+            if (result.ok) { var nps = document.querySelector(".mi-nps"); if (nps) nps.style.display = "none"; }
+          })
+          .catch(function () { npsFeedback.hidden = false; npsFeedback.className = "mi-dash-form-feedback err"; npsFeedback.textContent = "Falha de conexão. Tente novamente."; });
+      });
+    }
 
    var documentForm = document.querySelector("[data-mi-document-form]");
    var documentFeedback = document.querySelector("[data-mi-document-feedback]");

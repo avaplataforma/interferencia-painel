@@ -663,6 +663,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // movido para o final.
         upgrade_plugin_savepoint(true, 2026081839, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081840) {
+        // Sem mudança de esquema. Portal: certificados com download, materiais
+        // da franquia, alerta de parcelas vencidas, anexos em tickets e NPS.
+        upgrade_plugin_savepoint(true, 2026081840, 'local', 'mundointer');
+    }
     return true;
 }
 
