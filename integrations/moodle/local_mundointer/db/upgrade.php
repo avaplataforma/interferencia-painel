@@ -700,6 +700,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // suporte redesenhado em cartão moderno com pílulas de contato.
         upgrade_plugin_savepoint(true, 2026081846, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081847) {
+        // Sem mudança de esquema. Pílulas de contato centralizadas na caixa
+        // de suporte do login.
+        upgrade_plugin_savepoint(true, 2026081847, 'local', 'mundointer');
+    }
     return true;
 }
 

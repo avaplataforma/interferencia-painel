@@ -382,6 +382,7 @@ body.pagelayout-login .btn-cookie{display:none!important}
     display: flex;
     gap: .5rem;
     flex-wrap: wrap;
+    justify-content: center;
 }
 .mundointer-support-pill {
     display: inline-flex;
