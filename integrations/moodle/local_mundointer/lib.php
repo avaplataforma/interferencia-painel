@@ -2045,9 +2045,13 @@ function hideMundoInterCourseExtras() {
       var siteUrl = brand.getAttribute("data-site-url") || "";
       var contacts = "<a href=\"" + basePath + "local/mundointer/portal.php\">Meu espaço</a>";
       if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
+      var fullName = brand.getAttribute("data-student-name") || "";
+      var firstName = fullName.split(/\s+/)[0] || "";
+      var greeting = firstName ? "Olá, " + firstName + "! 👋" : "Olá! 👋";
+      var heroSub = brandName + (welcome ? " · " + welcome : "");
       hero.innerHTML = heroLogo
-        + "<div class=\"mundointer-mycourses-copy\"><strong>" + brandName + "</strong>"
-        + "<small>" + (studentName || welcome || "") + "</small></div>"
+        + "<div class=\"mundointer-mycourses-copy\"><strong>" + greeting + "</strong>"
+        + "<small>" + heroSub + "</small></div>"
         + (contacts ? "<div class=\"mundointer-mycourses-contacts\">" + contacts + "</div>" : "");
       region.insertBefore(hero, region.firstChild);
     }

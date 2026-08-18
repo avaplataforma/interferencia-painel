@@ -510,6 +510,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // Jornada, Matrículas, Financeiro, Tickets e Documentos do aluno.
         upgrade_plugin_savepoint(true, 2026081809, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081810) {
+        // Sem mudança de esquema. A testeira de Meus cursos volta a cumprimentar
+        // o aluno pelo nome (Olá, Nome!).
+        upgrade_plugin_savepoint(true, 2026081810, 'local', 'mundointer');
+    }
     return true;
 }
 
