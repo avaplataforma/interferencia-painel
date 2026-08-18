@@ -102,6 +102,7 @@ a.mundointer-link,
 .mundointer-mycourses-contacts a {
     display: inline-flex;
     align-items: center;
+    gap: .45rem;
     padding: .45rem .8rem;
     border-radius: .6rem;
     background: var(--mundointer-primary);
@@ -1315,7 +1316,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . $heroLogo
             . '<div class="mundointer-mycourses-copy"><strong>' . $greeting . '</strong><small>' . $heroSub . '</small></div>'
             . '<div class="mundointer-mycourses-contacts">'
-            . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</a>'
+            . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-user-graduate"></i> Portal do Aluno</a>'
             . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
             . '</div></header>';
     }

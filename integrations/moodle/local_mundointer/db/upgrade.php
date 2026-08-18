@@ -642,6 +642,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // dentro dos cursos e o botão flutuante foi removido.
         upgrade_plugin_savepoint(true, 2026081835, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081836) {
+        // Sem mudança de esquema. Ícone educacional no botão Portal do Aluno e
+        // espaçamento entre ícone e texto.
+        upgrade_plugin_savepoint(true, 2026081836, 'local', 'mundointer');
+    }
     return true;
 }
 
