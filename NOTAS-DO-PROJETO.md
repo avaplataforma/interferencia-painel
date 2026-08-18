@@ -74,5 +74,6 @@ ava-courses:process | ava-courses:link-catalog | site:recoveries:sync | sitemap:
 
 - Serviço: `systemctl status code-server` (user `deploy`, porta local 8080)
 - Workspace: `/home/deploy/dev/mundo-inter` (clone do repo; **nunca editar /var/www/painel-inter diretamente**)
-- Fluxo no code-server: editar → commit → push → pull na produção → migrate → smoke
+- Fluxo no code-server: editar → commit → push → deploy na produção
+- **Deploy dentro do Code Server: NÃO usar SSH** (a produção fica na mesma VPS). Rodar `bash scripts/deploy-prod.sh` (pull workspace + produção, migrate e smoke)
 - Reconfigurar senha: `/home/deploy/.config/code-server/config.yaml`
