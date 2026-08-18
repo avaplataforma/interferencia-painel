@@ -1305,7 +1305,8 @@ function local_mundointer_before_standard_top_of_body_html(): string
 
     $isMyCourses = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/my/courses.php');
     $isCourseView = $PAGE !== null && $PAGE->url !== null && (str_starts_with((string) $PAGE->pagetype, 'course-view') || str_contains((string) $PAGE->url->get_path(), '/course/view.php'));
-    if ($isMyCourses || $isCourseView) {
+    $isActivityView = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/mod/');
+    if ($isMyCourses || $isCourseView || $isActivityView) {
         $firstname = s((string) (isloggedin() && !isguestuser() ? ($USER->firstname ?? '') : ''));
         $greeting = $firstname !== '' ? 'Olá, ' . $firstname . '! 👋' : 'Olá! 👋';
         $heroSub = s((string) $brand['name']) . ($welcome !== '' ? ' · ' . $welcome : '');
@@ -2041,7 +2042,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
                 });
             }
             var moodleBase = brand.getAttribute("data-moodle-base") || "";
-            if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
+            if (moodleBase) {
                 navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
             }
             return;

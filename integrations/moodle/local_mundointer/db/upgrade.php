@@ -689,6 +689,12 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // documentos obrigatórios pendentes do aluno.
         upgrade_plugin_savepoint(true, 2026081844, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081845) {
+        // Sem mudança de esquema. Testeira da marca também em atividades (mod)
+        // e logo sempre leva ao Portal do Aluno; estrelas pintam na hora e
+        // permitem reavaliar o curso.
+        upgrade_plugin_savepoint(true, 2026081845, 'local', 'mundointer');
+    }
     return true;
 }
 

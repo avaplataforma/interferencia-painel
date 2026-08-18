@@ -1696,7 +1696,10 @@ return static function (
         $ratedStatement=$database->prepare("SELECT DISTINCT enrollment_id FROM portal_satisfaction_responses WHERE finance_customer_id=:customer AND enrollment_id IS NOT NULL AND created_at>=NOW()-INTERVAL 90 DAY");
         $ratedStatement->execute(['customer'=>$customerId]);
         $ratedIds=[];foreach($ratedStatement->fetchAll()as$row)$ratedIds[(int)$row['enrollment_id']]=true;
-        foreach($enrollments as&$enrollmentRow){$enrollmentRow['satisfaction_rated']=isset($ratedIds[(int)($enrollmentRow['id']??0)]);}unset($enrollmentRow);
+        $lastRatingStatement=$database->prepare("SELECT enrollment_id,rating FROM portal_satisfaction_responses WHERE finance_customer_id=:customer AND enrollment_id IS NOT NULL ORDER BY created_at DESC,id DESC");
+        $lastRatingStatement->execute(['customer'=>$customerId]);
+        $lastRatings=[];foreach($lastRatingStatement->fetchAll()as$row){$id=(int)$row['enrollment_id'];if(!isset($lastRatings[$id]))$lastRatings[$id]=(int)$row['rating'];}
+        foreach($enrollments as&$enrollmentRow){$enrollmentId=(int)($enrollmentRow['id']??0);$enrollmentRow['satisfaction_rated']=isset($ratedIds[$enrollmentId]);$enrollmentRow['satisfaction_rating']=$lastRatings[$enrollmentId]??0;}unset($enrollmentRow);
         $paymentsStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 ORDER BY due_date DESC LIMIT 12");
         $paymentsStatement->execute(['customer'=>$customerId]);
         $payments=$paymentsStatement->fetchAll()?:[];

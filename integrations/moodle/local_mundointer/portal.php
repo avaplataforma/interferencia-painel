@@ -190,8 +190,8 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-dash-panel.materials{border-top-color:#0ea5e9}
 .mi-stars-inline{display:inline-flex;gap:.05rem;margin-left:.55rem;vertical-align:middle}
 .mi-stars-inline button{border:0;background:none;padding:0 .05rem;color:#d4d4e0;cursor:pointer;font-size:.95rem;line-height:1}
-.mi-stars-inline button.active,.mi-stars-inline[data-rated="1"] button{color:#f59e0b}
-.mi-stars-inline[data-rated="1"] button{cursor:default}
+.mi-stars-inline button.active{color:#f59e0b}
+.mi-stars-inline button:hover{transform:scale(1.15)}
 @media(max-width:900px){.mi-dash-tabs,.mi-dash-kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 <div class="mi-dash">
@@ -235,8 +235,8 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="<?php echo $firstTab==='journey'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
-  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); $ratedCourse=!empty($enrollment['satisfaction_rated']); ?>
-  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rated="<?php echo $ratedCourse?'1':'0'; ?>" title="<?php echo $ratedCourse?'Avaliado!':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" <?php echo $ratedCourse?'disabled':''; ?> aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
+  <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); $courseRating=(int)($enrollment['satisfaction_rating']??0); ?>
+  <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><i class="fa-solid fa-book-open" style="color:var(--mundointer-primary)"></i> <?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?><?php if (!empty($tabs['satisfaction'])): ?><span class="mi-stars-inline" data-mi-course-stars data-enrollment="<?php echo (int) ($enrollment['id'] ?? 0); ?>" data-rating="<?php echo $courseRating; ?>" title="<?php echo $courseRating>0?'Sua avaliação: '.$courseRating.' estrela(s). Clique para mudar.':'Avalie de 1 a 5 estrelas'; ?>"><?php for($star=1;$star<=5;$star++): ?><button type="button" data-star="<?php echo $star; ?>" class="<?php echo $courseRating>=$star?'active':''; ?>" aria-label="<?php echo $star; ?> estrela(s)"><i class="fa-solid fa-star"></i></button><?php endfor; ?></span><?php endif; ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
   <?php endforeach; ?>
   </section>
   <?php endif; ?>
@@ -392,24 +392,20 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
     }
 
     document.querySelectorAll("[data-mi-course-stars]").forEach(function (group) {
-      if (group.dataset.rated === "1") return;
       var enrollmentId = parseInt(group.dataset.enrollment, 10);
       group.querySelectorAll("[data-star]").forEach(function (starButton) {
         starButton.addEventListener("click", function () {
           var rating = parseInt(starButton.dataset.star, 10);
+          group.querySelectorAll("[data-star]").forEach(function (other) {
+            other.classList.toggle("active", parseInt(other.dataset.star, 10) <= rating);
+          });
+          group.dataset.rating = String(rating);
+          group.setAttribute("title", "Sua avaliação: " + rating + " estrela(s). Clique para mudar.");
           var body = new URLSearchParams(portalParams);
           body.set("rating", String(rating));
           body.set("enrollment_id", String(enrollmentId));
           fetch(baseUrl + "/satisfaction", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body.toString() })
             .then(function (response) { return response.json(); })
-            .then(function (result) {
-              if (!result.ok) return;
-              group.dataset.rated = "1";
-              group.querySelectorAll("[data-star]").forEach(function (other) {
-                other.classList.toggle("active", parseInt(other.dataset.star, 10) <= rating);
-                other.disabled = true;
-              });
-            })
             .catch(function () {});
         });
       });
