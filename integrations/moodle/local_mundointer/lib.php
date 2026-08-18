@@ -10,7 +10,7 @@ function local_mundointer_before_standard_html_head(): string
     if (is_siteadmin()) {
         return '';
     }
-    $brand = \local_mundointer\local\brand_resolver::current();
+$brand = \local_mundointer\local\brand_resolver::current();
     if ($brand === null) {
         return '';
     }
@@ -130,33 +130,29 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     font-weight: 700;
     text-decoration: none;
 }
-.mundointer-course-portal-float {
-    position: fixed;
-    left: 1rem;
-    bottom: 1rem;
-    z-index: 9999;
+.mundointer-navbar-portal {
     display: inline-flex;
     align-items: center;
-    gap: .5rem;
-    padding: .65rem 1rem;
+    gap: .45rem;
+    margin-left: .6rem;
+    padding: .5rem .85rem;
     border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
     border-radius: 999px;
     background: #fff;
     color: var(--mundointer-primary);
     font-weight: 800;
-    font-size: .9rem;
+    font-size: .85rem;
     text-decoration: none;
-    box-shadow: 0 .5rem 1.2rem rgb(20 40 70 / 18%);
+    box-shadow: 0 .3rem .8rem rgb(20 40 70 / 14%);
+    white-space: nowrap;
 }
-.mundointer-course-portal-float:hover {
+.mundointer-navbar-portal:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
 }
 @media (max-width: 768px) {
-    .mundointer-course-portal-float {
-        left: .6rem;
-        bottom: .6rem;
-        padding: .55rem .8rem;
-        font-size: .82rem;
+    .mundointer-navbar-portal {
+        padding: .45rem .7rem;
+        font-size: .78rem;
     }
 }
 .mundointer-secretaria-link:hover {
@@ -1293,18 +1289,8 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
 function local_mundointer_before_standard_top_of_body_html(): string
 {
     global $USER, $PAGE;
-    $isCourseView = $PAGE !== null && $PAGE->url !== null && (str_starts_with((string) $PAGE->pagetype, 'course-view') || str_contains((string) $PAGE->url->get_path(), '/course/view.php'));
-    $floatButton = '';
-    if ($isCourseView && isloggedin() && !isguestuser()) {
-        $baseurl = s((string) (new moodle_url('/'))->out(false));
-        $floatButton = '<a class="mundointer-course-portal-float" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
-    }
     if (is_siteadmin()) {
-        return $floatButton;
-    }
-    $brand = \local_mundointer\local\brand_resolver::current();
-    if ($brand === null) {
-        return $floatButton;
+        return '';
     }
 
     $logo = s((string)$brand['logo_url']);
@@ -1339,7 +1325,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '</div></header>';
     }
 
-    return $html . $floatButton . '<script>
+    return $html.'<script>
 (function() {
     function setMundoInterCourseIndexSection(section, open) {
         if (!section) {
@@ -2042,12 +2028,25 @@ function local_mundointer_before_standard_top_of_body_html(): string
             var moodleBase = brand.getAttribute("data-moodle-base") || "";
             if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
                 navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
+                var portalButton = document.createElement("a");
+                portalButton.className = "mundointer-navbar-portal";
+                portalButton.href = moodleBase + "local/mundointer/portal.php";
+                portalButton.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Portal do Aluno";
+                navbar.insertAdjacentElement("afterend", portalButton);
             }
             return;
         }
 
         brand.classList.add("mundointer-brand-ribbon");
         brand.style.display = "flex";
+        var moodleBaseRibbon = brand.getAttribute("data-moodle-base") || "";
+        if (moodleBaseRibbon && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
+            var portalButtonRibbon = document.createElement("a");
+            portalButtonRibbon.className = "mundointer-navbar-portal";
+            portalButtonRibbon.href = moodleBaseRibbon + "local/mundointer/portal.php";
+            portalButtonRibbon.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Portal do Aluno";
+            brand.insertAdjacentElement("afterend", portalButtonRibbon);
+        }
     }
 
     if (document.readyState === "loading") {
