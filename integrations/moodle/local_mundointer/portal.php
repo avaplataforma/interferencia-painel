@@ -20,8 +20,8 @@ $orgCode = $brand !== null ? (string) ($brand['code'] ?? '') : '';
 
 $PAGE->set_url('/local/mundointer/portal.php');
 $PAGE->set_context(context_system::instance());
-$PAGE->set_title('Meu espaço');
-$PAGE->set_heading('Meu espaço');
+$PAGE->set_title('Secretaria Digital');
+$PAGE->set_heading('Secretaria Digital');
 echo $OUTPUT->header();
 
 $data = null;
@@ -64,8 +64,8 @@ $statusTone = static function (string $status): string {
 .mi-dash-hero strong{font-size:1.45rem}
 .mi-dash-hero small{opacity:.9;margin-top:.2rem}
 .mi-dash-hero .mi-dash-hero-actions{margin-left:auto;display:flex;gap:.5rem;flex-wrap:wrap}
-.mi-dash-hero a{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border-radius:.65rem;background:rgb(255 255 255 / 16%);color:#fff;text-decoration:none;font-weight:700}
-.mi-dash-hero a:hover{background:rgb(255 255 255 / 28%)}
+.mi-dash-hero a{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem .9rem;border-radius:.65rem;background:#fff;color:var(--mundointer-primary);text-decoration:none;font-weight:700;box-shadow:0 .3rem .8rem rgb(20 40 70 / 14%)}
+.mi-dash-hero a:hover{background:#f4f7f9}
 .mi-dash-error{padding:1rem 1.2rem;border:1px solid #f0c9cc;border-radius:.8rem;background:#fdf0f1;color:#a3271e}
 .mi-dash-tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:.6rem;margin:0 0 1.2rem}
 .mi-dash-tab{display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:3.4rem;padding:.6rem .8rem;border:0;border-radius:.8rem;color:#fff;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 .4rem 1rem rgb(20 40 70 / 10%);transition:transform .15s ease}
@@ -126,7 +126,7 @@ $statusTone = static function (string $status): string {
  </header>
  <?php if ($error !== ''): ?><div class="mi-dash-error"><?php echo s($error); ?></div><?php endif; ?>
  <?php if ($data !== null): ?>
- <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Meu espaço">
+ <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Secretaria Digital">
   <button class="mi-dash-tab journey" type="button" role="tab" data-mi-tab="journey" aria-selected="true"><i class="fa-solid fa-route"></i> Jornada</button>
   <button class="mi-dash-tab enroll" type="button" role="tab" data-mi-tab="enroll" aria-selected="false"><i class="fa-solid fa-graduation-cap"></i> Matrículas</button>
   <button class="mi-dash-tab finance" type="button" role="tab" data-mi-tab="finance" aria-selected="false"><i class="fa-solid fa-wallet"></i> Financeiro</button>

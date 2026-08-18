@@ -530,6 +530,16 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // de parcelas, abertura de tickets e envio de documentos.
         upgrade_plugin_savepoint(true, 2026081813, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081814) {
+        // Sem mudança de esquema. Secretaria Digital: saudação com o nome do
+        // aluno (global $USER) e botões do herói com fundo claro.
+        upgrade_plugin_savepoint(true, 2026081814, 'local', 'mundointer');
+    }
+    if ($oldversion < 2026081815) {
+        // Sem mudança de esquema. Link Secretaria Digital ao lado do título
+        // nativo em Meus cursos.
+        upgrade_plugin_savepoint(true, 2026081815, 'local', 'mundointer');
+    }
     return true;
 }
 

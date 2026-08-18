@@ -33,6 +33,13 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_create_sso_session',$parameters);
     }
 
+    /** Atualiza dados básicos de um usuário no Moodle (nome e e-mail). */
+    public function updateUser(int $userId,array $fields):array
+    {
+        $fields['id']=$userId;
+        return$this->call('core_user_update_users',['users'=>[$fields]]);
+    }
+
     /** @return array<string,mixed> */
     public function poloDiagnostics():array{return$this->call('local_mundointer_diagnose_poles');}
 

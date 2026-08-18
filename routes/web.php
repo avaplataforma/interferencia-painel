@@ -1300,7 +1300,7 @@ return static function (
     $router->get('/finance/customers/{id:\d+}',static function(Request$request,array$params)use($view,$finance,$financeCatalog,$financeScope,$unitContext,$moodleRepository,$auth,$session,$csrf,$basePath,$browserTitle):Response{$available=$unitContext->available();$scope=(string)($request->queryValue('context','')??'')==='pedagogical'?array_map(static fn(array$unit):int=>(int)$unit['id'],$available):$financeScope();$customer=$finance->customer((int)$params['id'],$scope,$auth->can('finance.legacy_view'));if($customer===null)return Response::text("Cliente financeiro não encontrado.\n",404);return$view->render('finance/customers/show',['title'=>(string)$customer['name'].' — Financeiro','customer'=>$customer,'academicProfile'=>$moodleRepository->academicProfileForCustomer((int)$customer['id']),'payments'=>$finance->customerPayments((int)$customer['id']),'subscriptions'=>$finance->customerSubscriptions((int)$customer['id']),'checkouts'=>$financeCatalog->customerCheckouts((int)$customer['id']),'units'=>$available,'candidates'=>$finance->crmCandidates($customer,array_map(static fn(array$u):int=>(int)$u['id'],$available)),'canManage'=>$auth->can('finance.manage'),'canReconcile'=>$auth->can('finance.manage')&&$auth->can('finance.legacy_view'),'message'=>$session->get('finance_customers.message'),'error'=>$session->get('finance_customers.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$viewFinance);
     $manageFinanceCustomers=[$requireAuth,new RequirePermission($auth,'finance.manage')];
     $router->get('/finance/customers/{id:\d+}/edit',static function(Request$request,array$params)use($view,$finance,$unitContext,$auth,$session,$csrf,$asaas,$basePath,$browserTitle):Response{$unitIds=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());$customer=$finance->customer((int)$params['id'],$unitIds,$auth->can('finance.legacy_view'));if($customer===null)return Response::text("Aluno não encontrado ou fora das unidades permitidas.\n",404);return$view->render('finance/customers/edit',['title'=>'Editar aluno — '.$browserTitle,'customer'=>$customer,'missingFields'=>StudentActionQueueBuilder::registrationMissingFields($customer),'writeEnabled'=>$asaas->paymentsWriteEnabled(),'error'=>$session->get('finance_customers.edit_error'),'cancelHref'=>$basePath.'/students/'.(int)$customer['id'].'?tab=overview','csrfField'=>$csrf->field(),'basePath'=>$basePath]);},$manageFinanceCustomers);
-    $router->post('/finance/customers/{id:\d+}/edit',static function(Request$request,array$params)use($finance,$unitContext,$auth,$asaas,$session,$basePath):Response{
+    $router->post('/finance/customers/{id:\d+}/edit',static function(Request$request,array$params)use($finance,$unitContext,$auth,$asaas,$avaConnections,$session,$basePath):Response{
         $id=(int)$params['id'];
         try{
             $unitIds=array_map(static fn(array$unit):int=>(int)$unit['id'],$unitContext->available());
@@ -1344,6 +1344,22 @@ return static function (
                 $finance->updateCustomerLocally($id,$localCustomer);
                 $session->flash('finance_customers.message','Cadastro do aluno atualizado no Painel. O Asaas permaneceu inalterado porque o modo seguro está ativo.');
             }
+            try{
+                $shared=$avaConnections->shared();
+                if((bool)($shared['configured']??false)&&(bool)($shared['is_active']??false)){
+                    $client=new MoodleClient((string)$shared['base_url'],(string)$shared['token'],true);
+                    $doc=preg_replace('/\D/','',(string)$customer['cpf_cnpj'])??'';
+                    if($doc!==''){
+                        $matches=$client->usersByField('idnumber',$doc);
+                        if(isset($matches[0]['id'])&&(int)$matches[0]['id']>0){
+                            $parts=preg_split('/\s+/',trim($name))?:[];
+                            $first=array_shift($parts)?:'Aluno';
+                            $last=trim(implode(' ',$parts))?:'Mundo Inter';
+                            $client->updateUser((int)$matches[0]['id'],['firstname'=>$first,'lastname'=>$last,'email'=>$email]);
+                        }
+                    }
+                }
+            }catch(Throwable){}
             return Response::redirect($basePath.'/students/'.$id.'?tab=overview');
         }catch(Throwable$e){
             $session->flash('finance_customers.edit_error',$e->getMessage());
