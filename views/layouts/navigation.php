@@ -1,7 +1,4 @@
 <a class="nav-link" href="<?= $escape($basePath) ?>/"><i class="fa-solid fa-house fa-fw" aria-hidden="true"></i>Visão geral</a>
-<?php if (empty($isCentralContext)): ?>
-  <a class="nav-link" href="<?= $escape($basePath) ?>/ava-sso" target="_blank"><i class="fa-solid fa-laptop fa-fw" aria-hidden="true"></i>Entrar no AVA</a>
-<?php endif; ?>
 <?php if (!empty($isCentralContext)): ?>
   <details class="nav-group" <?= $franchisesOpen ? 'open' : '' ?>>
     <summary><span><i class="fa-solid fa-network-wired fa-fw" aria-hidden="true"></i>FRANQUIAS</span></summary>

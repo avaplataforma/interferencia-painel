@@ -1975,7 +1975,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($routes,"'/ava-sso'"));
     assertTrue(str_contains($routes,"'/students/{id:\\d+}/ava-sso'"));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/students/show.php'),'ava-sso'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/layouts/navigation.php'),'ava-sso'));
+    assertTrue(!str_contains((string)file_get_contents($rootPath.'/views/layouts/navigation.php'),'ava-sso'));
     $pluginDir=$rootPath.'/integrations/moodle/local_mundointer';
     assertTrue(is_file($pluginDir.'/sso_login.php'));
     assertTrue(is_file($pluginDir.'/classes/external/sso_session.php'));
