@@ -437,6 +437,32 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081618, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081800) {
+        global $DB;
+
+        // Registra o login automático (SSO) nos serviços conector já existentes.
+        $connectorservices = $DB->get_records_sql(
+            "SELECT DISTINCT service.id
+               FROM {external_services} service
+               JOIN {external_services_functions} functionlink
+                 ON functionlink.externalserviceid = service.id
+              WHERE functionlink.functionname = :ping",
+            ['ping' => 'local_mundointer_ping']
+        );
+        foreach ($connectorservices as $service) {
+            if (!$DB->record_exists('external_services_functions', [
+                'externalserviceid' => (int)$service->id,
+                'functionname' => 'local_mundointer_create_sso_session',
+            ])) {
+                $DB->insert_record('external_services_functions', (object)[
+                    'externalserviceid' => (int)$service->id,
+                    'functionname' => 'local_mundointer_create_sso_session',
+                ]);
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026081800, 'local', 'mundointer');
+    }
     return true;
 }
 

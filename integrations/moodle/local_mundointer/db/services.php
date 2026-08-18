@@ -59,6 +59,13 @@ $functions = [
         'ajax' => false,
         'capabilities' => 'local/mundointer:manage',
     ],
+    'local_mundointer_create_sso_session' => [
+        'classname' => 'local_mundointer\\external\\sso_session',
+        'description' => 'Gera um token de uso único para login automático de um usuário.',
+        'type' => 'write',
+        'ajax' => false,
+        'capabilities' => 'local/mundointer:manage',
+    ],
     'local_mundointer_materialize_lti_course' => [
         'classname' => 'local_mundointer\\external\\materialize_lti_course',
         'description' => 'Cria ou atualiza um Curso Individual MASTER, agrupando as aulas LTI homologadas em módulos pedagógicos.',
@@ -80,6 +87,7 @@ $services = [
             'local_mundointer_lti_selections',
             'local_mundointer_prepare_lti_robot',
             'local_mundointer_materialize_lti_course',
+            'local_mundointer_create_sso_session',
             'core_webservice_get_site_info',
             'core_course_get_courses',
             'core_course_get_categories',

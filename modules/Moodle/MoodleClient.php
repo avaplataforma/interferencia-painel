@@ -25,6 +25,14 @@ final readonly class MoodleClient
         return$this->call('local_mundointer_sync_brands',['catalog'=>$json]);
     }
 
+    /** @return array{token:string,loginurl:string} */
+    public function createSsoSession(string $username,int $courseId=0):array
+    {
+        $parameters=['username'=>$username];
+        if($courseId>0)$parameters['courseid']=$courseId;
+        return$this->call('local_mundointer_create_sso_session',$parameters);
+    }
+
     /** @return array<string,mixed> */
     public function poloDiagnostics():array{return$this->call('local_mundointer_diagnose_poles');}
 

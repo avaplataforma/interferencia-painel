@@ -43,6 +43,105 @@ function local_mundointer_before_standard_html_head(): string
 .mundointer-theme-brand {
     display: none;
 }
+a.mundointer-link,
+.mundointer-welcome a,
+.mundointer-support-float a {
+    color: var(--mundointer-primary);
+}
+.nav-link.active,
+.nav-tabs .nav-link.active {
+    border-bottom-color: var(--mundointer-primary) !important;
+    color: var(--mundointer-primary) !important;
+}
+.mundointer-welcome {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin: 0 0 1rem;
+    padding: .9rem 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 22%, #dce3e8);
+    border-left: 5px solid var(--mundointer-primary);
+    border-radius: .85rem;
+    background: linear-gradient(135deg, #fff, var(--mundointer-primary-soft));
+}
+.mundointer-welcome strong,
+.mundointer-welcome small {
+    display: block;
+}
+.mundointer-welcome small {
+    color: #647482;
+    margin-top: .2rem;
+}
+.mundointer-welcome .mundointer-welcome-actions {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    flex-wrap: wrap;
+}
+.mundointer-welcome .mundointer-welcome-actions a {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .45rem .8rem;
+    border-radius: .6rem;
+    background: var(--mundointer-primary);
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+.mundointer-welcome .mundointer-welcome-actions a:hover {
+    background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
+}
+.mundointer-support-float {
+    position: fixed;
+    z-index: 1300;
+    right: 1rem;
+    bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: .5rem;
+}
+.mundointer-support-float .mundointer-support-chip {
+    display: none;
+    flex-direction: column;
+    gap: .35rem;
+    padding: .75rem .85rem;
+    border: 1px solid #dfe5ea;
+    border-radius: .8rem;
+    background: #fff;
+    box-shadow: 0 .5rem 1.4rem rgba(18, 36, 54, .18);
+}
+.mundointer-support-float.is-open .mundointer-support-chip {
+    display: flex;
+}
+.mundointer-support-float .mundointer-support-chip a {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    color: var(--mundointer-primary);
+    font-weight: 600;
+    text-decoration: none;
+}
+.mundointer-support-float .mundointer-support-chip strong {
+    color: var(--mundointer-secondary);
+    font-size: .85rem;
+}
+.mundointer-support-toggle {
+    display: grid;
+    place-items: center;
+    width: 3.1rem;
+    height: 3.1rem;
+    border: 0;
+    border-radius: 50%;
+    background: var(--mundointer-primary);
+    color: #fff;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 .5rem 1.4rem color-mix(in srgb, var(--mundointer-primary) 38%, transparent);
+}
 .mundointer-brand-ribbon {
     align-items: center;
     gap: .75rem;
@@ -1068,7 +1167,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $pagetitle = s((string)$brand['login_title'].' | AVA');
     $logohtml = $logo !== '' ? '<img src="'.$logo.'" alt="">' : '';
 
-    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'">'
+    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
@@ -1780,5 +1879,98 @@ function local_mundointer_before_standard_top_of_body_html(): string
         mountMundoInterBrand();
     }
 })();
-</script>';
+</script><script></script><script>
+(function () {
+  var brand = document.querySelector(".mundointer-theme-brand[data-franquia]");
+  if (!brand) return;
+  var isLogin = document.body.classList.contains("pagelayout-login") || document.body.id.indexOf("page-login-") === 0;
+  var siteUrl = brand.getAttribute("data-site-url") || "";
+  var brandName = brand.getAttribute("data-brand-name") || "";
+  var supportEmail = brand.getAttribute("data-support-email") || "";
+  var supportPhone = brand.getAttribute("data-support-phone") || "";
+  var basePath = brand.getAttribute("data-moodle-base") || "";
+  var digits = supportPhone.replace(/\D/g, "");
+  var whatsapp = digits.length >= 10 ? "https://wa.me/55" + digits : "";
+
+  if (isLogin && siteUrl && brand.getAttribute("data-login-back") === "1") {
+    var loginContainer = document.querySelector(".login-container");
+    if (loginContainer && !loginContainer.querySelector(".mundointer-back-site")) {
+      var back = document.createElement("a");
+      back.className = "mundointer-back-site";
+      back.href = siteUrl;
+      back.textContent = "Voltar ao site da franquia";
+      back.style.cssText = "display:flex;justify-content:center;margin-top:.9rem;color:var(--mundointer-primary);font-weight:600;text-decoration:none;";
+      loginContainer.appendChild(back);
+    }
+  }
+
+  if (!isLogin && brand.getAttribute("data-support-float") === "1" && !document.querySelector(".mundointer-support-float")) {
+    var wrap = document.createElement("div");
+    wrap.className = "mundointer-support-float";
+    var chip = document.createElement("div");
+    chip.className = "mundointer-support-chip";
+    var title = document.createElement("strong");
+    title.textContent = "Fale com a franquia";
+    chip.appendChild(title);
+    var institution = document.createElement("a");
+    institution.href = basePath + "local/mundointer/instituicao.php";
+    institution.textContent = "Minha instituição";
+    chip.appendChild(institution);
+    if (supportEmail) {
+      var emailLink = document.createElement("a");
+      emailLink.href = "mailto:" + supportEmail;
+      emailLink.textContent = "E-mail: " + supportEmail;
+      chip.appendChild(emailLink);
+    }
+    if (whatsapp) {
+      var whatsLink = document.createElement("a");
+      whatsLink.href = whatsapp;
+      whatsLink.target = "_blank";
+      whatsLink.rel = "noopener";
+      whatsLink.textContent = "WhatsApp";
+      chip.appendChild(whatsLink);
+    }
+    var toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "mundointer-support-toggle";
+    toggle.setAttribute("aria-label", "Suporte da franquia");
+    toggle.textContent = "?";
+    toggle.addEventListener("click", function () { wrap.classList.toggle("is-open"); });
+    wrap.appendChild(chip);
+    wrap.appendChild(toggle);
+    document.body.appendChild(wrap);
+  }
+
+  if (document.body.classList.contains("pagelayout-mydashboard") && brand.getAttribute("data-welcome") === "1" && !document.querySelector(".mundointer-welcome")) {
+    var main = document.querySelector("#region-main") || document.querySelector(".drawercontent");
+    if (main) {
+      var banner = document.createElement("div");
+      banner.className = "mundointer-welcome";
+      var copy = document.createElement("div");
+      var strong = document.createElement("strong");
+      strong.textContent = brandName ? "Bem-vindo(a) à " + brandName + "!" : "Bem-vindo(a)!";
+      var small = document.createElement("small");
+      small.textContent = "Seus cursos e o suporte da sua franquia estão logo aqui.";
+      copy.appendChild(strong);
+      copy.appendChild(small);
+      var actions = document.createElement("div");
+      actions.className = "mundointer-welcome-actions";
+      var inst2 = document.createElement("a");
+      inst2.href = basePath + "local/mundointer/instituicao.php";
+      inst2.textContent = "Minha instituição";
+      actions.appendChild(inst2);
+      if (siteUrl) {
+        var siteLink = document.createElement("a");
+        siteLink.href = siteUrl;
+        siteLink.target = "_blank";
+        siteLink.rel = "noopener";
+        siteLink.textContent = "Site da franquia";
+        actions.appendChild(siteLink);
+      }
+      banner.appendChild(copy);
+      banner.appendChild(actions);
+      main.insertBefore(banner, main.firstChild);
+    }
+  }
+})();</script>';
 }
