@@ -728,6 +728,14 @@ $tests['prepara fluxo unificado de matrículas'] = static function () use ($root
     assertTrue(is_file($rootPath.'/database/migrations/20260805_640000_link_finance_products_to_moodle_courses.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php'),'2. Curso contratado'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php'),'5. Atendente'));
+    $enrollmentForm=(string)file_get_contents($rootPath.'/views/moodle/enrollments/form.php');
+    assertTrue(str_contains($enrollmentForm,'data-enrollment-search="student"'));
+    assertTrue(str_contains($enrollmentForm,'data-enrollment-search="product"'));
+    assertTrue(str_contains($enrollmentForm,'data-enrollment-summary'));
+    assertTrue(str_contains($enrollmentForm,'data-selected-ava'));
+    assertTrue(str_contains($enrollmentForm,'for="enrollment-student"'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'Nenhum resultado encontrado.'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/public/assets/js/app.js'),'data-enrollment-submit'));
     assertTrue(is_file($rootPath.'/database/migrations/20260805_650000_add_attendant_to_student_enrollments.php'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/views/moodle/enrollments/index.php'),'Excluir matrícula'));
     assertTrue(str_contains($layout,'>Cadastro</a>'));
