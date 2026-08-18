@@ -2032,7 +2032,7 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),"data['announcements']"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),"data['tabs']"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'Baixar certificado'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'mi-nps'));
+    assertTrue(!str_contains((string)file_get_contents($pluginDir.'/portal.php'),'mi-nps'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'mi-alert-overdue'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'name="attachment"'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'data-mi-open-finance'));
