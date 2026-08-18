@@ -16,6 +16,16 @@ final readonly class OrganizationSatisfaction
         if ($rating < 1 || $rating > 5) throw new RuntimeException('Avaliação inválida.');
         $comment = trim($comment);
         if (mb_strlen($comment) > 1000) throw new RuntimeException('O comentário deve ter no máximo 1.000 caracteres.');
+        if ($enrollmentId !== null) {
+            $existing = $this->database->prepare('SELECT id FROM portal_satisfaction_responses WHERE finance_customer_id=:customer AND enrollment_id=:enrollment LIMIT 1');
+            $existing->execute(['customer' => $customerId, 'enrollment' => $enrollmentId]);
+            $id = $existing->fetchColumn();
+            if ($id !== false) {
+                $s = $this->database->prepare('UPDATE portal_satisfaction_responses SET rating=:rating,comment=:comment,created_at=NOW() WHERE id=:id');
+                $s->execute(['rating' => $rating, 'comment' => $comment === '' ? null : $comment, 'id' => (int) $id]);
+                return;
+            }
+        }
         $s = $this->database->prepare('INSERT INTO portal_satisfaction_responses(organization_id,finance_customer_id,enrollment_id,rating,comment) VALUES(:org,:customer,:enrollment,:rating,:comment)');
         $s->execute(['org' => $organizationId, 'customer' => $customerId, 'enrollment' => $enrollmentId, 'rating' => $rating, 'comment' => $comment === '' ? null : $comment]);
     }
