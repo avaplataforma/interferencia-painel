@@ -22,7 +22,7 @@
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/branding"><i class="fa-solid fa-palette fa-fw" aria-hidden="true"></i>Personalização</a>
       <a class="nav-link" href="<?= $escape($basePath) ?>/admin/document-types"><i class="fa-solid fa-folder-tree fa-fw" aria-hidden="true"></i>Documentos</a>
        <a class="nav-link" href="<?= $escape($basePath) ?>/admin/platform/integrations"><i class="fa-solid fa-plug fa-fw" aria-hidden="true"></i>Integrações</a>
-       <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/announcements"><i class="fa-solid fa-bullhorn fa-fw" aria-hidden="true"></i>Comunicados</a><?php endif; ?>
+       <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/portal"><i class="fa-solid fa-user-graduate fa-fw" aria-hidden="true"></i>Portal do Aluno</a><?php endif; ?>
     </div>
   </details>
 <?php else: ?>
@@ -38,9 +38,9 @@
       <?php if ($navigation['whatsapp_lines'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/whatsapp/lines"><i class="fa-solid fa-sim-card fa-fw" aria-hidden="true"></i>Linhas do WhatsApp</a><?php endif; ?>
       <?php if ($navigation['whatsapp_templates'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/whatsapp/templates"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true"></i>Modelos do WhatsApp</a><?php endif; ?>
       <?php if ($navigation['ticket_departments'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/ticket-departments"><i class="fa-solid fa-people-group fa-fw" aria-hidden="true"></i>Setores</a><?php endif; ?>
-       <?php if ($navigation['site'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/site"><i class="fa-solid fa-store fa-fw" aria-hidden="true"></i>Site Institucional</a><?php endif; ?>
-       <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/announcements"><i class="fa-solid fa-bullhorn fa-fw" aria-hidden="true"></i>Comunicados</a><?php endif; ?>
+      <?php if ($navigation['site'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/site"><i class="fa-solid fa-store fa-fw" aria-hidden="true"></i>Site Institucional</a><?php endif; ?>
     </div></details>
   <?php endif; ?>
+  <?php if ($navigation['users'] ?? false): ?><details class="nav-group" <?= $portalOpen ? 'open' : '' ?>><summary><span><i class="fa-solid fa-user-graduate fa-fw"></i>PORTAL DO ALUNO</span></summary><div class="nav-submenu"><a class="nav-link" href="<?= $escape($basePath) ?>/admin/portal#comunicados"><i class="fa-solid fa-bullhorn fa-fw"></i>Comunicados</a><a class="nav-link" href="<?= $escape($basePath) ?>/admin/portal#abas"><i class="fa-solid fa-table-columns fa-fw"></i>Abas e seções</a></div></details><?php endif; ?>
   <div class="adm-extensions"><?php if ($navigation['finance_products'] ?? false): ?><a class="nav-link adm-extension" href="<?= $escape($basePath) ?>/admin/finance/products"><i class="fa-solid fa-book-open fa-fw"></i>Cursos e preços</a><?php endif; ?><?php if ($navigation['finance_campaigns'] ?? false): ?><a class="nav-link adm-extension" href="<?= $escape($basePath) ?>/admin/finance/campaigns"><i class="fa-solid fa-bullhorn fa-fw"></i>Campanhas</a><?php endif; ?><?php if($navigation['finance_settings']??false):?><a class="nav-link adm-extension" href="<?= $escape($basePath) ?>/admin/integrations"><i class="fa-solid fa-plug fa-fw"></i>Integrações</a><?php endif;?></div>
 <?php endif; ?>

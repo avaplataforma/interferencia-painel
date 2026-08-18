@@ -11,6 +11,7 @@ $curationOpen = str_contains($currentPath, '/admin/platform/catalog-trails');
 $admOpen = !$curationOpen && (preg_match('#/(users|units|roles|tags|statuses|external-forms|ticket-departments)(?:/|$)#', $currentPath) === 1 || str_contains($currentPath, '/whatsapp/lines') || str_contains($currentPath, '/whatsapp/templates') || str_contains($currentPath, '/admin/integrations') || str_contains($currentPath, '/admin/finance') || str_contains($currentPath, '/admin/ava') || str_contains($currentPath, '/admin/site') || str_contains($currentPath, '/admin/platform') || str_contains($currentPath, '/admin/document-types'));
 $franchisesOpen = str_contains($currentPath, '/admin/organizations') || str_contains($currentPath, '/admin/franchise-');
 $studentsOpen = str_contains($currentPath, '/finance') || str_contains($currentPath, '/students/') || $isStudentRegistration;
+$portalOpen = str_contains($currentPath, '/admin/portal');
 $appScriptPath = dirname(__DIR__, 2).'/public/assets/js/app.js';
 $appScriptVersion = is_file($appScriptPath) ? (string) filemtime($appScriptPath) : '1';
 ?>

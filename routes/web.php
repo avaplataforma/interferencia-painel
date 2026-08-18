@@ -22,6 +22,7 @@ use Interferencia\Modules\Identity\PasswordHasher;
 use Interferencia\Modules\Organization\UnitManager;
 use Interferencia\Modules\Organization\UnitRepository;
 use Interferencia\Modules\Organization\OrganizationAnnouncements;
+use Interferencia\Modules\Organization\OrganizationPortalSettings;
 use Interferencia\Modules\Organization\UnitContext;
 use Interferencia\Modules\Organization\OrganizationRepository;
 use Interferencia\Modules\Organization\OrganizationPoleRepository;
@@ -156,6 +157,7 @@ return static function (
     DepartmentRepository $ticketDepartments,
     MediaStorage $ticketFiles,
     OrganizationAnnouncements $organizationAnnouncements,
+    OrganizationPortalSettings $organizationPortalSettings,
     AvaConnectionRepository $avaConnections,
     AvaBrandCatalog $avaBrands,
     AvaPoloMappingRepository $avaPoloMappings,
@@ -191,10 +193,11 @@ return static function (
     $router->post('/admin/document-types',static fn(Request$request):Response=>$saveDocumentType($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/document-types/{id:\d+}',static fn(Request$request,array$params):Response=>$saveDocumentType($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
-    $router->get('/admin/announcements',static function(Request$request)use($view,$organizationAnnouncements,$organizationId,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('admin/announcements',['title'=>'Comunicados — '.$browserTitle,'announcements'=>$organizationAnnouncements->list($organizationId),'message'=>$session->get('announcements.message'),'error'=>$session->get('announcements.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $router->post('/admin/announcements',static function(Request$request)use($organizationAnnouncements,$organizationId,$auth,$session,$basePath):Response{try{$organizationAnnouncements->create($organizationId,(string)$request->input('title',''),(string)$request->input('body',''),$auth->user()?->id);$session->flash('announcements.message','Comunicado publicado. Ele já aparece no Portal do Aluno.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $router->post('/admin/announcements/{id:\d+}/toggle',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->toggle((int)$params['id'],$organizationId,$request->input('active')==='1');$session->flash('announcements.message','Comunicado atualizado.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $router->post('/admin/announcements/{id:\d+}/delete',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->delete((int)$params['id'],$organizationId);$session->flash('announcements.message','Comunicado removido.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/announcements');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->get('/admin/portal',static function(Request$request)use($view,$organizationAnnouncements,$organizationPortalSettings,$organizationId,$session,$csrf,$basePath,$browserTitle):Response{return$view->render('admin/portal',['title'=>'Portal do Aluno — '.$browserTitle,'announcements'=>$organizationAnnouncements->list($organizationId),'tabs'=>$organizationPortalSettings->get($organizationId),'message'=>$session->get('announcements.message'),'error'=>$session->get('announcements.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal',static function(Request$request)use($organizationAnnouncements,$organizationId,$auth,$session,$basePath):Response{try{$organizationAnnouncements->create($organizationId,(string)$request->input('title',''),(string)$request->input('body',''),(string)$request->input('expires_at',''),$auth->user()?->id);$session->flash('announcements.message','Comunicado publicado. Ele já aparece no Portal do Aluno.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/{id:\d+}/toggle',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->toggle((int)$params['id'],$organizationId,$request->input('active')==='1');$session->flash('announcements.message','Comunicado atualizado.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/{id:\d+}/delete',static function(Request$request,array$params)use($organizationAnnouncements,$organizationId,$session,$basePath):Response{try{$organizationAnnouncements->delete((int)$params['id'],$organizationId);$session->flash('announcements.message','Comunicado removido.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#comunicados');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $router->post('/admin/portal/tabs',static function(Request$request)use($organizationPortalSettings,$organizationId,$session,$basePath):Response{try{$organizationPortalSettings->save($organizationId,['journey'=>$request->input('tab_journey')==='1','enrollments'=>$request->input('tab_enrollments')==='1','finance'=>$request->input('tab_finance')==='1','tickets'=>$request->input('tab_tickets')==='1','documents'=>$request->input('tab_documents')==='1']);$session->flash('announcements.message','Abas do Portal do Aluno atualizadas.');}catch(Throwable$e){$session->flash('announcements.error',$e->getMessage());}return Response::redirect($basePath.'/admin/portal#abas');},[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
     $documentResponse=static function(Request$request,array$document)use($documents):Response{
         try{$body=$documents->read($document);$mime=(string)$document['mime_type'];$inline=$request->queryValue('inline')==='1'&&($mime==='application/pdf'||str_starts_with($mime,'image/'));$name=preg_replace('/[^\pL\pN._ -]+/u','_',basename((string)$document['original_name']))?:'documento';return(new Response($body,200))->withHeaders(['Content-Type'=>$mime,'Content-Length'=>(string)strlen($body),'Content-Disposition'=>($inline?'inline':'attachment').'; filename="'.str_replace('"','',$name).'"','X-Content-Type-Options'=>'nosniff','Cache-Control'=>'private, no-store','Content-Security-Policy'=>"default-src 'none'; sandbox"]);}catch(Throwable){return Response::text("Documento indisponível.\n",404);}
@@ -1686,9 +1689,13 @@ return static function (
         $upcomingStatement=$database->prepare("SELECT id,status,value,net_value,due_date,payment_date,description,bank_slip_url,invoice_url,asaas_payment_id FROM finance_payments WHERE finance_customer_id=:customer AND is_deleted=0 AND status IN ('PENDING','OVERDUE') AND due_date>=CURDATE() ORDER BY due_date ASC LIMIT 12");
         $upcomingStatement->execute(['customer'=>$customerId]);
         $upcomingPayments=$upcomingStatement->fetchAll()?:[];
-        $announcementsStatement=$database->prepare("SELECT id,title,body,created_at FROM organization_announcements WHERE organization_id=:org AND is_active=1 ORDER BY created_at DESC,id DESC LIMIT 5");
+        $announcementsStatement=$database->prepare("SELECT id,title,body,created_at,expires_at FROM organization_announcements WHERE organization_id=:org AND is_active=1 AND (expires_at IS NULL OR expires_at>=CURDATE()) ORDER BY created_at DESC,id DESC LIMIT 5");
         $announcementsStatement->execute(['org'=>(int)$customer['organization_id']]);
         $announcements=$announcementsStatement->fetchAll()?:[];
+        $tabsStatement=$database->prepare("SELECT show_journey,show_enrollments,show_finance,show_tickets,show_documents FROM organization_portal_settings WHERE organization_id=:org LIMIT 1");
+        $tabsStatement->execute(['org'=>(int)$customer['organization_id']]);
+        $tabsRow=$tabsStatement->fetch()?:[];
+        $tabs=['journey'=>!isset($tabsRow['show_journey'])||(int)$tabsRow['show_journey']===1,'enrollments'=>!isset($tabsRow['show_enrollments'])||(int)$tabsRow['show_enrollments']===1,'finance'=>!isset($tabsRow['show_finance'])||(int)$tabsRow['show_finance']===1,'tickets'=>!isset($tabsRow['show_tickets'])||(int)$tabsRow['show_tickets']===1,'documents'=>!isset($tabsRow['show_documents'])||(int)$tabsRow['show_documents']===1];
         $pixClient=null;
         if($request->queryValue('pix','')==='1'){
             try{
@@ -1717,7 +1724,7 @@ return static function (
         $documentsStatement->execute(['customer'=>$customerId]);
         $documentRows=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{

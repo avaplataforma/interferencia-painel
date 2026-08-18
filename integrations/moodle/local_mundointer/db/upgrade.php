@@ -652,6 +652,12 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // com progresso e nota, continuar de onde parou, próximas parcelas e PIX.
         upgrade_plugin_savepoint(true, 2026081837, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081838) {
+        // Sem mudança de esquema. As abas do Portal do Aluno passam a obedecer
+        // a configuração por franquia (ADM > Portal do Aluno > Abas e seções) e
+        // os comunicados respeitam a data de expiração.
+        upgrade_plugin_savepoint(true, 2026081838, 'local', 'mundointer');
+    }
     return true;
 }
 

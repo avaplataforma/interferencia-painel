@@ -181,6 +181,7 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
  </header>
   <?php if ($error !== ''): ?><div class="mi-dash-error"><?php echo s($error); ?></div><?php endif; ?>
   <?php if ($data !== null): ?>
+  <?php $tabs=$data['tabs']??['journey'=>true,'enrollments'=>true,'finance'=>true,'tickets'=>true,'documents'=>true]; $firstTab='journey'; foreach(['journey','enrollments','finance','tickets','documents'] as $tabKey){if(!empty($tabs[$tabKey])){$firstTab=$tabKey;break;}} ?>
   <?php if (($data['announcements'] ?? []) !== []): ?>
   <section class="mi-aviso-list" aria-label="Avisos da franquia">
    <?php foreach ($data['announcements'] as $announcement): ?>
@@ -188,13 +189,13 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    <?php endforeach; ?>
   </section>
   <?php endif; ?>
- <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Portal do Aluno">
-  <button class="mi-dash-tab journey" type="button" role="tab" data-mi-tab="journey" aria-selected="true"><i class="fa-solid fa-route"></i> Jornada</button>
-  <button class="mi-dash-tab enroll" type="button" role="tab" data-mi-tab="enroll" aria-selected="false"><i class="fa-solid fa-graduation-cap"></i> Matrículas</button>
-  <button class="mi-dash-tab finance" type="button" role="tab" data-mi-tab="finance" aria-selected="false"><i class="fa-solid fa-wallet"></i> Financeiro</button>
-  <button class="mi-dash-tab tickets" type="button" role="tab" data-mi-tab="tickets" aria-selected="false"><i class="fa-solid fa-headset"></i> Tickets</button>
-  <button class="mi-dash-tab documents" type="button" role="tab" data-mi-tab="documents" aria-selected="false"><i class="fa-solid fa-folder-open"></i> Documentos</button>
- </nav>
+  <nav class="mi-dash-tabs" role="tablist" aria-label="Seções do Portal do Aluno">
+   <?php if (!empty($tabs['journey'])): ?><button class="mi-dash-tab journey" type="button" role="tab" data-mi-tab="journey" aria-selected="<?php echo $firstTab==='journey'?'true':'false'; ?>"><i class="fa-solid fa-route"></i> Jornada</button><?php endif; ?>
+   <?php if (!empty($tabs['enrollments'])): ?><button class="mi-dash-tab enroll" type="button" role="tab" data-mi-tab="enroll" aria-selected="<?php echo $firstTab==='enrollments'?'true':'false'; ?>"><i class="fa-solid fa-graduation-cap"></i> Matrículas</button><?php endif; ?>
+   <?php if (!empty($tabs['finance'])): ?><button class="mi-dash-tab finance" type="button" role="tab" data-mi-tab="finance" aria-selected="<?php echo $firstTab==='finance'?'true':'false'; ?>"><i class="fa-solid fa-wallet"></i> Financeiro</button><?php endif; ?>
+   <?php if (!empty($tabs['tickets'])): ?><button class="mi-dash-tab tickets" type="button" role="tab" data-mi-tab="tickets" aria-selected="<?php echo $firstTab==='tickets'?'true':'false'; ?>"><i class="fa-solid fa-headset"></i> Tickets</button><?php endif; ?>
+   <?php if (!empty($tabs['documents'])): ?><button class="mi-dash-tab documents" type="button" role="tab" data-mi-tab="documents" aria-selected="<?php echo $firstTab==='documents'?'true':'false'; ?>"><i class="fa-solid fa-folder-open"></i> Documentos</button><?php endif; ?>
+  </nav>
  <div class="mi-dash-kpis">
   <div class="mi-dash-kpi"><i class="fa-solid fa-route" style="background:#2563eb"></i><div><strong><?php echo (int) $data['journey']['matriculas']; ?></strong><small>Matrículas</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-check-circle" style="background:#16a34a"></i><div><strong><?php echo (int) $data['journey']['liberadas']; ?></strong><small>Liberadas no AVA</small></div></div>
@@ -202,21 +203,26 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <div class="mi-dash-kpi"><i class="fa-solid fa-file-invoice-dollar" style="background:#f59e0b"></i><div><strong><?php echo (int) $data['journey']['pagamentos_abertos']; ?></strong><small>Parcelas a pagar</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-ticket" style="background:#0ea5e9"></i><div><strong><?php echo (int) $data['journey']['tickets_abertos']; ?></strong><small>Tickets abertos</small></div></div>
  </div>
- <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="1">
+  <?php if (!empty($tabs['journey'])): ?>
+  <section class="mi-dash-panel journey" data-mi-panel="journey" data-active="<?php echo $firstTab==='journey'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-route" style="color:#2563eb"></i> Jornada</h2>
   <div class="mi-dash-row"><div><strong>Seu caminho na <?php echo $brandName !== '' ? $brandName : 'franquia'; ?></strong><small>Acompanhe abaixo cada etapa: matrícula, pagamento, acesso ao AVA e certificado.</small></div></div>
   <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $progress=(float) ($enrollment['academic_progress_percent'] ?? 0); $last=$lastAccessText($enrollment); $grade=$gradeLabel($enrollment); $continue=$continueUrl($enrollment); ?>
   <div class="mi-dash-row"><div class="mi-course-progress"><div class="mi-donut-wrap"><div class="mi-donut" style="--p:<?php echo round($progress, 1); ?>"><span><?php echo round($progress); ?>%</span></div></div><div class="mi-course-text"><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small><?php echo 'Progresso: ' . round($progress, 1) . '%'; ?><?php echo $grade !== '' ? ' · ' . s($grade) : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div></div><div class="mi-dash-actions"><?php if ($continue !== ''): ?><a class="new" href="<?php echo s($continue); ?>"><i class="fa-solid fa-circle-play"></i> Continuar de onde parou</a><?php elseif ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?></div></div>
-  <?php endforeach; ?>
- </section>
- <section class="mi-dash-panel enroll" data-mi-panel="enroll">
+   <?php endforeach; ?>
+  </section>
+  <?php endif; ?>
+  <?php if (!empty($tabs['enrollments'])): ?>
+  <section class="mi-dash-panel enroll" data-mi-panel="enroll" data-active="<?php echo $firstTab==='enrollments'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-graduation-cap" style="color:#16a34a"></i> Matrículas</h2>
   <?php if (($data['enrollments'] ?? []) === []): ?><p class="mi-dash-empty">Nenhuma matrícula encontrada.</p><?php endif; ?>
   <?php foreach (($data['enrollments'] ?? []) as $enrollment): $status=$statusFor($enrollment); $last=$lastAccessText($enrollment); ?>
   <div class="mi-dash-row"><div><strong><?php echo s((string) ($enrollment['course_name'] ?? 'Curso')); ?></strong><small>Matrícula em <?php echo s((string) substr((string) ($enrollment['created_at'] ?? ''), 0, 10)); ?><?php echo (string) ($enrollment['academic_certificate_status'] ?? '') === 'available' ? ' · Certificado disponível' : ''; ?><?php echo $last !== '' ? ' · ' . s($last) : ''; ?></small></div><div class="mi-dash-actions"><?php if ($canAccess($enrollment)): ?><a class="new" href="<?php echo $courseUrl($enrollment); ?>"><i class="fa-solid fa-play"></i> Acessar curso</a><?php endif; ?><span class="mi-dash-badge <?php echo $statusTone($status); ?>"><?php echo s($statusLabel($status)); ?></span></div></div>
   <?php endforeach; ?>
- </section>
- <section class="mi-dash-panel finance" data-mi-panel="finance">
+  </section>
+  <?php endif; ?>
+  <?php if (!empty($tabs['finance'])): ?>
+  <section class="mi-dash-panel finance" data-mi-panel="finance" data-active="<?php echo $firstTab==='finance'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-wallet" style="color:#f59e0b"></i> Financeiro</h2>
   <?php if (($data['payments'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum pagamento registrado.</p><?php endif; ?>
   <?php foreach (($data['payments'] ?? []) as $payment): $open=in_array((string)$payment['status'],['PENDING','OVERDUE'],true); $pixImage=(string)($payment['pix_image']??''); $pixPayload=(string)($payment['pix_payload']??''); ?>
@@ -235,7 +241,9 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <?php endforeach; ?>
   <?php endif; ?>
  </section>
- <section class="mi-dash-panel tickets" data-mi-panel="tickets">
+ <?php endif; ?>
+ <?php if (!empty($tabs['tickets'])): ?>
+ <section class="mi-dash-panel tickets" data-mi-panel="tickets" data-active="<?php echo $firstTab==='tickets'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-headset" style="color:#8b5cf6"></i> Tickets</h2>
   <?php if (($data['tickets'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum ticket aberto.</p><?php endif; ?>
   <?php foreach (($data['tickets'] ?? []) as $ticket): ?>
@@ -248,7 +256,9 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    <p class="mi-dash-form-feedback" data-mi-ticket-feedback hidden></p>
   </form>
  </section>
- <section class="mi-dash-panel documents" data-mi-panel="documents">
+ <?php endif; ?>
+ <?php if (!empty($tabs['documents'])): ?>
+ <section class="mi-dash-panel documents" data-mi-panel="documents" data-active="<?php echo $firstTab==='documents'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-folder-open" style="color:#0ea5e9"></i> Documentos</h2>
   <?php if (($data['documents'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum documento enviado.</p><?php endif; ?>
   <?php foreach (($data['documents'] ?? []) as $document): ?>
@@ -263,6 +273,7 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
    <p class="mi-dash-form-feedback" data-mi-document-feedback hidden></p>
   </form>
  </section>
+ <?php endif; ?>
  <script>
  (function () {
    var tabs = document.querySelectorAll(".mi-dash-tab[data-mi-tab]");
