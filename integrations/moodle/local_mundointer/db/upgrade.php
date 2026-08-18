@@ -611,6 +611,12 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // garantindo logo, cores e botão do Portal do Aluno para todos os alunos.
         upgrade_plugin_savepoint(true, 2026081829, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081830) {
+        // Sem mudança de esquema. Navbar restaurado (logo nativa da franquia) e
+        // botão Portal do Aluno passa a ser flutuante no canto inferior esquerdo
+        // em todas as páginas, sem depender da marca da sessão.
+        upgrade_plugin_savepoint(true, 2026081830, 'local', 'mundointer');
+    }
     return true;
 }
 

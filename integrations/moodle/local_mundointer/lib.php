@@ -130,24 +130,37 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     font-weight: 700;
     text-decoration: none;
 }
-.mundointer-navbar-portal {
+.mundointer-portal-float {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 9999;
     display: inline-flex;
     align-items: center;
-    gap: .45rem;
-    margin-left: .6rem;
-    padding: .5rem .85rem;
+    gap: .5rem;
+    padding: .65rem 1rem;
     border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
     border-radius: 999px;
     background: #fff;
     color: var(--mundointer-primary);
     font-weight: 800;
-    font-size: .85rem;
-    box-shadow: 0 .3rem .8rem rgb(20 40 70 / 14%);
-    white-space: nowrap;
-    flex: 0 0 auto;
+    font-size: .9rem;
+    text-decoration: none;
+    box-shadow: 0 .5rem 1.2rem rgb(20 40 70 / 18%);
 }
-body.pagelayout-login .mundointer-navbar-portal {
+.mundointer-portal-float:hover {
+    background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
+}
+body.pagelayout-login .mundointer-portal-float {
     display: none;
+}
+@media (max-width: 768px) {
+    .mundointer-portal-float {
+        left: .6rem;
+        bottom: .6rem;
+        padding: .55rem .8rem;
+        font-size: .82rem;
+    }
 }
 .mundointer-navbar-portal:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
@@ -1309,7 +1322,6 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-brand-logo="'.s((string)($brand['logo_url'] ?? '')).'" data-student-name="'.s((string)(isloggedin()&&!isguestuser()?($USER->firstname ?? ''):'')).'" data-welcome-text="'.s((string)($brand['welcome_text'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
-        .'<span class="mundointer-navbar-portal"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</span>'
         .'</span>';
 
     $isMyCourses = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/my/courses.php');
@@ -1327,6 +1339,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</a>'
             . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
             . '</div></header>';
+    }
+
+    $isPortal = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/local/mundointer/portal.php');
+    if (isloggedin() && !isguestuser() && !$isPortal) {
+        $portalUrl = s((string) (new moodle_url('/local/mundointer/portal.php'))->out(false));
+        $html .= '<a class="mundointer-portal-float" href="' . $portalUrl . '"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
     }
 
     return $html.'<script>
@@ -2028,10 +2046,6 @@ function local_mundointer_before_standard_top_of_body_html(): string
             if (faviconUrl && brandImage) {
                 brandImage.src = faviconUrl;
                 brandImage.removeAttribute("srcset");
-            }
-            var moodleBase = brand.getAttribute("data-moodle-base") || "";
-            if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
-                navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
             }
             return;
         }
