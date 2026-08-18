@@ -1904,43 +1904,14 @@ function local_mundointer_before_standard_top_of_body_html(): string
     }
   }
 
-  if (!isLogin && brand.getAttribute("data-support-float") === "1" && !document.querySelector(".mundointer-support-float")) {
-    var wrap = document.createElement("div");
-    wrap.className = "mundointer-support-float";
-    var chip = document.createElement("div");
-    chip.className = "mundointer-support-chip";
-    var title = document.createElement("strong");
-    title.textContent = "Fale com a franquia";
-    chip.appendChild(title);
-    var institution = document.createElement("a");
-    institution.href = basePath + "local/mundointer/instituicao.php";
-    institution.textContent = "Minha instituição";
-    chip.appendChild(institution);
-    if (supportEmail) {
-      var emailLink = document.createElement("a");
-      emailLink.href = "mailto:" + supportEmail;
-      emailLink.textContent = "E-mail: " + supportEmail;
-      chip.appendChild(emailLink);
-    }
-    if (whatsapp) {
-      var whatsLink = document.createElement("a");
-      whatsLink.href = whatsapp;
-      whatsLink.target = "_blank";
-      whatsLink.rel = "noopener";
-      whatsLink.textContent = "WhatsApp";
-      chip.appendChild(whatsLink);
-    }
-    var toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "mundointer-support-toggle";
-    toggle.setAttribute("aria-label", "Suporte da franquia");
-    toggle.textContent = "?";
-    toggle.addEventListener("click", function () { wrap.classList.toggle("is-open"); });
-    wrap.appendChild(chip);
-    wrap.appendChild(toggle);
-    document.body.appendChild(wrap);
+  if (document.body.classList.contains("pagelayout-mydashboard")) {
+    try {
+      if (!sessionStorage.getItem("mundointer-home-redirected")) {
+        sessionStorage.setItem("mundointer-home-redirected", "1");
+        window.location.replace(basePath + "local/mundointer/instituicao.php");
+      }
+    } catch (error) {}
   }
-
   if (document.body.classList.contains("pagelayout-mydashboard") && brand.getAttribute("data-welcome") === "1" && !document.querySelector(".mundointer-welcome")) {
     var main = document.querySelector("#region-main") || document.querySelector(".drawercontent");
     if (main) {

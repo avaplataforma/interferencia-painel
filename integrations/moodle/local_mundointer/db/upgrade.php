@@ -463,6 +463,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
 
         upgrade_plugin_savepoint(true, 2026081800, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081801) {
+        // Sem mudança de esquema. A home do aluno passa a ser a página Minha
+        // instituição e o logout preserva a marca da franquia.
+        upgrade_plugin_savepoint(true, 2026081801, 'local', 'mundointer');
+    }
     return true;
 }
 

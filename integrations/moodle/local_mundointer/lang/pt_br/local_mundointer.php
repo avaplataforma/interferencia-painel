@@ -22,4 +22,5 @@ $string['institutiontitle'] = 'Minha instituição';
 $string['institutionnobrand'] = 'Nenhuma franquia identificada para este acesso.';
 $string['supportlabel'] = 'Fale com a franquia';
 $string['institutionsite'] = 'Site da franquia';
+$string['institutionwelcome'] = 'Boas-vindas! Acompanhe aqui seus cursos, recados e o suporte da sua franquia.';
 $string['privacy:metadata'] = 'O conector Mundo Inter não armazena dados pessoais dentro do plugin.';

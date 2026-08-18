@@ -18,5 +18,6 @@ $string['institutiontitle'] = 'My institution';
 $string['institutionnobrand'] = 'No franchise identified for this access.';
 $string['supportlabel'] = 'Talk to your franchise';
 $string['institutionsite'] = 'Franchise site';
+$string['institutionwelcome'] = 'Welcome! Track your courses, notices and franchise support here.';
 
 $string['privacy:metadata'] = 'The Mundo Inter connector does not store personal data inside the plugin.';
