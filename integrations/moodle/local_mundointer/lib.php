@@ -83,8 +83,18 @@ $brand = \local_mundointer\local\brand_resolver::current();
     $secondary = s((string)$brand['secondary_color']);
     $favicon = s((string)$brand['favicon_url']);
     $faviconhtml = $favicon !== '' ? '<link rel="icon" href="'.$favicon.'">' : '';
+    $brandHide = '<style>
+nav.navbar .navbar-brand img.logo { visibility: hidden; }
+.activity-icon img.activityicon,
+.activityiconcontainer img.activityicon { visibility: hidden; }
+body.pagelayout-login #loginlogo,
+body.pagelayout-login .login-logo { display: none !important; }
+.mundointer-theme-brand { display: none; }
+.mundointer-navbar-brand,
+.mundointer-activity-play { visibility: visible !important; }
+</style>';
 
-    return $faviconhtml.$neutralLogin.'<meta name="theme-color" content="'.$primary.'"><style>
+    return $faviconhtml.$brandHide.$neutralLogin.'<meta name="theme-color" content="'.$primary.'"><style>
 :root {
     --mundointer-primary: '.$primary.';
     --mundointer-secondary: '.$secondary.';

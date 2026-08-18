@@ -781,6 +781,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // do curso na Jornada também é clicável.
         upgrade_plugin_savepoint(true, 2026081862, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081863) {
+        // Sem mudança de esquema. Imagens originais do Moodle ocultadas já no
+        // primeiro paint quando a marca da franquia está ativa (sem flash).
+        upgrade_plugin_savepoint(true, 2026081863, 'local', 'mundointer');
+    }
     return true;
 }
 
