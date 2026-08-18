@@ -720,6 +720,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // fluxo com marca da franquia.
         upgrade_plugin_savepoint(true, 2026081850, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081851) {
+        // Sem mudança de esquema. Reforço da regra neutra do link Perdeu a senha
+        // para todos os estados (:link, :visited, :hover, :active).
+        upgrade_plugin_savepoint(true, 2026081851, 'local', 'mundointer');
+    }
     return true;
 }
 

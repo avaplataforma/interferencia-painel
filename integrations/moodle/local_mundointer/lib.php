@@ -10,6 +10,10 @@ function local_mundointer_before_standard_html_head(): string
     $neutralLogin = '<style>
 body.pagelayout-login .btn-cookie{display:none!important}
 body.pagelayout-login .login-form-forgotpassword a,
+body.pagelayout-login .login-form-forgotpassword a:link,
+body.pagelayout-login .login-form-forgotpassword a:visited,
+body.pagelayout-login .login-form-forgotpassword a:hover,
+body.pagelayout-login .login-form-forgotpassword a:active,
 body.pagelayout-login .login-signup a,
 body.pagelayout-login .login-identityproviders a {
     color: #5b6874 !important;
