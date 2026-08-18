@@ -115,16 +115,17 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     gap: .45rem;
     margin: .35rem 0;
     padding: .6rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 40%, #dce3e8);
     border-radius: .7rem;
-    background: var(--mundointer-primary);
-    color: #fff;
+    background: #fff;
+    color: var(--mundointer-primary);
     font-weight: 700;
     text-decoration: none;
-    box-shadow: 0 .35rem .9rem color-mix(in srgb, var(--mundointer-primary) 30%, transparent);
 }
 .mundointer-secretaria-link:hover {
-    background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
-    color: #fff;
+    border-color: var(--mundointer-primary);
+    background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
+    color: var(--mundointer-primary);
     text-decoration: none;
 }
 body.mundointer-brand-active #usermenu a[href*="/user/profile.php"],
@@ -2046,13 +2047,25 @@ function hideMundoInterCourseExtras() {
   var mountMundoInterCoursesHero = function () {
     if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
     document.body.classList.add("mundointer-mycourses");
-    var headerArea = document.querySelector("#region-main .page-header-headings, #region-main .page-context-header, #page-header");
-    if (headerArea && !headerArea.querySelector(".mundointer-secretaria-link")) {
+    
+    var miCoursesAnchor = null;
+    Array.prototype.slice.call(document.querySelectorAll("a, button, h1, h2, h3, .nav-link, .breadcrumb a, .crumb")).some(function (candidate) {
+      var label = (candidate.textContent || "").replace(/\s+/g, " ").trim();
+      if (label === "Meus cursos" || label === "My courses") {
+        miCoursesAnchor = candidate;
+        return true;
+      }
+      return false;
+    });
+    if (!miCoursesAnchor) {
+      miCoursesAnchor = document.querySelector("a[href*=\"/my/courses.php\"]");
+    }
+    if (miCoursesAnchor && !document.querySelector(".mundointer-secretaria-link")) {
       var secretariaLink = document.createElement("a");
       secretariaLink.className = "mundointer-secretaria-link";
       secretariaLink.href = basePath + "local/mundointer/portal.php";
       secretariaLink.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Secretaria Digital";
-      headerArea.appendChild(secretariaLink);
+      miCoursesAnchor.insertAdjacentElement("afterend", secretariaLink);
     }
     document.querySelectorAll("#region-main h1").forEach(function (heading) {
       heading.style.display = "none";
@@ -2068,7 +2081,7 @@ function hideMundoInterCourseExtras() {
       var studentName = brand.getAttribute("data-student-name") || "";
       var welcome = brand.getAttribute("data-welcome-text") || "";
       var siteUrl = brand.getAttribute("data-site-url") || "";
-      var contacts = "<a href=\"" + basePath + "local/mundointer/portal.php\">Secretaria Digital</a>";
+      var contacts = "";
       if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
       var fullName = brand.getAttribute("data-student-name") || "";
       var firstName = fullName.split(/\s+/)[0] || "";

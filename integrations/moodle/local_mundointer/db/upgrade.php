@@ -540,6 +540,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // nativo em Meus cursos.
         upgrade_plugin_savepoint(true, 2026081815, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081816) {
+        // Sem mudança de esquema. Secretaria Digital aparece uma única vez,
+        // com fundo branco, ao lado do link nativo Meus cursos.
+        upgrade_plugin_savepoint(true, 2026081816, 'local', 'mundointer');
+    }
     return true;
 }
 
