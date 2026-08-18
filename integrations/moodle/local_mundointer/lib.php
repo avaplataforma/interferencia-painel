@@ -324,6 +324,9 @@ a.mundointer-link,
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+.mundointer-navbar-brand .mundointer-brand-copy {
+    display: none !important;
+}
 .mundointer-navbar-brand small {
     display: none;
 }
@@ -1951,6 +1954,16 @@ function local_mundointer_before_standard_top_of_body_html(): string
       loginContainer.appendChild(back);
     }
   }
+
+document.addEventListener("click", function (event) {
+    var link = event.target.closest && event.target.closest("a[href*=\"/login/logout.php\"]");
+    if (!link) return;
+    var activeBrand = document.querySelector(".mundointer-theme-brand[data-franquia]");
+    var slug = activeBrand ? activeBrand.getAttribute("data-franquia") : "";
+    if (!slug) return;
+    event.preventDefault();
+    window.location.href = basePath + "local/mundointer/logout.php?slug=" + encodeURIComponent(slug);
+  });
 
   var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
   var mountMundoInterCoursesHero = function () {

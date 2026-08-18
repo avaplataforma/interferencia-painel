@@ -478,6 +478,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // detectar a página pela URL e a montar somente após o DOM estar pronto.
         upgrade_plugin_savepoint(true, 2026081803, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081804) {
+        // Sem mudança de esquema. O logout volta para o link personalizado da
+        // franquia e o cabeçalho exibe somente a logo.
+        upgrade_plugin_savepoint(true, 2026081804, 'local', 'mundointer');
+    }
     return true;
 }
 
