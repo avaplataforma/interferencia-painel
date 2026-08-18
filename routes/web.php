@@ -1660,18 +1660,18 @@ return static function (
         $tickets=$ticketsStatement->fetchAll()?:[];
         $documentsStatement=$database->prepare("SELECT id,title,category,original_name,mime_type,created_at FROM managed_documents WHERE entity_type='student' AND entity_id=:customer AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 20");
         $documentsStatement->execute(['customer'=>$customerId]);
-        $documents=$documentsStatement->fetchAll()?:[];
+        $documentRows=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{
-        $cpf=preg_replace('/\D/','',(string)$request->queryValue('cpf',''))??'';
-        $token=(string)$request->queryValue('token','');
+        $cpf=preg_replace('/\D/','',(string)($request->input('cpf')??$request->queryValue('cpf','')))??'';
+        $token=(string)($request->input('token')??$request->queryValue('token',''));
         $key=(string)$config->get('app.encryption_key');
         $expected=hash_hmac('sha256','student-portal|'.$cpf,$key);
         if($cpf===''||$key===''||!hash_equals($expected,$token))throw new RuntimeException('token inválido');
-        $orgCode=trim((string)$request->queryValue('org',''));
+        $orgCode=trim((string)($request->input('org')??$request->queryValue('org','')));
         if($orgCode!==''){
             $statement=$database->prepare("SELECT c.id,c.organization_id,c.name,c.email,c.unit_id,u.name unit_name,o.display_name organization_name FROM finance_customers c LEFT JOIN units u ON u.id=c.unit_id LEFT JOIN organizations o ON o.id=c.organization_id WHERE REPLACE(REPLACE(REPLACE(c.cpf_cnpj,'.',''),'-',''),'/','')=:cpf AND c.is_deleted=0 AND o.code=:org ORDER BY (SELECT COUNT(*) FROM student_enrollments e WHERE e.finance_customer_id=c.id) DESC, c.id DESC LIMIT 1");
             $statement->execute(['cpf'=>$cpf,'org'=>$orgCode]);
