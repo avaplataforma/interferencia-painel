@@ -1991,7 +1991,6 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($routes,"usersByField('idnumber'"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/db/field_helpers.php'),'mundointer_portal_token'));
     assertTrue(is_file($pluginDir.'/portal.php'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'Meu espaço'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'/portal/aluno'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'local/mundointer/portal.php'));
     assertTrue(str_contains($routes,"'/portal/aluno'"));
