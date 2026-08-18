@@ -483,6 +483,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // franquia e o cabeçalho exibe somente a logo.
         upgrade_plugin_savepoint(true, 2026081804, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081805) {
+        // Sem mudança de esquema. Ajustes visuais: favicon no cabeçalho, contatos
+        // do topo removidos e título nativo de Meus cursos oculto.
+        upgrade_plugin_savepoint(true, 2026081805, 'local', 'mundointer');
+    }
     return true;
 }
 

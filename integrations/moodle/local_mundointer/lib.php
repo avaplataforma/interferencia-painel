@@ -101,6 +101,10 @@ a.mundointer-link,
 .mundointer-mycourses-contacts a:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 86%, black);
 }
+body.mundointer-mycourses #region-main h1,
+body.mundointer-mycourses #region-main .page-context-header {
+    display: none !important;
+}
 .mundointer-welcome {
     display: flex;
     align-items: center;
@@ -1917,6 +1921,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
             brand.classList.add("mundointer-navbar-brand");
             navbar.textContent = "";
             navbar.appendChild(brand);
+            var faviconUrl = brand.getAttribute("data-favicon");
+            var brandImage = brand.querySelector("img");
+            if (faviconUrl && brandImage) {
+                brandImage.src = faviconUrl;
+                brandImage.removeAttribute("srcset");
+            }
             return;
         }
 
@@ -1968,6 +1978,7 @@ document.addEventListener("click", function (event) {
   var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
   var mountMundoInterCoursesHero = function () {
     if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
+    document.body.classList.add("mundointer-mycourses");
     var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
     if (region) {
       var hero = document.createElement("header");
@@ -1977,14 +1988,8 @@ document.addEventListener("click", function (event) {
       if (logoUrl) heroLogo = "<img src=\"" + logoUrl + "\" alt=\"\">";
       var studentName = brand.getAttribute("data-student-name") || "";
       var welcome = brand.getAttribute("data-welcome-text") || "";
-      var supportEmail = brand.getAttribute("data-support-email") || "";
-      var supportPhone = brand.getAttribute("data-support-phone") || "";
       var siteUrl = brand.getAttribute("data-site-url") || "";
-      var phoneDigits = supportPhone.replace(/\D/g, "");
-      var whatsapp = phoneDigits.length >= 10 ? "https://wa.me/55" + phoneDigits : "";
       var contacts = "";
-      if (supportEmail) contacts += "<a href=\"mailto:" + supportEmail + "\">E-mail</a>";
-      if (whatsapp) contacts += "<a href=\"" + whatsapp + "\" target=\"_blank\" rel=\"noopener\">WhatsApp</a>";
       if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
       hero.innerHTML = heroLogo
         + "<div class=\"mundointer-mycourses-copy\"><strong>" + brandName + "</strong>"
