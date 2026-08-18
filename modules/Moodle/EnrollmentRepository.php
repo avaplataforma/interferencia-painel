@@ -156,6 +156,9 @@ final readonly class EnrollmentRepository
         $s=$this->database->prepare("UPDATE student_enrollments SET status='cancelled',cancelled_at=NOW(),cancelled_reason=:reason,cancelled_by=:user WHERE id=:id AND status<>'cancelled'");
         $s->execute(['reason'=>mb_substr($reason,0,500),'user'=>$userId,'id'=>$id]);
         if($s->rowCount()!==1)throw new RuntimeException('Não foi possível cancelar a matrícula.');
+        if((string)$context['moodle_enrolment_status']==='released'&&(int)($context['ava_user_id']??0)>0&&(int)($context['ava_course_id']??0)>0){
+            $this->database->prepare('UPDATE moodle_enrolments SET is_active=0 WHERE moodle_user_id=:user AND moodle_course_id=:course')->execute(['user'=>(int)$context['ava_user_id'],'course'=>(int)$context['ava_course_id']]);
+        }
         $this->recordEvent($id,'enrollment-cancelled:'.$id,'enrollment_cancelled','Matrícula cancelada. Motivo: '.$reason,$userId);
         return $context;
     }
