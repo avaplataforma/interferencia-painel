@@ -25,10 +25,10 @@ body.pagelayout-login .login-signup a:hover {
 }
 a:not([class]):focus,
 .activityinstance > a:focus {
-    outline: .2rem solid transparent;
-    color: #212529;
-    background-color: #eef2f5;
-    box-shadow: 0 -.2rem #5b6874, 0 .2rem #373a3c;
+    outline: .2rem solid transparent !important;
+    color: #212529 !important;
+    background-color: #eef2f5 !important;
+    box-shadow: 0 -.2rem #5b6874, 0 .2rem #373a3c !important;
 }
 </style><script>
 document.addEventListener("DOMContentLoaded", function () {

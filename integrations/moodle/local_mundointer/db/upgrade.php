@@ -735,6 +735,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // vermelho vivo do Moodle core e passa para cinza suave.
         upgrade_plugin_savepoint(true, 2026081853, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081854) {
+        // Sem mudança de esquema. Foco neutro dos links sem classe com
+        // !important para vencer a cascata do tema.
+        upgrade_plugin_savepoint(true, 2026081854, 'local', 'mundointer');
+    }
     return true;
 }
 
