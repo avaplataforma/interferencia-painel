@@ -1243,7 +1243,7 @@ $tests['personaliza o AVA compartilhado pela franquia e pelo Polo Presencial'] =
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'justify-content: center !important'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'padding: 0 !important'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'enhanceMundoInterCourse'));
-    assertTrue(!str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'new MutationObserver'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'new MutationObserver'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'[400, 1200, 3000]'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'mundointer-course-overview'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/integrations/moodle/local_mundointer/lib.php'),'setupMundoInterCourseIndex'));
