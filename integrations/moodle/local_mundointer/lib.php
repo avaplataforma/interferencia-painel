@@ -39,6 +39,7 @@ a:not([class]):focus,
     justify-content: center;
     color: #405267;
     font-size: 1.3rem;
+    text-decoration: none;
 }
 </style><script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -49,9 +50,15 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 function swapMundoInterActivityIcons() {
     document.querySelectorAll(".activity-icon img.activityicon, .activityiconcontainer img.activityicon").forEach(function (img) {
-        var play = document.createElement("span");
+        var item = img.closest(".activity-item");
+        var activityLink = item ? item.querySelector("a.aalink, .activitytitle a, .activityname a") : null;
+        var play = document.createElement("a");
         play.className = "mundointer-activity-play";
         play.setAttribute("aria-hidden", "true");
+        if (activityLink && activityLink.href) {
+            play.href = activityLink.href;
+            play.title = activityLink.textContent.trim();
+        }
         play.innerHTML = "<i class=\"fa-solid fa-circle-play\"></i>";
         img.parentNode.replaceChild(play, img);
     });

@@ -776,6 +776,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // com observador de DOM para carregamento dinâmico.
         upgrade_plugin_savepoint(true, 2026081861, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081862) {
+        // Sem mudança de esquema. Ícone de play vira link da atividade e o nome
+        // do curso na Jornada também é clicável.
+        upgrade_plugin_savepoint(true, 2026081862, 'local', 'mundointer');
+    }
     return true;
 }
 
