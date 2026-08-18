@@ -24,7 +24,7 @@ $announcements=$announcements??[];
 .announcement-meta i{color:#c4cdd5}
 .announcement-actions{display:flex;gap:.5rem;flex-wrap:wrap;padding-top:.7rem;border-top:1px solid #f0f4f7}
 .announcement-actions form{display:flex;margin:0;flex:1 1 8rem;max-width:8.5rem}
-.announcement-actions .button{width:100%;justify-content:center}
+.announcement-actions .button{display:inline-flex!important;align-items:center;width:100%;min-height:2.6rem!important;padding:.45rem .7rem!important;justify-content:center}
 @media(max-width:1000px){.portal-layout{grid-template-columns:1fr}.portal-form-card{position:static}}
 </style>
 <div class="portal-page">
