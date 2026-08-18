@@ -227,6 +227,8 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
   <div class="mi-dash-kpi"><i class="fa-solid fa-route" style="background:#2563eb"></i><div><strong><?php echo (int) $data['journey']['matriculas']; ?></strong><small>Matrículas</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-file-invoice-dollar" style="background:#f59e0b"></i><div><strong><?php echo (int) $data['journey']['pagamentos_abertos']; ?></strong><small>Parcelas a pagar</small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-ticket" style="background:#0ea5e9"></i><div><strong><?php echo (int) $data['journey']['tickets_abertos']; ?></strong><small>Tickets abertos</small></div></div>
+  <?php $missingDocs=$data['missing_documents']??[]; $missingCount=count($missingDocs); ?>
+  <div class="mi-dash-kpi"><i class="fa-solid fa-folder-open" style="background:<?php echo $missingCount>0?'#e11d48':'#16a34a'; ?>"></i><div><strong><?php echo $missingCount; ?></strong><small><?php echo $missingCount>0?'Documentos pendentes':'Documentos em dia'; ?></small></div></div>
   <div class="mi-dash-kpi"><i class="fa-solid fa-award" style="background:#8b5cf6"></i><div><strong><?php echo (int) $data['journey']['certificados']; ?></strong><small>Certificados</small></div></div>
  </div>
   <?php if (!empty($tabs['journey'])): ?>
@@ -287,6 +289,9 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
  <?php if (!empty($tabs['documents'])): ?>
  <section class="mi-dash-panel documents" data-mi-panel="documents" data-active="<?php echo $firstTab==='documents'?'1':'0'; ?>">
   <h2><i class="fa-solid fa-folder-open" style="color:#0ea5e9"></i> Documentos</h2>
+  <?php if ($missingCount>0): ?>
+  <div class="mi-dash-row"><div><strong><i class="fa-solid fa-triangle-exclamation" style="color:#e11d48"></i> Documentos obrigatórios pendentes</strong><small><?php foreach($missingDocs as$index=>$missingDoc){if($index>0)echo ' · ';echo s((string)$missingDoc['name']);} ?></small></div></div>
+  <?php endif; ?>
   <?php if (($data['documents'] ?? []) === []): ?><p class="mi-dash-empty">Nenhum documento enviado.</p><?php endif; ?>
   <?php foreach (($data['documents'] ?? []) as $document): ?>
   <div class="mi-dash-row"><div><strong><i class="fa-solid fa-file" style="color:#0ea5e9"></i> <?php echo s((string) ($document['title'] ?: $document['original_name'])); ?></strong><small><?php echo s((string) ($document['category'] ?? 'Documento')); ?> · <?php echo s((string) substr((string) ($document['created_at'] ?? ''), 0, 10)); ?></small></div></div>

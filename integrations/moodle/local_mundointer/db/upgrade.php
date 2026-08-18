@@ -684,6 +684,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // com ícone de capelo.
         upgrade_plugin_savepoint(true, 2026081843, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081844) {
+        // Sem mudança de esquema. Nova caixinha de Documentos com a contagem de
+        // documentos obrigatórios pendentes do aluno.
+        upgrade_plugin_savepoint(true, 2026081844, 'local', 'mundointer');
+    }
     return true;
 }
 

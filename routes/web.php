@@ -1747,8 +1747,15 @@ return static function (
         $documentsStatement=$database->prepare("SELECT id,title,category,original_name,mime_type,created_at FROM managed_documents WHERE entity_type='student' AND entity_id=:customer AND deleted_at IS NULL ORDER BY created_at DESC LIMIT 20");
         $documentsStatement->execute(['customer'=>$customerId]);
         $documentRows=$documentsStatement->fetchAll()?:[];
+        $requiredStatement=$database->prepare("SELECT code,name FROM document_types WHERE scope='franchise' AND is_active=1 AND is_required=1 ORDER BY sort_order,name");
+        $requiredStatement->execute();
+        $requiredDocs=$requiredStatement->fetchAll()?:[];
+        $submittedCategories=[];
+        foreach($documentRows as$documentRow){$submittedCategories[(string)$documentRow['category']]=true;}
+        $missingDocs=[];
+        foreach($requiredDocs as$requiredDoc){$code=(string)$requiredDoc['code'];if(!isset($submittedCategories[$code]))$missingDocs[]=['code'=>$code,'name'=>(string)$requiredDoc['name']];}
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'materials'=>$materials,'finance_alert'=>$financeAlert,'satisfaction_rated'=>$satisfactionRated,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'materials'=>$materials,'finance_alert'=>$financeAlert,'satisfaction_rated'=>$satisfactionRated,'missing_documents'=>$missingDocs,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{
