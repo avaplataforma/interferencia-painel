@@ -7,6 +7,9 @@ defined('MOODLE_INTERNAL') || die();
  */
 function local_mundointer_before_standard_html_head(): string
 {
+    if (is_siteadmin()) {
+        return '';
+    }
     $brand = \local_mundointer\local\brand_resolver::current();
     if ($brand === null) {
         return '';
@@ -1235,6 +1238,9 @@ body.mundointer-brand-active #course-index [data-for="cm_completion"].completion
  */
 function local_mundointer_before_standard_top_of_body_html(): string
 {
+    if (is_siteadmin()) {
+        return '';
+    }
     $brand = \local_mundointer\local\brand_resolver::current();
     if ($brand === null) {
         return '';

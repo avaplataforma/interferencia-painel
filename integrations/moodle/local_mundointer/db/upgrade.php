@@ -498,6 +498,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // ocultos em todas as páginas da marca, inclusive dentro dos cursos.
         upgrade_plugin_savepoint(true, 2026081807, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081808) {
+        // Sem mudança de esquema. Administradores do Moodle ficam isentos da
+        // identidade visual e dos ajustes de experiência da franquia.
+        upgrade_plugin_savepoint(true, 2026081808, 'local', 'mundointer');
+    }
     return true;
 }
 
