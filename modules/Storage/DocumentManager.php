@@ -21,7 +21,7 @@ final readonly class DocumentManager
     public function __construct(private PDO $db, private SpacesStorageManager $storage, private DocumentTypeRepository $documentTypes) {}
 
     /** @return array<string,string> */
-    public function categories(string $scope): array { return $scope === 'central' ? self::CENTRAL_CATEGORIES : $this->documentTypes->categories(); }
+    public function categories(string $scope, ?int $organizationId = null): array { return $scope === 'central' ? self::CENTRAL_CATEGORIES : $this->documentTypes->categories($organizationId); }
 
     /** @return list<array<string,mixed>> */
     public function all(string $scope, ?int $organizationId, string $category = ''): array
@@ -57,7 +57,7 @@ final readonly class DocumentManager
     public function upload(string $scope, ?int $organizationId, UploadedFile $file, string $title, string $category, string $description, ?int $replaceId, int $userId, ?string $entityType=null, ?int $entityId=null): int
     {
         if(!$this->storage->active())throw new RuntimeException('Ative e valide primeiro a integração com a DigitalOcean Spaces.');
-        $title=trim($title);$description=trim($description);$categories=$this->categories($scope);$entityType=$entityType===null?null:$this->entityType($entityType);if(($entityType===null)!==($entityId===null||$entityId<1))throw new RuntimeException('O vínculo do documento está incompleto.');
+        $title=trim($title);$description=trim($description);$categories=$this->categories($scope,$organizationId);$entityType=$entityType===null?null:$this->entityType($entityType);if(($entityType===null)!==($entityId===null||$entityId<1))throw new RuntimeException('O vínculo do documento está incompleto.');
         if(mb_strlen($description)>1000)throw new RuntimeException('A observação deve ter no máximo 1.000 caracteres.');
         if(!isset($categories[$category]))throw new RuntimeException('Selecione um tipo de documento válido.');
         if($file->isEmpty())throw new RuntimeException('Selecione um arquivo.');
@@ -71,7 +71,12 @@ final readonly class DocumentManager
         if($replaceId!==null){$previous=$entityType===null?$this->find($replaceId,$scope,$organizationId):$this->findForEntity($replaceId,$scope,$organizationId,$entityType,(int)$entityId);if($previous===null)throw new RuntimeException('O documento escolhido para versionamento não foi encontrado.');$group=(string)$previous['document_group'];$title=(string)$previous['title'];$category=(string)$previous['category'];$s=$this->db->prepare('SELECT COALESCE(MAX(version_number),0)+1 FROM managed_documents WHERE document_group=:group');$s->execute(['group'=>$group]);$version=(int)$s->fetchColumn();}
         if($title==='')$title=$categories[$category]??'Documento';
         $originalName=mb_substr(trim($file->originalName)?:'documento',0,255);
-        $folder=$entityType==='student'?'Alunos/'.str_pad((string)$entityId,8,'0',STR_PAD_LEFT).'/Documentos':'Documentos';
+        $studentFolder='';
+        if($entityType==='student'){
+            $cpf=preg_replace('/\D/','',(string)($this->db->query('SELECT cpf_cnpj FROM finance_customers WHERE id='.(int)$entityId)->fetchColumn()?:''));
+            $studentFolder='Alunos/'.($cpf!==''?$cpf:'matricula-'.str_pad((string)$entityId,8,'0',STR_PAD_LEFT)).'/Documentos';
+        }
+        $folder=$entityType==='student'?$studentFolder:'Documentos';
         $path=$scope==='central'
             ?$this->storage->storeCentral($folder,$content,$originalName,$mime,$userId)
             :$this->storage->storeFranchise((int)$organizationId,$folder,$content,$originalName,$mime,$userId);

@@ -193,8 +193,8 @@ return static function (
     $documentTypes=$spacesStorage->documentTypes();
     $pluginRelease=new PluginReleaseManager(dirname(__DIR__).'/integrations/moodle/local_mundointer');
 
-    $router->get('/admin/document-types',static function(Request$request)use($view,$documentTypes,$platformAdmin,$session,$csrf,$basePath,$browserTitle):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);$editId=(int)($request->queryValue('edit','0')??0);return$view->render('admin/document-types/index',['title'=>'Tipos de documentos — '.$browserTitle,'types'=>$documentTypes->all(),'editingType'=>$editId>0?$documentTypes->find($editId):null,'message'=>$session->get('document_types.message'),'error'=>$session->get('document_types.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
-    $saveDocumentType=static function(Request$request,?int$id=null)use($documentTypes,$platformAdmin,$session,$basePath):Response{if(!$platformAdmin())return Response::text("Acesso restrito ao ADM Central.\n",403);try{$documentTypes->save($id,(string)$request->input('name',''),$request->input('is_required')==='1',$request->input('is_active')==='1',(int)$request->input('sort_order','100'));$session->flash('document_types.message',$id===null?'Tipo de documento cadastrado.':'Tipo de documento atualizado.');}catch(Throwable$e){$session->flash('document_types.error',$e->getMessage());}return Response::redirect($basePath.'/admin/document-types'.($id!==null?'?edit='.$id:''));};
+    $router->get('/admin/document-types',static function(Request$request)use($view,$documentTypes,$organizationId,$session,$csrf,$basePath,$browserTitle):Response{$editId=(int)($request->queryValue('edit','0')??0);return$view->render('admin/document-types/index',['title'=>'Tipos de documentos — '.$browserTitle,'types'=>$documentTypes->all(false,$organizationId),'editingType'=>$editId>0?$documentTypes->find($editId,$organizationId):null,'message'=>$session->get('document_types.message'),'error'=>$session->get('document_types.error'),'csrfField'=>$csrf->field(),'basePath'=>$basePath]);},[$requireAuth,new RequirePermission($auth,'users.manage')]);
+    $saveDocumentType=static function(Request$request,?int$id=null)use($documentTypes,$organizationId,$session,$basePath):Response{try{$documentTypes->save($id,(string)$request->input('name',''),$request->input('is_required')==='1',$request->input('is_active')==='1',(int)$request->input('sort_order','100'),$organizationId);$session->flash('document_types.message',$id===null?'Tipo de documento cadastrado.':'Tipo de documento atualizado.');}catch(Throwable$e){$session->flash('document_types.error',$e->getMessage());}return Response::redirect($basePath.'/admin/document-types'.($id!==null?'?edit='.$id:''));};
     $router->post('/admin/document-types',static fn(Request$request):Response=>$saveDocumentType($request),[$requireAuth,new RequirePermission($auth,'users.manage')]);
     $router->post('/admin/document-types/{id:\d+}',static fn(Request$request,array$params):Response=>$saveDocumentType($request,(int)$params['id']),[$requireAuth,new RequirePermission($auth,'users.manage')]);
 
@@ -592,8 +592,8 @@ return static function (
             'organizationPoles'=>$organizationPoles->allForOrganization($id),
             'organizationPoleUnits'=>$organizationPoles->availableUnits($id),
             'franchiseDocuments'=>$documents->all('franchise',$id),
-            'documentCategories'=>$documents->categories('franchise'),
-            'documentTypes'=>$documentTypes->all(true),
+            'documentCategories'=>$documents->categories('franchise',$id),
+            'documentTypes'=>$documentTypes->all(true,$id),
             'siteSettings'=>$sites->settings($id),
             'siteDomainStatus'=>$sites->domainStatus($id),
             'siteDnsIpv4'=>$config->string('app.public_ipv4'),
@@ -1758,7 +1758,7 @@ return static function (
         $missingDocs=[];
         foreach($requiredDocs as$requiredDoc){$code=(string)$requiredDoc['code'];if(!isset($submittedCategories[$code]))$missingDocs[]=['code'=>$code,'name'=>(string)$requiredDoc['name']];}
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'materials'=>$materials,'finance_alert'=>$financeAlert,'satisfaction_rated'=>$satisfactionRated,'missing_documents'=>$missingDocs,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'tabs'=>$tabs,'enrollments'=>$enrollments,'payments'=>$payments,'upcoming_payments'=>$upcomingPayments,'announcements'=>$announcements,'materials'=>$materials,'finance_alert'=>$financeAlert,'satisfaction_rated'=>$satisfactionRated,'missing_documents'=>$missingDocs,'tickets'=>$tickets,'documents'=>$documentRows,'document_categories'=>$documents->categories('franchise',(int)$customer['organization_id'])]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{
@@ -1829,7 +1829,7 @@ return static function (
             $file=$request->file('document');
             if($file===null)throw new RuntimeException('Selecione um arquivo.');
             $category=trim((string)$request->input('category',''));
-            $categories=$documents->categories('franchise');
+            $categories=$documents->categories('franchise',(int)$customer['organization_id']);
             if(!isset($categories[$category]))throw new RuntimeException('Selecione um tipo de documento válido.');
             $title=trim((string)$request->input('title',''));
             if($title==='')$title=(string)$file->originalName;

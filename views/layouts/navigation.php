@@ -37,6 +37,7 @@
       <?php if ($navigation['whatsapp_templates'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/whatsapp/templates"><i class="fa-solid fa-file-lines fa-fw" aria-hidden="true"></i>Modelos do WhatsApp</a><?php endif; ?>
       <?php if ($navigation['ticket_departments'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/ticket-departments"><i class="fa-solid fa-people-group fa-fw" aria-hidden="true"></i>Setores</a><?php endif; ?>
       <?php if ($navigation['site'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/site"><i class="fa-solid fa-store fa-fw" aria-hidden="true"></i>Site Institucional</a><?php endif; ?>
+      <?php if ($navigation['users'] ?? false): ?><a class="nav-link" href="<?= $escape($basePath) ?>/admin/document-types"><i class="fa-solid fa-folder-tree fa-fw" aria-hidden="true"></i>Documentos</a><?php endif; ?>
     </div></details>
   <?php endif; ?>
 <?php endif; ?>
