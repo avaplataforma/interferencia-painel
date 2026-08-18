@@ -65,6 +65,11 @@ final readonly class AvaEnrollmentReleaser
 
             $identity=$this->poles->identityForEnrollment((int)$context['unit_id'],isset($context['organization_pole_id'])?(int)$context['organization_pole_id']:null);
             if($identity===null)throw new RuntimeException('A Unidade desta matrícula ainda não possui um polo Mundo Inter ativo. Configure a aba Polos da franquia.');
+            $email = strtolower(trim((string) $context['email']));
+            $document = preg_replace('/\D/', '', (string) $context['cpf_cnpj']) ?? '';
+            if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+                throw new RuntimeException('O aluno precisa ter um e-mail válido antes da liberação.');
+            }
             $customFields=[
                 ['type'=>OrganizationPoleRepository::FRANCHISE_FIELD,'value'=>$identity['franchise_code']],
                 ['type'=>OrganizationPoleRepository::POLE_FIELD,'value'=>$identity['pole_code']],
@@ -74,12 +79,6 @@ final readonly class AvaEnrollmentReleaser
             }
             $unitField=(string)$connection['connection_type']==='shared'?$this->moodle->unitCustomFieldForUnit((int)$context['unit_id']):null;
             if($unitField!==null)$customFields[]=$unitField;
-
-            $email = strtolower(trim((string) $context['email']));
-            $document = preg_replace('/\D/', '', (string) $context['cpf_cnpj']) ?? '';
-            if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
-                throw new RuntimeException('O aluno precisa ter um e-mail válido antes da liberação.');
-            }
 
             $byDocument = $document === '' ? [] : $client->usersByField('idnumber', $document);
             $byEmail = $client->usersByField('email', $email);
