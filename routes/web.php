@@ -1662,7 +1662,7 @@ return static function (
         $documentsStatement->execute(['customer'=>$customerId]);
         $documents=$documentsStatement->fetchAll()?:[];
         $journey=['matriculas'=>count($enrollments),'liberadas'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['moodle_enrolment_status']==='released')),'certificados'=>count(array_filter($enrollments,static fn(array$item):bool=>(string)$item['academic_certificate_status']==='available')),'pagamentos_abertos'=>count(array_filter($payments,static fn(array$item):bool=>in_array((string)$item['status'],['PENDING','OVERDUE'],true))),'tickets_abertos'=>count(array_filter($tickets,static fn(array$item):bool=>in_array((string)$item['status'],['open','in_progress','waiting'],true)))];
-        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents,'document_categories'=>$documentsManager->categories('franchise')]);
+        return Response::json(['ok'=>true,'journey'=>$journey,'student'=>['name'=>(string)$customer['name'],'organization'=>(string)($customer['organization_name']??''),'unit'=>(string)($customer['unit_name']??''),'email'=>(string)$customer['email']],'enrollments'=>$enrollments,'payments'=>$payments,'tickets'=>$tickets,'documents'=>$documents,'document_categories'=>$documents->categories('franchise')]);
     });
 
     $portalCustomer=static function(Request$request)use($database,$config):array{
@@ -1684,7 +1684,7 @@ return static function (
         return $customer;
     };
 
-    $router->post('/portal/aluno/ticket',static function(Request$request)use($portalCustomer,$tickets,$organizations,$ticketDepartments):Response{
+    $router->postWithoutCsrf('/portal/aluno/ticket',static function(Request$request)use($portalCustomer,$tickets,$organizations,$ticketDepartments):Response{
         try{
             $customer=$portalCustomer($request);
             $subject=trim((string)$request->input('subject',''));
@@ -1700,7 +1700,7 @@ return static function (
         }catch(Throwable$e){return Response::json(['ok'=>false,'error'=>$e->getMessage()],422);}
     });
 
-    $router->post('/portal/aluno/document',static function(Request$request)use($portalCustomer,$documents,$organizations):Response{
+    $router->postWithoutCsrf('/portal/aluno/document',static function(Request$request)use($portalCustomer,$documents,$organizations):Response{
         try{
             $customer=$portalCustomer($request);
             $master=$organizations->panelUser((int)$customer['organization_id']);
