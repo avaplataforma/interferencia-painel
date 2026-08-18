@@ -1952,8 +1952,9 @@ function local_mundointer_before_standard_top_of_body_html(): string
     }
   }
 
-  var isMyCourses = document.body.classList.contains("pagelayout-mycourses");
-  if (isMyCourses && !document.querySelector(".mundointer-mycourses-hero")) {
+  var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
+  var mountMundoInterCoursesHero = function () {
+    if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
     var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
     if (region) {
       var hero = document.createElement("header");
@@ -1978,8 +1979,15 @@ function local_mundointer_before_standard_top_of_body_html(): string
         + (contacts ? "<div class=\"mundointer-mycourses-contacts\">" + contacts + "</div>" : "");
       region.insertBefore(hero, region.firstChild);
     }
+  };
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", mountMundoInterCoursesHero);
+  } else {
+    mountMundoInterCoursesHero();
   }
-  if (document.body.classList.contains("pagelayout-mydashboard")) {
+  [600, 1600].forEach(function (delay) { window.setTimeout(mountMundoInterCoursesHero, delay); });
+  var isMyHome = location.pathname === "/my/" || location.pathname.indexOf("/my/index.php") !== -1;
+  if (isMyHome) {
     try {
       if (!sessionStorage.getItem("mundointer-home-redirected")) {
         sessionStorage.setItem("mundointer-home-redirected", "1");

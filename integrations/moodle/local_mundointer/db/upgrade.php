@@ -473,6 +473,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // nativa Meus cursos (/my/courses.php) com o cabeçalho da franquia.
         upgrade_plugin_savepoint(true, 2026081802, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081803) {
+        // Sem mudança de esquema. O cabeçalho da franquia em Meus cursos passa a
+        // detectar a página pela URL e a montar somente após o DOM estar pronto.
+        upgrade_plugin_savepoint(true, 2026081803, 'local', 'mundointer');
+    }
     return true;
 }
 
