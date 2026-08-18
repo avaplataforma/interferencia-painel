@@ -132,7 +132,8 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
 }
 .mundointer-portal-float {
     position: fixed;
-    left: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
     bottom: 1rem;
     z-index: 9999;
     display: inline-flex;
@@ -156,7 +157,6 @@ body.pagelayout-login .mundointer-portal-float {
 }
 @media (max-width: 768px) {
     .mundointer-portal-float {
-        left: .6rem;
         bottom: .6rem;
         padding: .55rem .8rem;
         font-size: .82rem;
@@ -2068,6 +2068,10 @@ function local_mundointer_before_standard_top_of_body_html(): string
                     var copy = brand.querySelector(".mundointer-brand-copy");
                     if (copy) copy.style.display = "";
                 });
+            }
+            var moodleBase = brand.getAttribute("data-moodle-base") || "";
+            if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
+                navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
             }
             return;
         }

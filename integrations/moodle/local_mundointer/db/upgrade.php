@@ -627,6 +627,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // resolver a marca da sessão antes de montar o bloco da marca.
         upgrade_plugin_savepoint(true, 2026081832, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081833) {
+        // Sem mudança de esquema. Logo da marca leva ao Portal do Aluno e o
+        // botão flutuante fica centralizado horizontalmente.
+        upgrade_plugin_savepoint(true, 2026081833, 'local', 'mundointer');
+    }
     return true;
 }
 
