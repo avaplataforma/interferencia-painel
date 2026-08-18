@@ -765,6 +765,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // atividades e ícones das atividades trocados por play na cor da marca.
         upgrade_plugin_savepoint(true, 2026081859, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081860) {
+        // Sem mudança de esquema. Troca de ícones das atividades passa a valer
+        // para todos os usuários, inclusive administradores.
+        upgrade_plugin_savepoint(true, 2026081860, 'local', 'mundointer');
+    }
     return true;
 }
 

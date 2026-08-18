@@ -33,6 +33,13 @@ a:not([class]):focus,
     background-color: #eef2f5 !important;
     box-shadow: 0 -.2rem #5b6874, 0 .2rem #373a3c !important;
 }
+.mundointer-activity-play {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #405267;
+    font-size: 1.3rem;
+}
 </style><script>
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".login-form-forgotpassword a, .login-signup a").forEach(function (link) {
@@ -40,6 +47,17 @@ document.addEventListener("DOMContentLoaded", function () {
         link.style.setProperty("font-weight", "600");
     });
 });
+function swapMundoInterActivityIcons() {
+    document.querySelectorAll(".activity-icon img.activityicon, .activityiconcontainer img.activityicon").forEach(function (img) {
+        var play = document.createElement("span");
+        play.className = "mundointer-activity-play";
+        play.setAttribute("aria-hidden", "true");
+        play.innerHTML = "<i class=\"fa-solid fa-circle-play\"></i>";
+        img.parentNode.replaceChild(play, img);
+    });
+}
+document.addEventListener("DOMContentLoaded", swapMundoInterActivityIcons);
+window.setTimeout(swapMundoInterActivityIcons, 1200);
 </script>';
     if (is_siteadmin()) {
         return $neutralLogin;
@@ -2246,23 +2264,6 @@ function hideMundoInterCourseExtras() {
     mountMundoInterCoursesHero();
   }
   [600, 1600].forEach(function (delay) { window.setTimeout(mountMundoInterCoursesHero, delay); });
-
-  function swapMundoInterActivityIcons() {
-    document.querySelectorAll(".activity-icon img.activityicon, .activityiconcontainer img.activityicon").forEach(function (img) {
-      if (img.closest(".mundointer-activity-play")) return;
-      var play = document.createElement("span");
-      play.className = "mundointer-activity-play";
-      play.setAttribute("aria-hidden", "true");
-      play.innerHTML = "<i class=\"fa-solid fa-circle-play\"></i>";
-      img.parentNode.replaceChild(play, img);
-    });
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", swapMundoInterActivityIcons);
-  } else {
-    swapMundoInterActivityIcons();
-  }
-  [800, 2000].forEach(function (delay) { window.setTimeout(swapMundoInterActivityIcons, delay); });
   
   if (document.body.classList.contains("pagelayout-mydashboard") && brand.getAttribute("data-welcome") === "1" && !document.querySelector(".mundointer-welcome")) {
     var main = document.querySelector("#region-main") || document.querySelector(".drawercontent");
