@@ -831,30 +831,79 @@ document.querySelectorAll('[data-master-course-detail]').forEach((detail) => {
 })();
 
 (() => {
+  const form = document.querySelector('[data-enrollment-form]');
   const product = document.querySelector('[data-enrollment-product]');
   const ava = document.querySelector('[data-enrollment-ava]');
   const source = document.querySelector('[data-enrollment-ava-options]');
-  if (!(product instanceof HTMLSelectElement) || !(ava instanceof HTMLSelectElement) || !(source instanceof HTMLScriptElement)) return;
+  if (!(form instanceof HTMLFormElement) || !(product instanceof HTMLSelectElement) || !(ava instanceof HTMLSelectElement) || !(source instanceof HTMLScriptElement)) return;
   let destinations = {};
   try { destinations = JSON.parse(source.textContent || '{}'); } catch (_) { destinations = {}; }
+  const student = form.querySelector('[data-enrollment-student]');
+  const unit = form.elements.namedItem('unit_id');
+  const campaign = form.querySelector('[data-enrollment-campaign]');
+  const submit = form.querySelector('[data-enrollment-submit]');
+  const summary = form.querySelector('[data-enrollment-summary-text]');
+  const errorBox = form.querySelector('[data-enrollment-form-error]');
+  const avaHelp = form.querySelector('[data-enrollment-ava-help]');
+  const money = (value) => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  const selectedText = (select) => select instanceof HTMLSelectElement && select.selectedIndex >= 0 ? select.options[select.selectedIndex]?.textContent?.trim() || '' : '';
+  const filter = (kind, query) => {
+    const select = kind === 'student' ? student : product;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const needle = String(query || '').trim().toLocaleLowerCase('pt-BR');
+    let visible = 0;
+    Array.from(select.options).forEach((option) => {
+      if (!option.value) return;
+      const matches = needle === '' || option.textContent.toLocaleLowerCase('pt-BR').includes(needle);
+      option.hidden = !matches;
+      if (matches) visible += 1;
+    });
+    const count = form.querySelector(kind === 'student' ? '[data-enrollment-count]' : '[data-enrollment-product-count]');
+    if (count instanceof HTMLElement && needle !== '') count.textContent = visible === 0 ? 'Nenhum resultado encontrado.' : `${visible} resultado(s) encontrado(s).`;
+  };
+  form.querySelectorAll('[data-enrollment-search]').forEach((input) => {
+    if (!(input instanceof HTMLInputElement)) return;
+    input.addEventListener('input', () => filter(input.dataset.enrollmentSearch || '', input.value));
+  });
   const refresh = () => {
     const options = Array.isArray(destinations[product.value]) ? destinations[product.value] : [];
+    const selectedAva = ava.dataset.selectedAva || '';
     ava.replaceChildren();
     if (options.length === 0) {
       ava.append(new Option(product.value ? 'Curso sem AVA sincronizado' : 'Escolha primeiro o curso contratado', ''));
       ava.disabled = true;
+      if (avaHelp instanceof HTMLElement) avaHelp.textContent = product.value ? 'Esta oferta não pode ser matriculada enquanto não houver AVA disponível.' : 'O destino é definido pela oferta selecionada.';
       return;
     }
     ava.append(new Option('Selecione o AVA', ''));
     options.forEach((destination) => {
       const option = new Option(`${destination.name} · ${destination.remote_course_name}`, String(destination.connection_id));
-      option.selected = destination.primary === true;
+      option.selected = selectedAva !== '' ? String(destination.connection_id) === selectedAva : destination.primary === true;
       ava.append(option);
     });
     ava.disabled = false;
+    ava.dataset.selectedAva = '';
+    if (avaHelp instanceof HTMLElement) avaHelp.textContent = options.some((destination) => destination.automatic === true) ? 'O curso será preparado automaticamente no AVA após o envio.' : 'Confira o ambiente acadêmico antes de continuar.';
+  };
+  const refreshSummary = () => {
+    const selected = product.options[product.selectedIndex];
+    const price = Number(selected?.dataset.price || 0);
+    const discount = Number(campaign?.options[campaign.selectedIndex]?.dataset.discount || 0);
+    const finalPrice = price * (1 - discount / 100);
+    const valid = student instanceof HTMLSelectElement && student.value !== '' && product.value !== '' && ava.value !== '' && unit instanceof HTMLSelectElement && unit.value !== '';
+    if (submit instanceof HTMLButtonElement) submit.disabled = !valid;
+    if (summary instanceof HTMLElement) summary.textContent = valid ? `${selectedText(student)} · ${selectedText(product)} · ${selectedText(unit)} · ${selectedText(ava)}. ${money(finalPrice)}${discount > 0 ? ` após ${discount.toLocaleString('pt-BR')}% de desconto` : ''}. Até ${selected?.dataset.maxInstallments || 1}x. A próxima etapa será gerar a cobrança.` : 'Escolha o aluno, a oferta, o AVA e a unidade para revisar os dados.';
   };
   product.addEventListener('change', refresh);
+  [student, ava, unit, campaign, product].forEach((field) => field?.addEventListener('change', refreshSummary));
   refresh();
+  refreshSummary();
+  form.addEventListener('submit', (event) => {
+    if (submit instanceof HTMLButtonElement && submit.disabled) {
+      event.preventDefault();
+      if (errorBox instanceof HTMLElement) { errorBox.textContent = 'Complete aluno, oferta, AVA e unidade antes de continuar.'; errorBox.hidden = false; errorBox.focus(); }
+    }
+  });
 })();
 
 (() => {
