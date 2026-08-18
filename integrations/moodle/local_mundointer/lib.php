@@ -130,6 +130,35 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     font-weight: 700;
     text-decoration: none;
 }
+.mundointer-course-portal-float {
+    position: fixed;
+    left: 1rem;
+    bottom: 1rem;
+    z-index: 9999;
+    display: inline-flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .65rem 1rem;
+    border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--mundointer-primary);
+    font-weight: 800;
+    font-size: .9rem;
+    text-decoration: none;
+    box-shadow: 0 .5rem 1.2rem rgb(20 40 70 / 18%);
+}
+.mundointer-course-portal-float:hover {
+    background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
+}
+@media (max-width: 768px) {
+    .mundointer-course-portal-float {
+        left: .6rem;
+        bottom: .6rem;
+        padding: .55rem .8rem;
+        font-size: .82rem;
+    }
+}
 .mundointer-secretaria-link:hover {
     border-color: var(--mundointer-primary);
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
@@ -1302,6 +1331,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
             . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</a>'
             . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
             . '</div></header>';
+    }
+
+    $isCourseView = $PAGE !== null && $PAGE->url !== null && str_starts_with((string) $PAGE->pagetype, 'course-view');
+    if ($isCourseView) {
+        $baseurl = s((string) (new moodle_url('/'))->out(false));
+        $html .= '<a class="mundointer-course-portal-float" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-arrow-left"></i> Portal do Aluno</a>';
     }
 
     return $html.'<script>

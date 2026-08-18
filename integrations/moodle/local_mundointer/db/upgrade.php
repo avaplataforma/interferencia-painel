@@ -576,6 +576,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // para Portal do Aluno.
         upgrade_plugin_savepoint(true, 2026081822, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081823) {
+        // Sem mudança de esquema. Atalho flutuante 'Portal do Aluno' dentro
+        // das páginas de curso (course-view).
+        upgrade_plugin_savepoint(true, 2026081823, 'local', 'mundointer');
+    }
     return true;
 }
 
