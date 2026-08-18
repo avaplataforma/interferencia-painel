@@ -740,6 +740,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // !important para vencer a cascata do tema.
         upgrade_plugin_savepoint(true, 2026081854, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081855) {
+        // Sem mudança de esquema. Mobile: barra inferior fixa com ícones para as
+        // seções do portal, KPIs compactos e jornada logo após a testeira.
+        upgrade_plugin_savepoint(true, 2026081855, 'local', 'mundointer');
+    }
     return true;
 }
 

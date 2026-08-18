@@ -188,6 +188,24 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
 .mi-dash-tab.materials{background:linear-gradient(135deg,#0ea5e9,#0284c7)}
 .mi-dash-panel.certificates{border-top-color:#8b5cf6}
 .mi-dash-panel.materials{border-top-color:#0ea5e9}
+@media (max-width: 768px) {
+    .mi-dash{padding-bottom:calc(4.9rem + env(safe-area-inset-bottom))}
+    .mi-dash-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1000;display:flex;margin:0;padding:.35rem .4rem calc(.35rem + env(safe-area-inset-bottom));gap:.25rem;background:#fff;border-top:1px solid #e3e8ec;box-shadow:0 -.4rem 1.2rem rgb(20 40 70 / 10%);overflow-x:auto;border-radius:0;grid-template-columns:none}
+    .mi-dash-tab{flex:1 0 auto;min-width:4.1rem;min-height:3.3rem;flex-direction:column;gap:.15rem;padding:.35rem .3rem;border-radius:.7rem;background:transparent!important;box-shadow:none!important;color:#647482!important;font-size:.6rem;font-weight:800;white-space:nowrap}
+    .mi-dash-tab i{font-size:1.1rem}
+    .mi-dash-tab[aria-selected="true"]{background:#eef2f5!important;color:#172129!important;outline:0}
+    .mi-dash-tab.journey{color:#2563eb!important}
+    .mi-dash-tab.enroll{color:#16a34a!important}
+    .mi-dash-tab.finance{color:#f59e0b!important}
+    .mi-dash-tab.tickets{color:#8b5cf6!important}
+    .mi-dash-tab.documents{color:#0ea5e9!important}
+    .mi-dash-tab.certificates{color:#8b5cf6!important}
+    .mi-dash-tab.materials{color:#0ea5e9!important}
+    .mi-dash-kpis{display:flex;overflow-x:auto;gap:.45rem;margin-bottom:1rem;padding-bottom:.2rem;grid-template-columns:none}
+    .mi-dash-kpi{flex:0 0 auto;min-width:8.5rem}
+    .mi-dash-hero{flex-direction:column;align-items:flex-start}
+    .mi-dash-hero .mi-dash-hero-actions{margin-left:0}
+}
 .mi-stars-inline{display:inline-flex;gap:.05rem;margin-left:.55rem;vertical-align:middle}
 .mi-stars-inline button{border:0;background:none;padding:0 .05rem;color:#d4d4e0;cursor:pointer;font-size:.95rem;line-height:1}
 .mi-stars-inline button.active{color:#f59e0b}
@@ -328,10 +346,11 @@ $continueUrl = function (array $enrollment) use (&$continueCache, $DB, $USER): s
  (function () {
    var tabs = document.querySelectorAll(".mi-dash-tab[data-mi-tab]");
    var panels = document.querySelectorAll(".mi-dash-panel[data-mi-panel]");
-   function activate(name) {
-     tabs.forEach(function (tab) { tab.setAttribute("aria-selected", tab.dataset.miTab === name ? "true" : "false"); });
-     panels.forEach(function (panel) { panel.dataset.active = panel.dataset.miPanel === name ? "1" : "0"; });
-   }
+    function activate(name) {
+      tabs.forEach(function (tab) { tab.setAttribute("aria-selected", tab.dataset.miTab === name ? "true" : "false"); });
+      panels.forEach(function (panel) { panel.dataset.active = panel.dataset.miPanel === name ? "1" : "0"; });
+      if (window.innerWidth <= 768) { window.scrollTo({ top: 0, behavior: "smooth" }); }
+    }
     tabs.forEach(function (tab) { tab.addEventListener("click", function () { activate(tab.dataset.miTab); }); });
 
     document.querySelectorAll("[data-mi-pix-toggle]").forEach(function (toggle) {
