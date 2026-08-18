@@ -14,7 +14,7 @@ final readonly class OrganizationBrandingStorage
 
     public function store(int $organizationId, UploadedFile $file, string $kind): string
     {
-        if (!in_array($kind, ['logo', 'favicon'], true)) throw new RuntimeException('Tipo de imagem inválido.');
+        if (!in_array($kind, ['logo', 'favicon', 'navbar'], true)) throw new RuntimeException('Tipo de imagem inválido.');
         if ($file->error !== UPLOAD_ERR_OK || !is_uploaded_file($file->temporaryPath)) throw new RuntimeException('Não foi possível receber a imagem enviada.');
         if ($file->size < 1 || $file->size > 3 * 1024 * 1024) throw new RuntimeException('A imagem deve ter no máximo 3 MB.');
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($file->temporaryPath);

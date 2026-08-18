@@ -13,7 +13,7 @@ final readonly class AvaBrandCatalog
     /** @return array{schema:int,version:string,generated_at:string,profile_field:string,franchise_field:string,pole_field:string,brands:list<array<string,mixed>>} */
     public function build(): array
     {
-        $rows=$this->database->query("SELECT o.id,o.code,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.ava_primary_color,o.ava_secondary_color,o.logo_path,o.favicon_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,o.ava_polo_name,st.site_primary_color,st.site_secondary_color,dom.host site_host,p.code pole_code,p.name pole_name,p.legacy_value,u.code unit_code,u.name unit_name FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN organization_sites st ON st.organization_id=o.id LEFT JOIN organization_domains dom ON dom.organization_id=o.id AND dom.purpose='site' AND dom.is_primary=1 LEFT JOIN organization_poles p ON p.organization_id=o.id AND p.is_active=1 LEFT JOIN units u ON u.id=p.unit_id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,p.is_primary DESC,p.name")->fetchAll()?:[];
+        $rows=$this->database->query("SELECT o.id,o.code,o.panel_slug,o.display_name,o.primary_color,o.secondary_color,o.ava_primary_color,o.ava_secondary_color,o.logo_path,o.favicon_path,o.ava_navbar_logo_path,o.login_title,o.login_welcome_text,o.support_email,o.support_phone,o.ava_polo_name,st.site_primary_color,st.site_secondary_color,dom.host site_host,p.code pole_code,p.name pole_name,p.legacy_value,u.code unit_code,u.name unit_name FROM organizations o INNER JOIN organization_ava_settings s ON s.organization_id=o.id LEFT JOIN organization_sites st ON st.organization_id=o.id LEFT JOIN organization_domains dom ON dom.organization_id=o.id AND dom.purpose='site' AND dom.is_primary=1 LEFT JOIN organization_poles p ON p.organization_id=o.id AND p.is_active=1 LEFT JOIN units u ON u.id=p.unit_id WHERE o.status='active' AND s.access_mode IN('shared','both') ORDER BY o.display_name,p.is_primary DESC,p.name")->fetchAll()?:[];
         $brands=[];$profileField='polo_presencial';
         foreach($rows as$row){
             $id=(int)$row['id'];
@@ -26,6 +26,7 @@ final readonly class AvaBrandCatalog
                     'secondary_color'=>$this->color((string)(trim((string)($row['site_secondary_color']??''))!==''?$row['site_secondary_color']:(trim((string)($row['ava_secondary_color']??''))!==''?$row['ava_secondary_color']:($row['secondary_color']??''))),'#082d72'),
                     'logo_url'=>$this->assetUrl((string)($row['logo_path']??''),'/assets/media/mundo-inter-logo.png'),
                     'favicon_url'=>$this->assetUrl((string)($row['favicon_path']??''),'/assets/media/mundo-inter-favicon.png'),
+                    'navbar_logo_url'=>$this->assetUrl((string)($row['ava_navbar_logo_path']??''),''),
                     'login_title'=>(string)($row['login_title']?:$row['display_name']),
                     'welcome_text'=>(string)($row['login_welcome_text']?:'Use suas credenciais para continuar.'),
                     'support_email'=>(string)($row['support_email']??''),

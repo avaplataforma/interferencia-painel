@@ -124,8 +124,15 @@ final readonly class OrganizationRepository
             $this->database->commit();return$id;
         }catch(Throwable$e){if($this->database->inTransaction())$this->database->rollBack();if($e instanceof RuntimeException)throw$e;throw new RuntimeException('Não foi possível salvar. O CNPJ, código, endereço interno ou domínio pode já estar em uso.',0,$e);}
     }
-    public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath):void
-    {$s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');}
+    public function updateBrandingPaths(int$id,?string$logoPath,?string$faviconPath,?string$navbarLogoPath=null):void
+    {
+        if($navbarLogoPath!==null){
+            $s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon,ava_navbar_logo_path=:navbar WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'navbar'=>$navbarLogoPath,'id'=>$id]);
+        }else{
+            $s=$this->database->prepare('UPDATE organizations SET logo_path=:logo,favicon_path=:favicon WHERE id=:id');$s->execute(['logo'=>$logoPath,'favicon'=>$faviconPath,'id'=>$id]);
+        }
+        if($s->rowCount()===0&&$this->findRecord($id)===null)throw new RuntimeException('Organização não encontrada.');
+    }
     public function updateAvaCommunication(int$id,string$loginTitle,string$poloName,string$welcome,string$email,string$phone,string$avaAccessUrl='',string$avaPrimaryColor='',string$avaSecondaryColor=''):void
     {
         $loginTitle=trim($loginTitle);$poloName=trim(preg_replace('/\s+/u',' ',$poloName)??'');$welcome=trim($welcome);$email=strtolower(trim($email));$phone=trim($phone);$avaAccessUrl=trim($avaAccessUrl);$avaPrimaryColor=strtolower(trim($avaPrimaryColor));$avaSecondaryColor=strtolower(trim($avaSecondaryColor));

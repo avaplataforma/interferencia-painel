@@ -1343,7 +1343,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $pagetitle = s((string)$brand['login_title'].' | AVA');
     $logohtml = $logo !== '' ? '<img src="'.$logo.'" alt="">' : '';
 
-    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-brand-logo="'.s((string)($brand['logo_url'] ?? '')).'" data-student-name="'.s((string)(isloggedin()&&!isguestuser()?($USER->firstname ?? ''):'')).'" data-welcome-text="'.s((string)($brand['welcome_text'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
+    $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-navbar-logo="'.s((string)($brand['navbar_logo_url'] ?? '')).'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-brand-logo="'.s((string)($brand['logo_url'] ?? '')).'" data-student-name="'.s((string)(isloggedin()&&!isguestuser()?($USER->firstname ?? ''):'')).'" data-welcome-text="'.s((string)($brand['welcome_text'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
@@ -2083,11 +2083,26 @@ function local_mundointer_before_standard_top_of_body_html(): string
             navbar.textContent = "";
             navbar.appendChild(brand);
             var faviconUrl = brand.getAttribute("data-favicon");
+            var navbarLogoUrl = brand.getAttribute("data-navbar-logo") || "";
             var logoUrl = brand.getAttribute("data-brand-logo");
-            if (faviconUrl && brandImage) {
+            var brandImageAttempts = 0;
+            if (navbarLogoUrl && brandImage) {
+                brandImage.src = navbarLogoUrl;
+                brandImage.removeAttribute("srcset");
+                brandImage.addEventListener("error", function () {
+                    brandImageAttempts++;
+                    if (brandImageAttempts === 1 && faviconUrl) {
+                        brandImage.src = faviconUrl;
+                        brandImage.removeAttribute("srcset");
+                        return;
+                    }
+                    brandImage.style.display = "none";
+                    var copy = brand.querySelector(".mundointer-brand-copy");
+                    if (copy) copy.style.display = "";
+                });
+            } else if (faviconUrl && brandImage) {
                 brandImage.src = faviconUrl;
                 brandImage.removeAttribute("srcset");
-                var brandImageAttempts = 0;
                 brandImage.addEventListener("error", function () {
                     brandImageAttempts++;
                     if (brandImageAttempts === 1 && logoUrl) {

@@ -44,6 +44,7 @@ final class sync_brands extends external_api
                 'slug'=>$slug,'name'=>$name,'primary_color'=>$primary,'secondary_color'=>$secondary,
                 'logo_url'=>clean_param((string)($brand['logo_url']??''),PARAM_URL),
                 'favicon_url'=>clean_param((string)($brand['favicon_url']??''),PARAM_URL),
+                'navbar_logo_url'=>clean_param((string)($brand['navbar_logo_url']??''),PARAM_URL),
                 'login_title'=>clean_param((string)($brand['login_title']??$name),PARAM_TEXT),
                 'welcome_text'=>clean_param((string)($brand['welcome_text']??''),PARAM_TEXT),
                 'support_email'=>clean_param((string)($brand['support_email']??''),PARAM_EMAIL),

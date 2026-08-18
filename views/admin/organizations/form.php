@@ -23,7 +23,7 @@ $application=$application??null;$contracts=$contracts??[];
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="polos"><i class="fa-solid fa-location-crosshairs"></i> Polos</button><?php endif;?>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="contrato"><i class="fa-solid fa-file-signature"></i> Contrato</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="painel"><i class="fa-solid fa-window-maximize"></i> Painel</button>
-   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-book-open-reader"></i> Formações/AVA</button><?php endif;?>
+   <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="ava"><i class="fa-solid fa-laptop"></i> AVA</button><?php endif;?>
    <button class="organization-tab" type="button" role="tab" data-organization-tab="site"><i class="fa-solid fa-store"></i> Site</button>
    <?php if($editing):?><button class="organization-tab" type="button" role="tab" data-organization-tab="integracoes"><i class="fa-solid fa-plug-circle-bolt"></i> Integrações</button><?php endif;?>
   </nav>

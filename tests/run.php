@@ -1722,7 +1722,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains($admin,'data-catalog-tab'));
     assertTrue(str_contains($admin,'Conexão e API'));
     assertTrue(!str_contains($admin,'Liberação por franquia'));
-    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos individuais e preços da franquia'));
+    assertTrue(!str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Cursos individuais e preços da franquia'));
+    assertTrue(str_contains((string)file_get_contents($rootPath.'/views/admin/organizations/ava.php'),'Logo da Barra'));
     assertTrue(str_contains($public,'Saiba mais'));
     assertTrue(!str_contains($public,'Acesso pelo ambiente acadêmico definido para esta Formação'));
     assertTrue(str_contains($public,'Carga Horária'));
@@ -2080,8 +2081,10 @@ $tests['controla catalogos comerciais pela aba AVA da franquia'] = static functi
     assertTrue(str_contains($repository,'saveCatalogAccess'));
     assertTrue(str_contains($site,'COALESCE(access.is_enabled,1)=1'));
     assertTrue(str_contains($financeCatalog,'catalog_enabled'));
-    assertTrue(str_contains($view,'Formações disponíveis'));
-    assertTrue(str_contains($view,'catalog_ids[]'));
+    assertTrue(!str_contains($view,'Formações disponíveis'));
+    assertTrue(!str_contains($view,'catalog_ids[]'));
+    assertTrue(str_contains($view,'Logo do Login'));
+    assertTrue(str_contains($view,'name="ava_navbar_logo"'));
 };
 
 $tests['registra todos os catalogos e fornecedores academicos'] = static function () use ($rootPath): void {
@@ -2269,10 +2272,11 @@ $tests['governa catalogos com curadoria preservada recursos e regra por franquia
     assertTrue(str_contains($catalogView,'Matriz real de recursos deste fornecedor'));
     assertTrue(str_contains($catalogView,'Aplicar em lote'));
     assertTrue(str_contains($courseCuration,'Aprovar não publica sozinho'));
-    assertTrue(str_contains($organizationView,'Preço padrão para todos'));
-    assertTrue(str_contains($organizationView,'Salvar regra e aplicar em lote'));
-    assertTrue(str_contains($organizationView,'catalog_policy['));
-    assertTrue(str_contains($organizationView,'Padrão definido pelo ADM Central'));
+    assertTrue(!str_contains($organizationView,'Preço padrão para todos'));
+    assertTrue(!str_contains($organizationView,'Salvar regra e aplicar em lote'));
+    assertTrue(!str_contains($organizationView,'catalog_policy['));
+    assertTrue(!str_contains($organizationView,'Padrão definido pelo ADM Central'));
+    assertTrue(str_contains($organizationView,'AVA'));
     assertTrue(str_contains($centralPolicyView,'Herança e autonomia da franquia'));
     assertTrue(str_contains($centralPolicyView,'Todas as franquias ativas'));
     assertTrue(str_contains($centralPolicyView,'Salvar e aplicar'));
@@ -2390,8 +2394,9 @@ $tests['libera catalogos por padrao e registra bloqueios como excecoes'] = stati
     assertTrue(str_contains($routes,"'/admin/organizations/{organizationId:\\d+}/catalog-items/{type:course|content}/{itemId:\\d+}/availability'"));
     assertTrue(str_contains($catalogView,'Cursos individuais liberados por padrão'));
     assertTrue(str_contains($catalogView,'content-curation-row'));
-    assertTrue(str_contains($organizationView,'Todas as Formações são liberadas por padrão'));
-    assertTrue(str_contains($organizationView,'Cursos individuais'));
+    assertTrue(!str_contains($organizationView,'Todas as Formações são liberadas por padrão'));
+    assertTrue(!str_contains($organizationView,'Cursos individuais'));
+    assertTrue(str_contains($organizationView,'Logo do Login'));
     assertTrue(str_contains($javascript,'data-content-curation-toggle'));
 };
 
@@ -2571,7 +2576,8 @@ $tests['padroniza nomenclaturas oficiais do Mundo Inter'] = static function () u
     foreach(['Formações','Cursos individuais','Trilhas','Categorias','Catálogos'] as$term) assertTrue(str_contains($standard,$term));
     assertTrue(str_contains($standard,'uso interno e exclusivo do ADM Central'));
     assertTrue(str_contains($public,'Cursos individuais e Trilhas'));
-    assertTrue(str_contains($franchise,'Formações disponíveis'));
+    assertTrue(!str_contains($franchise,'Formações disponíveis'));
+    assertTrue(str_contains($franchise,'Logo da Barra'));
 };
 
 $tests['organiza novas matriculas em uma coorte por franquia e turmas no AVA'] = static function () use ($rootPath): void {
