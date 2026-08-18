@@ -601,6 +601,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // direito do navbar (fim da barra), ao lado do logo.
         upgrade_plugin_savepoint(true, 2026081827, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081828) {
+        // Sem mudança de esquema. Botão Portal do Aluno passa a ser renderizado
+        // no servidor dentro do bloco da marca, ficando ao lado do logo.
+        upgrade_plugin_savepoint(true, 2026081828, 'local', 'mundointer');
+    }
     return true;
 }
 

@@ -134,7 +134,7 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     display: inline-flex;
     align-items: center;
     gap: .45rem;
-    margin: 0 0 0 .6rem;
+    margin-left: .6rem;
     padding: .5rem .85rem;
     border: 1px solid color-mix(in srgb, var(--mundointer-primary) 45%, #dce3e8);
     border-radius: 999px;
@@ -142,10 +142,12 @@ body.mundointer-mycourses #region-main > .card > .card-body > h1 {
     color: var(--mundointer-primary);
     font-weight: 800;
     font-size: .85rem;
-    text-decoration: none;
     box-shadow: 0 .3rem .8rem rgb(20 40 70 / 14%);
     white-space: nowrap;
     flex: 0 0 auto;
+}
+body.pagelayout-login .mundointer-navbar-portal {
+    display: none;
 }
 .mundointer-navbar-portal:hover {
     background: color-mix(in srgb, var(--mundointer-primary) 8%, #fff);
@@ -1307,6 +1309,7 @@ function local_mundointer_before_standard_top_of_body_html(): string
     $html = '<span class="mundointer-theme-brand" data-franquia="'.$slug.'" data-favicon="'.$favicon.'" data-page-title="'.$pagetitle.'" data-support-email="'.$supportemail.'" data-support-phone="'.$supportphone.'" data-brand-name="'.s((string)($brand['name'] ?? '')).'" data-site-url="'.s((string)($brand['site_url'] ?? '')).'" data-brand-logo="'.s((string)($brand['logo_url'] ?? '')).'" data-student-name="'.s((string)(isloggedin()&&!isguestuser()?($USER->firstname ?? ''):'')).'" data-welcome-text="'.s((string)($brand['welcome_text'] ?? '')).'" data-moodle-base="'.s((string)(new moodle_url('/'))->out(false)).'" data-support-float="'.((bool)(get_config('local_mundointer','supportbutton') ?? true)?'1':'0').'" data-welcome="'.((bool)(get_config('local_mundointer','homewelcome') ?? true)?'1':'0').'" data-login-back="'.((bool)(get_config('local_mundointer','loginback') ?? true)?'1':'0').'">'
         .$logohtml
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
+        .'<span class="mundointer-navbar-portal"><i class="fa-solid fa-building-columns"></i> Portal do Aluno</span>'
         .'</span>';
 
     $isMyCourses = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/my/courses.php');
@@ -2029,26 +2032,12 @@ function local_mundointer_before_standard_top_of_body_html(): string
             var moodleBase = brand.getAttribute("data-moodle-base") || "";
             if (moodleBase && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
                 navbar.setAttribute("href", moodleBase + "local/mundointer/portal.php");
-                var portalButton = document.createElement("a");
-                portalButton.className = "mundointer-navbar-portal";
-                portalButton.href = moodleBase + "local/mundointer/portal.php";
-                portalButton.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Portal do Aluno";
-                var navBar = navbar.closest("nav.navbar") || navbar.parentNode;
-                navBar.appendChild(portalButton);
             }
             return;
         }
 
         brand.classList.add("mundointer-brand-ribbon");
         brand.style.display = "flex";
-        var moodleBaseRibbon = brand.getAttribute("data-moodle-base") || "";
-        if (moodleBaseRibbon && location.pathname.indexOf("local/mundointer/portal.php") === -1) {
-            var portalButtonRibbon = document.createElement("a");
-            portalButtonRibbon.className = "mundointer-navbar-portal";
-            portalButtonRibbon.href = moodleBaseRibbon + "local/mundointer/portal.php";
-            portalButtonRibbon.innerHTML = "<i class=\"fa-solid fa-building-columns\"></i> Portal do Aluno";
-            brand.insertAdjacentElement("afterend", portalButtonRibbon);
-        }
     }
 
     if (document.readyState === "loading") {
