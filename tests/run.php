@@ -1982,8 +1982,8 @@ $tests['publica Catalogo PRO por franquia com venda assistida'] = static functio
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),'2026081817'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/version.php'),"'1.0.17'"));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'global $USER;'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mundointer-secretaria-link'));
-    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'Secretaria Digital"'));
+    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'mi-secretaria'));
+    assertTrue(str_contains((string)file_get_contents($pluginDir.'/lib.php'),'Secretaria Digital</a>'));
     assertTrue(str_contains((string)file_get_contents($pluginDir.'/portal.php'),'Secretaria Digital'));
     assertTrue(!str_contains((string)file_get_contents($pluginDir.'/portal.php'),'Meu espaço'));
     assertTrue(str_contains((string)file_get_contents($rootPath.'/modules/Moodle/MoodleClient.php'),'function updateUser'));
