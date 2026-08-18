@@ -622,6 +622,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // marca; em falha, restaura a logo original e preserva a logo nativa.
         upgrade_plugin_savepoint(true, 2026081831, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081832) {
+        // Sem mudança de esquema. Correção crítica: o hook do body voltou a
+        // resolver a marca da sessão antes de montar o bloco da marca.
+        upgrade_plugin_savepoint(true, 2026081832, 'local', 'mundointer');
+    }
     return true;
 }
 

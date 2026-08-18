@@ -1308,6 +1308,10 @@ function local_mundointer_before_standard_top_of_body_html(): string
     if (is_siteadmin()) {
         return '';
     }
+    $brand = \local_mundointer\local\brand_resolver::current();
+    if ($brand === null) {
+        return '';
+    }
 
     $logo = s((string)$brand['logo_url']);
     $name = s((string)$brand['login_title']);
