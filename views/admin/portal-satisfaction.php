@@ -20,6 +20,7 @@ $summary=$summary??['avg'=>0.0,'count'=>0,'stars'=>[1=>0,2=>0,3=>0,4=>0,5=>0]];$
    <?php foreach($responses as$item):?>
    <article class="response-card">
     <div class="response-head"><span class="response-stars"><?= str_repeat('★',(int)$item['rating']).str_repeat('☆',5-(int)$item['rating']) ?></span><strong><?= $escape((string)$item['student_name']) ?></strong></div>
+    <?php if(!empty($item['course_name'])):?><small style="display:block;margin-top:.2rem"><i class="fa-solid fa-book-open"></i> <?= $escape((string)$item['course_name']) ?></small><?php endif;?>
     <?php if(!empty($item['comment'])):?><p><?= $escape((string)$item['comment']) ?></p><?php endif;?>
     <small><?= $escape(substr((string)$item['created_at'],0,16)) ?></small>
    </article>
