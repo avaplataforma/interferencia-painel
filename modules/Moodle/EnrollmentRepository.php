@@ -145,6 +145,21 @@ final readonly class EnrollmentRepository
         if($allowedUnits===[])throw new RuntimeException('Matrícula não encontrada.');$marks=implode(',',array_fill(0,count($allowedUnits),'?'));$s=$this->database->prepare("DELETE FROM student_enrollments WHERE id=? AND unit_id IN ($marks) AND finance_payment_id IS NULL AND status='awaiting_charge' AND moodle_enrolment_status='not_released'");$s->execute(array_merge([$id],$allowedUnits));if($s->rowCount()!==1)throw new RuntimeException('A matrícula não pode ser excluída porque já possui movimentação financeira ou acadêmica.');
     }
 
+    /** @return array<string,mixed> */
+    public function cancel(int $id,string $reason,int $userId,array $allowedUnits): array
+    {
+        $context=$this->releaseContext($id,$allowedUnits);
+        if($context===null)throw new RuntimeException('Matrícula não encontrada.');
+        if((string)$context['status']==='cancelled')throw new RuntimeException('Esta matrícula já está cancelada.');
+        $reason=trim($reason);
+        if(mb_strlen($reason)<5||mb_strlen($reason)>500)throw new RuntimeException('Informe o motivo do cancelamento entre 5 e 500 caracteres.');
+        $s=$this->database->prepare("UPDATE student_enrollments SET status='cancelled',cancelled_at=NOW(),cancelled_reason=:reason,cancelled_by=:user WHERE id=:id AND status<>'cancelled'");
+        $s->execute(['reason'=>mb_substr($reason,0,500),'user'=>$userId,'id'=>$id]);
+        if($s->rowCount()!==1)throw new RuntimeException('Não foi possível cancelar a matrícula.');
+        $this->recordEvent($id,'enrollment-cancelled:'.$id,'enrollment_cancelled','Matrícula cancelada. Motivo: '.$reason,$userId);
+        return $context;
+    }
+
     public function chargeContext(int $id,array $units): ?array
     {
         if($units===[])return null;$marks=implode(',',array_fill(0,count($units),'?'));$s=$this->database->prepare("SELECT e.*,COALESCE(p.name,trail.name,pco.commercial_name,pc.commercial_name,pc.name) product_name,COALESCE(e.final_value,p.value,trail_access.price_override,trail.default_price,pco.price) value,COALESCE(trail_access.max_installments_override,trail.max_installments,p.max_installments,pco.max_installments,1) max_installments,c.name campaign_name FROM student_enrollments e LEFT JOIN finance_products p ON p.id=e.finance_product_id LEFT JOIN catalog_trails trail ON trail.id=e.catalog_trail_id LEFT JOIN organization_catalog_trail_access trail_access ON trail_access.organization_id=e.organization_id AND trail_access.catalog_trail_id=trail.id LEFT JOIN organization_provider_course_offers pco ON pco.id=e.provider_course_offer_id LEFT JOIN provider_courses pc ON pc.id=pco.provider_course_id LEFT JOIN finance_campaigns c ON c.id=e.campaign_id WHERE e.id=? AND e.unit_id IN ($marks) AND e.finance_payment_id IS NULL AND (e.finance_product_id IS NOT NULL OR e.catalog_trail_id IS NOT NULL OR e.provider_course_offer_id IS NOT NULL) LIMIT 1");$s->execute(array_merge([$id],$units));$row=$s->fetch();return is_array($row)?$row:null;
@@ -166,7 +181,7 @@ final readonly class EnrollmentRepository
     public function releaseContext(int$id,array$allowedUnits):?array
     {
         if($allowedUnits===[])return null;$marks=implode(',',array_fill(0,count($allowedUnits),'?'));
-        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname,ct.name trail_name FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN catalog_trails ct ON ct.id=e.catalog_trail_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
+        $sql="SELECT e.id,e.finance_customer_id,e.organization_id,e.unit_id,e.organization_pole_id,e.ava_connection_id,e.ava_course_id,e.ava_user_id,e.catalog_trail_id,e.status,e.moodle_enrolment_status,e.created_at,e.academic_provider_code,e.provider_content_type,e.provider_batch,e.provider_course_offer_id,e.provider_content_offer_id,f.name,f.email,f.cpf_cnpj,mc.id moodle_course_local_id,mc.moodle_course_id,mc.shortname course_shortname,mc.fullname course_fullname,ct.name trail_name FROM student_enrollments e INNER JOIN finance_customers f ON f.id=e.finance_customer_id LEFT JOIN moodle_courses mc ON mc.id=e.moodle_course_id LEFT JOIN catalog_trails ct ON ct.id=e.catalog_trail_id WHERE e.id=? AND e.unit_id IN ($marks) LIMIT 1";
         $s=$this->database->prepare($sql);$s->execute(array_merge([$id],$allowedUnits));$row=$s->fetch();return is_array($row)?$row:null;
     }
 

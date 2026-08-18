@@ -3,7 +3,7 @@ $studentId=(int)$student['id'];
 $money=static fn(mixed$value):string=>'R$ '.number_format((float)$value,2,',','.');
 $date=static function(mixed$value,bool$withTime=false):string{if($value===null||$value==='')return'—';$time=strtotime((string)$value);return$time===false?'—':date($withTime?'d/m/Y H:i':'d/m/Y',$time);};
 $paymentLabels=['PENDING'=>'Pendente','OVERDUE'=>'Vencida','RECEIVED'=>'Recebida','CONFIRMED'=>'Confirmada','RECEIVED_IN_CASH'=>'Recebida em dinheiro','REFUNDED'=>'Estornada','CANCELED'=>'Cancelada'];
-$enrollmentLabels=['awaiting_charge'=>'Aguardando cobrança','awaiting_payment'=>'Aguardando pagamento','payment_confirmed'=>'Pagamento confirmado','payment_waived'=>'Pagamento dispensado','payment_interrupted'=>'Pagamento interrompido'];
+$enrollmentLabels=['awaiting_charge'=>'Aguardando cobrança','awaiting_payment'=>'Aguardando pagamento','payment_confirmed'=>'Pagamento confirmado','payment_waived'=>'Pagamento dispensado','payment_interrupted'=>'Pagamento interrompido','cancelled'=>'Cancelada'];
 $avaLabels=['released'=>'Liberado','not_released'=>'Não liberado'];
 $riskLabels=['ok'=>'Regular','pending'=>'A liberar','blocked'=>'Bloqueado','never_accessed'=>'Sem acesso','inactive_7'=>'Inativo 7d','inactive_15'=>'Inativo 15d','inactive_30'=>'Inativo 30d','stalled'=>'Parado','unavailable'=>'Sem dados'];
 $documentTypeNames=[];foreach($documentTypes as$type)$documentTypeNames[(string)$type['code']]=(string)$type['name'];

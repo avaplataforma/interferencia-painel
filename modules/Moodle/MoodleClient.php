@@ -41,6 +41,18 @@ final readonly class MoodleClient
         return$this->call('core_user_update_users',['users'=>[$fields]]);
     }
 
+    /** Desmatricula o aluno do curso pelo método manual do Moodle. */
+    public function unenrolStudent(int $userId,int $courseId):array
+    {
+        $methods=$this->call('core_enrol_get_course_enrolment_methods',['courseid'=>$courseId]);
+        $enrolId=0;
+        foreach((array)$methods as$method){
+            if(is_array($method)&&(string)($method['type']??'')==='manual'){$enrolId=(int)$method['id'];break;}
+        }
+        if($enrolId<1)return['status'=>'no_manual_enrol'];
+        return$this->call('enrol_manual_unenrol_users',['enrolments'=>[['userid'=>$userId,'enrolid'=>$enrolId]]]);
+    }
+
     /** @return array<string,mixed> */
     public function poloDiagnostics():array{return$this->call('local_mundointer_diagnose_poles');}
 
