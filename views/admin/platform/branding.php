@@ -29,7 +29,7 @@
       <div class="border rounded-4 bg-light p-4 h-100">
         <strong>Logo principal</strong>
         <div class="my-3"><img src="<?= $escape($assetBasePath.$settings['logo_path']) ?>" alt="Logo atual" style="max-width:18rem;max-height:9rem;object-fit:contain"></div>
-        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp">
+        <input type="file" name="logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
         <label class="d-flex align-items-center gap-2 mt-3"><input type="checkbox" name="remove_logo" value="1" style="width:auto;margin:0"> Restaurar logo padrão</label>
       </div>
     </div>
@@ -37,7 +37,7 @@
       <div class="border rounded-4 bg-light p-4 h-100">
         <strong>Favicon</strong>
         <div class="my-3"><img src="<?= $escape($assetBasePath.$settings['favicon_path']) ?>" alt="Favicon atual" style="width:6rem;height:6rem;object-fit:contain"></div>
-        <input type="file" name="favicon" accept="image/png,image/jpeg,image/webp">
+        <input type="file" name="favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
         <label class="d-flex align-items-center gap-2 mt-3"><input type="checkbox" name="remove_favicon" value="1" style="width:auto;margin:0"> Restaurar favicon padrão</label>
       </div>
     </div>
