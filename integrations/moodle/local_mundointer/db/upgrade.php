@@ -550,6 +550,11 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // botão único Secretaria Digital na testeira com fundo branco.
         upgrade_plugin_savepoint(true, 2026081817, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081818) {
+        // Sem mudança de esquema. A testeira com o botão Secretaria Digital é
+        // renderizada no servidor e apenas posicionada pelo navegador.
+        upgrade_plugin_savepoint(true, 2026081818, 'local', 'mundointer');
+    }
     return true;
 }
 

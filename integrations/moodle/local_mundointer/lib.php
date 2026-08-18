@@ -1287,6 +1287,23 @@ function local_mundointer_before_standard_top_of_body_html(): string
         .'<span class="mundointer-brand-copy"><strong>'.$name.'</strong><small>'.$welcome.'</small></span>'
         .'</span>';
 
+    $isMyCourses = $PAGE !== null && $PAGE->url !== null && str_contains((string) $PAGE->url->get_path(), '/my/courses.php');
+    if ($isMyCourses) {
+        $firstname = s((string) (isloggedin() && !isguestuser() ? ($USER->firstname ?? '') : ''));
+        $greeting = $firstname !== '' ? 'Olá, ' . $firstname . '! 👋' : 'Olá! 👋';
+        $heroSub = s((string) $brand['name']) . ($welcome !== '' ? ' · ' . $welcome : '');
+        $siteurl = s((string) ($brand['site_url'] ?? ''));
+        $baseurl = s((string) (new moodle_url('/'))->out(false));
+        $heroLogo = $logo !== '' ? '<img src="' . $logo . '" alt="">' : '';
+        $html .= '<header class="mundointer-mycourses-hero" id="mundointer-mycourses-hero">'
+            . $heroLogo
+            . '<div class="mundointer-mycourses-copy"><strong>' . $greeting . '</strong><small>' . $heroSub . '</small></div>'
+            . '<div class="mundointer-mycourses-contacts">'
+            . '<a class="mi-secretaria" href="' . $baseurl . 'local/mundointer/portal.php"><i class="fa-solid fa-building-columns"></i> Secretaria Digital</a>'
+            . ($siteurl !== '' ? '<a href="' . $siteurl . '" target="_blank" rel="noopener">Site da franquia</a>' : '')
+            . '</div></header>';
+    }
+
     return $html.'<script>
 (function() {
     function setMundoInterCourseIndexSection(section, open) {
@@ -2051,38 +2068,12 @@ function hideMundoInterCourseExtras() {
   }
   [800, 2000].forEach(function (delay) { window.setTimeout(hideMundoInterCourseExtras, delay); });
 
-  var isMyCourses = location.pathname.indexOf("/my/courses.php") !== -1;
-  var mountMundoInterCoursesHero = function () {
-    if (!isMyCourses || document.querySelector(".mundointer-mycourses-hero")) return;
-    document.body.classList.add("mundointer-mycourses");
-    
-    
+  var miHero = document.getElementById("mundointer-mycourses-hero");
+    var miRegion = document.querySelector("#region-main") || document.querySelector(".drawercontent");
+    if (miHero && miRegion && miHero.parentNode !== miRegion) {
+      miRegion.insertBefore(miHero, miRegion.firstChild);
+      document.body.classList.add("mundointer-mycourses");
     }
-    document.querySelectorAll("#region-main h1").forEach(function (heading) {
-      heading.style.display = "none";
-    });
-
-    var region = document.querySelector("#region-main") || document.querySelector(".drawercontent");
-    if (region) {
-      var hero = document.createElement("header");
-      hero.className = "mundointer-mycourses-hero";
-      var heroLogo = "";
-      var logoUrl = brand.getAttribute("data-brand-logo");
-      if (logoUrl) heroLogo = "<img src=\"" + logoUrl + "\" alt=\"\">";
-      var studentName = brand.getAttribute("data-student-name") || "";
-      var welcome = brand.getAttribute("data-welcome-text") || "";
-      var siteUrl = brand.getAttribute("data-site-url") || "";
-      var contacts = "<a class=\"mi-secretaria\" href=\"" + basePath + "local/mundointer/portal.php\"><i class=\"fa-solid fa-building-columns\"></i> Secretaria Digital</a>";
-      if (siteUrl) contacts += "<a href=\"" + siteUrl + "\" target=\"_blank\" rel=\"noopener\">Site da franquia</a>";
-      var fullName = brand.getAttribute("data-student-name") || "";
-      var firstName = fullName.split(/\s+/)[0] || "";
-      var greeting = firstName ? "Olá, " + firstName + "! 👋" : "Olá! 👋";
-      var heroSub = brandName + (welcome ? " · " + welcome : "");
-      hero.innerHTML = heroLogo
-        + "<div class=\"mundointer-mycourses-copy\"><strong>" + greeting + "</strong>"
-        + "<small>" + heroSub + "</small></div>"
-        + (contacts ? "<div class=\"mundointer-mycourses-contacts\">" + contacts + "</div>" : "");
-      region.insertBefore(hero, region.firstChild);
     }
   };
   if (document.readyState === "loading") {
