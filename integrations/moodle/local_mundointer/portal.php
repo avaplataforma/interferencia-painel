@@ -92,14 +92,23 @@ $liveProgress = function (array $enrollment) use (&$liveProgressCache, $DB, $USE
     if ($courseId < 1) return 0.0;
     if (!array_key_exists($courseId, $liveProgressCache)) {
         $percent = 0.0;
-        $course = $DB->get_record('course', ['id' => $courseId], '*', IGNORE_MISSING);
-        if ($course) {
-            try {
-                require_once($CFG->dirroot . '/lib/completionlib.php');
-                $completion = new \core_completion\progress($course);
-                $percent = (float) $completion->get_course_progress_percentage($USER);
-            } catch (\Throwable) {
-                $percent = 0.0;
+        $total = (int) $DB->count_records_select('course_modules', 'course=:course AND completion<>0 AND visible=1', ['course' => $courseId]);
+        if ($total > 0) {
+            $done = (int) $DB->count_records_sql(
+                "SELECT COUNT(*) FROM {course_modules_completion} cmc JOIN {course_modules} cm ON cm.id=cmc.coursemoduleid WHERE cm.course=:course AND cm.completion<>0 AND cm.visible=1 AND cmc.userid=:userid AND cmc.completionstate IN (1,2,3)",
+                ['course' => $courseId, 'userid' => (int) $USER->id]
+            );
+            $percent = round($done / $total * 100, 1);
+        } else {
+            $course = $DB->get_record('course', ['id' => $courseId], '*', IGNORE_MISSING);
+            if ($course) {
+                try {
+                    require_once($CFG->dirroot . '/lib/completionlib.php');
+                    $completion = new \core_completion\progress($course);
+                    $percent = (float) $completion->get_course_progress_percentage($USER);
+                } catch (\Throwable) {
+                    $percent = 0.0;
+                }
             }
         }
         $liveProgressCache[$courseId] = $percent;

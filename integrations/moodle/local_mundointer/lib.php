@@ -58,6 +58,11 @@ function swapMundoInterActivityIcons() {
 }
 document.addEventListener("DOMContentLoaded", swapMundoInterActivityIcons);
 window.setTimeout(swapMundoInterActivityIcons, 1200);
+window.setTimeout(swapMundoInterActivityIcons, 3200);
+if (window.MutationObserver) {
+    var miIconObserver = new MutationObserver(function () { swapMundoInterActivityIcons(); });
+    miIconObserver.observe(document.documentElement, { childList: true, subtree: true });
+}
 </script>';
     if (is_siteadmin()) {
         return $neutralLogin;

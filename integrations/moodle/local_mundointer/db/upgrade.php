@@ -770,6 +770,12 @@ function xmldb_local_mundointer_upgrade(int $oldversion): bool
         // para todos os usuários, inclusive administradores.
         upgrade_plugin_savepoint(true, 2026081860, 'local', 'mundointer');
     }
+    if ($oldversion < 2026081861) {
+        // Sem mudança de esquema. Progresso calculado pelas atividades concluídas
+        // (funciona mesmo sem conclusão de curso habilitada) e troca de ícones
+        // com observador de DOM para carregamento dinâmico.
+        upgrade_plugin_savepoint(true, 2026081861, 'local', 'mundointer');
+    }
     return true;
 }
 
